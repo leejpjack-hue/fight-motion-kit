@@ -7,6 +7,7 @@
   const uid = () => 'clip-' + crypto.randomUUID();
   const DEMO = 'daiyu-wang-five-seconds';
   const ORIGINAL = 'daiyu-wang-codex-import';
+  const CONTINUATION = 'daiyu-wang-ten-seconds';
   let project, presets, effects, renderer, result, selected = 0, time = 0, playing = false, looping = false;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0;
@@ -165,11 +166,11 @@
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(await builtIn(DEMO));}}
-    else if(sid&&![DEMO,ORIGINAL].includes(sid)){await load(await builtIn(DEMO));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else if(sid&&![DEMO,ORIGINAL,CONTINUATION].includes(sid)){await load(await builtIn(DEMO));status('Requested project is not stored here. Open its saved project JSON.',true);}
     else await load(await builtIn(sid||DEMO));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(duration(),Math.max(0,requestedTime));draw();}
   }
-  on('loadDemo',async()=>load(await builtIn(DEMO)));on('loadOriginal',async()=>load(await builtIn(ORIGINAL)));
+  on('loadDemo',async()=>load(await builtIn(DEMO)));on('loadOriginal',async()=>load(await builtIn(ORIGINAL)));on('loadExtended',async()=>load(await builtIn(CONTINUATION)));
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;

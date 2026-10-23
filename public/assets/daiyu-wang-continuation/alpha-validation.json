@@ -1,0 +1,154 @@
+[
+  {
+    "file": "P09.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      172,
+      8,
+      1469,
+      928
+    ],
+    "fully_transparent_pixels": 1170113
+  },
+  {
+    "file": "P10.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      208,
+      9,
+      1499,
+      925
+    ],
+    "fully_transparent_pixels": 1126579
+  },
+  {
+    "file": "P11.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      234,
+      7,
+      1556,
+      927
+    ],
+    "fully_transparent_pixels": 1131698
+  },
+  {
+    "file": "P12.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      221,
+      5,
+      1627,
+      911
+    ],
+    "fully_transparent_pixels": 1105972
+  },
+  {
+    "file": "P13.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      199,
+      7,
+      1548,
+      928
+    ],
+    "fully_transparent_pixels": 1094127
+  },
+  {
+    "file": "P14.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      182,
+      9,
+      1568,
+      927
+    ],
+    "fully_transparent_pixels": 1161254
+  },
+  {
+    "file": "P15.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      55,
+      11,
+      1654,
+      917
+    ],
+    "fully_transparent_pixels": 1112283
+  },
+  {
+    "file": "P16.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "bounds_alpha_at_least_64": [
+      83,
+      9,
+      1623,
+      916
+    ],
+    "fully_transparent_pixels": 1170938
+  }
+]

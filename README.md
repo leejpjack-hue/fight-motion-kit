@@ -38,6 +38,23 @@ The default project is **Daiyu × Xifeng · First exchange**: the eight original
 
 This is animation of existing plates with cuts, camera motion and effects. It does not synthesize new poses or interpolate limbs between the eight images. The originals are included without modifying their pixels.
 
+## AI skill and ten-second continuation
+
+The reusable skill lives in [`skills/html-motion-composer/SKILL.md`](skills/html-motion-composer/SKILL.md). It describes project authoring, new image generation, actual-alpha compositing, preservation of an existing edit, and verified offline/video exports. Its two helpers build a portable project and export through the actual editor in an isolated browser. They are parameterized by checkout, show/project, output paths, and fps.
+
+The editor's **Open 10-second continuation** button opens the extended sample: the original eight clips and first five seconds are preserved, then eight newly generated transparent character PNGs play over a new dusk rooftop background. It is also available at `/ui/?show=daiyu-wang-ten-seconds` and `/player/?show=daiyu-wang-ten-seconds`.
+
+```sh
+node skills/html-motion-composer/scripts/build-project.cjs --repo . \
+  --show public/shows/daiyu-wang-ten-seconds.json --out work/extended.motion.json \
+  --base-show public/shows/daiyu-wang-five-seconds.json --append-seconds 5
+node skills/html-motion-composer/scripts/export-project.cjs --repo . \
+  --project work/extended.motion.json --html work/extended.html \
+  --video work/extended.webm --report work/extended.verification.json --fps 30
+```
+
+These helpers require the dev dependencies and, for video, ffmpeg with VP8 support. `BROWSER_CHANNEL=chrome` uses installed Chrome; `FFMPEG` can select a binary. They do not publish projects or deploy the Worker.
+
 ## Verify
 
 ```sh
