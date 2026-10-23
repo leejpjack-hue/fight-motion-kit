@@ -12,6 +12,7 @@
   let project, presets, effects, fightPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0;
+  let loadRequest = 0, loading = false;
   const duration = () => Math.round((project?.show.atoms.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const atom = () => project?.show.atoms[selected];
   const startOf = index => project.show.atoms.slice(0,index).reduce((s,a) => s + a.duration_s, 0);
@@ -71,10 +72,20 @@
     return {version:1, show, layouts, media};
   }
   async function load(p) {
+    const request=++loadRequest;loading=true;
+    try {
     validate(p); pause(); project=copy(p); selected=project.show.atoms.length?0:-1;time=0;
     history=[copy(project)];historyIndex=0;result=null;
-    update(); await compile(); await persist();status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
+    update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
+    status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
     const url=new URL(location.href);url.searchParams.set('show',project.show.show_id);historyReplace(url);
+    return true;
+    } finally {if(request===loadRequest)loading=false;}
+  }
+  async function openProject(source) {
+    const request=++loadRequest;loading=true;pause();status('Opening project…');
+    try {const next=await source;if(request===loadRequest)return await load(next);return false;}
+    finally {if(request===loadRequest)loading=false;}
   }
   function historyReplace(url) { window.history.replaceState(null,'',url); }
   async function persist() {
@@ -276,7 +287,7 @@
     else await load(await builtIn(sid||DEMO));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(duration(),Math.max(0,requestedTime));draw();}
   }
-  on('loadDemo',async()=>load(await builtIn(DEMO)));on('loadOriginal',async()=>load(await builtIn(ORIGINAL)));on('loadExtended',async()=>load(await builtIn(CONTINUATION)));
+  on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));
   on('fightCamPack',applyFightCamPack);
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
@@ -402,6 +413,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get composed(){return copy(result);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},compile,renderAt(t){pause();time=Math.min(duration(),Math.max(0,t));draw();},load,download,safe,on,$,copy,get renderer(){return renderer;},pause,get duration(){return duration();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get composed(){return copy(result);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},compile,renderAt(t){pause();time=Math.min(duration(),Math.max(0,t));draw();},load,openProject,download,safe,on,$,copy,get renderer(){return renderer;},pause,get duration(){return duration();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

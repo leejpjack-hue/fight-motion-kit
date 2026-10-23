@@ -31,6 +31,7 @@
   $('projectInput').onchange=safe(async e=>{
     const f=e.target.files[0];if(!f)return;
     try{
+      const opened=await S.openProject((async()=>{
       if(f.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
       const parsed=JSON.parse(await f.text());let p=parsed;
       if(!p.show&&p.show_id){
@@ -39,7 +40,8 @@
         const media=[];for(const [key,l] of Object.entries(layouts)){const dir=key.slice(0,key.lastIndexOf('/')+1);for(const [id,e] of Object.entries(l)){if(e.full)e.full=e.full.replace(/(plates\/[^/]+)\.png$/,'$1.jpg');for(const part of e.parts||[])part.src=part.src.replace(/(cutout\/[^/]+)\.png$/,'$1.webp');const src=e.full?dir+e.full:dir+e.parts?.[0]?.src;if(src)media.push({id:crypto.randomUUID(),name:id,src,layoutSource:key,plateId:id});}}
         p={version:1,show:p,layouts,media};
       }
-      await S.load(p);report('Project opened.');
+      return p;
+      })());if(opened)report('Project opened.');
     }finally{e.target.value='';}
   });
   on('exportOpen',()=>{S.pause();report('');$('exportDialog').showModal();});
