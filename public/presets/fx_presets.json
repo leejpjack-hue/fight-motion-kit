@@ -1,0 +1,166 @@
+{
+ "version": "p0",
+ "t_rel": "normalized 0..1 inside the atom (t_rel_end for span hooks)",
+ "builtin_per_plate": [
+  "ghost_smear (prev pose, blur, first 0.12s of each plate)",
+  "motion_blur from camera velocity",
+  "bg parallax 0.25x/0.2x",
+  "close-plate push scale(1+0.12*pt)"
+ ],
+ "hooks": [
+  {
+   "id": "hit_orange",
+   "components": [
+    "hitstop_2f",
+    "flash",
+    "shake",
+    "impact_burst"
+   ],
+   "color": "#ff8a1e",
+   "source": "HITS[] orange",
+   "defaults": {}
+  },
+  {
+   "id": "hit_pink",
+   "components": [
+    "hitstop_2f",
+    "flash",
+    "shake",
+    "impact_burst"
+   ],
+   "color": "#ff3fa4",
+   "source": "HITS[] pink",
+   "defaults": {}
+  },
+  {
+   "id": "hitstop_2f",
+   "components": [
+    "hitstop_2f"
+   ],
+   "source": "renderAt: grayscale(1) contrast(9) invert(1) for 2/24 s after each hit",
+   "defaults": {}
+  },
+  {
+   "id": "flash_orange",
+   "components": [
+    "flash"
+   ],
+   "color": "#ff8a1e",
+   "source": "#flash screen-blend 0.28s, starts 2/24 s after hit",
+   "defaults": {}
+  },
+  {
+   "id": "flash_pink",
+   "components": [
+    "flash"
+   ],
+   "color": "#ff3fa4",
+   "source": "#flash",
+   "defaults": {}
+  },
+  {
+   "id": "bg_flash_blue",
+   "components": [
+    "tint"
+   ],
+   "color": "#2f7bff",
+   "source": "BGFLASH 4.0 (#tint colour-blend 0.45s)",
+   "defaults": {}
+  },
+  {
+   "id": "bg_flash_teal",
+   "components": [
+    "tint"
+   ],
+   "color": "#19e0d0",
+   "source": "BGFLASH 21.0",
+   "defaults": {}
+  },
+  {
+   "id": "shake",
+   "components": [
+    "shake"
+   ],
+   "source": "shake(): 14px decaying over 0.32s (also implied by every hit_*)",
+   "defaults": {
+    "amp": 14,
+    "dur": 0.32
+   }
+  },
+  {
+   "id": "smear_trail",
+   "components": [
+    "trail"
+   ],
+   "source": "TRAILS[] white fist-wind arcs 0.18s",
+   "defaults": {
+    "dir": 1
+   }
+  },
+  {
+   "id": "dust",
+   "components": [
+    "dust"
+   ],
+   "source": "DUST[] floor puffs 0.6s",
+   "defaults": {
+    "k": 1
+   }
+  },
+  {
+   "id": "speed_lines",
+   "components": [
+    "speed"
+   ],
+   "source": "SPEED[] up|down|radial spans",
+   "defaults": {
+    "mode": "up",
+    "k0": 0,
+    "k1": 1
+   },
+   "span": true
+  },
+  {
+   "id": "sparks",
+   "components": [
+    "sparks"
+   ],
+   "source": "SPARKS[] 0.5s; optional fixed screen point 'at'",
+   "defaults": {
+    "n": 40
+   }
+  },
+  {
+   "id": "fence_shake",
+   "components": [
+    "fence"
+   ],
+   "source": "FENCE[] bg-only rattle + 3k px shake",
+   "defaults": {
+    "k": 1
+   },
+   "span": true
+  },
+  {
+   "id": "pink_cut",
+   "components": [
+    "pink_cut"
+   ],
+   "color": "#ff2f9a",
+   "source": "t>=29.9 full pink card",
+   "defaults": {}
+  },
+  {
+   "id": "impact_white",
+   "components": [
+    "hitstop_2f",
+    "flash",
+    "shake",
+    "impact_burst"
+   ],
+   "color": "#ffffff",
+   "source": "AIMIKODA craft: white impact-frame punch (hitstop invert + white flash). Additive 2026-10-22.",
+   "defaults": {}
+  }
+ ]
+}

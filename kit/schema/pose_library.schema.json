@@ -1,0 +1,30 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "pose_library.schema.json",
+ "title": "Per-character pose library",
+ "type": "object",
+ "required": ["character", "poses"],
+ "properties": {
+  "character": {"type": "string"},
+  "placeholder": {"type": "boolean"},
+  "costume_lock": {"type": "string"},
+  "ref_height_px": {"type": "number", "description": "standing height in png px at scale 1"},
+  "poses": {"type": "array", "minItems": 1, "items": {
+   "type": "object",
+   "required": ["pose_id", "png", "facing", "foot_anchor_xy", "hand_hit_xy", "head_xy"],
+   "properties": {
+    "pose_id": {"type": "string"},
+    "png": {"type": "string", "description": "transparent PNG, path relative to the library json"},
+    "size": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+    "facing": {"enum": ["left", "right"]},
+    "foot_anchor_xy": {"$ref": "#/$defs/xy"},
+    "hand_hit_xy": {"$ref": "#/$defs/xy"},
+    "head_xy": {"$ref": "#/$defs/xy"},
+    "scale": {"type": "number", "description": "multiplier to normalise this png to library scale"},
+    "beat_tags": {"type": "array", "items": {"type": "string"}},
+    "placeholder": {"type": "boolean"},
+    "source": {"type": "string"}
+   }}}
+ },
+ "$defs": {"xy": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}}
+}

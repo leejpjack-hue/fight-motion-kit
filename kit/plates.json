@@ -1,0 +1,759 @@
+{
+ "ok": true,
+ "show_id": "daiyu-wang-codex-import",
+ "assets_dir": "assets/daiyu-wang-codex-import",
+ "plates": [
+  {
+   "id": "P01",
+   "file": "P01.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P01.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P01.jpg"
+  },
+  {
+   "id": "P02",
+   "file": "P02.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P02.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P02.jpg"
+  },
+  {
+   "id": "P03",
+   "file": "P03.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P03.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P03.jpg"
+  },
+  {
+   "id": "P04",
+   "file": "P04.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P04.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P04.jpg"
+  },
+  {
+   "id": "P05",
+   "file": "P05.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P05.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P05.jpg"
+  },
+  {
+   "id": "P06",
+   "file": "P06.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P06.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P06.jpg"
+  },
+  {
+   "id": "P07",
+   "file": "P07.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P07.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P07.jpg"
+  },
+  {
+   "id": "P08",
+   "file": "P08.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P08.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P08.jpg"
+  },
+  {
+   "id": "P09",
+   "file": "P09.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P09.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P09.jpg"
+  },
+  {
+   "id": "P10",
+   "file": "P10.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P10.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P10.jpg"
+  },
+  {
+   "id": "P11",
+   "file": "P11.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P11.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P11.jpg"
+  },
+  {
+   "id": "P12",
+   "file": "P12.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P12.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P12.jpg"
+  },
+  {
+   "id": "P13",
+   "file": "P13.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P13.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P13.jpg"
+  },
+  {
+   "id": "P14",
+   "file": "P14.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P14.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P14.jpg"
+  },
+  {
+   "id": "P15",
+   "file": "P15.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P15.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P15.jpg"
+  },
+  {
+   "id": "P16",
+   "file": "P16.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P16.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P16.jpg"
+  },
+  {
+   "id": "P17",
+   "file": "P17.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P17.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P17.jpg"
+  },
+  {
+   "id": "P18",
+   "file": "P18.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P18.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P18.jpg"
+  },
+  {
+   "id": "P19",
+   "file": "P19.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P19.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P19.jpg"
+  },
+  {
+   "id": "P20",
+   "file": "P20.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P20.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P20.jpg"
+  },
+  {
+   "id": "P21",
+   "file": "P21.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P21.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P21.jpg"
+  },
+  {
+   "id": "P22",
+   "file": "P22.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P22.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P22.jpg"
+  },
+  {
+   "id": "P23",
+   "file": "P23.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P23.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P23.jpg"
+  },
+  {
+   "id": "P24",
+   "file": "P24.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P24.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P24.jpg"
+  },
+  {
+   "id": "P25",
+   "file": "P25.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P25.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P25.jpg"
+  },
+  {
+   "id": "P26",
+   "file": "P26.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P26.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P26.jpg"
+  },
+  {
+   "id": "P27",
+   "file": "P27.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P27.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P27.jpg"
+  },
+  {
+   "id": "P28",
+   "file": "P28.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P28.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P28.jpg"
+  },
+  {
+   "id": "P29",
+   "file": "P29.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P29.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P29.jpg"
+  },
+  {
+   "id": "P30",
+   "file": "P30.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P30.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P30.jpg"
+  },
+  {
+   "id": "P31",
+   "file": "P31.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P31.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P31.jpg"
+  },
+  {
+   "id": "P32",
+   "file": "P32.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P32.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P32.jpg"
+  },
+  {
+   "id": "P33",
+   "file": "P33.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P33.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P33.jpg"
+  },
+  {
+   "id": "P34",
+   "file": "P34.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P34.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P34.jpg"
+  },
+  {
+   "id": "P35",
+   "file": "P35.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P35.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P35.jpg"
+  },
+  {
+   "id": "P36",
+   "file": "P36.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P36.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P36.jpg"
+  },
+  {
+   "id": "P37",
+   "file": "P37.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P37.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P37.jpg"
+  },
+  {
+   "id": "P38",
+   "file": "P38.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P38.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P38.jpg"
+  },
+  {
+   "id": "P39",
+   "file": "P39.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P39.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P39.jpg"
+  },
+  {
+   "id": "P40",
+   "file": "P40.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P40.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P40.jpg"
+  },
+  {
+   "id": "P41",
+   "file": "P41.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P41.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P41.jpg"
+  },
+  {
+   "id": "P42",
+   "file": "P42.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P42.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P42.jpg"
+  },
+  {
+   "id": "P43",
+   "file": "P43.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P43.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P43.jpg"
+  },
+  {
+   "id": "P44",
+   "file": "P44.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P44.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P44.jpg"
+  },
+  {
+   "id": "P45",
+   "file": "P45.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P45.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P45.jpg"
+  },
+  {
+   "id": "P46",
+   "file": "P46.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P46.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P46.jpg"
+  },
+  {
+   "id": "P47",
+   "file": "P47.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P47.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P47.jpg"
+  },
+  {
+   "id": "P48",
+   "file": "P48.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P48.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P48.jpg"
+  },
+  {
+   "id": "P49",
+   "file": "P49.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P49.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P49.jpg"
+  },
+  {
+   "id": "P50",
+   "file": "P50.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P50.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P50.jpg"
+  },
+  {
+   "id": "P51",
+   "file": "P51.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P51.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P51.jpg"
+  },
+  {
+   "id": "P52",
+   "file": "P52.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P52.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P52.jpg"
+  },
+  {
+   "id": "P53",
+   "file": "P53.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P53.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P53.jpg"
+  },
+  {
+   "id": "P54",
+   "file": "P54.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P54.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P54.jpg"
+  },
+  {
+   "id": "P55",
+   "file": "P55.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P55.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P55.jpg"
+  },
+  {
+   "id": "P56",
+   "file": "P56.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P56.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P56.jpg"
+  },
+  {
+   "id": "P57",
+   "file": "P57.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P57.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P57.jpg"
+  },
+  {
+   "id": "P58",
+   "file": "P58.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P58.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P58.jpg"
+  },
+  {
+   "id": "P59",
+   "file": "P59.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P59.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P59.jpg"
+  },
+  {
+   "id": "P60",
+   "file": "P60.jpg",
+   "src": "assets/daiyu-wang-codex-import/plates/P60.jpg",
+   "url": "/assets/daiyu-wang-codex-import/plates/P60.jpg"
+  }
+ ],
+ "cutouts": [
+  {
+   "id": "P01",
+   "file": "P01.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P01.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P01.webp"
+  },
+  {
+   "id": "P02",
+   "file": "P02.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P02.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P02.webp"
+  },
+  {
+   "id": "P03",
+   "file": "P03.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P03.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P03.webp"
+  },
+  {
+   "id": "P04",
+   "file": "P04.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P04.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P04.webp"
+  },
+  {
+   "id": "P05",
+   "file": "P05.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P05.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P05.webp"
+  },
+  {
+   "id": "P06",
+   "file": "P06.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P06.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P06.webp"
+  },
+  {
+   "id": "P07",
+   "file": "P07.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P07.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P07.webp"
+  },
+  {
+   "id": "P08",
+   "file": "P08.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P08.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P08.webp"
+  },
+  {
+   "id": "P12",
+   "file": "P12.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P12.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P12.webp"
+  },
+  {
+   "id": "P13",
+   "file": "P13.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P13.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P13.webp"
+  },
+  {
+   "id": "P14",
+   "file": "P14.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P14.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P14.webp"
+  },
+  {
+   "id": "P15",
+   "file": "P15.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P15.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P15.webp"
+  },
+  {
+   "id": "P16",
+   "file": "P16.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P16.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P16.webp"
+  },
+  {
+   "id": "P17",
+   "file": "P17.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P17.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P17.webp"
+  },
+  {
+   "id": "P18",
+   "file": "P18.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P18.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P18.webp"
+  },
+  {
+   "id": "P19",
+   "file": "P19.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P19.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P19.webp"
+  },
+  {
+   "id": "P20",
+   "file": "P20.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P20.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P20.webp"
+  },
+  {
+   "id": "P21",
+   "file": "P21.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P21.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P21.webp"
+  },
+  {
+   "id": "P22",
+   "file": "P22.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P22.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P22.webp"
+  },
+  {
+   "id": "P23",
+   "file": "P23.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P23.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P23.webp"
+  },
+  {
+   "id": "P24",
+   "file": "P24.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P24.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P24.webp"
+  },
+  {
+   "id": "P25",
+   "file": "P25.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P25.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P25.webp"
+  },
+  {
+   "id": "P26",
+   "file": "P26.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P26.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P26.webp"
+  },
+  {
+   "id": "P27",
+   "file": "P27.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P27.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P27.webp"
+  },
+  {
+   "id": "P28",
+   "file": "P28.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P28.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P28.webp"
+  },
+  {
+   "id": "P29",
+   "file": "P29.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P29.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P29.webp"
+  },
+  {
+   "id": "P31",
+   "file": "P31.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P31.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P31.webp"
+  },
+  {
+   "id": "P32",
+   "file": "P32.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P32.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P32.webp"
+  },
+  {
+   "id": "P33",
+   "file": "P33.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P33.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P33.webp"
+  },
+  {
+   "id": "P35",
+   "file": "P35.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P35.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P35.webp"
+  },
+  {
+   "id": "P35_hua",
+   "file": "P35_hua.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P35_hua.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P35_hua.webp"
+  },
+  {
+   "id": "P35_zhao",
+   "file": "P35_zhao.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P35_zhao.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P35_zhao.webp"
+  },
+  {
+   "id": "P36",
+   "file": "P36.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P36.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P36.webp"
+  },
+  {
+   "id": "P37",
+   "file": "P37.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P37.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P37.webp"
+  },
+  {
+   "id": "P38",
+   "file": "P38.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P38.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P38.webp"
+  },
+  {
+   "id": "P39",
+   "file": "P39.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P39.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P39.webp"
+  },
+  {
+   "id": "P40",
+   "file": "P40.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P40.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P40.webp"
+  },
+  {
+   "id": "P41",
+   "file": "P41.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P41.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P41.webp"
+  },
+  {
+   "id": "P42",
+   "file": "P42.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P42.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P42.webp"
+  },
+  {
+   "id": "P45",
+   "file": "P45.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P45.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P45.webp"
+  },
+  {
+   "id": "P46",
+   "file": "P46.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P46.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P46.webp"
+  },
+  {
+   "id": "P47",
+   "file": "P47.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P47.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P47.webp"
+  },
+  {
+   "id": "P48",
+   "file": "P48.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P48.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P48.webp"
+  },
+  {
+   "id": "P49",
+   "file": "P49.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P49.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P49.webp"
+  },
+  {
+   "id": "P50",
+   "file": "P50.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P50.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P50.webp"
+  },
+  {
+   "id": "P51",
+   "file": "P51.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P51.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P51.webp"
+  },
+  {
+   "id": "P52",
+   "file": "P52.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P52.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P52.webp"
+  },
+  {
+   "id": "P53",
+   "file": "P53.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P53.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P53.webp"
+  },
+  {
+   "id": "P54",
+   "file": "P54.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P54.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P54.webp"
+  },
+  {
+   "id": "P55",
+   "file": "P55.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P55.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P55.webp"
+  },
+  {
+   "id": "P56",
+   "file": "P56.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P56.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P56.webp"
+  },
+  {
+   "id": "P57",
+   "file": "P57.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P57.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P57.webp"
+  },
+  {
+   "id": "P58",
+   "file": "P58.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P58.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P58.webp"
+  },
+  {
+   "id": "P59",
+   "file": "P59.webp",
+   "src": "assets/daiyu-wang-codex-import/cutout/P59.webp",
+   "url": "/assets/daiyu-wang-codex-import/cutout/P59.webp"
+  }
+ ],
+ "used_in_show": [
+  "P01",
+  "P02",
+  "P02",
+  "P02",
+  "P02",
+  "P03",
+  "P04",
+  "P05",
+  "P06",
+  "P07",
+  "P08",
+  "P09",
+  "P10",
+  "P11",
+  "P12",
+  "P13",
+  "P14",
+  "P15",
+  "P16",
+  "P17",
+  "P18",
+  "P19",
+  "P20",
+  "P21",
+  "P22",
+  "P23",
+  "P24",
+  "P25",
+  "P26",
+  "P27",
+  "P28",
+  "P29",
+  "P30",
+  "P31",
+  "P32",
+  "P33",
+  "P34",
+  "P35",
+  "P36",
+  "P37",
+  "P38",
+  "P39",
+  "P40",
+  "P41",
+  "P42",
+  "P43",
+  "P44",
+  "P45",
+  "P46",
+  "P47",
+  "P48",
+  "P49",
+  "P50",
+  "P51",
+  "P52",
+  "P53",
+  "P54",
+  "P55",
+  "P56",
+  "P57",
+  "P58",
+  "P59",
+  "P60"
+ ],
+ "plate_count": 60
+}

@@ -1,0 +1,240 @@
+{
+  "show_id": "qa-setup-ui",
+  "template": "fight-wording-8s",
+  "seed_show": "shows/wording-fx.json",
+  "show_path": "shows/qa-setup-ui.json",
+  "created": "2026-10-20T22:41:08+0900",
+  "setup_status": "ready_local",
+  "jobs": [
+    {
+      "slot": "pose_L_clash_fist",
+      "kind": "pose_png",
+      "pose_id": "clash_fist",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_crouch",
+      "kind": "pose_png",
+      "pose_id": "crouch",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_duck",
+      "kind": "pose_png",
+      "pose_id": "duck",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_front_kick",
+      "kind": "pose_png",
+      "pose_id": "front_kick",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_guard_stance",
+      "kind": "pose_png",
+      "pose_id": "guard_stance",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_hit_body_fold",
+      "kind": "pose_png",
+      "pose_id": "hit_body_fold",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_jab",
+      "kind": "pose_png",
+      "pose_id": "jab",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_recover",
+      "kind": "pose_png",
+      "pose_id": "recover",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_L_step_in",
+      "kind": "pose_png",
+      "pose_id": "step_in",
+      "side": "L",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_backstep",
+      "kind": "pose_png",
+      "pose_id": "backstep",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_block_forearm_mid",
+      "kind": "pose_png",
+      "pose_id": "block_forearm_mid",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_clash_fist",
+      "kind": "pose_png",
+      "pose_id": "clash_fist",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_guard_stance",
+      "kind": "pose_png",
+      "pose_id": "guard_stance",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_hit_head_snap",
+      "kind": "pose_png",
+      "pose_id": "hit_head_snap",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_hook",
+      "kind": "pose_png",
+      "pose_id": "hook",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_parry",
+      "kind": "pose_png",
+      "pose_id": "parry",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_recover",
+      "kind": "pose_png",
+      "pose_id": "recover",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_stagger",
+      "kind": "pose_png",
+      "pose_id": "stagger",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_step_in",
+      "kind": "pose_png",
+      "pose_id": "step_in",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "pose_R_windup",
+      "kind": "pose_png",
+      "pose_id": "windup",
+      "side": "R",
+      "status": "missing_pose_entry"
+    },
+    {
+      "slot": "ov_ov_clash",
+      "kind": "wording_pillow",
+      "text": "CLASH",
+      "out": "uploads/wording_setup_CLASH_fd14aa52.png",
+      "overlay_id": "ov_clash",
+      "status": "generated",
+      "meta": {
+        "w": 323,
+        "h": 142,
+        "text": "CLASH"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup_CLASH_fd14aa52.png"
+    },
+    {
+      "slot": "ov_ov_bang",
+      "kind": "wording_pillow",
+      "text": "砰",
+      "out": "uploads/wording_setup__b1543f60.png",
+      "overlay_id": "ov_bang",
+      "status": "generated",
+      "meta": {
+        "w": 220,
+        "h": 209,
+        "text": "砰"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup__b1543f60.png"
+    },
+    {
+      "slot": "ov_ov_whoosh",
+      "kind": "wording_pillow",
+      "text": "WHOOSH",
+      "out": "uploads/wording_setup_WHOOSH_7fc7290c.png",
+      "overlay_id": "ov_whoosh",
+      "status": "generated",
+      "meta": {
+        "w": 283,
+        "h": 107,
+        "text": "WHOOSH"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup_WHOOSH_7fc7290c.png"
+    },
+    {
+      "slot": "ov_ov_hit",
+      "kind": "wording_pillow",
+      "text": "HIT",
+      "out": "uploads/wording_setup_HIT_3498442c.png",
+      "overlay_id": "ov_hit",
+      "status": "generated",
+      "meta": {
+        "w": 210,
+        "h": 133,
+        "text": "HIT"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup_HIT_3498442c.png"
+    },
+    {
+      "slot": "ov_ov_ko",
+      "kind": "wording_pillow",
+      "text": "KO",
+      "out": "uploads/wording_setup_KO_598daee4.png",
+      "overlay_id": "ov_ko",
+      "status": "generated",
+      "meta": {
+        "w": 223,
+        "h": 162,
+        "text": "KO"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup_KO_598daee4.png"
+    },
+    {
+      "slot": "ov_ov_end",
+      "kind": "wording_pillow",
+      "text": "終",
+      "out": "uploads/wording_setup__0f2993f9.png",
+      "overlay_id": "ov_end",
+      "status": "generated",
+      "meta": {
+        "w": 208,
+        "h": 200,
+        "text": "終"
+      },
+      "raw": "setup/qa-setup-ui/raw/wording_setup__0f2993f9.png"
+    }
+  ],
+  "counts": {
+    "jobs": 26,
+    "generated_or_exists": 6,
+    "pending": 20,
+    "pending_generate_image": 0
+  }
+}
