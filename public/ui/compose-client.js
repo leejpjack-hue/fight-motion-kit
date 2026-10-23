@@ -351,6 +351,16 @@
 
     const floor = show.floor_y != null ? show.floor_y : 684;
     const bg = show.bg || {};
+    const backgroundMoves = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out'];
+    function validateBackground(value, label) {
+      if (value == null) return;
+      if (typeof value !== 'object' || Array.isArray(value)) { errors.push(label + ': invalid background settings'); return; }
+      if (value.src !== undefined && value.src !== null && (typeof value.src !== 'string' || !value.src)) errors.push(label + ': background image must be a path or null');
+      if (value.key_white !== undefined && typeof value.key_white !== 'boolean') errors.push(label + ': white-backdrop setting must be true or false');
+      const m = value.motion;
+      if (m !== undefined && (!m || !backgroundMoves.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1)) errors.push(label + ': invalid background motion');
+    }
+    validateBackground(bg, 'Project');
     const swapT = bg.swap ? bg.swap_t : null;
     const layout = {};
     const plates = [];
@@ -365,6 +375,7 @@
     let nHero = 0;
 
     for (const a of atoms) {
+      validateBackground(a.background, a.id);
       const d = +a.duration_s;
       const npl = +a.plates_needed;
       if (!Number.isFinite(d) || d < 0.1 || !Number.isInteger(npl) || npl < 1 || npl > 1000) {
@@ -467,6 +478,7 @@
           }
         }
         applyLayoutTransforms(entry, show, a, warns);
+        if (a.background) entry.background = deepClone(a.background);
         layout[pid] = entry;
         plates.push({
           id: pid,
@@ -561,6 +573,7 @@
         swap: bg.swap || null,
         swap_t: swapT,
         key_white: bg.key_white === true,
+        ...(bg.motion ? {motion: deepClone(bg.motion)} : {}),
       },
       chars: show.chars,
       atoms: tlAtoms,

@@ -25,7 +25,7 @@ function createMotionRenderer(canvas, assets = {}) {
   async function load(data) {
     timeline = data.timeline; layout = data.layout;
     const paths = new Set();
-    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); (l.parts || []).forEach(p => paths.add(p.src)); });
+    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
     Object.values(timeline.bg || {}).filter(p => typeof p === 'string').forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
     await Promise.all([...paths].map(async path => {
@@ -34,7 +34,7 @@ function createMotionRenderer(canvas, assets = {}) {
       try { await im.decode(); } catch (_) { throw new Error('Image could not load: ' + path.slice(0, 120)); }
       images.set(path, im);
     }));
-    if(timeline.bg?.key_white)for(const l of Object.values(layout)){if(l.full&&!keyedImages.has(l.full))keyedImages.set(l.full,removeWhiteBackdrop(images.get(l.full)));}
+    for(const l of Object.values(layout)){const b=backgroundFor(l);if(b.src&&b.key_white&&l.full&&!keyedImages.has(l.full))keyedImages.set(l.full,removeWhiteBackdrop(images.get(l.full)));}
   }
   // Flood only edge-connected neutral whites, preserving enclosed white clothing/highlights.
   function removeWhiteBackdrop(im) {
@@ -53,9 +53,23 @@ function createMotionRenderer(canvas, assets = {}) {
     if (contain) { const s = Math.min(w / im.width, h / im.height); x += (w - im.width * s) / 2; y += (h - im.height * s) / 2; w = im.width * s; h = im.height * s; }
     ctx.save(); if (flip) {ctx.translate(x + w, y); ctx.scale(-1, 1); x = 0; y = 0;} ctx.drawImage(im, x, y, w, h); ctx.restore();
   }
-  function drawScene(l, bgOnly = false) {
-    const bg = (timeline.bg || {})[l.bg || 'base']; if (bg && bgOnly) {ctx.save();ctx.translate(640,360);ctx.scale(l.bg_zoom||1,l.bg_zoom||1);ctx.translate(-640,-360);backgroundImage(bg);ctx.restore();}
-    if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!bg && timeline.bg?.key_white);
+  function backgroundFor(l) {
+    const own=l.background||{},global=timeline.bg||{};
+    return {src:Object.hasOwn(own,'src')?own.src:global[l.bg||'base'],key_white:own.key_white??global.key_white,motion:own.motion??global.motion};
+  }
+  function drawBackground(l, t) {
+    const b=backgroundFor(l);if(!b.src)return;
+    const a=timeline.atoms.find(a=>a.id===l.atom),u=a?ease(clamp((t-a.t0)/(a.t1-a.t0),0,1),'smooth'):0;
+    const m=b.motion||{},amount=m.amount??.4,extra=amount*.25;
+    let s=1,x=0,y=0;
+    if(m.preset==='push_in')s=1+extra*u;
+    if(m.preset==='pull_out')s=1+extra*(1-u);
+    if(m.preset?.startsWith('pan_')){s=1+extra;const v=1-2*u;if(m.preset==='pan_left')x=640*extra*v;if(m.preset==='pan_right')x=-640*extra*v;if(m.preset==='pan_up')y=360*extra*v;if(m.preset==='pan_down')y=-360*extra*v;}
+    s*=l.bg_zoom||1;ctx.save();ctx.translate(640+x,360+y);ctx.scale(s,s);ctx.translate(-640,-360);backgroundImage(b.src);ctx.restore();
+  }
+  function drawScene(l) {
+    const b=backgroundFor(l);
+    if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
     else {
       (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
       (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
@@ -80,13 +94,16 @@ function createMotionRenderer(canvas, assets = {}) {
     let amp = 0;
     (fx.shake || []).forEach(([h, a, d]) => { if (t >= h && t < h + d) amp = Math.max(amp, a * (1 - (t - h) / d)); });
     (fx.hits || []).forEach(([h]) => { if (t >= h && t < h + .28) amp = Math.max(amp, 9 * (1 - (t - h) / .28)); });
+    const bgMotion=backgroundFor(l).motion,independent=bgMotion&&bgMotion.preset!=='follow_camera';
+    if(independent)drawBackground(l,t);
     ctx.save(); ctx.translate(640 + camera.x + Math.sin(t * 157) * amp, 360 + camera.y + Math.cos(t * 131) * amp * .6); ctx.rotate(camera.r * Math.PI / 180); ctx.scale(camera.s, camera.s); ctx.translate(-640, -360);
-    drawScene(l, true);
+    if(!independent)drawBackground(l,t);
+    drawScene(l);
     if (opts.onion) {
       const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
       ctx.save(); ctx.globalAlpha = 0.25;
-      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id], false);
-      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id], false);
+      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id]);
+      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id]);
       ctx.restore();
     }
     ctx.restore();

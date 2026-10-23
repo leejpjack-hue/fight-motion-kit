@@ -15,8 +15,10 @@
     const project=S.project; const assets={...(project.assets||{})};
     // Include library images as well as timeline assets so a project is editable offline.
     const paths=new Set(project.media.map(m=>m.src));
+    Object.values(project.show.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));
+    project.show.atoms.forEach(a=>{if(a.background?.src)paths.add(a.background.src);});
     const result=project.show.atoms.length?await S.compile():null;
-    if(result){Object.values(result.layout).forEach(l=>{if(l.full)paths.add(l.full);(l.parts||[]).forEach(p=>paths.add(p.src));});Object.values(result.timeline.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));(result.timeline.overlays||[]).forEach(o=>{if(o.src)paths.add(o.src);});}
+    if(result){Object.values(result.layout).forEach(l=>{if(l.full)paths.add(l.full);if(l.background?.src)paths.add(l.background.src);(l.parts||[]).forEach(p=>paths.add(p.src));});Object.values(result.timeline.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));(result.timeline.overlays||[]).forEach(o=>{if(o.src)paths.add(o.src);});}
     await Promise.all([...paths].map(async p=>{if(!p.startsWith('data:image/'))assets[p]=await embeddedAsset(p,project);}));
     project.assets=assets;
     return {project,result,assets};
