@@ -37,4 +37,4 @@ A deterministic deliverable is rendered separately as 150 frames at 30fps, for a
 
 ## Boundaries
 
-No live Cloudflare deployment was performed. The legacy Python kit and original assets are unchanged. A draft PR is the review surface. Video recording depends on browser MediaRecorder/canvas support; unsupported browsers show a disabled control and explanation. Storage limits are browser dependent and failures direct the user to download a project. Demo/blank actions replace the active draft, so save a portable project first. This is plate animation, not generated in-between character animation.
+No live Cloudflare deployment was performed. The legacy Python kit and original assets are unchanged. The source and verification evidence are prepared locally for review; remote publication requires approval. Video recording depends on browser MediaRecorder/canvas support; unsupported browsers show a disabled control and explanation. Storage limits are browser dependent and failures direct the user to download a project. Demo/blank actions replace the active draft, so save a portable project first. This is plate animation, not generated in-between character animation.
