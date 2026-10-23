@@ -1,0 +1,90 @@
+{
+  "S001": {
+    "id": "S001",
+    "t": 0,
+    "atom": "beat-01",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P01",
+    "full": "assets/daiyu-wang-eight/P01.png"
+  },
+  "S002": {
+    "id": "S002",
+    "t": 0.5,
+    "atom": "beat-02",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P02",
+    "full": "assets/daiyu-wang-eight/P02.png"
+  },
+  "S003": {
+    "id": "S003",
+    "t": 1,
+    "atom": "beat-03",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P03",
+    "full": "assets/daiyu-wang-eight/P03.png"
+  },
+  "S004": {
+    "id": "S004",
+    "t": 1.5,
+    "atom": "beat-04",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P04",
+    "full": "assets/daiyu-wang-eight/P04.png"
+  },
+  "S005": {
+    "id": "S005",
+    "t": 2,
+    "atom": "beat-05",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P05",
+    "full": "assets/daiyu-wang-eight/P05.png"
+  },
+  "S006": {
+    "id": "S006",
+    "t": 2.75,
+    "atom": "beat-06",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P06",
+    "full": "assets/daiyu-wang-eight/P06.png"
+  },
+  "S007": {
+    "id": "S007",
+    "t": 3.25,
+    "atom": "beat-07",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P07",
+    "full": "assets/daiyu-wang-eight/P07.png"
+  },
+  "S008": {
+    "id": "S008",
+    "t": 4,
+    "atom": "beat-08",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P08",
+    "full": "assets/daiyu-wang-eight/P08.png"
+  }
+}

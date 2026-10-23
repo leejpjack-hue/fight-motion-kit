@@ -679,6 +679,143 @@
      "v": 20
     }
    }
+  },
+  {
+   "id": "static_hold",
+   "label": "Hold frame",
+   "curves": {
+    "x": {
+     "type": "const",
+     "v": 0
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "const",
+     "v": 1
+    },
+    "r": {
+     "type": "const",
+     "v": 0
+    }
+   }
+  },
+  {
+   "id": "slow_push",
+   "label": "Slow push in",
+   "curves": {
+    "x": {
+     "type": "const",
+     "v": 0
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1,
+     "b": 1.07
+    },
+    "r": {
+     "type": "const",
+     "v": 0
+    }
+   }
+  },
+  {
+   "id": "slow_pull",
+   "label": "Slow pull out",
+   "curves": {
+    "x": {
+     "type": "const",
+     "v": 0
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.07,
+     "b": 1
+    },
+    "r": {
+     "type": "const",
+     "v": 0
+    }
+   }
+  },
+  {
+   "id": "slide_left",
+   "label": "Pan left",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": 18,
+     "b": -18
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "const",
+     "v": 1.06
+    },
+    "r": {
+     "type": "const",
+     "v": 0
+    }
+   }
+  },
+  {
+   "id": "slide_right",
+   "label": "Pan right",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": -18,
+     "b": 18
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "const",
+     "v": 1.06
+    },
+    "r": {
+     "type": "const",
+     "v": 0
+    }
+   }
+  },
+  {
+   "id": "gentle_orbit",
+   "label": "Gentle tilt",
+   "curves": {
+    "x": {
+     "type": "const",
+     "v": 0
+    },
+    "y": {
+     "type": "const",
+     "v": 0
+    },
+    "s": {
+     "type": "const",
+     "v": 1.06
+    },
+    "r": {
+     "type": "lerp",
+     "a": -1,
+     "b": 1
+    }
+   }
   }
  ]
 }

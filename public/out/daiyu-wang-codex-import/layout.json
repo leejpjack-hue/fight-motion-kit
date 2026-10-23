@@ -1,0 +1,1628 @@
+{
+  "S001": {
+    "id": "S001",
+    "t": 0,
+    "atom": "codex_01_low_rise",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P01",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P01.webp",
+        "x": 87,
+        "y": -77,
+        "w": 1369,
+        "h": 761
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 758.2520744474604,
+        "cy": 683.1,
+        "rx": 957.88,
+        "ry": 10
+      }
+    ]
+  },
+  "S002": {
+    "id": "S002",
+    "t": 0.5,
+    "atom": "codex_01_low_rise",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P02",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P02.webp",
+        "x": 146,
+        "y": -82,
+        "w": 1266,
+        "h": 766
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 702.8341673502872,
+        "cy": 681.4000000000001,
+        "rx": 171.71,
+        "ry": 10
+      },
+      {
+        "cx": 973.0271519352975,
+        "cy": 683.6,
+        "rx": 328.02,
+        "ry": 10
+      }
+    ]
+  },
+  "S003": {
+    "id": "S003",
+    "t": 1,
+    "atom": "codex_01_low_rise",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P02",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P02.webp",
+        "x": 146,
+        "y": -82,
+        "w": 1266,
+        "h": 766
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 702.8341673502872,
+        "cy": 681.4000000000001,
+        "rx": 171.71,
+        "ry": 10
+      },
+      {
+        "cx": 973.0271519352975,
+        "cy": 683.6,
+        "rx": 328.02,
+        "ry": 10
+      }
+    ]
+  },
+  "S004": {
+    "id": "S004",
+    "t": 1.5,
+    "atom": "codex_01_low_rise",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P02",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P02.webp",
+        "x": 146,
+        "y": -82,
+        "w": 1266,
+        "h": 766
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 702.8341673502872,
+        "cy": 681.4000000000001,
+        "rx": 171.71,
+        "ry": 10
+      },
+      {
+        "cx": 973.0271519352975,
+        "cy": 683.6,
+        "rx": 328.02,
+        "ry": 10
+      }
+    ]
+  },
+  "S005": {
+    "id": "S005",
+    "t": 2,
+    "atom": "codex_01_low_rise",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P02",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P02.webp",
+        "x": 146,
+        "y": -82,
+        "w": 1266,
+        "h": 766
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 702.8341673502872,
+        "cy": 681.4000000000001,
+        "rx": 171.71,
+        "ry": 10
+      },
+      {
+        "cx": 973.0271519352975,
+        "cy": 683.6,
+        "rx": 328.02,
+        "ry": 10
+      }
+    ]
+  },
+  "S006": {
+    "id": "S006",
+    "t": 2.5,
+    "atom": "codex_02_eye_orbit",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P03",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P03.webp",
+        "x": 112,
+        "y": -62,
+        "w": 1344,
+        "h": 746
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 841.4821894498016,
+        "cy": 683.8000000000001,
+        "rx": 940.1700000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S007": {
+    "id": "S007",
+    "t": 3,
+    "atom": "codex_02_eye_orbit",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P04",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P04.webp",
+        "x": 210,
+        "y": -80,
+        "w": 1216,
+        "h": 764
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 842.4831604938273,
+        "cy": 683.4000000000001,
+        "rx": 849.3100000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S008": {
+    "id": "S008",
+    "t": 3.5,
+    "atom": "codex_03_eye_push",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P05",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P05.webp",
+        "x": 132,
+        "y": -71,
+        "w": 1299,
+        "h": 755
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 875.1230855855857,
+        "cy": 683.6,
+        "rx": 908.5999999999999,
+        "ry": 10
+      }
+    ]
+  },
+  "S009": {
+    "id": "S009",
+    "t": 4,
+    "atom": "codex_03_eye_push",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P06",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P06.webp",
+        "x": 163,
+        "y": -93,
+        "w": 1268,
+        "h": 777
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 522.4317687464224,
+        "cy": 683.6,
+        "rx": 487.41,
+        "ry": 10
+      }
+    ]
+  },
+  "S010": {
+    "id": "S010",
+    "t": 4.5,
+    "atom": "codex_04_ecu_fist_lens",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P07",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P07.webp",
+        "x": 249,
+        "y": -93,
+        "w": 1102,
+        "h": 777
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 283.8624844720497,
+        "cy": 683.6,
+        "rx": 50.05,
+        "ry": 10
+      },
+      {
+        "cx": 1303.007358870968,
+        "cy": 668.2,
+        "rx": 385.77,
+        "ry": 10
+      }
+    ]
+  },
+  "S011": {
+    "id": "S011",
+    "t": 5,
+    "atom": "codex_04_ecu_fist_lens",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P08",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P08.webp",
+        "x": 130,
+        "y": -65,
+        "w": 1320,
+        "h": 749
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 1041.2769709543568,
+        "cy": 683.0000000000001,
+        "rx": 578.27,
+        "ry": 10
+      }
+    ]
+  },
+  "S012": {
+    "id": "S012",
+    "t": 5.5,
+    "atom": "codex_05_ecu_jitter",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "base",
+    "source_plate": "P09",
+    "full": "assets/daiyu-wang-codex-import/plates/P09.jpg"
+  },
+  "S013": {
+    "id": "S013",
+    "t": 6,
+    "atom": "codex_05_ecu_jitter",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "base",
+    "source_plate": "P10",
+    "full": "assets/daiyu-wang-codex-import/plates/P10.jpg"
+  },
+  "S014": {
+    "id": "S014",
+    "t": 6.5,
+    "atom": "codex_05_ecu_jitter",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "base",
+    "source_plate": "P11",
+    "full": "assets/daiyu-wang-codex-import/plates/P11.jpg"
+  },
+  "S015": {
+    "id": "S015",
+    "t": 7,
+    "atom": "codex_06_dive_then_inside",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P12",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P12.webp",
+        "x": 140,
+        "y": -84,
+        "w": 1246,
+        "h": 768
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 808.3369784656797,
+        "cy": 683.8000000000001,
+        "rx": 799.2600000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S016": {
+    "id": "S016",
+    "t": 7.5,
+    "atom": "codex_06_dive_then_inside",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P13",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P13.webp",
+        "x": 205,
+        "y": -81,
+        "w": 1109,
+        "h": 765
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 803.8477765108324,
+        "cy": 683.5000000000001,
+        "rx": 776.1600000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S017": {
+    "id": "S017",
+    "t": 8,
+    "atom": "codex_06_dive_then_inside",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P14",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P14.webp",
+        "x": 129,
+        "y": -75,
+        "w": 1240,
+        "h": 759
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 958.2426829268294,
+        "cy": 682.9000000000001,
+        "rx": 860.8600000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S018": {
+    "id": "S018",
+    "t": 8.5,
+    "atom": "codex_07_ots_R_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P15",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P15.webp",
+        "x": 210,
+        "y": -81,
+        "w": 1162,
+        "h": 765
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 1334.5600896860988,
+        "cy": 683.5000000000001,
+        "rx": 57.74999999999999,
+        "ry": 10
+      }
+    ]
+  },
+  "S019": {
+    "id": "S019",
+    "t": 9,
+    "atom": "codex_07_ots_R_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P16",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P16.webp",
+        "x": 84,
+        "y": -84,
+        "w": 1382,
+        "h": 768
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 555.2666990291262,
+        "cy": 683.8000000000001,
+        "rx": 599.83,
+        "ry": 10
+      }
+    ]
+  },
+  "S020": {
+    "id": "S020",
+    "t": 9.5,
+    "atom": "codex_08_eye_lateral",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P17",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P17.webp",
+        "x": 221,
+        "y": -84,
+        "w": 1111,
+        "h": 768
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 774.06190926276,
+        "cy": 683.8000000000001,
+        "rx": 389.62,
+        "ry": 10
+      }
+    ]
+  },
+  "S021": {
+    "id": "S021",
+    "t": 10,
+    "atom": "codex_08_eye_lateral",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P18",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P18.webp",
+        "x": 300,
+        "y": -87,
+        "w": 944,
+        "h": 771
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 775.0657352941178,
+        "cy": 683.0000000000001,
+        "rx": 650.6500000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S022": {
+    "id": "S022",
+    "t": 10.5,
+    "atom": "codex_09_waist_ots_chase",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "base",
+    "bg_zoom": 1.9,
+    "floor": 684,
+    "source_plate": "P19",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P19.webp",
+        "x": 202,
+        "y": 2,
+        "w": 894,
+        "h": 718
+      }
+    ],
+    "shadows": []
+  },
+  "S023": {
+    "id": "S023",
+    "t": 11,
+    "atom": "codex_09_waist_ots_chase",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P20",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P20.webp",
+        "x": 344,
+        "y": -69,
+        "w": 864,
+        "h": 753
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 882.0872118724345,
+        "cy": 683.4000000000001,
+        "rx": 602.14,
+        "ry": 10
+      }
+    ]
+  },
+  "S024": {
+    "id": "S024",
+    "t": 11.5,
+    "atom": "codex_10_fence_sweep_roll",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P21",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P21.webp",
+        "x": 223,
+        "y": -89,
+        "w": 1002,
+        "h": 773
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 878.4348348348349,
+        "cy": 683.2,
+        "rx": 700.7,
+        "ry": 10
+      }
+    ]
+  },
+  "S025": {
+    "id": "S025",
+    "t": 12,
+    "atom": "codex_10_fence_sweep_roll",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "base",
+    "bg_zoom": 1.9,
+    "floor": 684,
+    "source_plate": "P22",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P22.webp",
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 720
+      }
+    ],
+    "shadows": []
+  },
+  "S026": {
+    "id": "S026",
+    "t": 12.5,
+    "atom": "codex_11_floor_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P23",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P23.webp",
+        "x": 224,
+        "y": -92,
+        "w": 1057,
+        "h": 776
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 409.27098298676754,
+        "cy": 683.5000000000001,
+        "rx": 201.74,
+        "ry": 10
+      }
+    ]
+  },
+  "S027": {
+    "id": "S027",
+    "t": 13,
+    "atom": "codex_11_floor_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P24",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P24.webp",
+        "x": 83,
+        "y": -55,
+        "w": 1389,
+        "h": 739
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 382.382432748538,
+        "cy": 673.2,
+        "rx": 478.94,
+        "ry": 10
+      },
+      {
+        "cx": 949.9159744408946,
+        "cy": 683.1,
+        "rx": 297.21999999999997,
+        "ry": 10
+      }
+    ]
+  },
+  "S028": {
+    "id": "S028",
+    "t": 13.5,
+    "atom": "codex_12_eye_lateral_rev",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P25",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P25.webp",
+        "x": 90,
+        "y": -39,
+        "w": 1365,
+        "h": 723
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 672.2076956333767,
+        "cy": 682.6,
+        "rx": 622.16,
+        "ry": 10
+      },
+      {
+        "cx": 1223.8443617630226,
+        "cy": 683.7,
+        "rx": 258.72,
+        "ry": 10
+      }
+    ]
+  },
+  "S029": {
+    "id": "S029",
+    "t": 14,
+    "atom": "codex_12_eye_lateral_rev",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P26",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P26.webp",
+        "x": 79,
+        "y": -82,
+        "w": 1405,
+        "h": 766
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 784.1053369272238,
+        "cy": 683.6,
+        "rx": 983.29,
+        "ry": 10
+      }
+    ]
+  },
+  "S030": {
+    "id": "S030",
+    "t": 14.5,
+    "atom": "codex_13_eye_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P27",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P27.webp",
+        "x": 226,
+        "y": -71,
+        "w": 1201,
+        "h": 755
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 683.7348933649289,
+        "cy": 683.6,
+        "rx": 663.74,
+        "ry": 10
+      }
+    ]
+  },
+  "S031": {
+    "id": "S031",
+    "t": 15,
+    "atom": "codex_13_eye_hold",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P28",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P28.webp",
+        "x": 91,
+        "y": -73,
+        "w": 1229,
+        "h": 757
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 767.038141607526,
+        "cy": 683.8000000000001,
+        "rx": 849.3100000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S032": {
+    "id": "S032",
+    "t": 15.5,
+    "atom": "codex_14_ecu_jitter_y",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P29",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P29.webp",
+        "x": 91,
+        "y": -73,
+        "w": 1229,
+        "h": 757
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 767.038141607526,
+        "cy": 683.8000000000001,
+        "rx": 849.3100000000001,
+        "ry": 10
+      }
+    ]
+  },
+  "S033": {
+    "id": "S033",
+    "t": 16,
+    "atom": "codex_14_ecu_jitter_y",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "base",
+    "source_plate": "P30",
+    "full": "assets/daiyu-wang-codex-import/plates/P30.jpg"
+  },
+  "S034": {
+    "id": "S034",
+    "t": 16.5,
+    "atom": "codex_15_floor_race",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P31",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P31.webp",
+        "x": 251,
+        "y": -79,
+        "w": 1051,
+        "h": 763
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 912.2087464387465,
+        "cy": 683.3000000000001,
+        "rx": 672.98,
+        "ry": 10
+      }
+    ]
+  },
+  "S035": {
+    "id": "S035",
+    "t": 17,
+    "atom": "codex_15_floor_race",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P32",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P32.webp",
+        "x": 86,
+        "y": -67,
+        "w": 1393,
+        "h": 751
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 746.4137555228277,
+        "cy": 683.2,
+        "rx": 974.82,
+        "ry": 10
+      }
+    ]
+  },
+  "S036": {
+    "id": "S036",
+    "t": 17.5,
+    "atom": "codex_16_whip_A_to_B",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P33",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P33.webp",
+        "x": 76,
+        "y": -3,
+        "w": 1408,
+        "h": 687
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 96.44334862385321,
+        "cy": 683.4000000000001,
+        "rx": 40.04,
+        "ry": 10
+      }
+    ]
+  },
+  "S037": {
+    "id": "S037",
+    "t": 18,
+    "atom": "codex_16_whip_A_to_B",
+    "kind": "full",
+    "pose_mode": "hero",
+    "bg": "base",
+    "source_plate": "P34",
+    "full": "assets/daiyu-wang-codex-import/plates/P34.jpg"
+  },
+  "S038": {
+    "id": "S038",
+    "t": 18.5,
+    "atom": "codex_17_high_dive",
+    "kind": "split",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 668,
+    "source_plate": "P35",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P35_zhao.webp",
+        "x": 730,
+        "y": -134,
+        "w": 370,
+        "h": 528
+      },
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P35_hua.webp",
+        "x": 1082,
+        "y": 111,
+        "w": 338,
+        "h": 557
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 915,
+        "cy": 392,
+        "rx": 129.5,
+        "ry": 7
+      },
+      {
+        "cx": 1251,
+        "cy": 670,
+        "rx": 118.3,
+        "ry": 9
+      }
+    ]
+  },
+  "S039": {
+    "id": "S039",
+    "t": 19,
+    "atom": "codex_17_high_dive",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "base",
+    "bg_zoom": 1.9,
+    "floor": 668,
+    "source_plate": "P36",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P36.webp",
+        "x": 0,
+        "y": 0,
+        "w": 1202,
+        "h": 720
+      }
+    ],
+    "shadows": []
+  },
+  "S040": {
+    "id": "S040",
+    "t": 19.5,
+    "atom": "codex_18_box_side_pan",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 668,
+    "source_plate": "P37",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P37.webp",
+        "x": 267,
+        "y": 135,
+        "w": 930,
+        "h": 532
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 790.3852206273259,
+        "cy": 667,
+        "rx": 650.72,
+        "ry": 10
+      }
+    ]
+  },
+  "S041": {
+    "id": "S041",
+    "t": 20,
+    "atom": "codex_18_box_side_pan",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P38",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P38.webp",
+        "x": 222,
+        "y": 114,
+        "w": 1024,
+        "h": 553
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 573.3133805752398,
+        "cy": 666.8000000000001,
+        "rx": 163.52,
+        "ry": 10
+      },
+      {
+        "cx": 798.0697471665214,
+        "cy": 662,
+        "rx": 68.88,
+        "ry": 10
+      }
+    ]
+  },
+  "S042": {
+    "id": "S042",
+    "t": 20.5,
+    "atom": "codex_19_whip_A_to_B_wide",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P39",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P39.webp",
+        "x": 196,
+        "y": 102,
+        "w": 1011,
+        "h": 565
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 401.20745341614906,
+        "cy": 666.8000000000001,
+        "rx": 350.56,
+        "ry": 10
+      }
+    ]
+  },
+  "S043": {
+    "id": "S043",
+    "t": 21,
+    "atom": "codex_19_whip_A_to_B_wide",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P40",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P40.webp",
+        "x": 290,
+        "y": 119,
+        "w": 809,
+        "h": 548
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 671.0781072555205,
+        "cy": 667,
+        "rx": 566.16,
+        "ry": 10
+      }
+    ]
+  },
+  "S044": {
+    "id": "S044",
+    "t": 21.5,
+    "atom": "codex_19_whip_A_to_B_wide",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P41",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P41.webp",
+        "x": 328,
+        "y": 131,
+        "w": 741,
+        "h": 536
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 466.76063268892796,
+        "cy": 654.2,
+        "rx": 253.68,
+        "ry": 10
+      },
+      {
+        "cx": 1013.6530712530713,
+        "cy": 667,
+        "rx": 40,
+        "ry": 10
+      }
+    ]
+  },
+  "S045": {
+    "id": "S045",
+    "t": 22,
+    "atom": "codex_19_whip_A_to_B_wide",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P42",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P42.webp",
+        "x": 352,
+        "y": 124,
+        "w": 750,
+        "h": 543
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 695.8200466200467,
+        "cy": 666.4,
+        "rx": 524.72,
+        "ry": 10
+      }
+    ]
+  },
+  "S046": {
+    "id": "S046",
+    "t": 22.5,
+    "atom": "codex_20_ecu_jitter_s",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "source_plate": "P43",
+    "full": "assets/daiyu-wang-codex-import/plates/P43.jpg"
+  },
+  "S047": {
+    "id": "S047",
+    "t": 23,
+    "atom": "codex_20_ecu_jitter_s",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "source_plate": "P44",
+    "full": "assets/daiyu-wang-codex-import/plates/P44.jpg"
+  },
+  "S048": {
+    "id": "S048",
+    "t": 23.5,
+    "atom": "codex_21_face_whip",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P45",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P45.webp",
+        "x": 282,
+        "y": 114,
+        "w": 841,
+        "h": 553
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 905.8696443341605,
+        "cy": 666.8000000000001,
+        "rx": 588,
+        "ry": 10
+      }
+    ]
+  },
+  "S049": {
+    "id": "S049",
+    "t": 24,
+    "atom": "codex_21_face_whip",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P46",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P46.webp",
+        "x": 199,
+        "y": 102,
+        "w": 1004,
+        "h": 565
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 570.0342810722989,
+        "cy": 666.8000000000001,
+        "rx": 362.87999999999994,
+        "ry": 10
+      }
+    ]
+  },
+  "S050": {
+    "id": "S050",
+    "t": 24.5,
+    "atom": "codex_22_pass_between_a",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P47",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P47.webp",
+        "x": 399,
+        "y": 107,
+        "w": 616,
+        "h": 560
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 703.109670079636,
+        "cy": 667,
+        "rx": 430.64,
+        "ry": 10
+      }
+    ]
+  },
+  "S051": {
+    "id": "S051",
+    "t": 25,
+    "atom": "codex_22_pass_between_a",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P48",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P48.webp",
+        "x": 196,
+        "y": 118,
+        "w": 1004,
+        "h": 549
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 733.5641705187468,
+        "cy": 666.8000000000001,
+        "rx": 702.24,
+        "ry": 10
+      }
+    ]
+  },
+  "S052": {
+    "id": "S052",
+    "t": 25.5,
+    "atom": "codex_22_pass_between_a",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P49",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P49.webp",
+        "x": 260,
+        "y": 112,
+        "w": 901,
+        "h": 555
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 588.8084860173578,
+        "cy": 666.4,
+        "rx": 627.1999999999999,
+        "ry": 10
+      }
+    ]
+  },
+  "S053": {
+    "id": "S053",
+    "t": 26,
+    "atom": "codex_22_pass_between_a",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P50",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P50.webp",
+        "x": 216,
+        "y": 108,
+        "w": 972,
+        "h": 560
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 388.6100676183321,
+        "cy": 642.4,
+        "rx": 322,
+        "ry": 10
+      },
+      {
+        "cx": 732.1228865979382,
+        "cy": 667.2,
+        "rx": 40.88,
+        "ry": 10
+      }
+    ]
+  },
+  "S054": {
+    "id": "S054",
+    "t": 26.5,
+    "atom": "codex_23_pass_between_b",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P51",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P51.webp",
+        "x": 249,
+        "y": 112,
+        "w": 877,
+        "h": 556
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 600.3036674816626,
+        "cy": 667.2,
+        "rx": 613.76,
+        "ry": 10
+      }
+    ]
+  },
+  "S055": {
+    "id": "S055",
+    "t": 27,
+    "atom": "codex_23_pass_between_b",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 668,
+    "source_plate": "P52",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P52.webp",
+        "x": 199,
+        "y": 124,
+        "w": 1002,
+        "h": 544
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 222.035,
+        "cy": 667.2,
+        "rx": 40,
+        "ry": 10
+      },
+      {
+        "cx": 879.3317225253313,
+        "cy": 666.4,
+        "rx": 343.28000000000003,
+        "ry": 10
+      }
+    ]
+  },
+  "S056": {
+    "id": "S056",
+    "t": 27.5,
+    "atom": "codex_24_dutch_spiral_a",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 684,
+    "source_plate": "P53",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P53.webp",
+        "x": 141,
+        "y": -62,
+        "w": 1267,
+        "h": 746
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 167.32788461538462,
+        "cy": 670.9,
+        "rx": 40,
+        "ry": 10
+      },
+      {
+        "cx": 1376.2003424657535,
+        "cy": 683.5,
+        "rx": 40,
+        "ry": 10
+      }
+    ]
+  },
+  "S057": {
+    "id": "S057",
+    "t": 28,
+    "atom": "codex_24_dutch_spiral_a",
+    "kind": "leap",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 684,
+    "source_plate": "P54",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P54.webp",
+        "x": 102,
+        "y": -211,
+        "w": 1344,
+        "h": 732
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 135.9021582733813,
+        "cy": 686,
+        "rx": 32,
+        "ry": 9
+      },
+      {
+        "cx": 1404.7711722488039,
+        "cy": 686,
+        "rx": 32,
+        "ry": 9
+      }
+    ]
+  },
+  "S058": {
+    "id": "S058",
+    "t": 28.5,
+    "atom": "codex_24_dutch_spiral_a",
+    "kind": "leap",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 684,
+    "source_plate": "P55",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P55.webp",
+        "x": 110,
+        "y": -210,
+        "w": 1326,
+        "h": 731
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 1166.5727835051548,
+        "cy": 686,
+        "rx": 732.06,
+        "ry": 9
+      }
+    ]
+  },
+  "S059": {
+    "id": "S059",
+    "t": 29,
+    "atom": "codex_24_dutch_spiral_a",
+    "kind": "leap",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "floor": 684,
+    "source_plate": "P56",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P56.webp",
+        "x": 123,
+        "y": -158,
+        "w": 1296,
+        "h": 679
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 144.01521739130436,
+        "cy": 686,
+        "rx": 32,
+        "ry": 9
+      },
+      {
+        "cx": 1381.6400265957445,
+        "cy": 686,
+        "rx": 32,
+        "ry": 9
+      }
+    ]
+  },
+  "S060": {
+    "id": "S060",
+    "t": 29.5,
+    "atom": "codex_25_dutch_spiral_b",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "bg_zoom": 1.9,
+    "floor": 684,
+    "source_plate": "P57",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P57.webp",
+        "x": 17,
+        "y": 22,
+        "w": 1238,
+        "h": 662
+      }
+    ],
+    "shadows": []
+  },
+  "S061": {
+    "id": "S061",
+    "t": 30,
+    "atom": "codex_25_dutch_spiral_b",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "bg_zoom": 1.9,
+    "floor": 684,
+    "source_plate": "P58",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P58.webp",
+        "x": 10,
+        "y": 0,
+        "w": 1260,
+        "h": 715
+      }
+    ],
+    "shadows": []
+  },
+  "S062": {
+    "id": "S062",
+    "t": 30.5,
+    "atom": "codex_25_dutch_spiral_b",
+    "kind": "tight",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "bg_zoom": 1.9,
+    "floor": 684,
+    "source_plate": "P59",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-codex-import/cutout/P59.webp",
+        "x": 30,
+        "y": 14,
+        "w": 1211,
+        "h": 675
+      }
+    ],
+    "shadows": []
+  },
+  "S063": {
+    "id": "S063",
+    "t": 31,
+    "atom": "codex_25_dutch_spiral_b",
+    "kind": "close",
+    "pose_mode": "hero",
+    "bg": "swap",
+    "source_plate": "P60",
+    "full": "assets/daiyu-wang-codex-import/plates/P60.jpg"
+  }
+}
