@@ -1,0 +1,323 @@
+{
+ "show_id": "library-smoke",
+ "title": "Library-mode smoke test (PLACEHOLDER poses)",
+ "draft": true,
+ "grounded": true,
+ "floor_y": 684,
+ "chars": {
+  "L": {
+   "name": "趙敏 Zhao Min (placeholder lib)",
+   "pose_library": "libraries/placeholder-zhao/pose_library.json"
+  },
+  "R": {
+   "name": "華妃 Hua Fei (placeholder lib)",
+   "pose_library": "libraries/placeholder-hua/pose_library.json"
+  }
+ },
+ "bg": {
+  "base": "assets/zhao-hua/bg/bg_rooftop.png",
+  "swap": "assets/zhao-hua/bg/bg_rooftop_dented.png",
+  "swap_t": 6
+ },
+ "atoms": [
+  {
+   "id": "lib_eye_push__jab_vs_block__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_push"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "jab",
+    "left_pose_brief": "jab",
+    "right_pose_brief": "forearm block"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "zhao_crouch",
+     "zhao_jab",
+     "zhao_jab",
+     "zhao_elbow"
+    ],
+    "R": [
+     "hua_crouch",
+     "hua_guard_lean",
+     "hua_guard_lean",
+     "hua_crouch"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "guard"
+    },
+    {
+     "attacker": "L",
+     "target": "guard",
+     "depth_px": 30
+    },
+    {
+     "attacker": "none",
+     "gap_px": -40
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    },
+    {
+     "t_rel": 0.27,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   },
+   "compat": {
+    "prev_exit_tags": [
+     "grounded"
+    ],
+    "next_entry_tags": [
+     "grounded"
+    ]
+   }
+  },
+  {
+   "id": "lib_eye_orbit__hook_vs_duck__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "hook",
+    "left_pose_brief": "duck low",
+    "right_pose_brief": "lunging hook"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "zhao_elbow",
+     "zhao_low_sweep",
+     "zhao_low_sweep",
+     "zhao_shoved"
+    ],
+    "R": [
+     "hua_crouch",
+     "hua_lunge_punch",
+     "hua_lunge_punch",
+     "hua_step_back"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "R",
+     "target": "head",
+     "depth_px": -150
+    },
+    {
+     "attacker": "R",
+     "target": "head",
+     "depth_px": -130
+    },
+    {
+     "attacker": "none",
+     "gap_px": -40
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "smear_trail",
+     "params": {
+      "dir": -1
+     }
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust",
+     "params": {
+      "k": 1.2
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  },
+  {
+   "id": "lib_low_rise__kick_vs_parry__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "low_rise"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "front_kick",
+    "left_pose_brief": "high front kick",
+    "right_pose_brief": "parry"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "zhao_crouch",
+     "zhao_high_kick",
+     "zhao_high_kick",
+     "zhao_jab"
+    ],
+    "R": [
+     "hua_crouch",
+     "hua_guard_lean",
+     "hua_cheek_hit",
+     "hua_cheek_hit"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "guard"
+    },
+    {
+     "attacker": "L",
+     "target": "head"
+    },
+    {
+     "attacker": "L",
+     "target": "body"
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.27,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.52,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.52,
+     "type": "sparks",
+     "params": {
+      "n": 40
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  },
+  {
+   "id": "lib_whip_A_to_B__clash__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash",
+    "left_pose_brief": "hook",
+    "right_pose_brief": "straight"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "zhao_shoved",
+     "zhao_hook",
+     "zhao_hook",
+     "zhao_crouch"
+    ],
+    "R": [
+     "hua_step_back",
+     "hua_lunge_punch",
+     "hua_lunge_punch",
+     "hua_crouch"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "fist",
+     "depth_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "fist",
+     "depth_px": 0
+    },
+    {
+     "attacker": "none",
+     "gap_px": 0
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.25,
+     "type": "sparks",
+     "params": {
+      "n": 60
+     }
+    },
+    {
+     "t_rel": 0.5,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.75,
+     "type": "dust",
+     "params": {
+      "k": 1.5
+     }
+    },
+    {
+     "t_rel": 0.75,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "radial"
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  }
+ ]
+}

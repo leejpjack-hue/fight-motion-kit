@@ -1,0 +1,112 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "show.schema.json",
+ "title": "HTML Motion show spec",
+ "type": "object",
+ "required": ["show_id", "chars", "bg", "atoms"],
+ "properties": {
+  "show_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+  "title": {"type": "string"},
+  "duration_target_s": {"type": "number", "minimum": 30, "maximum": 60},
+  "draft": {"type": "boolean", "description": "QA/smoke only: downgrade 30-60 s duration error to a warning"},
+  "grounded": {"const": true},
+  "floor_y": {"type": "number", "default": 684},
+  "char_screen_scale": {"type": "number", "default": 1.0},
+  "chars": {
+   "type": "object", "required": ["L", "R"],
+   "properties": {"L": {"$ref": "#/$defs/char"}, "R": {"$ref": "#/$defs/char"}}
+  },
+  "bg": {
+   "type": "object", "required": ["base"],
+   "properties": {
+    "base": {"type": "string", "description": "image path relative to kit root"},
+    "swap": {"type": "string"},
+    "swap_t": {"type": "number", "minimum": 0}
+   }
+  },
+  "overlays": {
+   "type": "array",
+   "description": "Wording / title / impact overlays (screen-space, above chars, below pink cut). Prefer kind=text (runtime artificial wording) over legacy PNG src.",
+   "items": {"$ref": "#/$defs/overlay"}
+  },
+  "atoms": {
+   "type": "array", "minItems": 1,
+   "items": {"oneOf": [
+     {"$ref": "atom.schema.json"},
+     {"type": "object", "required": ["ref"], "properties": {"ref": {"type": "string"}}}
+   ]}
+  }
+ },
+ "$defs": {
+  "transform": {
+   "type": "object",
+   "description": "Offset/scale applied after grounded placement. Scale pivots on the foot so feet stay on the floor when y=0. Setting y != 0 breaks floor grounding.",
+   "properties": {
+    "x": {"type": "number", "default": 0, "description": "px offset (positive = right)"},
+    "y": {"type": "number", "default": 0, "description": "px offset (positive = down). Non-zero breaks grounding."},
+    "scale": {"type": "number", "minimum": 0.05, "maximum": 5, "default": 1}
+   },
+   "additionalProperties": false
+  },
+  "char": {"type": "object", "required": ["name"], "properties": {
+    "name": {"type": "string"},
+    "pose_library": {"type": "string", "description": "path to pose_library.json (library atoms)"},
+    "image": {"type": "string", "description": "character key image (hero-plate generation input)"},
+    "costume_lock": {"type": "string"},
+    "transform": {"$ref": "#/$defs/transform"}
+  }},
+  "overlayStyle": {
+   "type": "object",
+   "properties": {
+    "fill": {"type": "string", "default": "#ffe66d"},
+    "stroke": {"type": "string", "default": "#1a0a00"},
+    "strokeWidth": {"type": "number", "minimum": 0, "maximum": 40, "default": 8},
+    "fontSize": {"type": "number", "minimum": 12, "maximum": 320, "default": 96},
+    "fontWeight": {"type": ["string", "number"], "default": "900"},
+    "italic": {"type": "boolean", "default": false},
+    "fontFamily": {"type": "string"}
+   },
+   "additionalProperties": false
+  },
+  "overlayEffectType": {
+   "type": "string",
+   "enum": ["none","pop","slam","shake","flash","fade","bounce","slide_left","slide_right","spin_in","pulse","impact"]
+  },
+  "overlayEffect": {
+   "oneOf": [
+    {"$ref": "#/$defs/overlayEffectType"},
+    {
+     "type": "object",
+     "required": ["type"],
+     "properties": {
+      "type": {"$ref": "#/$defs/overlayEffectType"},
+      "intensity": {"type": "number", "minimum": 0.25, "maximum": 2, "default": 1},
+      "hold": {"type": "number", "minimum": 0, "maximum": 1, "description": "optional hold fraction before exit"}
+     },
+     "additionalProperties": false
+    }
+   ]
+  },
+  "overlay": {
+   "type": "object",
+   "required": ["id", "t_start", "t_end"],
+   "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "enum": ["image", "text"], "default": "image",
+      "description": "text = runtime artificial wording (no PNG); image = src PNG path"},
+    "src": {"type": "string", "description": "PNG path relative to kit root (image kind / legacy)"},
+    "text": {"type": "string", "description": "artificial wording string when kind=text"},
+    "style": {"$ref": "#/$defs/overlayStyle"},
+    "effect": {"$ref": "#/$defs/overlayEffect"},
+    "t_start": {"type": "number", "minimum": 0},
+    "t_end": {"type": "number", "minimum": 0},
+    "x": {"type": "number", "default": 640, "description": "center x on 1280 stage"},
+    "y": {"type": "number", "default": 200, "description": "center y on 720 stage"},
+    "scale": {"type": "number", "minimum": 0.05, "maximum": 8, "default": 1},
+    "opacity": {"type": "number", "minimum": 0, "maximum": 1, "default": 1},
+    "z": {"type": "number", "default": 10, "description": "sort among overlays only"}
+   },
+   "additionalProperties": false
+  }
+ }
+}

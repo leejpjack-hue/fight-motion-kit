@@ -1,0 +1,1293 @@
+{
+ "show_id": "hm-compose-04-retest-smoke",
+ "title": "HM-COMPOSE-04 retest smoke",
+ "duration_target_s": 30,
+ "grounded": true,
+ "floor_y": 684,
+ "parity_mode": true,
+ "compose_mode": "parity",
+ "chars": {
+  "L": {
+   "name": "林黛玉"
+  },
+  "R": {
+   "name": "王熙鳳"
+  }
+ },
+ "bg": {
+  "base": "assets/hm-compose-04-retest-smoke/bg/bg_rooftop.png",
+  "swap": "assets/hm-compose-04-retest-smoke/bg/bg_rooftop_dented.png",
+  "swap_t": 18.5
+ },
+ "atoms": [
+  {
+   "id": "codex_01_low_rise",
+   "duration_s": 1.5,
+   "plates_needed": 3,
+   "kind": "duo",
+   "camera": {
+    "preset": "low_rise",
+    "nudge": {
+     "x": 92,
+     "y": 0,
+     "s": 0,
+     "r": 0
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P02",
+     "P02",
+     "P02"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.05,
+     "type": "hit_orange"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[0,1) t=0-1s",
+    "plates_spec P01-P02",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_02_eye_orbit",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "straight"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P03",
+     "P04"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "dust"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[1,2) t=1-2s",
+    "plates_spec P03-P04",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_03_eye_push",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_push"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "uppercut"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P05",
+     "P06"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "up"
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[2,3) t=2-3s",
+    "plates_spec P05-P06",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_04_ecu_fist_lens",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "ecu_fist_lens"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "straight"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P07",
+     "P08"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust",
+     "params": {
+      "k": 1.2
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[3,4) t=3-4s",
+    "plates_spec P07-P08",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_05_ecu_jitter",
+   "duration_s": 1.5,
+   "plates_needed": 3,
+   "kind": "close",
+   "camera": {
+    "preset": "ecu_jitter"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P09",
+     "P10",
+     "P11"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "bg_flash_blue"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[4,5.5) t=4-5.5s",
+    "plates_spec P09-P11",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_06_dive_then_inside",
+   "duration_s": 1.5,
+   "plates_needed": 3,
+   "kind": "duo",
+   "camera": {
+    "segments": [
+     {
+      "preset": "low_dive_under",
+      "dur_s": 0.5
+     },
+     {
+      "preset": "upward_inside",
+      "dur_s": 1
+     }
+    ]
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "hook"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P12",
+     "P13",
+     "P14"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.3333333333333333,
+     "type": "hit_orange"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[5.5,6)+[6,7) t=5.5-7s",
+    "plates_spec P12-P14",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_07_ots_R_hold",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "ots_R_hold"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "elbow"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P15",
+     "P16"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.5,
+     "type": "smear_trail",
+     "params": {
+      "dir": -1
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[7,8) t=7-8s",
+    "plates_spec P15-P16",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_08_eye_lateral",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_lateral"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "slip"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P17",
+     "P18"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.5,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[8,9) t=8-9s",
+    "plates_spec P17-P18",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_09_waist_ots_chase",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "waist_ots_chase",
+    "params": {
+     "y": {
+      "phase": 180
+     }
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "skid"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P19",
+     "P20"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "dust",
+     "params": {
+      "k": 0.8
+     }
+    },
+    {
+     "t_rel": 0,
+     "type": "fence_shake",
+     "t_rel_end": 0.6,
+     "params": {
+      "k": 0.4
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[9,10) t=9-10s",
+    "plates_spec P19-P20",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_10_fence_sweep_roll",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "fence_sweep_roll"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "leap_short"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P21",
+     "P22"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "up"
+     }
+    },
+    {
+     "t_rel": 0,
+     "type": "fence_shake",
+     "t_rel_end": 1,
+     "params": {
+      "k": 1
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[10,11) t=10-11s",
+    "plates_spec P21-P22",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_11_floor_hold",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "floor_hold"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "knee"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P23",
+     "P24"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0,
+     "type": "dust",
+     "params": {
+      "k": 1.3
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[11,12) t=11-12s",
+    "plates_spec P23-P24",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_12_eye_lateral_rev",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_lateral",
+    "params": {
+     "x": {
+      "a": 90,
+      "b": -90
+     },
+     "y": {
+      "type": "const",
+      "v": -45
+     },
+     "s": {
+      "v": 1.2
+     }
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "sweep"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P25",
+     "P26"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "dust"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "sparks",
+     "params": {
+      "n": 40
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[12,13) t=12-13s",
+    "plates_spec P25-P26",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_13_eye_hold",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_hold"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "straight"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P27",
+     "P28"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_pink"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[13,14) t=13-14s",
+    "plates_spec P27-P28",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_14_ecu_jitter_y",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "close",
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "b": 1.12
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.5
+     }
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P29",
+     "P30"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "fence_shake",
+     "t_rel_end": 1,
+     "params": {
+      "k": 2.2
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[14,15) t=14-15s",
+    "plates_spec P29-P30",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_15_floor_race",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "floor_race"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "duck"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P31",
+     "P32"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.5,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust",
+     "params": {
+      "k": 1.2
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[15,16) t=15-16s",
+    "plates_spec P31-P32",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_16_whip_A_to_B",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P33",
+     "P34"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[16,17) t=16-17s",
+    "plates_spec P33-P34",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_17_high_dive",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "split",
+   "camera": {
+    "preset": "high_dive"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "leap_short"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P35",
+     "P36"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "down"
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[17,18) t=17-18s",
+    "plates_spec P35-P36",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_18_box_side_pan",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "box_side_pan"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "front_kick"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P37",
+     "P38"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0,
+     "type": "sparks",
+     "params": {
+      "n": 60
+     }
+    },
+    {
+     "t_rel": 0,
+     "type": "fence_shake",
+     "t_rel_end": 0.5,
+     "params": {
+      "k": 0.8
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[18,19) t=18-19s",
+    "plates_spec P37-P38",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_19_whip_A_to_B_wide",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "whip_A_to_B",
+    "params": {
+     "x": {
+      "offset": -90,
+      "amp": 140,
+      "cycles": 1
+     },
+     "s": {
+      "type": "lerp",
+      "a": 1.4,
+      "b": 1.5,
+      "ease": "linear"
+     }
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "cartwheel"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P39",
+     "P40",
+     "P41",
+     "P42"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.75,
+     "type": "hit_orange"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[19,21) t=19-21s",
+    "plates_spec P39-P42",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_20_ecu_jitter_s",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "close",
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "x": {
+      "type": "const",
+      "v": 0
+     }
+    }
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P43",
+     "P44"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "bg_flash_teal"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "sparks",
+     "params": {
+      "n": 90,
+      "at": [
+       700,
+       380
+      ]
+     }
+    },
+    {
+     "t_rel": 0.75,
+     "type": "sparks",
+     "params": {
+      "n": 60,
+      "at": [
+       700,
+       380
+      ]
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[21,22) t=21-22s",
+    "plates_spec P43-P44",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_21_face_whip",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "face_whip"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "jab"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P45",
+     "P46"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    },
+    {
+     "t_rel": 0.25,
+     "type": "smear_trail",
+     "params": {
+      "dir": -1
+     }
+    },
+    {
+     "t_rel": 0.5,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    },
+    {
+     "t_rel": 0.75,
+     "type": "smear_trail",
+     "params": {
+      "dir": -1
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[22,23) t=22-23s",
+    "plates_spec P45-P46",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_22_pass_between_a",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0,
+     0.6666666666666666
+    ]
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "hook"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P47",
+     "P48",
+     "P49",
+     "P50"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.75,
+     "type": "hit_orange"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[23,26) part 1 t=23-25s",
+    "plates_spec P47-P50",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_23_pass_between_b",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "kind": "duo",
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0.6666666666666666,
+     1
+    ]
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "guard_recover"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P51",
+     "P52"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[23,26) part 2 t=25-26s",
+    "plates_spec P51-P52",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_24_dutch_spiral_a",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "leap",
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0,
+     0.5
+    ]
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "leap_short"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P53",
+     "P54",
+     "P55",
+     "P56"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "dust",
+     "params": {
+      "k": 2.2
+     }
+    },
+    {
+     "t_rel": 0,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "radial",
+      "k0": 0,
+      "k1": 0.5
+     }
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[26,30) part 1 t=26-28s",
+    "plates_spec P53-P56",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  },
+  {
+   "id": "codex_25_dutch_spiral_b",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "tight",
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0.5,
+     1
+    ]
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash"
+   },
+   "pose_mode": "hero",
+   "hero": {
+    "layout_source": "assets/hm-compose-04-retest-smoke/layout.json",
+    "plates": [
+     "P57",
+     "P58",
+     "P59",
+     "P60"
+    ]
+   },
+   "fx_hooks": [
+    {
+     "t_rel": 0,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "radial",
+      "k0": 0.5,
+      "k1": 1
+     }
+    },
+    {
+     "t_rel": 0.95,
+     "type": "pink_cut"
+    }
+   ],
+   "assets": {
+    "char_slots": [
+     "L",
+     "R"
+    ],
+    "requires_costume_lock": false
+   },
+   "source_refs": [
+    "codex index.html camBase[26,30) part 2 t=28-30s",
+    "plates_spec P57-P60",
+    "src=fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19"
+   ]
+  }
+ ],
+ "meta": {
+  "imported_from": "/workspace/deliverables/fight-daiyu-wang-rooftop-tankshort-codex-html-2026-10-19",
+  "plate_count": 60,
+  "import": "HM-COMPOSE-01",
+  "duplicated_from": "daiyu-wang-codex-import",
+  "duplicate": "HM-COMPOSE-02"
+ },
+ "overlays": []
+}

@@ -1,0 +1,3138 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<!-- HM-COMPOSE-07: frontend-only product path -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HTML Motion Composer</title>
+<style>
+@font-face{font-family:"Ma Shan Zheng";src:url("../assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-weight:400 900;font-display:swap}
+@font-face{font-family:"Long Cang";src:url("../assets/fonts/LongCang-Regular.ttf") format("truetype");font-weight:400 900;font-display:swap}
+
+ :root{--bg:#05090c;--panel:#0b161c;--panel2:#0f2129;--line:#1c3a45;--ink:#d8f3ee;--dim:#7fa9a6;--acc:#77ffdd;--hero:#ff8a1e;--lib:#19e0d0;--bad:#ff3fa4;--ok:#5be38a;--header-bg:#071016;--fx-warn-bg:#2a1808;--fx-warn-ink:#ffccaa}
+ *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+ header{height:52px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--header-bg);flex-wrap:nowrap;overflow:hidden;position:relative;z-index:20}
+ header h1{font:600 14px/1 system-ui,sans-serif;color:var(--acc);margin:0 4px 0 0;letter-spacing:.4px;white-space:nowrap}
+ header h1 .ver{font:500 11px monospace;color:var(--dim);margin-left:4px}
+ button,select,input,textarea{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+ button{cursor:pointer} button:hover{border-color:var(--acc)}
+ button.pri{background:var(--panel2);border-color:var(--acc);color:var(--acc)}
+ button.pri.openFight{background:var(--acc);border-color:var(--acc);color:var(--bg);font-weight:600}
+ button.pri.composePri{background:var(--panel);border-color:var(--acc);color:var(--acc)}
+ button.ghost{background:transparent;border-color:transparent;color:var(--dim);padding:4px 6px;font-size:12px}
+ button.ghost:hover{color:var(--ink);border-color:var(--line);background:var(--panel2)}
+ button.small{padding:2px 6px;font-size:12px}
+ button:disabled{opacity:.45;cursor:not-allowed}
+ .hnav{display:flex;gap:2px;align-items:center;margin-right:6px}
+ .hnav button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--dim);padding:10px 8px;font:500 12px system-ui,sans-serif}
+ .hnav button.hnavOn{color:var(--ink);border-bottom-color:var(--acc)}
+ .hnav button:disabled{opacity:.4}
+ .hproj{font:11px monospace;color:var(--dim);max-width:18vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .hspacer{flex:1;min-width:8px}
+ .htools{display:none;align-items:center;gap:4px;flex-wrap:nowrap}
+ header.toolsOpen .htools{display:flex}
+ header.toolsOpen #hdrMore{color:var(--acc);border-color:var(--line)}
+ #hdrMore{flex-shrink:0}
+ #status{font:11px monospace;color:var(--dim);max-width:16vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #banner{display:none;align-items:center;gap:10px;padding:6px 14px;background:#2a1808;border-bottom:1px solid #a65;color:#fca;font:12px monospace}
+ #banner.on{display:flex} #banner .msg{flex:1}
+ #banner button{padding:3px 8px;font-size:11px}
+ main{display:grid;grid-template-columns:minmax(380px,1.15fr) minmax(360px,1fr) 320px;height:calc(100% - 52px - var(--banH,0px) - var(--fxH,0px));transition:grid-template-columns .15s ease}
+ body.atomPickCollapsed main{grid-template-columns:44px minmax(360px,1fr) 320px}
+ body.atomPickCollapsed #atomPane .filters,
+ body.atomPickCollapsed #atomPane #cards,
+ body.atomPickCollapsed #atomPane #more{display:none}
+ body.atomPickCollapsed #atomPane>h2 .atomTitle{display:none}
+ section{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:auto}
+ #atomPane h2 .paneTools{margin-left:auto;display:flex;gap:6px;align-items:center;font-weight:400;text-transform:none;letter-spacing:0}
+ #atomPane h2 .paneTools label.chk{display:inline-flex;align-items:center;gap:3px;font:10px monospace;color:var(--dim)}
+ #cards.staticOnly .card canvas{opacity:.92}
+ section>h2{font:600 12px monospace;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0;padding:10px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+ .filters{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)} .filters select,.filters input{font-size:12px;padding:3px 6px}
+ #cards{flex:1;overflow:auto;padding:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px;align-content:start}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:grab}
+ .card:hover{border-color:var(--acc)} .card canvas{display:block;width:100%;aspect-ratio:16/9;background:#0b2a33}
+ .card .meta{padding:6px 8px;display:flex;flex-direction:column;gap:3px} .card .id{font:11px monospace;color:var(--ink);word-break:break-all}
+ .tag{display:inline-block;font:10px monospace;padding:1px 5px;border-radius:4px;background:#12303a;color:var(--dim);margin-right:3px}
+ .tag.hero{background:#3a2208;color:var(--hero)} .tag.library{background:#073632;color:var(--lib)} .tag.inv{background:#331028;color:#f9a}
+ .card .row{display:flex;justify-content:space-between;align-items:center}
+ #more{margin:0 10px 10px}
+ #stats{display:flex;gap:14px;padding:10px 12px;border-bottom:1px solid var(--line);font:12px monospace;flex-wrap:wrap}
+ .stat b{font-size:15px} .good{color:var(--ok)} .warn{color:var(--bad)}
+ #bar{height:18px;margin:0 12px 8px;display:flex;border-radius:4px;overflow:hidden;background:#0a1418;border:1px solid var(--line);position:relative}
+ #bar div{height:100%;border-right:1px solid #000} #bar .lim{position:absolute;top:0;bottom:0;width:2px;background:#fff6}
+ #tl{flex:1;overflow:auto;padding:8px 12px;display:flex;flex-direction:column;gap:5px;min-height:80px}
+ #tl.drop{outline:2px dashed var(--acc);outline-offset:-6px}
+ .item{display:grid;grid-template-columns:22px 52px 1fr auto;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--lib);border-radius:6px;padding:5px 8px;cursor:grab}
+ .item.hero{border-left-color:var(--hero)} .item.sel{border-color:var(--acc);background:#0f2a30} .item.over{border-top:2px solid var(--acc)}
+ .item .n{font:11px monospace;color:var(--dim)} .item .t{font:11px monospace;color:var(--dim)} .item .nm{font:12px monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ aside{overflow:auto;padding:0 0 20px} .grp{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+ .grp h3{margin:0;font:600 11px monospace;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+ .grp label{display:grid;grid-template-columns:78px 1fr;gap:6px;align-items:center;font-size:12px;color:var(--dim)}
+ .grp label>*{min-width:0} textarea{width:100%;height:180px;font:11px monospace;resize:vertical}
+ .slot{border:1px solid var(--line);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:5px}
+ .slot .thumb{height:64px;display:flex;gap:3px;overflow:hidden;background:#0a1418;border-radius:4px;padding:2px} .slot .thumb img{height:100%}
+ #bgthumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+ .err{color:var(--bad);font:11px monospace;white-space:pre-wrap}
+ .empty{color:var(--dim);font:12px monospace;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:8px}
+ .xf{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+ .xf label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--dim);grid-template-columns:none}
+ .xf input{width:100%;padding:3px 4px}
+ .warn-y{color:var(--bad);font:10px monospace;display:none}
+ .warn-y.on{display:block}
+ #previewBox{border-top:1px solid var(--line);padding:8px 12px;display:flex;flex-direction:column;gap:6px;background:#071016}
+ #previewBox h3{margin:0;font:600 11px monospace;color:var(--dim);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+ #pvWrap{position:relative;width:100%;aspect-ratio:16/9;background:#0b2a33;border:1px solid var(--line);border-radius:6px;overflow:hidden;cursor:crosshair;touch-action:none}
+ #pv{display:block;width:100%;height:100%}
+ #pvHud{position:absolute;left:6px;bottom:4px;font:10px monospace;color:#7fd;opacity:.8;pointer-events:none}
+ .ovrow{display:grid;grid-template-columns:1fr auto;gap:4px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px}
+ .ovrow.sel{border-color:var(--acc)}
+ .ovrow .fields{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ .ovrow label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--dim);grid-template-columns:none}
+ .ovrow img.th{width:100%;max-height:48px;object-fit:contain;background:#0a1418;border-radius:4px}
+ #ovList{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+ #playerDock{display:none;border-top:1px solid var(--line);padding:8px 12px;background:#050e12;flex-direction:column;gap:6px}
+ #playerDock.on{display:flex}
+ #playerDock h3{margin:0;font:600 11px monospace;color:var(--dim);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+ #playerFrame{width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:6px;background:#000}
+ .durBtns{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+ .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:50}
+ .modal.on{display:flex}
+ .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;max-width:420px;width:90%;display:flex;flex-direction:column;gap:10px}
+ .modal .box h4{margin:0;font:600 14px monospace;color:var(--acc)}
+ .modal .acts{display:flex;gap:8px;justify-content:flex-end}
+
+ .chiprow{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+ .chip{padding:3px 8px;font:11px monospace;border-radius:999px;background:#12303a;border:1px solid var(--line);color:var(--ink);cursor:pointer}
+ .chip:hover,.chip.on{border-color:var(--acc);color:var(--acc);background:#0f3a3a}
+ .chip.fx{background:#2a1808;color:#fca}
+ .chip.fx.on{background:#3a2808;border-color:var(--hero);color:var(--hero)}
+ #ovLane{height:22px;margin:0 12px 6px;position:relative;background:#0a1418;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+ #ovLane .ovm{position:absolute;top:2px;bottom:2px;border-radius:3px;background:#ffe66d55;border:1px solid #ffe66daa;font:9px monospace;color:#ffe66d;overflow:hidden;white-space:nowrap;padding:0 3px;line-height:16px;cursor:pointer}
+ #ovLane .ovm.sel{background:#ffe66d99;border-color:#ffe66d}
+ #ovLane .playhead{position:absolute;top:0;bottom:0;width:2px;background:#7fd;pointer-events:none;z-index:2}
+ .stylegrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ .stylegrid label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--dim)}
+ .ovrow .fields{grid-template-columns:1fr 1fr}
+ #ovList{max-height:380px}
+
+ /* Editor v4 */
+ .item.msel{outline:2px solid #7fd; outline-offset:-2px; background:#0f2a30}
+ #ovLane{height:26px}
+ #ovLane .ovm{cursor:ew-resize}
+ #ovLane .ovm .hL,#ovLane .ovm .hR{position:absolute;top:0;bottom:0;width:6px;cursor:ew-resize;background:#ffe66d44}
+ #ovLane .ovm .hL{left:0} #ovLane .ovm .hR{right:0}
+ #ovLane .loopA,#ovLane .loopB,#bar .loopA,#bar .loopB{position:absolute;top:0;bottom:0;width:2px;background:#f6a;z-index:3;pointer-events:none}
+ #ovLane .loopRange,#bar .loopRange{position:absolute;top:0;bottom:0;background:#f6a22;pointer-events:none;z-index:1}
+ .poseGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-height:160px;overflow:auto;padding:4px;background:#0a1418;border-radius:6px;border:1px solid var(--line)}
+ .poseGrid .pt{border:2px solid transparent;border-radius:4px;cursor:pointer;background:#081018;aspect-ratio:1;overflow:hidden;padding:0}
+ .poseGrid .pt img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+ .poseGrid .pt.on{border-color:var(--acc)} .poseGrid .pt:hover{border-color:#7fd8}
+ .poseGrid .pt span{display:block;font:8px monospace;color:var(--dim);text-align:center;padding:0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #abDock{display:none;border-top:1px solid var(--line);padding:8px 12px;background:#050e12;flex-direction:column;gap:6px}
+ #abDock.on{display:flex}
+ #abGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ #abGrid.wipe{grid-template-columns:1fr; position:relative}
+ #abLiveWrap,#abPlayWrap{position:relative;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+ #abLive{display:block;width:100%;height:100%}
+ #abPlayer{width:100%;height:100%;border:0;background:#000}
+ #abGrid.wipe #abPlayWrap{position:absolute;inset:0;clip-path:inset(0 0 0 var(--wipe,50%))}
+ #abWipe{width:100%}
+ .v4bar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px}
+ .v4bar label.chk{display:inline-flex;align-items:center;gap:3px;font:10px monospace;color:var(--dim);grid-template-columns:none}
+
+ /* HM-COMPOSE-02 / HM-COMPOSE-03 / HM-COMPOSE-03b */
+ /* flex:0 0 88px + min-height — Timeline column flex was shrinking strip to ~17px hairline */
+ #plateStrip{display:none;flex:0 0 88px;flex-shrink:0;flex-wrap:nowrap;gap:6px;padding:8px 12px;min-height:88px;height:88px;max-height:88px;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--line);background:#071016;align-items:center;scrollbar-gutter:stable}
+ #plateStrip.on{display:flex}
+ #plateStrip .pth{width:128px;height:72px;flex:0 0 auto;border:2px solid var(--line);border-radius:4px;background:#0a1418;cursor:pointer;padding:0;overflow:hidden;position:relative}
+ #plateStrip .pth img{display:block;width:100%;height:100%;object-fit:cover}
+ #plateStrip .pth .ph{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font:11px monospace;color:#f88;background:repeating-linear-gradient(45deg,#2a1515 0 6px,#0a1418 6px 12px);letter-spacing:.02em}
+ #plateStrip .pth .plab{position:absolute;left:2px;bottom:1px;font:10px monospace;color:#dff;background:#000a;padding:0 3px;border-radius:2px}
+ #plateStrip .pth.on{border-color:var(--acc)}
+ #plateStrip .pth.atomOn{border-color:#bff;box-shadow:0 0 0 2px #7fd, inset 0 0 0 1px #7fd8;border-width:3px}
+ #plateStrip .pth.atomOn.on{border-color:#fff;box-shadow:0 0 0 2px #7fd, 0 0 10px #7fd8}
+ #plateStrip .pth:hover{border-color:#7fd8}
+ /* HM-COMPOSE-04 beat focus — strip + cam + timing + swap; collapse picker + secondary chrome */
+ body.beatFocus #abDock{display:none !important}
+ body.beatFocus aside .grp:not(.keepFocus){display:none}
+ body.beatFocus #previewBox .v4bar{display:none}
+ body.beatFocus #previewBox > div:last-child{display:none} /* tip line under canvas */
+ /* openFight / beatFocus chrome → HM-COMPOSE-05 block below */
+ #beatFocusBtn.on{border-color:var(--acc);background:#0f3a3a;color:var(--acc)}
+ #followPlayheadLbl{display:inline-flex;align-items:center;gap:3px;font:10px monospace;color:var(--dim)}
+ #fxBanner{display:none;position:absolute;left:8px;right:8px;bottom:8px;z-index:3;background:#3a2208ee;border:1px solid #f6a;color:#ffe6b0;font:11px monospace;padding:6px 8px;border-radius:4px;pointer-events:none}
+ #fxBanner.on{display:block}
+ #dockTransport{display:flex;gap:6px;align-items:center;padding:4px 0 2px;flex-wrap:wrap}
+ #dockToast{display:none;font:11px monospace;color:#9fd;margin-left:6px}
+ #dockToast.on{display:inline}
+ #platePick.modal .box{max-width:720px;width:94%}
+ #platePickGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;max-height:360px;overflow:auto;padding:4px;background:#0a1418;border-radius:6px;border:1px solid var(--line)}
+ #platePickGrid .pth{border:2px solid transparent;border-radius:4px;cursor:pointer;background:#081018;padding:0;overflow:hidden}
+ #platePickGrid .pth img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+ #platePickGrid .pth.on,#platePickGrid .pth:hover{border-color:var(--acc)}
+ #platePickGrid .pth span{display:block;font:9px monospace;color:var(--dim);text-align:center}
+ .camNudge{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+ .camNudge label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--dim)}
+ .tlTools{display:flex;flex-wrap:wrap;gap:4px;padding:0 12px 6px;align-items:center}
+
+
+ #atomInspGrp .inspBeat{display:none}
+ body.beatFocus #atomInspGrp .inspIdle{display:none}
+ body.beatFocus #atomInspGrp .inspBeat{display:inline}
+ /* HM-COMPOSE-05 — desktop Stitch visual shell (land + beat-focus) */
+ #fxHonestyBar{display:none;align-items:center;gap:8px;padding:5px 14px;background:var(--fx-warn-bg);border-bottom:1px solid #a65;color:var(--fx-warn-ink);font:12px system-ui,sans-serif}
+ #fxHonestyBar.on{display:flex}
+ #fxHonestyBar .ico{color:var(--hero)}
+ body.landMode #fxHonestyBar{display:none !important}
+ #landShell{display:none;position:fixed;inset:52px 0 0 0;z-index:15;background:var(--bg);overflow:auto;flex-direction:column}
+ body.landMode #landShell{display:flex}
+ body.landMode main{visibility:hidden;pointer-events:none}
+ .landInner{max-width:1180px;margin:0 auto;padding:20px 24px 40px;width:100%;display:flex;flex-direction:column;gap:18px}
+ .landHeroLabel{font:600 11px monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+ .landHero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;align-items:stretch}
+ .landHeroMeta h2{margin:0 0 8px;font:600 22px/1.2 system-ui,sans-serif;color:var(--ink)}
+ .landHeroMeta .htag{display:inline-block;font:10px monospace;padding:2px 7px;border-radius:4px;background:#3a2208;color:var(--hero);margin-left:8px;vertical-align:middle}
+ .landStats{display:flex;flex-wrap:wrap;gap:12px;font:12px monospace;color:var(--dim);margin:10px 0 14px}
+ .landStats .ok{color:var(--ok)}
+ .landActs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+ .landPrev{background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:160px}
+ .landPrev canvas,.landPrev .landPrevPh{flex:1;width:100%;background:#0a1418;display:flex;align-items:center;justify-content:center;color:var(--dim);font:12px monospace}
+ .landPrev .landPrevFoot{padding:6px 10px;font:10px monospace;color:var(--dim);border-top:1px solid var(--line);display:flex;justify-content:space-between}
+ .landCols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ .landCol h3{margin:0 0 10px;font:600 11px monospace;letter-spacing:1px;text-transform:uppercase;color:var(--dim)}
+ .landCard{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+ .landCard:hover{border-color:var(--acc)}
+ .landCard .nm{font:600 13px system-ui,sans-serif;color:var(--ink)}
+ .landCard .meta{font:11px monospace;color:var(--dim);margin-top:3px}
+ .landCard .tag{margin-top:4px}
+ .landTip{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#3a2208;border:1px solid var(--hero);border-radius:8px;color:#ffe6b0;font:12px system-ui,sans-serif}
+ .landTip button{margin-left:auto;flex-shrink:0}
+ .landFoot{margin-top:auto;padding:10px 0;font:11px monospace;color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line)}
+ .landFoot a{color:var(--acc);text-decoration:none}
+ /* Beat focus inspector chrome */
+ body.beatFocus #showGrp{display:none !important}
+ body.beatFocus #atomInspGrp{border-color:var(--acc);background:var(--panel)}
+ body.beatFocus #atomInspGrp > h3{color:var(--acc);display:flex;align-items:center;gap:8px}
+ body.beatFocus #atomInspGrp > h3 .bfBadge{display:inline-block;font:9px monospace;padding:1px 6px;border-radius:999px;background:#0f3a3a;border:1px solid var(--acc);color:var(--acc);letter-spacing:.5px}
+ #atomInspGrp > h3 .bfBadge{display:none}
+ #insp .bfSec,#insp #inspSwapBtn{display:none}
+ body.beatFocus #insp .bfSec{display:block;font:600 10px monospace;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin:8px 0 4px;padding-top:6px;border-top:1px solid var(--line)}
+ body.beatFocus #insp .bfSec:first-child{margin-top:0;padding-top:0;border-top:0}
+ body.beatFocus #insp #inspSwapBtn{display:block;margin-top:4px;border-color:var(--acc);color:var(--acc)}
+ body.beatFocus #swapPlateBtn{border-color:var(--acc);color:var(--acc)}
+ /* Dock above fold after Compose */
+ #playerDock.on{position:sticky;bottom:0;z-index:6;max-height:42vh;overflow:auto;box-shadow:0 -8px 24px #0008;display:flex;flex-direction:column}
+ #playerDock.on h3{order:2;flex-shrink:0}
+ #playerDock.on #dockTransport{order:1;position:sticky;top:0;z-index:3;background:#050e12;padding:8px 0;border-bottom:1px solid var(--line);flex-shrink:0}
+ #playerDock.on #playerFrame{order:3;max-height:22vh;height:auto;flex-shrink:0}
+ /* when docked, shrink live preview so transport fits above fold */
+ body.dockVisible #previewBox #pvWrap{max-height:28vh}
+ body.dockVisible #abDock{display:none !important}
+ #dockReplay.priDock,#dockPause.priDock{background:var(--panel2);border-color:var(--acc);color:var(--acc);font-weight:600;padding:4px 12px}
+ #openFightBtn{/* primacy via .openFight */}
+ #beatFocusBtn.on{border-color:var(--acc);background:#0f3a3a;color:var(--acc)}
+ @media (max-width:1100px){
+  .landHero{grid-template-columns:1fr}
+  .landCols{grid-template-columns:1fr}
+  .hproj{display:none}
+ }
+
+ /* HM-COMPOSE-06 — mobile composer/player shell (Stitch 03); desktop 05/04 unchanged above 640px */
+ .dockCompose{display:none}
+ @media (max-width:640px){
+  html,body{height:auto;min-height:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+  header{height:auto;min-height:48px;flex-wrap:wrap;padding:6px 10px;gap:6px;overflow:visible}
+  header h1{font-size:13px}
+  header h1 .ver{display:none}
+  header .hnav{display:none}
+  .hproj{display:none !important}
+  #status{max-width:28vw;font-size:10px}
+  #hdrMore{display:none}
+  header.toolsOpen .htools{display:none}
+  #openFightBtn{font-size:12px;padding:6px 10px;order:2}
+  #composeBtn{display:none} /* Compose lives in sticky dock on mobile */
+  #fxHonestyBar{padding:5px 10px;font-size:11px;flex-wrap:wrap}
+  #banner{padding:5px 10px;flex-wrap:wrap}
+  /* Land shell — already single-col at 1100; tighten for phone */
+  #landShell{inset:48px 0 0 0}
+  .landInner{padding:12px 12px 28px;gap:12px}
+  .landHeroMeta h2{font-size:18px}
+  .landHero{padding:12px}
+  .landTip{flex-wrap:wrap}
+  .landTip button{margin-left:0}
+  /* Composer: single column stage → strip → beat → dock */
+  body:not(.landMode) main{
+    display:grid;
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "stage"
+      "strip"
+      "beat"
+      "dock";
+    height:auto;
+    min-height:calc(100dvh - 48px - var(--banH,0px) - var(--fxH,0px));
+    align-content:start;
+    padding-bottom:76px; /* room for fixed dock */
+  }
+  #atomPane{display:none !important} /* no 3120 Atom Picker rail */
+  body.atomPickCollapsed #atomPane{display:none !important}
+  main > section:nth-of-type(2),
+  main > aside{display:contents}
+  /* hide desktop timeline chrome — zones only */
+  main > section:nth-of-type(2) > h2,
+  #stats,#bar,#ovLane,#tl,#tlTools,#abDock{display:none !important}
+  aside .grp:not(#atomInspGrp){display:none !important}
+  body.beatFocus #showGrp{display:none !important}
+  #previewBox{
+    grid-area:stage;
+    border-top:0;
+    padding:8px 10px;
+    gap:4px;
+    background:#071016;
+  }
+  #previewBox > h3{display:none}
+  #previewBox .v4bar{display:none !important}
+  #previewBox > div:last-child{display:none !important} /* tip */
+  body.dockVisible #previewBox #pvWrap{max-height:none}
+  #pvWrap{border-radius:8px;max-height:42vh}
+  #plateStrip{
+    grid-area:strip;
+    flex:0 0 88px !important;
+    min-height:88px !important;
+    height:88px !important;
+    max-height:88px !important;
+    border-bottom:1px solid var(--line);
+    border-top:1px solid var(--line);
+  }
+  #plateStrip.on{display:flex !important}
+  #plateStrip .pth{width:112px;height:68px}
+  #plateStrip .pth.atomOn{
+    border-color:var(--hero);
+    box-shadow:0 0 0 2px var(--hero), inset 0 0 0 1px #ff8a1e88;
+  }
+  #atomInspGrp{
+    grid-area:beat;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+    padding:10px 12px 12px;
+  }
+  body.beatFocus #atomInspGrp{border-color:var(--line);background:var(--panel)}
+  #atomInspGrp > h3{margin:0 0 6px}
+  #insp .camNudge{grid-template-columns:1fr 1fr}
+  /* Compact beat inspector — keep swap/cam/timing; hide pose grids & mode chrome */
+  #insp .poseGrid,#insp label:has(#iMode),#insp #inspPlateThumbs{display:none !important}
+  #insp{max-height:none}
+  #playerDock{
+    grid-area:dock;
+    display:flex !important; /* always reachable Compose on mobile */
+    position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;
+    z-index:30 !important;
+    width:100% !important;
+    max-height:none !important;overflow:visible !important;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));
+    background:#050e12;border-top:1px solid var(--line);
+    box-shadow:0 -6px 20px #000a;
+    flex-direction:column;gap:6px;
+    margin:0 !important;
+  }
+  #playerDock.on{
+    position:fixed !important;bottom:0 !important;top:auto !important;
+    max-height:none !important;overflow:visible !important;
+  }
+  #playerDock.on{max-height:none}
+  #playerDock h3{display:none}
+  #playerDock #playerFrame{display:none} /* keep transport slim; open tab for full player */
+  #playerDock.on #playerFrame{display:none}
+  #dockTransport{
+    order:0;position:static;display:flex;flex-wrap:nowrap;align-items:center;gap:6px;
+    padding:0;border:0;background:transparent;width:100%;
+  }
+  #dockReplay.priDock,#dockPause.priDock{
+    flex:0 0 auto;min-width:56px;padding:8px 12px;font-size:13px;border-radius:8px;
+  }
+  #dockTransport > label{flex:1;min-width:0;font-size:10px}
+  #dockScrub{width:100% !important;min-width:0}
+  #dockOpenTab,#dockHide{display:none}
+  .dockCompose{
+    display:inline-flex !important;align-items:center;justify-content:center;gap:4px;
+    margin-left:auto;flex:0 0 auto;
+    background:var(--hero) !important;border-color:var(--hero) !important;color:#1a0c00 !important;
+    font-weight:700;font-size:13px;padding:8px 14px;border-radius:8px;
+  }
+  #playerDock:not(.on) #dockReplay,
+  #playerDock:not(.on) #dockPause,
+  #playerDock:not(.on) > #dockTransport > label{opacity:.35;pointer-events:none}
+  /* Modal full-bleed */
+  .modal .box{max-width:100%;width:96%;margin:8px;max-height:90dvh;overflow:auto}
+  #platePick.modal .box{max-width:100%;width:96%}
+ }
+</style></head>
+<body>
+<header id="appHeader">
+ <h1>HTML MOTION<span class="ver">v2.4</span></h1>
+ <nav class="hnav" aria-label="Primary">
+  <button type="button" class="hnavOn" id="navFights" title="Land / open fights">Fights</button>
+  <button type="button" id="navPacks" title="Plate-pack fights">Plate Packs</button>
+  <button type="button" disabled title="Templates — later">Templates</button>
+  <button type="button" disabled title="Settings — later">Settings</button>
+ </nav>
+ <div class="hproj" id="hdrProject">Project: —</div>
+ <div class="hspacer"></div>
+ <div class="htools" id="hdrTools">
+  <select id="example" title="example shows"></select>
+  <button id="loadEx" class="ghost">Load</button>
+  <button id="newShow" class="ghost">New</button>
+  <button id="undoBtn" class="ghost" title="⌘/Ctrl+Z">Undo</button>
+  <button id="redoBtn" class="ghost" title="⌘/Ctrl+Shift+Z">Redo</button>
+  <button id="saveBtn" class="ghost">Save</button>
+  <button id="dupShowBtn" class="ghost" title="Save as / duplicate show (HM-COMPOSE-02)">Save as…</button>
+  <button id="exportBtn" class="ghost">Export</button>
+  <button id="previewBtn" class="ghost" title="open player in new tab">Preview ▶</button>
+  <button id="copyUrlBtn" class="ghost" title="copy editor deep link">Copy URL</button>
+ </div>
+ <button type="button" id="hdrMore" class="ghost" title="Show Load / New / Undo / Save…">More ▾</button>
+ <button id="composeBtn" class="pri composePri" title="compose + refresh docked player">Compose &amp; preview</button>
+ <button id="openFightBtn" class="pri openFight" title="Open pinned / recent Codex plate-pack fight (HM-COMPOSE-04/05)">Open fight</button>
+ <div id="status">loading…</div>
+</header>
+<div id="fxHonestyBar"><span class="ico">⚠</span><span>FX Honesty State: Compose to see FX — live preview shows cam &amp; plates only.</span></div>
+<div id="banner"><span class="msg" id="bannerMsg">edited — recompose to refresh player</span>
+ <button id="revertBtn" class="small">Revert to last composed</button>
+ <button id="bannerDismiss" class="small">dismiss</button>
+</div>
+<div id="draftModal" class="modal"><div class="box">
+ <h4>Local draft found</h4>
+ <div id="draftMsg" style="color:var(--dim);font:12px monospace"></div>
+ <div class="acts"><button id="draftDiscard">Discard</button><button id="draftRestore" class="pri">Restore</button></div>
+</div></div>
+
+<div id="dupModal" class="modal"><div class="box">
+ <h4>Save as / Duplicate</h4>
+ <div style="color:var(--dim);font:12px monospace">Copies the current show under a new id. Assets are symlinked so gold/import stays untouched.</div>
+ <label style="display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center;color:var(--dim)">from<input id="dupFrom" disabled></label>
+ <label style="display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center;color:var(--dim)">new show_id<input id="dupTo" placeholder="daiyu-wang-codex-v2"></label>
+ <label style="display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center;color:var(--dim)">title<input id="dupTitle" placeholder="optional title"></label>
+ <label class="chk" style="display:flex;align-items:center;gap:4px;color:var(--dim)"><input type="checkbox" id="dupCompose"> also compose (off = duplicate only)</label>
+ <div id="dupOut" style="font:11px monospace;color:var(--dim)">—</div>
+ <div class="acts"><button id="dupCancel">Cancel</button><button id="dupRun" class="pri">Duplicate</button></div>
+</div></div>
+<div id="platePick" class="modal"><div class="box">
+ <h4>Swap plate</h4>
+ <div id="platePickMeta" style="color:var(--dim);font:12px monospace">—</div>
+ <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <label class="chk" style="display:inline-flex;align-items:center;gap:3px;color:var(--dim)"><input type="radio" name="plateSrc" value="cutout" checked> cutout/</label>
+  <label class="chk" style="display:inline-flex;align-items:center;gap:3px;color:var(--dim)"><input type="radio" name="plateSrc" value="plates"> plates/</label>
+  <input id="platePickFilter" placeholder="filter P…" size="10">
+ </div>
+ <div id="platePickGrid"></div>
+ <div class="acts"><button id="platePickCancel">Cancel</button><button id="platePickApply" class="pri">Use selected</button></div>
+</div></div>
+
+<div id="landShell" aria-label="Open fight land">
+ <div class="landInner">
+  <div class="landHeroLabel">Continue last fight</div>
+  <div class="landHero" id="landHero">
+   <div class="landHeroMeta">
+    <h2 id="landHeroTitle">— <span class="htag" id="landHeroTag">PLATE-PACK</span></h2>
+    <div class="landStats" id="landHeroStats"></div>
+    <div class="landActs">
+     <button type="button" class="pri openFight" id="landOpenHero">Open</button>
+     <button type="button" id="landBeatFocus" class="ghost" title="Open in Beat focus">Beat focus</button>
+    </div>
+  </div>
+   <div class="landPrev">
+    <div class="landPrevPh" id="landPrevPh">CAM_A · plate-pack preview</div>
+    <div class="landPrevFoot"><span>SYNC · live cam</span><span id="landPrevDur">—</span></div>
+   </div>
+  </div>
+  <div class="landCols">
+   <div class="landCol">
+    <h3>Pinned plate-pack fights</h3>
+    <div id="landPinned"></div>
+   </div>
+   <div class="landCol">
+    <h3>Recent fights</h3>
+    <div id="landRecent"></div>
+   </div>
+  </div>
+  <div class="landTip">
+    <span>Tip: Open a Codex plate-pack to start editing in under 60 seconds. Drag &amp; drop .motionpacks or click Import.</span>
+    <button type="button" class="small" id="landGotoImport" title="Jump to Import panel in composer">Import…</button>
+  </div>
+  <div class="landFoot">
+   <span>HTML Motion v2.4 · Live cam &amp; plates preview ready · Engine sync OK</span>
+   <span>Jack-speed 60fps · <a href="../docs/" target="_blank" rel="noopener">DOCS</a> · SHORTCUTS · SYSTEM DIAGNOSTIC</span>
+  </div>
+ </div>
+</div>
+<main>
+ <section id="atomPane">
+  <h2><span class="atomTitle">Atom picker</span> <span id="count" style="font-weight:400"></span>
+   <span class="paneTools">
+    <label class="chk" title="Animate library card thumbs (costs CPU; off = static + faster live preview)"><input type="checkbox" id="cardAnimChk"> animate</label>
+    <button type="button" id="atomCollapse" class="small" title="Collapse / expand atom library">«</button>
+   </span>
+  </h2>
+  <div class="filters">
+   <select id="fFamily"></select><select id="fPreset"></select><select id="fBeat"></select>
+   <select id="fDur"><option value="">any dur</option><option>1</option><option>1.5</option><option>2</option></select>
+   <select id="fMode"><option value="">any mode</option><option>library</option><option>hero</option></select>
+   <input id="fText" placeholder="search…" size="10">
+  </div>
+  <div id="cards"></div><button id="more">show more</button>
+ </section>
+ <section>
+  <h2>Timeline <span style="margin-left:auto;font-weight:400">drag cards in · drag rows to reorder</span></h2>
+  <div id="stats"></div>
+  <div id="bar"></div>
+  <div id="ovLane" title="overlay lane · drag edges to trim"></div>
+  <div id="plateStrip" title="P01–P60 plate strip · click select · double-click swap"></div>
+  <div class="tlTools" id="tlTools">
+   <button type="button" id="splitAtomBtn" class="small" title="Split selected hero atom">Split</button>
+   <button type="button" id="mergeAtomBtn" class="small" title="Merge with next atom">Merge→</button>
+   <button type="button" id="swapPlateBtn" class="small" title="Swap plate under scrub">Swap plate…</button>
+   <button type="button" id="beatFocusBtn" class="small" title="Beat focus: strip + cam + timing + swap; collapse Atom Picker">Beat focus</button>
+   <label id="followPlayheadLbl" class="chk" title="Keep plate strip scrolled to the current beat while scrubbing / playing"><input type="checkbox" id="followPlayheadChk"> follow playhead</label>
+   <span id="durWarn" style="font:10px monospace;color:var(--dim)"></span>
+  </div>
+  <div id="tl"></div>
+  <div id="previewBox">
+   <h3>Live preview <span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">v4 · ,/. scrub · Shift←/→ atom · Alt nudge · Space loop A–B</span></h3>
+   <div style="display:flex;gap:8px;align-items:center">
+    <input id="scrub" type="range" min="0" max="8" step="0.05" value="0" style="flex:1">
+    <span id="scrubT" style="font:11px monospace;color:var(--dim);min-width:52px">0.00s</span>
+   </div>
+   <div class="v4bar">
+    <button id="loopInBtn" class="small" title="set loop In = scrub">In</button>
+    <button id="loopOutBtn" class="small" title="set loop Out = scrub">Out</button>
+    <button id="loopClearBtn" class="small" title="clear loop">Clear A/B</button>
+    <span id="loopLbl" style="font:10px monospace;color:#f6a">loop off</span>
+    <label class="chk"><input type="checkbox" id="guidesChk" checked> guides</label>
+    <label class="chk"><input type="checkbox" id="camLiveChk" checked> live cam</label>
+    <label class="chk"><input type="checkbox" id="contactGhostChk"> contact ghost</label>
+    <button id="abToggle" class="small" title="A/B live | composed">A/B dock</button>
+    <button id="exportStillBtn" class="small" title="PNG at scrub">Still PNG</button>
+    <button id="exportStripBtn" class="small" title="N-frame strip">Strip</button>
+    <input id="stripN" type="number" min="2" max="24" value="8" title="strip frames" style="width:44px;padding:2px 4px">
+   </div>
+   <div id="pvWrap"><canvas id="pv" width="1280" height="720"></canvas><div id="pvHud">—</div><div id="fxBanner">Compose to see FX (sparks / hits) — live preview shows plates + wording only</div></div>
+   <div style="font:10px monospace;color:var(--dim)">Drag cyan/orange = L/R · yellow = overlay · lane edges trim t_start/t_end. Y≠0 breaks floor grounding. <b>Zoom:</b> Characters panel scale / Selected atom L·R sc · Alt+wheel on preview scales nearest char · cam s = live cam preset (toggle live cam).</div>
+  </div>
+  <div id="abDock">
+   <h3>A/B compare <span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">live | composed @ shared t</span>
+    <label class="chk" style="margin-left:8px;text-transform:none;letter-spacing:0"><input type="checkbox" id="abWipeChk"> wipe</label>
+    <button id="abHide" class="small">hide</button>
+   </h3>
+   <input id="abWipe" type="range" min="0" max="100" value="50" style="display:none">
+   <div id="abGrid">
+    <div id="abLiveWrap"><canvas id="abLive" width="1280" height="720"></canvas><div style="position:absolute;left:6px;top:4px;font:10px monospace;color:#7fd">LIVE</div></div>
+    <div id="abPlayWrap"><iframe id="abPlayer" title="composed A/B"></iframe><div style="position:absolute;left:6px;top:4px;font:10px monospace;color:#fca;pointer-events:none">COMPOSED</div></div>
+   </div>
+  </div>
+  <div id="playerDock">
+   <div id="dockTransport">
+    <button type="button" id="dockReplay" class="small priDock" title="Play composed player from scrub">Play</button>
+    <button type="button" id="dockPause" class="small priDock" title="Pause / freeze at scrub">Pause</button>
+    <label style="display:inline-flex;align-items:center;gap:4px;font:10px monospace;color:var(--dim)">scrub
+     <input id="dockScrub" type="range" min="0" max="30" step="0.05" value="0" style="width:160px">
+     <span id="dockScrubT">0.00s</span>
+    </label>
+    <button id="dockOpenTab" class="small" style="margin-left:8px">open tab</button>
+    <button id="dockHide" class="small">hide</button>
+    <button type="button" id="dockCompose" class="pri dockCompose" title="Compose & preview (mobile dock)">Compose</button>
+    <span id="dockToast"></span>
+   </div>
+   <h3>Composed player <span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">after-edit review · synced scrub t</span></h3>
+   <iframe id="playerFrame" title="composed player"></iframe>
+  </div>
+ </section>
+ <aside>
+  <div class="grp keepFocus" id="showGrp"><h3>Show</h3>
+   <label>show_id<input id="sId"></label><label>title<input id="sTitle"></label>
+   <label>target<select id="sTarget"><option>30</option><option>45</option><option>60</option></select></label>
+   <label>char zoom<input id="sCharScale" type="number" step="0.05" min="0.2" max="4" title="show.char_screen_scale — global character zoom"></label>
+   <label>draft<span><input type="checkbox" id="sDraft"> allow &lt;30s (QA only)</span></label>
+  </div>
+  <div class="grp"><h3>Characters</h3><div id="slots"></div></div>
+  <div class="grp"><h3>Background</h3>
+   <label>base<select id="bgBase"></select></label><label>swap<select id="bgSwap"></select></label>
+   <label>swap at (s)<input id="bgSwapT" type="number" step="0.5" min="0"></label><img id="bgthumb">
+  </div>
+  <div class="grp keepFocus" id="atomInspGrp"><h3><span class="inspIdle">Selected atom</span><span class="inspBeat">Beat focus inspector</span> <span class="bfBadge">ACTIVE</span></h3><div id="insp" class="empty">select a timeline row</div></div>
+  <div class="grp"><h3>Wording / overlays (v3)</h3>
+   <div style="font:10px monospace;color:var(--dim)">Artificial text (runtime) preferred · legacy PNG optional</div>
+   <div class="chiprow" id="ovPresets" title="one-click add at scrub"></div>
+   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <input id="ovCustomText" placeholder="custom text…" style="flex:1;min-width:80px">
+    <select id="ovDefaultFx" title="default effect" style="max-width:110px"></select>
+    <button id="ovAddText" class="small pri">+ text</button>
+   </div>
+   <details style="font-size:11px;color:var(--dim)"><summary>legacy PNG / upload</summary>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+     <select id="ovPick" style="flex:1"></select>
+     <button id="ovAdd" class="small">+ PNG</button>
+     <label class="small" style="display:flex;align-items:center;gap:4px;cursor:pointer">upload<input type="file" id="ovUp" accept="image/png,image/*" style="display:none"></label>
+     <button id="ovGenPng" class="small" title="Unavailable in frontend-only mode (local Pillow only)">gen PNG</button>
+    </div>
+   </details>
+   <div style="display:flex;gap:4px;flex-wrap:wrap">
+    <button id="ovDup" class="small">Duplicate</button>
+    <button id="ovSnapAtom" class="small">Snap → atom</button>
+    <button id="ovSnapHit" class="small">Snap → hit</button>
+    <button id="ovBringUp" class="small" title="raise z">Bring↑</button>
+    <button id="ovSendDown" class="small" title="lower z">Send↓</button>
+   </div>
+   <div id="ovList" class="empty">no overlays</div>
+  </div>
+  <div class="grp"><h3>Edit loop (HM-COMPOSE-02)</h3>
+   <div style="font:10px monospace;color:var(--dim)">Save as → plate strip/swap → timing → cam nudge → L/R framing → FX/wording. Use header <b>Save as…</b> first so experiments never overwrite the import.</div>
+   <button type="button" id="dupShowBtn2" class="small">Save as / Duplicate…</button>
+  </div>
+  <div class="grp"><h3>Import plate pack (FE-only)</h3>
+   <div style="font:10px monospace;color:var(--dim)">Frontend-only: choose a Codex <b>folder</b> (layout.json + plates/ + bg/). Zip needs unzip first. No server upload.</div>
+   <label>show_id<input id="impShowId" placeholder="daiyu-wang-codex-import"></label>
+   <label>folder<input type="file" id="impFolder" webkitdirectory multiple></label>
+   <label>zip (info only)<input type="file" id="impZip" accept=".zip,application/zip"></label>
+   <button type="button" id="impRun" class="pri small">Import &amp; compose</button>
+   <div id="impOut" style="font:10px monospace;color:var(--dim);margin-top:4px">—</div>
+  </div>
+  <div class="grp"><h3>Template Setup (v4 #10)</h3>
+   <div style="font:10px monospace;color:var(--dim)">Pick a template → materialize show + image manifest. Local wording/composites generate now; hero plates stay pending GenerateImage.</div>
+   <label>template<select id="setupTemplate"></select></label>
+   <label>new show_id<input id="setupShowId" placeholder="my-show"></label>
+   <label>L library<select id="setupLibL"></select></label>
+   <label>R library<select id="setupLibR"></select></label>
+   <label>costume lock<input id="setupCostume" placeholder="optional path"></label>
+   <button type="button" id="setupRun" class="pri small">Run setup</button>
+  </div>
+  <div class="grp"><h3>Compose output</h3><div id="out" class="err" style="color:var(--dim)">—</div></div>
+ </aside>
+</main>
+<script src="compose-client.js"></script>
+<script src="fe-store.js"></script>
+<script>
+
+const $=id=>document.getElementById(id);
+const API=location.protocol.startsWith('http');
+let CAT=null, PRESETS={}, BGIMG=new Image(), SHOW=null, SEL=-1, LIMIT=24, apiOK=false, SCRUB=0, SEL_OV=-1, DRAG=null, POSE_CACHE={};
+let FE_ONLY=true; // HM-COMPOSE-07 product path: static host, in-browser compose, no /api/* required
+let FE_ASSET_MAP={}; // imported pack object URLs / inline json
+let dirtyDisk=false, lastComposedHash='', lastSavedHash='', lastComposedSnap=null, hasComposed=false;
+let hist=[], histI=-1, histApplying=false, HIST_CAP=40;
+let autoplay=false, autoplayRAF=null, autosaveTimer=null, pendingDraft=null;
+let LOOP_A=null, LOOP_B=null, SHOW_GUIDES=true, LIVE_CAM=true, CONTACT_GHOST=false;
+let SEL_SET=new Set(), CLIP_ATOMS=null;
+
+const DRAFT_PREFIX='html-motion-composer:draft:';
+const EASE={smooth:x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)},linear:x=>Math.max(0,Math.min(1,x)),sine:x=>0.5-0.5*Math.cos(Math.PI*Math.max(0,Math.min(1,x)))};
+function curve(c,u,tl){switch(c.type){case'const':return c.v;case'lerp':return c.a+(c.b-c.a)*EASE[c.ease||'smooth'](u);
+ case'saw':return c.a+(c.b-c.a)*((tl%c.period_s)/c.period_s);case'sin':return (c.offset||0)+c.amp*Math.sin(('omega'in c?c.omega*tl:2*Math.PI*(c.cycles??1)*u)+(c.phase||0));
+ case'alt_bump':{const k=c.n*u;return (c.offset||0)+(Math.floor(k)%2?1:-1)*c.amp*Math.sin((k%1)*Math.PI)}}return 0}
+function cam(curves,u,tl){const D={x:0,y:0,s:1.12,r:0},o={};for(const ch of'xysr')o[ch]=curves[ch]?curve(curves[ch],u,tl):D[ch];o.s=Math.max(o.s,1+Math.abs(Math.sin(o.r*Math.PI/180))*.9);return o}
+function status(m,bad){$('status').textContent=m;$('status').style.color=bad?'var(--bad)':'var(--dim)'}
+function showHash(){ try{return JSON.stringify(SHOW)}catch(e){return ''} }
+function markDirty(){
+  if(histApplying||!SHOW) return;
+  dirtyDisk=true;
+  scheduleAutosave();
+  updateBanner();
+  updatePreviewBtn();
+}
+function updateBanner(){
+  const stale=hasComposed && lastComposedHash && showHash()!==lastComposedHash;
+  const ban=$('banner');
+  document.documentElement.style.setProperty('--banH', (stale||dirtyDisk)?'32px':'0px');
+  if(stale){
+    ban.classList.add('on');
+    $('bannerMsg').textContent='edited — recompose to refresh player'+(dirtyDisk?' · unsaved':'');
+    $('revertBtn').style.display=lastComposedSnap?'inline-block':'none';
+  } else if(dirtyDisk){
+    ban.classList.add('on');
+    $('bannerMsg').textContent='unsaved changes — Save or Compose';
+    $('revertBtn').style.display=lastComposedSnap?'inline-block':'none';
+  } else {
+    ban.classList.remove('on');
+  }
+}
+function updatePreviewBtn(){
+  const btn=$('previewBtn');
+  if(!btn) return;
+  const need= !hasComposed || (lastComposedHash && showHash()!==lastComposedHash);
+  btn.title = need ? 'composed player may be stale — Compose & Preview first' : 'open player in new tab';
+  btn.style.opacity = need ? '.65' : '1';
+}
+function pushHist(){
+  if(histApplying||!SHOW) return;
+  const snap=JSON.stringify(SHOW);
+  if(histI>=0 && hist[histI]===snap) return;
+  hist=hist.slice(0, histI+1);
+  hist.push(snap);
+  if(hist.length>HIST_CAP) hist=hist.slice(hist.length-HIST_CAP);
+  histI=hist.length-1;
+  updateHistBtns();
+}
+function updateHistBtns(){
+  if($('undoBtn')) $('undoBtn').disabled=histI<=0;
+  if($('redoBtn')) $('redoBtn').disabled=histI<0||histI>=hist.length-1;
+}
+function applyHist(i){
+  if(i<0||i>=hist.length) return;
+  histApplying=true;
+  histI=i;
+  SHOW=JSON.parse(hist[i]);
+  SEL=Math.min(SEL, SHOW.atoms.length-1);
+  if(SEL<0 && SHOW.atoms.length) SEL=0;
+  SEL_OV=-1;
+  renderShow(); renderTL(); updateScrub(); paintPreview();
+  histApplying=false;
+  markDirty();
+  updateHistBtns();
+  status(i?'undo/redo':'');
+}
+function undo(){ if(histI>0) applyHist(histI-1); }
+function redo(){ if(histI<hist.length-1) applyHist(histI+1); }
+function draftKey(){ return DRAFT_PREFIX+(SHOW&&SHOW.show_id||'unknown'); }
+function scheduleAutosave(){
+  if(!SHOW||histApplying) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer=setTimeout(()=>{
+    try{
+      const payload={ts:Date.now(), show:SHOW, scrub:SCRUB};
+      localStorage.setItem(draftKey(), JSON.stringify(payload));
+    }catch(e){}
+  }, 800);
+}
+function clearDraft(){ try{ localStorage.removeItem(draftKey()); }catch(e){} }
+function checkDraftRestore(showId){
+  try{
+    const raw=localStorage.getItem(DRAFT_PREFIX+showId);
+    if(!raw) return null;
+    const d=JSON.parse(raw);
+    if(!d||!d.show||!d.ts) return null;
+    return d;
+  }catch(e){return null}
+}
+function xfOf(side){const t=(SHOW.chars[side]&&SHOW.chars[side].transform)||{}; return {x:+(t.x||0), y:+(t.y||0), scale:+(t.scale??1)||1};}
+function setXf(side, field, val, opts){const c=SHOW.chars[side]; if(!c.transform) c.transform={x:0,y:0,scale:1}; c.transform[field]=val;
+  const o=opts||{}; if(!o.silentHist){ pushHist(); markDirty(); }
+  if(o.rerender){ renderShow(); paintPreview(); return; }
+  const wy=$('slots')&&$('slots').querySelector(`[data-wy="${side}"]`);
+  if(wy && field==='y') wy.classList.toggle('on', Math.abs(+val)>1e-6);
+  paintPreview();}
+function atomXf(a, side){const base=xfOf(side); const ov=(a.char_overrides&&a.char_overrides[side])||{};
+  return {x: ov.x!=null?+ov.x:base.x, y: ov.y!=null?+ov.y:base.y, scale: ov.scale!=null?+ov.scale:base.scale};}
+function ensureOverlays(){ if(!SHOW.overlays) SHOW.overlays=[]; return SHOW.overlays; }
+const OV_EFFECTS=["none","pop","slam","shake","flash","fade","bounce","slide_left","slide_right","spin_in","pulse","impact"];
+const FONT_OPTS=[{id:'Ma Shan Zheng',label:'書法·马善政'},{id:'Long Cang',label:'草書·龙藏'},{id:'Noto Serif CJK SC',label:'Noto Serif CJK'},{id:'Noto Sans CJK SC',label:'Noto Sans CJK'}];
+(function loadCalligraphyFonts(){ if(!(document.fonts&&document.fonts.load)) return; Promise.all(['Ma Shan Zheng','Long Cang'].map(n=>document.fonts.load('96px "'+n+'"'))).then(()=>{ try{ if(typeof paintPreview==='function'&&typeof SHOW!=='undefined'&&SHOW) paintPreview(); }catch(e){} }).catch(()=>{}); })();
+const OV_PRESETS=["砰","咚","咔","啪","CLASH","BANG","HIT","KO","終","WHOOSH"];
+const FX_HOOK_CHIPS=["hit_orange","hit_pink","shake","dust","sparks","speed_lines","flash_orange","flash_pink","bg_flash_blue","smear_trail","hitstop_2f"];
+function ovEffectSpec(o){
+  const e=o&&o.effect; if(!e) return {type:'none', intensity:1};
+  if(typeof e==='string') return {type:e||'none', intensity:1};
+  return {type:e.type||'none', intensity:Math.max(0.25, Math.min(2, +(e.intensity||1)||1)), hold:e.hold};
+}
+function ovEffectXform(spec, u){
+  const I=spec.intensity||1, t=spec.type||'none';
+  let tx=0,ty=0,sx=1,sy=1,rot=0,opMul=1,flash=0;
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const easeOut=x=>{x=clamp(x,0,1);return 1-Math.pow(1-x,3)};
+  const easeIn=x=>{x=clamp(x,0,1);return x*x*x};
+  const lerp=(a,b,x)=>a+(b-a)*x;
+  if(t==='pop'){ const p=clamp(u/0.28,0,1); const over=1+0.35*I; const s=p<1?(0.15+over*easeOut(p)):(over+(1-over)*easeOut(clamp((u-0.28)/0.22,0,1))); sx=sy=s; opMul=clamp(u/0.08,0,1); }
+  else if(t==='slam'){ const p=clamp(u/0.35,0,1); ty=-180*I*(1-easeOut(p)); const squash=p<0.55?lerp(1.4,0.75,p/0.55):lerp(0.75,1,easeOut((p-0.55)/0.45)); sx=lerp(0.85,1,easeOut(p)); sy=squash; opMul=clamp(u/0.05,0,1); }
+  else if(t==='shake'){ const env=1-easeIn(u); const a=10*I*env; tx=Math.sin(u*54)*a; ty=Math.cos(u*47)*a*0.65; }
+  else if(t==='flash'){ opMul=0.25+0.75*Math.abs(Math.sin(u*Math.PI*6*I)); }
+  else if(t==='fade'){ opMul=Math.min(easeOut(clamp(u/0.22,0,1)), 1-easeIn(clamp((u-0.78)/0.22,0,1))); }
+  else if(t==='bounce'){ const p=clamp(u/0.5,0,1); sx=sy=1+0.45*I*Math.sin(p*Math.PI)*Math.exp(-2.2*p); opMul=clamp(u/0.06,0,1); }
+  else if(t==='slide_left'){ tx=-220*I*(1-easeOut(clamp(u/0.4,0,1))); opMul=clamp(u/0.08,0,1); }
+  else if(t==='slide_right'){ tx=220*I*(1-easeOut(clamp(u/0.4,0,1))); opMul=clamp(u/0.08,0,1); }
+  else if(t==='spin_in'){ const p=easeOut(clamp(u/0.45,0,1)); rot=-180*I*(1-p); sx=sy=0.2+0.8*p; opMul=clamp(u/0.08,0,1); }
+  else if(t==='pulse'){ sx=sy=1+0.12*I*Math.sin(u*Math.PI*4); }
+  else if(t==='impact'){ const p=clamp(u/0.25,0,1); const over=1+0.5*I; sx=sy=p<1?(0.1+over*easeOut(p)):(over+(1-over)*easeOut(clamp((u-0.25)/0.2,0,1))); flash=u<0.18?(1-u/0.18)*I:0; opMul=clamp(u/0.05,0,1); }
+  if(t!=='fade'&&t!=='none'&&t!=='flash'&&t!=='pulse'&&u>0.85) opMul*=1-easeIn((u-0.85)/0.15);
+  return {tx,ty,sx,sy,rot,opMul,flash};
+}
+function isTextOverlay(o){ return !!(o && (o.kind==='text' || (o.text && o.kind!=='image'))); }
+function defaultTextStyle(){ return {fill:'#ffe66d', stroke:'#1a0a00', strokeWidth:8, fontSize:96, fontWeight:'400', italic:false, fontFamily:'Ma Shan Zheng'}; }
+function defaultEffect(type){ return {type: type||'pop', intensity:1}; }
+function nextOvId(){ const n=(SHOW.overlays||[]).length+1; let id='ov_'+n; const ids=new Set((SHOW.overlays||[]).map(o=>o.id)); while(ids.has(id)){ id='ov_'+(++n); } return id; }
+function addTextOverlay(text, effectType){
+  const d=totalDur()||8;
+  const t0=Math.min(SCRUB, Math.max(0,d-0.2));
+  const o={id:nextOvId(), kind:'text', text:String(text||'砰'), style:defaultTextStyle(),
+    effect:defaultEffect(effectType || ($('ovDefaultFx')&&$('ovDefaultFx').value) || 'impact'),
+    t_start:t0, t_end:Math.min(t0+1.2, d||t0+1.2), x:640, y:180, scale:1, opacity:1, z:20};
+  ensureOverlays().push(o); SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); renderOvLane(); paintPreview();
+  status('text overlay “'+o.text+'” + '+(o.effect.type));
+  return o;
+}
+function atomBounds(){
+  const out=[]; let t=0;
+  (SHOW.atoms||[]).forEach(a=>{ const d=+a.duration_s||0; out.push({id:a.id, t0:t, t1:t+d, atom:a}); t+=d; });
+  return out;
+}
+function nearestAtomAt(t){
+  const b=atomBounds(); if(!b.length) return null;
+  for(const x of b){ if(t>=x.t0 && t<x.t1) return x; }
+  return b[b.length-1];
+}
+function nearestHitTime(t){
+  // Prefer composed timeline hits if docked/known; else mid of current atom
+  const mid = (()=>{ const a=nearestAtomAt(t); return a? (a.t0+a.t1)/2 : t; })();
+  if(window.__lastHits && window.__lastHits.length){
+    let best=window.__lastHits[0], bd=Math.abs(best-t);
+    for(const h of window.__lastHits){ const d=Math.abs(h-t); if(d<bd){bd=d;best=h;} }
+    return best;
+  }
+  return mid;
+}
+async function fetchComposedHits(sid){
+  try{
+    const tl=await fetch('/out/'+encodeURIComponent(sid)+'/timeline.json').then(r=>r.ok?r.json():null);
+    if(tl && tl.fx && tl.fx.hits){ window.__lastHits = tl.fx.hits.map(h=>Array.isArray(h)?h[0]:h); return window.__lastHits; }
+  }catch(e){}
+  return null;
+}
+
+function totalDur(){return SHOW.atoms.reduce((s,a)=>s+(+a.duration_s||0),0);}
+function plateAtTime(t){
+  let acc=0;
+  for(const a of SHOW.atoms){
+    const d=+a.duration_s||0;
+    if(t < acc+d - 1e-9){
+      const i=Math.min(Math.floor((t-acc)*2), Math.max(0, (a.plates_needed||d*2)-1));
+      return {atom:a, plateIdx:i, t0:acc};
+    }
+    acc+=d;
+  }
+  if(SHOW.atoms.length){const a=SHOW.atoms[SHOW.atoms.length-1]; return {atom:a, plateIdx:Math.max(0,(a.plates_needed||1)-1), t0:acc-(+a.duration_s||0)};}
+  return null;
+}
+function posePng(side, poseId){
+  const lib=libFor(side); if(!lib) return null;
+  const p=(lib.poses||[]).find(q=>q.pose_id===poseId); return p? ('../'+p.png) : null;
+}
+
+const LAYOUT_CACHE={};
+async function loadLayoutJson(rel){
+  if(!rel) return null;
+  if(LAYOUT_CACHE[rel]) return LAYOUT_CACHE[rel];
+  try{
+    const r=await fetch('../'+rel.replace(/^\.\//,'')).then(x=>x.json());
+    LAYOUT_CACHE[rel]=r; return r;
+  }catch(e){ LAYOUT_CACHE[rel]=null; return null; }
+}
+function loadImg(url){
+  if(!url) return Promise.resolve(null);
+  if(POSE_CACHE[url] && POSE_CACHE[url].complete) return Promise.resolve(POSE_CACHE[url]);
+  return new Promise(res=>{ const im=POSE_CACHE[url]||new Image(); POSE_CACHE[url]=im; if(im.complete&&im.naturalWidth) return res(im);
+    im.onload=()=>res(im); im.onerror=()=>res(null); if(!im.src) im.src=url; });
+}
+const STRIKE=['jab','straight','hook','uppercut','elbow','knee','front_kick','spin_kick','sweep','clash'], DEF=['block','parry','duck','slip'];
+function defaultFx(beat){
+ if(STRIKE.includes(beat)) return [{t_rel:.4,type:'smear_trail',params:{dir:1}},{t_rel:.5,type:beat==='clash'?'hit_pink':'hit_orange'}].concat(beat==='clash'?[{t_rel:.5,type:'sparks',params:{n:50}}]:[]);
+ if(DEF.includes(beat)) return [{t_rel:.5,type:'hit_pink'},{t_rel:.55,type:'dust'}];
+ if(beat==='leap_short') return [{t_rel:0,type:'speed_lines',t_rel_end:1,params:{mode:'up'}}];
+ if(beat==='skid'||beat==='cartwheel') return [{t_rel:.3,type:'dust',params:{k:1.2}}];
+ if(beat==='impact_hold') return [{t_rel:0,type:'shake'}];
+ return [];
+}
+function libFor(side){const p=SHOW&&SHOW.chars[side].pose_library;return CAT.libraries.find(l=>l.path===p)}
+function pickPose(lib,tags){if(!lib||!lib.poses||!lib.poses.length)return null;const m=lib.poses.find(p=>p.tags.some(t=>tags.includes(t)));return (m||lib.poses[0]).pose_id}
+function makeAtom(pid,beat,dur,mode){
+ const P=PRESETS[pid], n=dur*2;
+ const a={id:`cam_${pid}__mot_${beat}__${dur}s__${mode==='hero'?'hero':'lib'}`,duration_s:dur,plates_needed:n,kind:P.default_kind==='close'&&mode==='library'?'duo':P.default_kind,
+  camera:{preset:pid,angle:P.angle,move:P.move},motion:{family:$('fFamily').value||'fight',beat_class:beat},pose_mode:mode,fx_hooks:defaultFx(beat),
+  layout_hints:{shadow_policy:'contact'},assets:{char_slots:['L','R'],requires_costume_lock:true},
+  compat:{prev_exit_tags:['grounded'],next_entry_tags:['grounded']},source_refs:[`preset ${pid}: ${P.comment.split('|')[0].trim()}`]};
+ if(mode==='library'){
+  const atk=STRIKE.includes(beat)?'L':DEF.includes(beat)?'R':'none';
+  const Lp=pickPose(libFor('L'),atk==='L'?[beat]:atk==='R'?['guard','block','duck','evade']:['guard_recover','windup']);
+  const Rp=pickPose(libFor('R'),atk==='R'?[beat,'straight','hook']:atk==='L'?['block','guard','parry','evade']:['guard_recover','windup']);
+  a.poses={L:Lp||'MISSING',R:Rp||'MISSING'}; a.contact=atk==='none'?{attacker:'none',gap_px:40}:{attacker:atk,target:atk==='L'?'guard':'head'};
+ } else a.hero={layout_source:'',plates:[],pose_briefs:[]};
+ return a;
+}
+function virtualAtoms(){
+ const fam=$('fFamily').value||'fight',beats=CAT.families[fam]||[],out=[];const q=$('fText').value.toLowerCase();
+ for(const p of CAT.presets){ if($('fPreset').value&&p.id!==$('fPreset').value) continue;
+  for(const b of beats){ if($('fBeat').value&&b!==$('fBeat').value) continue;
+   for(const d of [1,1.5,2]){ if($('fDur').value&&+$('fDur').value!==d) continue;
+    for(const m of ['library','hero']){ if($('fMode').value&&m!==$('fMode').value) continue;
+     const id=`cam_${p.id}__mot_${b}__${d}s__${m==='hero'?'hero':'lib'}`; if(q&&!(id+m+p.angle+p.move).toLowerCase().includes(q)) continue; out.push({p,b,d,m,id});}}}}
+ return out;
+}
+let previews=[];
+let CARD_IO=null, cardRaf=null, cardLastT=0, CARD_FPS=8, ANIMATE_CARDS=false;
+function ensureCardObserver(){
+  if(CARD_IO) return CARD_IO;
+  const root=$('cards');
+  CARD_IO=new IntersectionObserver(entries=>{
+    for(const e of entries){ const pv=e.target._pv; if(pv) pv.visible=e.isIntersecting; }
+  }, {root: root||null, rootMargin:'40px', threshold:0.01});
+  return CARD_IO;
+}
+function stopCardLoop(){ if(cardRaf){ cancelAnimationFrame(cardRaf); cardRaf=null; } }
+function startCardLoop(){
+  if(cardRaf) return;
+  function tick(now){
+    cardRaf=requestAnimationFrame(tick);
+    if(document.hidden || !ANIMATE_CARDS || document.body.classList.contains('atomPickCollapsed')) return;
+    if(now-cardLastT < 1000/CARD_FPS) return;
+    cardLastT=now;
+    for(const p of previews){ if(p.visible) drawPreview(p, now); }
+  }
+  cardRaf=requestAnimationFrame(tick);
+}
+function renderCards(){
+ const all=virtualAtoms(); $('count').textContent=`${all.length} templates (${CAT.presets.length} cam × ${(CAT.families[$('fFamily').value]||[]).length} beats × dur × mode)`;
+ const box=$('cards');
+ if(CARD_IO){ try{ CARD_IO.disconnect(); }catch(e){} CARD_IO=null; }
+ box.innerHTML=''; previews=[];
+ const io=ensureCardObserver();
+ const t0=performance.now();
+ all.slice(0,LIMIT).forEach(v=>{
+  const c=document.createElement('div'); c.className='card'; c.draggable=true;
+  c.innerHTML=`<canvas width="176" height="99"></canvas><div class="meta"><div class="id">${v.id}</div>
+   <div class="row"><span><span class="tag ${v.m}">${v.m}</span><span class="tag">${v.d}s · ${v.d*2}pl</span>${v.p.derived?'':'<span class="tag inv">invented cam</span>'}</span><button class="small">+ add</button></div>
+   <div><span class="tag">${v.p.angle}</span><span class="tag">${v.p.move}</span></div></div>`;
+  c.querySelector('button').onclick=()=>{addAtom(makeAtom(v.p.id,v.b,v.d,v.m));};
+  c.ondragstart=e=>{e.dataTransfer.setData('text/x-atom',JSON.stringify([v.p.id,v.b,v.d,v.m]));};
+  const cv=c.querySelector('canvas');
+  const pv={cv,p:v.p,d:v.d,beat:v.b,m:v.m,visible:false};
+  cv._pv=pv; box.appendChild(c); previews.push(pv);
+  drawPreview(pv, t0); // one static paint — no perpetual RAF
+  io.observe(cv);
+ });
+ box.classList.toggle('staticOnly', !ANIMATE_CARDS);
+ $('more').style.display=all.length>LIMIT?'block':'none';
+ if(ANIMATE_CARDS) startCardLoop(); else stopCardLoop();
+}
+function drawPreview(pv,now){
+ const g=pv.cv.getContext('2d'),W=pv.cv.width,H=pv.cv.height,k=W/1280,tl=(now/1000)%(pv.d+.4),t=Math.min(tl,pv.d),u=t/pv.d,c=cam(pv.p.curves,u,t);
+ g.setTransform(1,0,0,1,0,0); g.fillStyle='#0b2a33'; g.fillRect(0,0,W,H);
+ g.translate(W/2+c.x*k,H/2+c.y*k); g.rotate(c.r*Math.PI/180); g.scale(c.s,c.s); g.translate(-W/2,-H/2);
+ // Skip full BG blit on library thumbs (main live preview still uses BGIMG) — big win when many cards animate
+ if(ANIMATE_CARDS && BGIMG.complete&&BGIMG.naturalWidth) g.drawImage(BGIMG,0,0,W,H);
+ else { g.fillStyle='#132832'; g.fillRect(0,0,W,H); g.fillStyle='#1a3340'; g.fillRect(0,H*0.72,W,H*0.28); }
+ const fl=684*k, ph=Math.sin(u*Math.PI*2*pv.d)*6*k;
+ g.fillStyle='rgba(8,20,28,.5)'; g.beginPath(); g.ellipse(470*k,fl,90*k,8*k,0,0,7); g.ellipse(810*k,fl,90*k,8*k,0,0,7); g.fill();
+ g.fillStyle='#111c'; g.fillRect(420*k+ph,fl-560*k,110*k,560*k); g.fillStyle='#e8e2d6'; g.fillRect(500*k+ph,fl-470*k,110*k,24*k);
+ g.fillStyle='#a5161ccc'; g.fillRect(760*k-ph,fl-570*k,120*k,570*k);
+ g.setTransform(1,0,0,1,0,0); g.fillStyle=pv.m==='hero'?'#ff8a1e':'#19e0d0'; g.fillRect(0,H-3,W*u,3);
+ g.fillStyle='#fff9'; g.font='10px monospace'; g.fillText(pv.beat,4,11);
+}
+function uniq(a){const ids=new Set(SHOW.atoms.map(x=>x.id));let id=a.id,i=2;while(ids.has(id))id=`${a.id}_${i++}`;a.id=id;return a}
+function addAtom(a,at){ uniq(a); if(at==null) SHOW.atoms.push(a); else SHOW.atoms.splice(at,0,a); SEL=at==null?SHOW.atoms.length-1:at; pushHist(); markDirty(); renderTL(); }
+function totals(){const d=SHOW.atoms.reduce((s,a)=>s+(+a.duration_s||0),0),h=SHOW.atoms.filter(a=>a.pose_mode==='hero').length;return {d,h,lo:6*d/30,hi:8*d/30}}
+function setAtomDuration(a, next, opts){
+  opts=opts||{};
+  const allowed=[0.5,1,1.5,2,2.5,3];
+  let best=allowed[0], bd=Math.abs(allowed[0]-next);
+  for(const v of allowed){ const d=Math.abs(v-next); if(d<bd){bd=d; best=v;} }
+  const prevN=a.plates_needed||Math.round((+a.duration_s||1)*2);
+  a.duration_s=best; a.plates_needed=Math.round(best*2);
+  // Keep hero plate list length in sync (trim or pad with last / empty)
+  if(a.pose_mode==='hero' && a.hero){
+    const pl=a.hero.plates||(a.hero.plates=[]);
+    const need=a.plates_needed;
+    if(pl.length>need) a.hero.plates=pl.slice(0,need);
+    else if(pl.length<need){
+      const pad=pl.length?pl[pl.length-1]:'';
+      while(a.hero.plates.length<need) a.hero.plates.push(pad);
+    }
+  }
+  // Sync camera segment dur if single-seg
+  if(a.camera && Array.isArray(a.camera.segments) && a.camera.segments.length===1){
+    a.camera.segments[0].dur_s=best;
+  }
+  if(!opts.silent){ pushHist(); markDirty(); renderTL(); updateDurWarn(); }
+}
+
+function updateDurWarn(){
+  const el=$('durWarn'); if(!el||!SHOW) return;
+  const T=totals(); const target=+(SHOW.duration_target_s||30);
+  if(Math.abs(T.d-target)<1e-6) el.textContent=`duration ${T.d.toFixed(1)}s = target`;
+  else if(T.d<target) { el.style.color='var(--bad)'; el.textContent=`⚠ ${T.d.toFixed(1)}s — short of ~${target}s by ${(target-T.d).toFixed(1)}s`; }
+  else { el.style.color='var(--bad)'; el.textContent=`⚠ ${T.d.toFixed(1)}s — over ~${target}s by ${(T.d-target).toFixed(1)}s`; }
+  if(Math.abs(T.d-target)<1e-6) el.style.color='var(--ok)';
+}
+
+function isPlatePackShow(){
+  if(!SHOW) return false;
+  if(SHOW.parity_mode || SHOW.compose_mode==='parity' || SHOW.plate_pack) return true;
+  const atoms=SHOW.atoms||[];
+  if(!atoms.length) return false;
+  const allHero=atoms.every(a=>a.pose_mode==='hero');
+  const nPl=atoms.reduce((s,a)=>s+((a.hero&&a.hero.plates)||[]).length,0);
+  return allHero && nPl>=20;
+}
+
+/* ===== HM-COMPOSE-04: open fight / recent / beat focus / strip sync ===== */
+const HM_RECENT_KEY='hm.composer.recentPlatePack';
+const HM_PIN_KEY='hm.composer.pinPlatePack';
+const HM_DEFAULT_FIGHT='daiyu-wang-codex-import';
+let BEAT_FOCUS=false, BEAT_FOCUS_PREV_COLLAPSE=false, FOLLOW_PLAYHEAD=false;
+let FOLLOW_RAF=0, FOLLOW_T0=0, FOLLOW_BASE=0;
+
+function readRecentFight(){
+  try{ return (localStorage.getItem(HM_PIN_KEY)||localStorage.getItem(HM_RECENT_KEY)||'').trim(); }catch(e){ return ''; }
+}
+function rememberFight(sid){
+  if(!sid) return;
+  try{
+    if(SHOW && isPlatePackShow()) localStorage.setItem(HM_RECENT_KEY, sid);
+    else if(/daiyu-wang-codex/.test(sid)) localStorage.setItem(HM_RECENT_KEY, sid);
+  }catch(e){}
+}
+function findShowById(sid){
+  if(!CAT||!CAT.shows||!sid) return null;
+  return CAT.shows.find(s=>s.show&&s.show.show_id===sid)
+    || CAT.shows.find(s=>s.path && (s.path.endsWith('/'+sid+'.json')||s.path.endsWith(sid+'.json')));
+}
+function isFightPath(path){
+  return /daiyu-wang-codex/.test(path||'') || /plate.?pack/i.test(path||'');
+}
+function pickLandShow(deep){
+  if(deep) return deep;
+  const recent=readRecentFight();
+  if(recent){ const hit=findShowById(recent); if(hit) return hit; }
+  const pin=findShowById(HM_DEFAULT_FIGHT); if(pin) return pin;
+  const any=(CAT.shows||[]).find(s=>isFightPath(s.path)); if(any) return any;
+  // last resort: keep prior demo fallback only if no plate-pack exists
+  return (CAT.shows||[]).find(s=>s.path.endsWith('editor-features.json'))
+    || (CAT.shows||[]).find(s=>s.path.endsWith('zhao-hua-parity.json'))
+    || (CAT.shows||[])[0];
+}
+function openFightShow(){
+  if(!CAT||!CAT.shows){ status('catalog not ready',true); return; }
+  const want=readRecentFight()||HM_DEFAULT_FIGHT;
+  const hit=findShowById(want) || findShowById(HM_DEFAULT_FIGHT)
+    || (CAT.shows||[]).find(s=>isFightPath(s.path));
+  if(!hit){ status('no Codex plate-pack show in catalog',true); return; }
+  $('example').value=hit.path;
+  loadShow(hit.show);
+  rememberFight(hit.show&&hit.show.show_id);
+  if(LAND_MODE) setLandMode(false);
+  setFxHonesty(true);
+  updateHdrProject();
+  if(isMobileShell()) setBeatFocus(true);
+  status('opened fight · '+hit.path);
+}
+function setAtomPickCollapsed(on){
+  document.body.classList.toggle('atomPickCollapsed', !!on);
+  if($('atomCollapse')) $('atomCollapse').textContent=on?'»':'«';
+  if(on){ if(typeof stopCardLoop==='function') stopCardLoop(); }
+  else if(typeof ANIMATE_CARDS!=='undefined' && ANIMATE_CARDS && typeof startCardLoop==='function') startCardLoop();
+}
+function isMobileShell(){
+  try{ return window.matchMedia && window.matchMedia('(max-width:640px)').matches; }catch(e){ return false; }
+}
+let _dockHome=null;
+function applyMobileShell(){
+  const on=isMobileShell();
+  document.body.classList.toggle('mobileShell', on);
+  const dock=$('playerDock');
+  if(dock){
+    if(!_dockHome) _dockHome={parent:dock.parentElement, next:dock.nextSibling};
+    if(on){
+      if(dock.parentElement!==document.body) document.body.appendChild(dock);
+    } else if(_dockHome && _dockHome.parent && dock.parentElement===document.body){
+      if(_dockHome.next && _dockHome.next.parentElement===_dockHome.parent)
+        _dockHome.parent.insertBefore(dock, _dockHome.next);
+      else _dockHome.parent.appendChild(dock);
+    }
+  }
+  if(on && !LAND_MODE && typeof isPlatePackShow==='function' && isPlatePackShow() && !BEAT_FOCUS){
+    setBeatFocus(true);
+  }
+}
+function setBeatFocus(on){
+  on=!!on;
+  if(on===BEAT_FOCUS) return;
+  if(on){
+    BEAT_FOCUS_PREV_COLLAPSE=document.body.classList.contains('atomPickCollapsed');
+    setAtomPickCollapsed(true);
+    document.body.classList.add('beatFocus');
+    BEAT_FOCUS=true;
+    if($('beatFocusBtn')) $('beatFocusBtn').classList.add('on');
+    status('beat focus on — strip · cam · timing · swap');
+  } else {
+    document.body.classList.remove('beatFocus');
+    BEAT_FOCUS=false;
+    if($('beatFocusBtn')) $('beatFocusBtn').classList.remove('on');
+    setAtomPickCollapsed(BEAT_FOCUS_PREV_COLLAPSE);
+    status('beat focus off');
+  }
+}
+function scrollStripToAtom(ai, opts){
+  const box=$('plateStrip'); if(!box||!box.classList.contains('on')) return;
+  const btns=[...box.querySelectorAll('.pth[data-ai="'+ai+'"]')];
+  if(!btns.length) return;
+  const first=btns[0], last=btns[btns.length-1];
+  const br=box.getBoundingClientRect(), fr=first.getBoundingClientRect(), lr=last.getBoundingClientRect();
+  if(fr.left < br.left+4) first.scrollIntoView({inline:'nearest', block:'nearest', behavior:(opts&&opts.smooth)?'smooth':'auto'});
+  else if(lr.right > br.right-4) last.scrollIntoView({inline:'nearest', block:'nearest', behavior:(opts&&opts.smooth)?'smooth':'auto'});
+}
+function scrollStripToScrub(opts){
+  if(!SHOW) return;
+  const pl=typeof plateAtTime==='function' ? plateAtTime(SCRUB) : null;
+  if(!pl) return;
+  const ai=SHOW.atoms.indexOf(pl.atom);
+  if(ai>=0) scrollStripToAtom(ai, opts);
+}
+function stopFollowTicker(){
+  if(FOLLOW_RAF){ cancelAnimationFrame(FOLLOW_RAF); FOLLOW_RAF=0; }
+}
+function startFollowTicker(){
+  stopFollowTicker();
+  if(!FOLLOW_PLAYHEAD || !SHOW) return;
+  FOLLOW_BASE=+SCRUB||0;
+  FOLLOW_T0=performance.now();
+  const dur=(SHOW.atoms||[]).reduce((s,a)=>s+(+a.duration_s||0),0)||30;
+  const tick=(now)=>{
+    if(!FOLLOW_PLAYHEAD){ FOLLOW_RAF=0; return; }
+    const t=Math.min(dur, FOLLOW_BASE + (now-FOLLOW_T0)/1000);
+    SCRUB=t;
+    if($('scrub')){ $('scrub').value=String(t); if($('scrubT')) $('scrubT').textContent=t.toFixed(2)+'s'; }
+    if($('dockScrub')){ $('dockScrub').value=String(t); if($('dockScrubT')) $('dockScrubT').textContent=t.toFixed(2)+'s'; }
+    scrollStripToScrub();
+    if(typeof renderPlateStrip==='function') renderPlateStrip();
+    if(typeof paintPreview==='function') paintPreview();
+    if(t>=dur-1e-3){ FOLLOW_RAF=0; return; }
+    FOLLOW_RAF=requestAnimationFrame(tick);
+  };
+  FOLLOW_RAF=requestAnimationFrame(tick);
+}
+function ensureDockInView(){
+  const dock=$('playerDock'); if(!dock) return;
+  showPlayerDock(true);
+  document.body.classList.add('dockVisible');
+  const target=$('dockTransport')||dock;
+  const place=()=>{
+    try{ target.scrollIntoView({behavior:'auto', block:'end'}); }catch(e){}
+    try{ dock.scrollIntoView({behavior:'auto', block:'end'}); }catch(e){}
+    const r=target.getBoundingClientRect();
+    const vh=window.innerHeight||900;
+    const topSafe=52 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--fxH'))||0) + 8;
+    if(r.bottom > vh-6 || r.top < topSafe){
+      let el=target.parentElement;
+      const need = r.bottom - (vh-8);
+      while(el && el!==document.documentElement){
+        const st=getComputedStyle(el);
+        const can=/(auto|scroll)/.test(st.overflowY+st.overflow) || el.scrollHeight>el.clientHeight+10;
+        if(can){ el.scrollTop += need; break; }
+        el=el.parentElement;
+      }
+      try{ window.scrollBy(0, Math.max(0, need)); }catch(e){}
+    }
+  };
+  place();
+  requestAnimationFrame(place);
+  setTimeout(place, 40);
+  setTimeout(place, 160);
+}
+
+/* ===== HM-COMPOSE-05: land shell + header chrome ===== */
+let LAND_MODE=false;
+function fightMeta(show){
+  if(!show) return {plates:0, dur:0, atoms:0};
+  const atoms=show.atoms||[];
+  const plates=atoms.reduce((s,a)=>s+((a.hero&&a.hero.plates)||[]).length,0);
+  const dur=atoms.reduce((s,a)=>s+(+a.duration_s||0),0);
+  return {plates, dur, atoms:atoms.length};
+}
+function fmtDur(s){
+  s=Math.max(0, Math.round(+s||0));
+  const m=Math.floor(s/60), r=s%60;
+  return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
+}
+function platePackShows(){
+  return (CAT&&CAT.shows||[]).filter(s=>s.show && (isFightPath(s.path) || (()=>{
+    try{ const sh=s.show; const atoms=sh.atoms||[];
+      return atoms.length>=8 && atoms.every(a=>a.pose_mode==='hero');
+    }catch(e){return false}
+  })()));
+}
+function updateHdrProject(){
+  const el=$('hdrProject'); if(!el) return;
+  const sid=(SHOW&&SHOW.show_id)||'—';
+  el.textContent='Project: '+sid;
+  el.title=sid;
+}
+function setFxHonesty(on){
+  const el=$('fxHonestyBar'); if(!el) return;
+  const show=!!on && !LAND_MODE;
+  el.classList.toggle('on', show);
+  document.documentElement.style.setProperty('--fxH', show?'28px':'0px');
+}
+function setLandMode(on){
+  LAND_MODE=!!on;
+  document.body.classList.toggle('landMode', LAND_MODE);
+  if(LAND_MODE){
+    paintLandShell();
+    setFxHonesty(false);
+    if($('navFights')){ $('navFights').classList.add('hnavOn'); }
+    if($('navPacks')) $('navPacks').classList.remove('hnavOn');
+  } else {
+    setFxHonesty(true);
+    if($('navFights')) $('navFights').classList.remove('hnavOn');
+    if($('navPacks')) $('navPacks').classList.add('hnavOn');
+  }
+  updateHdrProject();
+}
+function landCardHtml(entry, kind){
+  const sh=entry.show||{};
+  const m=fightMeta(sh);
+  const sid=sh.show_id||entry.path||'?';
+  const tag=kind==='pinned'
+    ? '<span class="tag hero">PINNED</span>'
+    : '<span class="tag library">LIBRARY</span>';
+  return `<div class="landCard" data-sid="${sid}" data-path="${entry.path||''}">
+    <div><div class="nm">${sid}</div><div class="meta">${m.plates} plates · ${fmtDur(m.dur)} · ${m.atoms} atoms</div>${tag}</div>
+    <button type="button" class="pri openFight landCardOpen" data-sid="${sid}">Open</button>
+  </div>`;
+}
+function paintLandShell(){
+  if(!CAT) return;
+  const packs=platePackShows();
+  const recentId=(()=>{ try{return (localStorage.getItem(HM_RECENT_KEY)||'').trim()}catch(e){return ''} })();
+  const pinId=(()=>{ try{return (localStorage.getItem(HM_PIN_KEY)||HM_DEFAULT_FIGHT).trim()}catch(e){return HM_DEFAULT_FIGHT} })();
+  const hero = (SHOW && isPlatePackShow() ? {show:SHOW, path:($('example')&&$('example').value)||''} : null)
+    || findShowById(recentId) || findShowById(pinId) || findShowById(HM_DEFAULT_FIGHT) || packs[0];
+  const hm=fightMeta(hero&&hero.show);
+  const hid=(hero&&hero.show&&hero.show.show_id)||HM_DEFAULT_FIGHT;
+  if($('landHeroTitle')){
+    $('landHeroTitle').innerHTML=`${hid} <span class="htag" id="landHeroTag">PLATE-PACK HERO</span>`;
+  }
+  if($('landHeroStats')){
+    $('landHeroStats').innerHTML=
+      `<span>Opened just now</span><span>${hm.plates} plates</span><span>${fmtDur(hm.dur)} total duration</span>`+
+      `<span class="ok">✓ Codex plate-pack ready</span>`;
+  }
+  if($('landPrevDur')) $('landPrevDur').textContent=fmtDur(hm.dur);
+  // pinned: default + any pin key
+  const pinned=[];
+  const pinHit=findShowById(pinId)||findShowById(HM_DEFAULT_FIGHT);
+  if(pinHit) pinned.push(pinHit);
+  for(const s of packs){
+    if(pinned.length>=3) break;
+    if(!pinned.some(p=>p.show&&s.show&&p.show.show_id===s.show.show_id)) pinned.push(s);
+  }
+  if($('landPinned')) $('landPinned').innerHTML=pinned.map(s=>landCardHtml(s,'pinned')).join('')||'<div class="empty">no pinned plate-packs</div>';
+  // recent: other packs excluding hero
+  const recent=[];
+  if(recentId){ const r=findShowById(recentId); if(r) recent.push(r); }
+  for(const s of packs){
+    if(recent.length>=4) break;
+    const sid=s.show&&s.show.show_id;
+    if(sid===hid) continue;
+    if(recent.some(p=>p.show&&p.show.show_id===sid)) continue;
+    recent.push(s);
+  }
+  if($('landRecent')) $('landRecent').innerHTML=recent.map(s=>landCardHtml(s,'recent')).join('')||'<div class="empty">no recent fights</div>';
+  // wire card opens
+  document.querySelectorAll('#landShell .landCardOpen').forEach(btn=>{
+    btn.onclick=()=>{
+      const sid=btn.dataset.sid;
+      const hit=findShowById(sid);
+      if(hit){ $('example').value=hit.path; loadShow(hit.show); rememberFight(sid); }
+      exitLandToComposer({beatFocus:false});
+    };
+  });
+}
+function exitLandToComposer(opts){
+  opts=opts||{};
+  setLandMode(false);
+  if(!SHOW){
+    openFightShow();
+  } else if(opts.reload){
+    openFightShow();
+  }
+  if(opts.beatFocus || isMobileShell()) setBeatFocus(true);
+  status('composer · '+(SHOW&&SHOW.show_id||''));
+  // ensure strip visible for plate-packs
+  if(typeof renderPlateStrip==='function') renderPlateStrip();
+}
+function enterLandShell(){
+  paintLandShell();
+  setLandMode(true);
+  status('land · pick a fight');
+}
+
+
+
+
+function flatPlates(){
+  const out=[]; let t=0;
+  (SHOW.atoms||[]).forEach((a,ai)=>{
+    const d=+a.duration_s||0; const n=a.plates_needed||Math.round(d*2)||1;
+    const pls=(a.hero&&a.hero.plates)||[];
+    for(let i=0;i<n;i++){
+      out.push({atomIdx:ai, plateIdx:i, id:pls[i]||`?${i+1}`, t0:t+i*0.5, atom:a});
+    }
+    t+=d;
+  });
+  return out;
+}
+
+function assetPrefix(){
+  // Prefer assets/<show_id>/ ; fall back to layout_source dirname
+  if(!SHOW) return null;
+  const sid=SHOW.show_id;
+  if(sid) return `assets/${sid}`;
+  for(const a of (SHOW.atoms||[])){
+    const ls=a.hero&&a.hero.layout_source;
+    if(ls){ const i=ls.lastIndexOf('/'); return i>=0?ls.slice(0,i):null; }
+  }
+  return null;
+}
+
+let PLATE_INV=null; // {plates, cutouts}
+async function fetchPlateInv(sid){
+  sid=sid||(SHOW&&SHOW.show_id)||'';
+  // HM-COMPOSE-07: static plates.json first (no /api/plates)
+  try{
+    const r=await fetch('/plates.json',{cache:'no-store'}).then(x=>x.ok?x.json():null);
+    if(r&&r.ok&&(!sid||!r.show_id||r.show_id===sid)){ PLATE_INV=r; return r; }
+  }catch(e){}
+  try{
+    const r=await fetch('../plates.json',{cache:'no-store'}).then(x=>x.ok?x.json():null);
+    if(r&&r.ok&&(!sid||!r.show_id||r.show_id===sid)){ PLATE_INV=r; return r; }
+  }catch(e){}
+  // Derive from hero layout_source (plate-pack path)
+  try{
+    if(SHOW&&isPlatePackShow()){
+      const a=(SHOW.atoms||[]).find(x=>x.pose_mode==='hero'&&x.hero&&x.hero.layout_source);
+      if(a){
+        const lsrc=a.hero.layout_source;
+        let L=null;
+        if(FE_ASSET_MAP[lsrc]&&String(FE_ASSET_MAP[lsrc]).startsWith('json:')) L=JSON.parse(FE_ASSET_MAP[lsrc].slice(5));
+        else {
+          const urls=['/'+lsrc.replace(/^\//,''),'../'+lsrc.replace(/^\//,'')];
+          for(const u of urls){ try{ const rr=await fetch(u); if(rr.ok){ L=await rr.json(); break; } }catch(e){} }
+        }
+        if(L){
+          const ldir=lsrc.replace(/\/[^/]+$/,'');
+          const plates=Object.keys(L).sort().map(id=>{
+            const se=L[id]||{};
+            const src=se.full? (ldir+'/'+se.full).replace(/\/+/g,'/') :
+              (se.parts&&se.parts[0]&&se.parts[0].src? (ldir+'/'+se.parts[0].src).replace(/\/+/g,'/') :
+              (ldir+'/plates/'+id+'.jpg'));
+            // prefer plates/ jpg when present in inventory sense
+            const plateSrc=(ldir+'/plates/'+id+'.jpg');
+            return {id, file:id+'.jpg', src:plateSrc, url:'/'+plateSrc};
+          });
+          PLATE_INV={ok:true, show_id:sid, assets_dir:ldir, plates, cutouts:[], used_in_show:[], plate_count:plates.length, note:'derived-from-layout'};
+          return PLATE_INV;
+        }
+      }
+    }
+  }catch(e){}
+  // Legacy API only if somehow online (not product path)
+  if(apiOK){
+    try{
+      const r=await fetch('/api/plates?show='+encodeURIComponent(sid)).then(x=>x.json());
+      if(r&&r.ok){ PLATE_INV=r; return r; }
+    }catch(e){}
+  }
+  return null;
+}
+
+function plateThumbUrl(pid){
+  const pref=assetPrefix();
+  if(!pref||!pid) return null;
+  // Prefer cutout; fall back plates/ via inventory when available (HM-COMPOSE-03)
+  if(PLATE_INV){
+    const cut=(PLATE_INV.cutouts||[]).find(p=>p.id===pid);
+    if(cut&&cut.src) return '../'+cut.src;
+    const pl=(PLATE_INV.plates||[]).find(p=>p.id===pid);
+    if(pl&&pl.src) return '../'+pl.src;
+    return null; // neither exists → caller shows placeholder
+  }
+  return `../${pref}/cutout/${pid}.png`;
+}
+
+function renderPlateStrip(){
+  const box=$('plateStrip'); if(!box) return;
+  if(!isPlatePackShow()){ box.classList.remove('on'); box.innerHTML=''; return; }
+  box.classList.add('on');
+  // Ensure inventory so missing cutouts get placeholders without waiting for lazy onerror
+  if(apiOK && !PLATE_INV){ fetchPlateInv(SHOW.show_id).then(()=>{ if(isPlatePackShow()) renderPlateStrip(); }); }
+  const flat=flatPlates();
+  const scrubPl=plateAtTime(SCRUB);
+  const prevScroll=box.scrollLeft;
+  box.innerHTML=flat.map((fp)=>{
+    const on=scrubPl && scrubPl.atom===fp.atom && scrubPl.plateIdx===fp.plateIdx;
+    const atomOn=(SEL>=0 && fp.atomIdx===SEL);
+    const url=plateThumbUrl(fp.id);
+    const img=url
+      ? `<img src="${url}" alt="${fp.id}" loading="lazy" onerror="this.onerror=null;const d=document.createElement('div');d.className='ph';d.textContent='404 '+this.alt;this.replaceWith(d);">`
+      : `<div class="ph">404 ${fp.id||'?'}</div>`;
+    return `<button type="button" class="pth ${on?'on':''} ${atomOn?'atomOn':''}" data-ai="${fp.atomIdx}" data-pi="${fp.plateIdx}" data-pid="${fp.id}" title="${fp.id} @ ${fp.t0.toFixed(1)}s · atom ${fp.atomIdx+1}${url?'':' · missing asset'} · dbl-click swap">
+      ${img}<span class="plab">${fp.id}</span></button>`;
+  }).join('');
+  box.scrollLeft=prevScroll;
+  box.querySelectorAll('.pth').forEach(btn=>{
+    btn.onclick=()=>{
+      const ai=+btn.dataset.ai, pi=+btn.dataset.pi;
+      SEL=ai; SEL_SET.clear(); SEL_SET.add(ai);
+      let t=0; for(let i=0;i<ai;i++) t+=+(SHOW.atoms[i].duration_s||0);
+      t+=pi*0.5; SCRUB=t; if($('scrub')){ $('scrub').value=String(t); if($('scrubT')) $('scrubT').textContent=t.toFixed(2)+'s'; }
+      renderTL();
+    };
+    // HM-COMPOSE-03: read ai/pi from dataset (closure vars were undefined)
+    btn.ondblclick=(e)=>{ e.preventDefault(); e.stopPropagation(); openPlatePicker(+btn.dataset.ai, +btn.dataset.pi); };
+  });
+  // HM-COMPOSE-04: keep selected atom plates in view
+  if(SEL>=0) scrollStripToAtom(SEL);
+  else if(FOLLOW_PLAYHEAD) scrollStripToScrub();
+}
+
+/* HM-COMPOSE-03b: wheel/trackpad over strip → horizontal scroll (preventDefault vertical) */
+(function wirePlateStripWheel(){
+  const box=document.getElementById('plateStrip');
+  if(!box || box._wheelWired) return;
+  box._wheelWired=true;
+  box.addEventListener('wheel', e=>{
+    if(!box.classList.contains('on')) return;
+    const max=box.scrollWidth - box.clientWidth;
+    if(max<=0) return;
+    // Prefer vertical delta when present (trackpad/mouse); also honour native deltaX
+    const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if(!dx) return;
+    const next = Math.max(0, Math.min(max, box.scrollLeft + dx));
+    if(next === box.scrollLeft && e.deltaX) return; // at edge with native horiz — let bubble
+    e.preventDefault();
+    box.scrollLeft = next;
+  }, {passive:false});
+})();
+
+let PICK_CTX=null; // {atomIdx, plateIdx}
+async function openPlatePicker(atomIdx, plateIdx){
+  if(!SHOW){ status('no show loaded',true); return; }
+  const a=SHOW.atoms[atomIdx]; if(!a||a.pose_mode!=='hero'){ status('select a hero plate slot',true); return; }
+  PICK_CTX={atomIdx, plateIdx};
+  const modal=$('platePick'); if(!modal) return;
+  $('platePickMeta').textContent=`atom ${a.id} · slot ${plateIdx+1}/${a.plates_needed} · current ${(a.hero.plates||[])[plateIdx]||'—'}`;
+  modal.classList.add('on');
+  await fetchPlateInv(SHOW.show_id);
+  renderPlatePickGrid();
+}
+function renderPlatePickGrid(){
+  const grid=$('platePickGrid'); if(!grid) return;
+  const src=(document.querySelector('input[name="plateSrc"]:checked')||{}).value||'cutout';
+  const filter=(($('platePickFilter')&&$('platePickFilter').value)||'').trim().toLowerCase();
+  const list=(PLATE_INV&&(src==='plates'?PLATE_INV.plates:PLATE_INV.cutouts))||[];
+  const cur=PICK_CTX && SHOW.atoms[PICK_CTX.atomIdx] && (SHOW.atoms[PICK_CTX.atomIdx].hero.plates||[])[PICK_CTX.plateIdx];
+  const filtered=list.filter(p=>!filter || p.id.toLowerCase().includes(filter));
+  grid.innerHTML=filtered.map(p=>`<button type="button" class="pth ${p.id===cur?'on':''}" data-pid="${p.id}">
+    <img src="../${p.src}" alt="${p.id}" loading="lazy"><span>${p.id}</span></button>`).join('')
+    || '<div class="empty">no plates in inventory</div>';
+  grid.querySelectorAll('.pth[data-pid]').forEach(b=>b.onclick=()=>{
+    grid.querySelectorAll('.pth').forEach(x=>x.classList.remove('on')); b.classList.add('on'); b.dataset.sel='1';
+  });
+}
+function applyPlatePick(){
+  if(!PICK_CTX) return;
+  const grid=$('platePickGrid');
+  const sel=grid && grid.querySelector('.pth.on[data-pid]');
+  if(!sel){ status('pick a plate first',true); return; }
+  const pid=sel.dataset.pid;
+  const a=SHOW.atoms[PICK_CTX.atomIdx];
+  if(!a.hero) a.hero={plates:[]};
+  if(!a.hero.plates) a.hero.plates=[];
+  // Ensure length
+  while(a.hero.plates.length < a.plates_needed) a.hero.plates.push(pid);
+  a.hero.plates[PICK_CTX.plateIdx]=pid;
+  pushHist(); markDirty();
+  $('platePick').classList.remove('on');
+  PICK_CTX=null;
+  renderTL(); status('swapped plate → '+pid);
+}
+
+function splitSelectedAtom(){
+  if(SEL<0||!SHOW.atoms[SEL]){ status('select an atom',true); return; }
+  const a=SHOW.atoms[SEL];
+  const d=+a.duration_s||0;
+  if(d<1){ status('atom too short to split (need ≥1s)',true); return; }
+  const half=d/2;
+  const allowed=[0.5,1,1.5,2,2.5,3];
+  const snap=v=>{ let b=allowed[0],bd=Math.abs(allowed[0]-v); for(const x of allowed){const dd=Math.abs(x-v); if(dd<bd){bd=dd;b=x}} return b; };
+  let d1=snap(half), d2=snap(d-d1);
+  if(Math.abs(d1+d2-d)>1e-9){
+    d2=snap(d-d1);
+    if(Math.abs(d1+d2-d)>1e-9){
+      d1=Math.round(half*2)/2; d2=d-d1;
+      if(!allowed.includes(d1)||!allowed.includes(d2)){ status('cannot split onto 0.5s grid',true); return; }
+    }
+  }
+  const n1=Math.round(d1*2), n2=Math.round(d2*2);
+  // HM-COMPOSE-03: stable base id + remember pre-split plates for exact Merge restore
+  const baseId=a._split_orig || String(a.id||'atom').replace(/__(a|b|m)+$/,'') || a.id;
+  const prePlates=(a.hero&&Array.isArray(a.hero.plates))?a.hero.plates.slice():null;
+  const left=JSON.parse(JSON.stringify(a));
+  const right=JSON.parse(JSON.stringify(a));
+  left.id=baseId+'__a'; right.id=baseId+'__b';
+  left._split_orig=baseId; right._split_orig=baseId;
+  left._split_mate='a'; right._split_mate='b';
+  if(prePlates){ left._pre_split_plates=prePlates.slice(); right._pre_split_plates=prePlates.slice(); }
+  left.duration_s=d1; left.plates_needed=n1;
+  right.duration_s=d2; right.plates_needed=n2;
+  if(a.pose_mode==='hero' && a.hero && a.hero.plates){
+    left.hero=left.hero||{}; right.hero=right.hero||{};
+    left.hero.plates=a.hero.plates.slice(0,n1);
+    right.hero.plates=a.hero.plates.slice(n1,n1+n2);
+  }
+  SHOW.atoms.splice(SEL,1,left,right);
+  SEL_SET.clear(); SEL_SET.add(SEL);
+  pushHist(); markDirty(); renderTL(); status(`split → ${d1}s + ${d2}s (id ${baseId})`);
+}
+
+function mergeWithNext(){
+  if(SEL<0||SEL>=SHOW.atoms.length-1){ status('select an atom with a next neighbour',true); return; }
+  const a=SHOW.atoms[SEL], b=SHOW.atoms[SEL+1];
+  if(a.pose_mode!==b.pose_mode){ status('merge requires same pose_mode',true); return; }
+  const d=(+a.duration_s||0)+(+b.duration_s||0);
+  const allowed=[0.5,1,1.5,2,2.5,3];
+  if(!allowed.includes(d)){ status(`merged duration ${d}s not on 0.5s grid (max 3s)`,true); return; }
+  const baseA=a._split_orig || String(a.id||'').replace(/__(a|b|m)+$/,'');
+  const baseB=b._split_orig || String(b.id||'').replace(/__(a|b|m)+$/,'');
+  const isPair=(a._split_mate==='a' && b._split_mate==='b' && a._split_orig && a._split_orig===b._split_orig)
+    || (String(a.id).endsWith('__a') && String(b.id).endsWith('__b') && baseA && baseA===baseB);
+  const m=JSON.parse(JSON.stringify(a));
+  // HM-COMPOSE-03: restore pre-split id (never stack __m / __a__m)
+  m.id=isPair ? (a._split_orig || baseA) : (a._split_orig || baseA || a.id);
+  delete m._split_orig; delete m._split_mate; delete m._pre_split_plates;
+  m.duration_s=d; m.plates_needed=Math.round(d*2);
+  if(a.pose_mode==='hero'){
+    m.hero=m.hero||{};
+    if(isPair && Array.isArray(a._pre_split_plates)){
+      m.hero.plates=a._pre_split_plates.slice();
+    } else {
+      // concat only — never invent duplicate pads
+      m.hero.plates=[...((a.hero&&a.hero.plates)||[]), ...((b.hero&&b.hero.plates)||[])];
+      if(m.hero.plates.length>m.plates_needed) m.hero.plates=m.hero.plates.slice(0,m.plates_needed);
+    }
+    if(a.hero&&a.hero.layout_source) m.hero.layout_source=a.hero.layout_source;
+  }
+  const da=+a.duration_s||1;
+  const hooks=[...(a.fx_hooks||[])];
+  for(const h of (b.fx_hooks||[])){
+    const hh=typeof h==='string'?{type:h,t_rel:0}:Object.assign({},h);
+    hh.t_rel=((hh.t_rel!=null?+hh.t_rel:0)*((+b.duration_s)||1)+da)/d;
+    if(hh.t_rel_end!=null) hh.t_rel_end=((+hh.t_rel_end)*((+b.duration_s)||1)+da)/d;
+    hooks.push(hh);
+  }
+  if(hooks.length) m.fx_hooks=hooks; else delete m.fx_hooks;
+  SHOW.atoms.splice(SEL,2,m);
+  SEL_SET.clear(); SEL_SET.add(SEL);
+  pushHist(); markDirty(); renderTL(); status(`merged → ${d}s · id ${m.id}`);
+}
+
+function renderTL(){
+ const T=totals(), dOK=T.d>=30&&T.d<=60;
+ const parity=typeof isPlatePackShow==='function' && isPlatePackShow();
+ const hOK=parity || (T.h>=T.lo-1e-6&&T.h<=T.hi+1e-6);
+ const heroStat=parity
+  ? `<span class="stat">hero <b class="good">${T.h}</b> · parity / plate-pack (budget N/A)</span>`
+  : `<span class="stat">hero <b class="${hOK?'good':'warn'}">${T.h}</b> / target ${T.lo.toFixed(1)}–${T.hi.toFixed(1)} <span class="${hOK?'good':'warn'}">${hOK?'✓':'⚠ outside 6–8 per 30s'}</span></span>`;
+ $('stats').innerHTML=`<span class="stat">total <b class="${dOK?'good':'warn'}">${T.d.toFixed(1)}s</b> <span class="${dOK?'good':'warn'}">${dOK?'✓ 30–60s':(T.d<30?'need '+(30-T.d).toFixed(1)+'s more':'over by '+(T.d-60).toFixed(1)+'s')}</span></span>
+  <span class="stat">atoms <b>${SHOW.atoms.length}</b></span><span class="stat">plates <b>${T.d*2}</b></span>
+  ${heroStat}`;
+ const bar=$('bar'); bar.innerHTML=''; const scale=Math.max(60,T.d);
+ SHOW.atoms.forEach((a,i)=>{const d=document.createElement('div'); d.style.width=(a.duration_s/scale*100)+'%'; d.style.background=a.pose_mode==='hero'?'#ff8a1e':'#19e0d0'; d.style.opacity=i===SEL?1:.55; d.title=a.id; bar.appendChild(d);});
+ [30,60].forEach(s=>{const l=document.createElement('div');l.className='lim';l.style.left=(s/scale*100)+'%';bar.appendChild(l)});
+ const tl=$('tl'); tl.innerHTML=''; let t=0;
+ if(!SHOW.atoms.length) tl.innerHTML='<div class="empty">drop atoms here</div>';
+ SHOW.atoms.forEach((a,i)=>{
+  const r=document.createElement('div'); r.className='item'+(a.pose_mode==='hero'?' hero':'')+(i===SEL?' sel':''); r.draggable=true;
+  const cp=a.camera.preset||(a.camera.segments||[]).map(s=>s.preset).join('+');
+  r.innerHTML=`<span class="n">${i+1}</span><span class="t">${t.toFixed(1)}s</span><span class="nm" title="${a.id}">${a.id}<br><span class="tag ${a.pose_mode}">${a.pose_mode}</span><span class="tag">${a.duration_s}s</span><span class="tag">${cp}</span><span class="tag">${a.motion.beat_class}</span></span>
+   <span><button class="small" data-a="up">↑</button><button class="small" data-a="dn">↓</button><button class="small" data-a="dup">⧉</button><button class="small" data-a="rm">✕</button></span>`;
+  t+=+a.duration_s;
+  if(SEL_SET.has(i)) r.classList.add('msel');
+  r.onclick=e=>{const act=e.target.dataset&&e.target.dataset.a; if(act==='up'&&i>0){[SHOW.atoms[i-1],SHOW.atoms[i]]=[SHOW.atoms[i],SHOW.atoms[i-1]];SEL=i-1; SEL_SET.clear(); pushHist(); markDirty();}
+   else if(act==='dn'&&i<SHOW.atoms.length-1){[SHOW.atoms[i+1],SHOW.atoms[i]]=[SHOW.atoms[i],SHOW.atoms[i+1]];SEL=i+1; SEL_SET.clear(); pushHist(); markDirty();}
+   else if(act==='rm'){SHOW.atoms.splice(i,1);SEL=Math.min(SEL,SHOW.atoms.length-1); SEL_SET.clear(); pushHist(); markDirty();} else if(act==='dup'){addAtom(JSON.parse(JSON.stringify(SHOW.atoms[i])),i+1);return}
+   else if(e.shiftKey){ if(SEL_SET.has(i)) SEL_SET.delete(i); else SEL_SET.add(i); SEL=i; }
+   else { SEL=i; SEL_SET.clear(); SEL_SET.add(i); }
+   renderTL();};
+  r.ondragstart=e=>e.dataTransfer.setData('text/x-row',String(i));
+  r.ondragover=e=>{e.preventDefault();r.classList.add('over')}; r.ondragleave=()=>r.classList.remove('over');
+  r.ondrop=e=>{e.preventDefault();e.stopPropagation();r.classList.remove('over');dropAt(e,i)};
+  tl.appendChild(r);
+ });
+ renderInsp(); updateScrub(); renderPlateStrip(); updateDurWarn(); paintPreview();
+}
+function dropAt(e,at){
+ const row=e.dataTransfer.getData('text/x-row'), atom=e.dataTransfer.getData('text/x-atom');
+ if(row!==''){const from=+row; const [a]=SHOW.atoms.splice(from,1); const to=at==null?SHOW.atoms.length:(from<at?at-1:at); SHOW.atoms.splice(to,0,a); SEL=to; pushHist(); markDirty(); renderTL();}
+ else if(atom){const [p,b,d,m]=JSON.parse(atom); addAtom(makeAtom(p,b,d,m),at);}
+}
+$('tl').ondragover=e=>{e.preventDefault();$('tl').classList.add('drop')}; $('tl').ondragleave=()=>$('tl').classList.remove('drop');
+$('tl').ondrop=e=>{e.preventDefault();$('tl').classList.remove('drop');dropAt(e,null)};
+function poseCur(a,side){return Array.isArray(a.poses[side])?a.poses[side][0]:a.poses[side]}
+function poseGridHtml(side,a){
+  const lib=libFor(side); const cur=poseCur(a,side);
+  const poses=(lib&&lib.poses)||[];
+  if(!poses.length) return `<div class="tag">no library</div>`;
+  return `<div style="font:10px monospace;color:var(--dim);margin:2px 0">${side} pose · ${cur||'—'}</div>
+   <div class="poseGrid" data-side="${side}">${poses.map(p=>`<button type="button" class="pt ${p.pose_id===cur?'on':''}" data-pose="${p.pose_id}" title="${p.pose_id}">
+     <img src="../${p.png}" alt="${p.pose_id}" loading="lazy"><span>${p.pose_id}</span></button>`).join('')}</div>`;
+}
+function poseSel(side,a){ /* legacy select kept for fallback */ const lib=libFor(side); const cur=poseCur(a,side);
+ return `<select data-side="${side}">${((lib&&lib.poses)||[]).map(p=>`<option ${p.pose_id===cur?'selected':''}>${p.pose_id}</option>`).join('')||'<option>no library</option>'}</select>`}
+function renderInsp(){
+ const box=$('insp'); const a=SHOW.atoms[SEL]; if(!a){box.className='empty';box.innerHTML='select a timeline row';return} box.className='';
+ let quick='';
+ if(a.pose_mode==='library'){const c=Array.isArray(a.contact)?null:(a.contact||{});
+  quick=`${poseGridHtml('L',a)}${poseGridHtml('R',a)}`+(c?`<label>attacker<select id="iAtt">${['L','R','none'].map(x=>`<option ${c.attacker===x?'selected':''}>${x}</option>`).join('')}</select></label>
+   <label>target<select id="iTgt">${['guard','head','body','fist'].map(x=>`<option ${c.target===x?'selected':''}>${x}</option>`).join('')}</select></label>`:'<div class="tag">per-plate contact (edit JSON)</div>');}
+ else {
+  const pls=(a.hero&&a.hero.plates)||[];
+  const thumbs=pls.map((pid,i)=>{
+    const url=plateThumbUrl(pid);
+    return `<button type="button" class="pth ${i===((plateAtTime(SCRUB)||{}).atom===a?((plateAtTime(SCRUB)||{}).plateIdx):-1)?'on':''}" data-swap-pi="${i}" title="swap ${pid}" style="width:48px;border:2px solid var(--line);border-radius:4px;padding:0;background:#0a1418;cursor:pointer;overflow:hidden;position:relative">
+      ${url?`<img src="${url}" alt="${pid}" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block" loading="lazy">`:''}
+      <span style="position:absolute;left:2px;bottom:1px;font:8px monospace;color:#dff;background:#000a">${pid}</span></button>`;
+  }).join('');
+  quick=`<label>layout src<select id="iLay"><option value="">(pending plates → slate)</option>${CAT.layouts.map(l=>`<option ${a.hero.layout_source===l?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>plates<input id="iPl" value="${pls.join(',')}" placeholder="P01,P02 or empty"></label>
+   <div style="font:10px monospace;color:var(--dim)">plate slots (click → swap)</div>
+   <div style="display:flex;flex-wrap:wrap;gap:4px" id="inspPlateThumbs">${thumbs||'<span class="tag">no plates</span>'}</div>`;
+ }
+ const axL=atomXf(a,'L'), axR=atomXf(a,'R');
+ const ovL=(a.char_overrides&&a.char_overrides.L)||{}, ovR=(a.char_overrides&&a.char_overrides.R)||{};
+ const unsidedHero=isPlatePackShow() && a.pose_mode==='hero';
+ const ovNote=unsidedHero
+  ? 'char_overrides — unsided hero: L/R scale scales WHOLE plate (pair)'
+  : 'char_overrides (blank = use show transform)';
+ const scTitle=unsidedHero?'scales whole plate (pair framing)':'scale';
+ const ovBlock=`<div style="font:10px monospace;color:var(--dim);margin-top:4px">${ovNote}</div>
+  <div class="xf">
+   <label>L x<input type="number" step="1" id="ovLx" placeholder="${axL.x}" value="${ovL.x!=null?ovL.x:''}"></label>
+   <label>L y<input type="number" step="1" id="ovLy" placeholder="${axL.y}" value="${ovL.y!=null?ovL.y:''}"></label>
+   <label title="${scTitle}">L sc<input type="number" step="0.05" id="ovLs" placeholder="${axL.scale}" value="${ovL.scale!=null?ovL.scale:''}" title="${scTitle}"></label>
+  </div>
+  <div class="xf">
+   <label>R x<input type="number" step="1" id="ovRx" placeholder="${axR.x}" value="${ovR.x!=null?ovR.x:''}"></label>
+   <label>R y<input type="number" step="1" id="ovRy" placeholder="${axR.y}" value="${ovR.y!=null?ovR.y:''}"></label>
+   <label title="${scTitle}">R sc${unsidedHero?' (whole plate)':''}<input type="number" step="0.05" id="ovRs" placeholder="${axR.scale}" value="${ovR.scale!=null?ovR.scale:''}" title="${scTitle}"></label>
+  </div>
+  <button class="small" id="ovClear">clear atom overrides</button>`;
+ const durBlock=`<div class="durBtns"><span style="color:var(--dim);font:11px monospace">duration ${a.duration_s}s</span>
+  <button class="small" id="durM">−0.5</button><button class="small" id="durP">+0.5</button>
+  <button class="small" data-ds="0.5">0.5</button><button class="small" data-ds="1">1</button><button class="small" data-ds="1.5">1.5</button>
+  <button class="small" data-ds="2">2</button><button class="small" data-ds="2.5">2.5</button><button class="small" data-ds="3">3</button>
+  <button class="small" id="durSplit">Split</button><button class="small" id="durMerge">Merge→</button></div>`;
+
+ const cam = a.camera || {};
+ const nudge = (cam.nudge && typeof cam.nudge==='object') ? cam.nudge : {};
+ const presetOpts = (CAT.presets||[]).map(p=>`<option value="${p.id}" ${cam.preset===p.id?'selected':''}>${p.id}</option>`).join('');
+ const camBlock=`<div style="font:10px monospace;color:var(--dim);margin-top:4px">camera (live preview)</div>
+  <label>preset<select id="iCamPreset">${presetOpts}</select></label>
+  <div class="camNudge">
+   <label>nudge x<input type="number" step="1" id="nudgeX" value="${nudge.x!=null?nudge.x:0}"></label>
+   <label>nudge y<input type="number" step="1" id="nudgeY" value="${nudge.y!=null?nudge.y:0}"></label>
+   <label>nudge s<input type="number" step="0.01" id="nudgeS" value="${nudge.s!=null?nudge.s:0}"></label>
+   <label>nudge r<input type="number" step="0.5" id="nudgeR" value="${nudge.r!=null?nudge.r:0}"></label>
+  </div>
+  <button class="small" id="nudgeClear">clear nudge</button>`;
+ const hookIds=(a.fx_hooks||[]).map(h=>typeof h==='string'?h:(h&&h.type)||'');
+ const hooks=new Set(hookIds.filter(Boolean));
+ const fxChips=`<div style="font:10px monospace;color:var(--dim)">fx_hooks (chips write string ids; JSON keeps full objects)</div><div class="chiprow" id="fxHookChips">${FX_HOOK_CHIPS.map(h=>`<button type="button" class="chip fx ${hooks.has(h)?'on':''}" data-fxh="${h}">${h}</button>`).join('')}</div>`;
+ const swapHint=isPlatePackShow()?`<div class="bfSec">Swap plate</div><button type="button" class="small" id="inspSwapBtn" style="width:100%">Swap plate with library source</button>`:'';
+ box.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px"><div class="bfSec">Plates</div>${quick}<div class="bfSec">Timing</div>${durBlock}<div class="bfSec">Cam</div>${camBlock}${swapHint}<label>mode<select id="iMode"><option ${a.pose_mode==='library'?'selected':''}>library</option><option ${a.pose_mode==='hero'?'selected':''}>hero</option></select></label>
+  ${ovBlock}${fxChips}
+  <textarea id="iJson">${JSON.stringify(a,null,1)}</textarea><button id="iApply">apply JSON</button></div>`;
+ box.querySelectorAll('select[data-side]').forEach(s=>s.onchange=()=>{a.poses[s.dataset.side]=s.value; pushHist(); markDirty(); renderTL(); paintPreview()});
+ box.querySelectorAll('.poseGrid .pt[data-pose]').forEach(btn=>btn.onclick=()=>{
+   const side=btn.closest('.poseGrid').dataset.side; const pid=btn.dataset.pose;
+   if(!a.poses) a.poses={}; a.poses[side]=pid; pushHist(); markDirty(); renderTL(); paintPreview();
+ });
+ if($('iAtt')) $('iAtt').onchange=()=>{a.contact.attacker=$('iAtt').value; pushHist(); markDirty(); renderTL()}; if($('iTgt')) $('iTgt').onchange=()=>{a.contact.target=$('iTgt').value; pushHist(); markDirty(); renderTL()};
+ if($('iLay')) $('iLay').onchange=()=>{a.hero.layout_source=$('iLay').value; pushHist(); markDirty(); renderTL()};
+ if($('iPl')) $('iPl').onchange=()=>{a.hero.plates=$('iPl').value.split(',').map(s=>s.trim()).filter(Boolean); pushHist(); markDirty(); renderTL()};
+ $('iMode').onchange=()=>{const n=makeAtom(a.camera.preset||'eye_hold',a.motion.beat_class,a.duration_s,$('iMode').value); n.id=a.id; n.camera=a.camera; n.fx_hooks=a.fx_hooks; SHOW.atoms[SEL]=n; pushHist(); markDirty(); renderTL()};
+ $('iApply').onclick=()=>{try{SHOW.atoms[SEL]=JSON.parse($('iJson').value); pushHist(); markDirty(); renderTL();status('atom updated')}catch(e){status('bad JSON: '+e.message,true)}};
+ box.querySelectorAll('[data-fxh]').forEach(btn=>btn.onclick=()=>{
+  const h=btn.dataset.fxh; a.fx_hooks=a.fx_hooks||[];
+  const i=a.fx_hooks.findIndex(x=>x===h || (x&&x.type===h));
+  if(i>=0) a.fx_hooks.splice(i,1);
+  else {
+    // Place at current scrub relative to this atom (easy beat FX)
+    let t0=0; for(let k=0;k<SEL;k++) t0+=+(SHOW.atoms[k].duration_s||0);
+    const d=Math.max(1e-6,+a.duration_s||1);
+    const tRel=Math.max(0, Math.min(1, (SCRUB-t0)/d));
+    a.fx_hooks.push({type:h, t_rel: Math.round(tRel*1000)/1000});
+  }
+  if(!a.fx_hooks.length) delete a.fx_hooks;
+  pushHist(); markDirty(); renderInsp(); paintPreview();
+ });
+ if($('durM')) $('durM').onclick=()=>setAtomDuration(a, (+a.duration_s||1)-0.5);
+ if($('durP')) $('durP').onclick=()=>setAtomDuration(a, (+a.duration_s||1)+0.5);
+ box.querySelectorAll('[data-ds]').forEach(b=>b.onclick=()=>setAtomDuration(a, +b.dataset.ds));
+ if($('durSplit')) $('durSplit').onclick=()=>splitSelectedAtom();
+ if($('durMerge')) $('durMerge').onclick=()=>mergeWithNext();
+ box.querySelectorAll('[data-swap-pi]').forEach(b=>b.onclick=()=>openPlatePicker(SEL, +b.dataset.swapPi));
+ if($('iCamPreset')) $('iCamPreset').onchange=()=>{
+   a.camera=a.camera||{}; a.camera.preset=$('iCamPreset').value;
+   pushHist(); markDirty(); renderTL(); paintPreview();
+ };
+ function writeNudge(commit){
+   a.camera=a.camera||{};
+   const n={
+     x:+($('nudgeX')&&$('nudgeX').value||0),
+     y:+($('nudgeY')&&$('nudgeY').value||0),
+     s:+($('nudgeS')&&$('nudgeS').value||0),
+     r:+($('nudgeR')&&$('nudgeR').value||0)
+   };
+   const any=Object.values(n).some(v=>Math.abs(v)>1e-9);
+   if(any) a.camera.nudge=n; else delete a.camera.nudge;
+   paintPreview();
+   if(commit){ pushHist(); markDirty(); } else markDirty();
+ }
+ ['nudgeX','nudgeY','nudgeS','nudgeR'].forEach(id=>{
+   if(!$(id)) return;
+   $(id).oninput=()=>writeNudge(false);
+   $(id).onchange=()=>writeNudge(true);
+ });
+ if($('nudgeClear')) $('nudgeClear').onclick=()=>{ if(a.camera) delete a.camera.nudge; pushHist(); markDirty(); renderInsp(); paintPreview(); };
+ if($('inspSwapBtn')) $('inspSwapBtn').onclick=()=>{ if($('swapPlateBtn')) $('swapPlateBtn').click(); else openPlatePicker(SEL, 0); };
+ function writeOv(commit){
+  const sides={L:['ovLx','ovLy','ovLs'], R:['ovRx','ovRy','ovRs']}; const keys=['x','y','scale'];
+  let any=false; a.char_overrides=a.char_overrides||{};
+  for(const side of ['L','R']){ const o={}; sides[side].forEach((id,i)=>{const el=$(id); if(el&&el.value!==''){o[keys[i]]=+el.value; any=true;}});
+   if(Object.keys(o).length) a.char_overrides[side]=o; else delete a.char_overrides[side]; }
+  if(!any) delete a.char_overrides;
+  paintPreview();
+  if(commit) pushHist();
+  markDirty();
+ }
+ ['ovLx','ovLy','ovLs','ovRx','ovRy','ovRs'].forEach(id=>{
+   if(!$(id)) return;
+   $(id).oninput=()=>writeOv(false);
+   $(id).onchange=()=>writeOv(true);
+ });
+ if($('ovClear')) $('ovClear').onclick=()=>{delete a.char_overrides; pushHist(); markDirty(); renderTL();};
+ paintPreview();
+}
+
+function renderShow(){
+ $('sId').value=SHOW.show_id; $('sTitle').value=SHOW.title||''; $('sTarget').value=String(SHOW.duration_target_s||30); $('sDraft').checked=!!SHOW.draft;
+ if($('sCharScale')) $('sCharScale').value=String(SHOW.char_screen_scale!=null?SHOW.char_screen_scale:1);
+ const opts=(sel,list,v,none)=>{sel.innerHTML=(none?'<option value="">(none)</option>':'')+list.map(b=>`<option ${b===v?'selected':''}>${b}</option>`).join('')};
+ opts($('bgBase'),CAT.bgs,SHOW.bg.base); opts($('bgSwap'),CAT.bgs,SHOW.bg.swap||'',true); $('bgSwapT').value=SHOW.bg.swap_t??'';
+ $('bgthumb').src='../'+SHOW.bg.base; BGIMG.src='../'+SHOW.bg.base;
+ $('slots').innerHTML=['L','R'].map(s=>{const c=SHOW.chars[s]; const lib=CAT.libraries.find(l=>l.path===c.pose_library); const xf=xfOf(s);
+  return `<div class="slot"><b style="color:${s==='L'?'var(--lib)':'var(--hero)'}">${s} · screen-${s==='L'?'LEFT':'RIGHT'}</b>
+   <label>name<input data-s="${s}" data-f="name" value="${c.name||''}"></label>
+   <label>pose lib<select data-s="${s}" data-f="pose_library"><option value="">(none — hero only)</option>${CAT.libraries.map(l=>`<option value="${l.path}" ${l.path===c.pose_library?'selected':''}>${l.path}${l.placeholder?' [placeholder]':''}</option>`).join('')}</select></label>
+   <label>key image<input data-s="${s}" data-f="image" value="${c.image||''}" placeholder="path or upload"></label>
+   <label>upload<input type="file" accept="image/*" data-up="${s}"></label>
+   <div class="thumb">${lib&&lib.poses?lib.poses.slice(0,8).map(p=>`<img src="../${p.png}" title="${p.pose_id}" loading="lazy" decoding="async">`).join(''):(c.image?`<img src="../${c.image}" loading="lazy">`:'<span class="tag">no library / image</span>')}</div>
+   <div style="font:10px monospace;color:var(--dim)">transform (after grounded place)${isPlatePackShow()?' · on unsided hero, scale = whole plate':''}</div>
+   <div class="xf">
+    <label>x px<input type="number" step="1" data-xf="${s}" data-k="x" value="${xf.x}"></label>
+    <label>y px<input type="number" step="1" data-xf="${s}" data-k="y" value="${xf.y}"></label>
+    <label title="${isPlatePackShow()?'scales whole plate':''}">${isPlatePackShow()?'scale (whole plate)':'scale'}<input type="number" step="0.05" min="0.1" max="5" data-xf="${s}" data-k="scale" value="${xf.scale}" title="${isPlatePackShow()?'scales whole plate':''}"></label>
+   </div>
+   <div class="warn-y ${Math.abs(xf.y)>1e-6?'on':''}" data-wy="${s}">⚠ y≠0 lifts feet off floor (grounding broken)</div>
+   <button class="small" data-xfreset="${s}">reset transform</button>
+   </div>`}).join('');
+ $('slots').querySelectorAll('[data-f]').forEach(el=>el.onchange=()=>{const c=SHOW.chars[el.dataset.s]; if(el.value) c[el.dataset.f]=el.value; else delete c[el.dataset.f]; pushHist(); markDirty(); renderShow(); renderTL();});
+ $('slots').querySelectorAll('[data-up]').forEach(el=>el.onchange=async()=>{const f=el.files[0]; if(!f) return;
+  status('upload unavailable in frontend-only mode',true);return;
+  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(f)});
+  const res=await fetch('/api/upload',{method:'POST',body:JSON.stringify({name:f.name,data_b64:b64})}).then(r=>r.json());
+  SHOW.chars[el.dataset.up].image=res.path; pushHist(); markDirty(); status('uploaded '+res.path); renderShow();});
+ $('slots').querySelectorAll('[data-xf]').forEach(el=>{
+   const apply=(commit)=>{
+     const v=+el.value; const k=el.dataset.k; const side=el.dataset.xf;
+     const val=k==='scale'?(v||1):v;
+     const c=SHOW.chars[side]; if(!c.transform) c.transform={x:0,y:0,scale:1}; c.transform[k]=val;
+     const wy=$('slots').querySelector(`[data-wy="${side}"]`);
+     if(wy && k==='y') wy.classList.toggle('on', Math.abs(+val)>1e-6);
+     paintPreview();
+     if(commit){ pushHist(); markDirty(); }
+   };
+   el.oninput=()=>{ apply(false); markDirty(); };
+   el.onchange=()=>apply(true);
+ });
+ $('slots').querySelectorAll('[data-xfreset]').forEach(el=>el.onclick=()=>{delete SHOW.chars[el.dataset.xfreset].transform; pushHist(); markDirty(); renderShow(); paintPreview();});
+ renderOverlays(); updateScrub(); paintPreview();
+}
+function applyShowMeta(commit){
+ SHOW.show_id=$('sId').value.trim(); SHOW.title=$('sTitle').value; SHOW.duration_target_s=+$('sTarget').value; if($('sDraft').checked) SHOW.draft=true; else delete SHOW.draft;
+ if($('sCharScale')){ const cs=+$('sCharScale').value; if(cs && Math.abs(cs-1)>1e-6) SHOW.char_screen_scale=cs; else delete SHOW.char_screen_scale; }
+ SHOW.bg.base=$('bgBase').value; if($('bgSwap').value){SHOW.bg.swap=$('bgSwap').value; SHOW.bg.swap_t=+$('bgSwapT').value||0}else{delete SHOW.bg.swap; delete SHOW.bg.swap_t}
+ if(commit) pushHist();
+ markDirty();
+}
+['sId','sTitle','sTarget','sDraft','bgBase','bgSwap','bgSwapT'].forEach(id=>$(id).onchange=()=>{ applyShowMeta(true); renderShow(); renderTL();});
+if($('sCharScale')){
+  $('sCharScale').oninput=()=>{ applyShowMeta(false); paintPreview(); };
+  $('sCharScale').onchange=()=>{ applyShowMeta(true); paintPreview(); };
+}
+
+function renderOverlays(){
+  if(!$('ovList')) return;
+  const list=ensureOverlays();
+  const pick=$('ovPick');
+  if(pick && CAT){
+    const words=(CAT.wording||[]);
+    pick.innerHTML='<option value="">legacy wording PNG…</option>'+words.map(w=>`<option value="${w}">${w.replace(/^assets\/wording\//,'').replace(/^uploads\//,'↑ ')}</option>`).join('');
+  }
+  const fxSel=$('ovDefaultFx');
+  if(fxSel && !fxSel.dataset.ready){
+    fxSel.innerHTML=OV_EFFECTS.map(e=>`<option value="${e}" ${e==='impact'?'selected':''}>${e}</option>`).join('');
+    fxSel.dataset.ready='1';
+  }
+  const chips=$('ovPresets');
+  if(chips && !chips.dataset.ready){
+    const presets=(CAT&&CAT.wording_presets)||OV_PRESETS;
+    chips.innerHTML=presets.map(t=>`<button type="button" class="chip" data-preset="${t}">${t}</button>`).join('');
+    chips.dataset.ready='1';
+    chips.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>addTextOverlay(b.dataset.preset));
+  }
+  const box=$('ovList');
+  if(!list.length){box.className='empty';box.textContent='no overlays — tap a preset chip or + text';renderOvLane();return}
+  box.className='';
+  box.innerHTML=list.map((o,i)=>{
+    const sel=i===SEL_OV?' sel':'';
+    const spec=ovEffectSpec(o);
+    const st=o.style||defaultTextStyle();
+    const textMode=isTextOverlay(o);
+    const styleBlock=textMode?`<div class="stylegrid" style="grid-column:1/-1">
+        <label>text<input data-of="text" value="${(o.text||'').replace(/"/g,'&quot;')}"></label>
+        <label>fill<input type="color" data-st="fill" value="${(st.fill||'#ffe66d')}"></label>
+        <label>stroke<input type="color" data-st="stroke" value="${(st.stroke||'#1a0a00')}"></label>
+        <label>strokeW<input type="number" step="1" min="0" max="40" data-st="strokeWidth" value="${st.strokeWidth??8}"></label>
+        <label>fontSize<input type="number" step="4" min="12" max="320" data-st="fontSize" value="${st.fontSize??96}"></label>
+        <label>font<select data-st="fontFamily">${(CAT&&CAT.fonts?CAT.fonts.map(f=>({id:f.id,label:f.label||f.id})):FONT_OPTS).map(f=>`<option value="${f.id}" ${(st.fontFamily||'Ma Shan Zheng')===f.id?'selected':''}>${f.label||f.id}</option>`).join('')}</select></label>
+        <label>weight<select data-st="fontWeight"><option ${String(st.fontWeight)==='700'?'selected':''}>700</option><option ${String(st.fontWeight)==='900'||st.fontWeight==null?'selected':''}>900</option><option ${String(st.fontWeight)==='400'?'selected':''}>400</option></select></label>
+        <label>italic<span><input type="checkbox" data-st="italic" ${st.italic?'checked':''}></span></label>
+      </div>`:`<label style="grid-column:1/-1">src<select data-of="src">${(CAT.wording||[]).concat(o.src&&!(CAT.wording||[]).includes(o.src)?[o.src]:[]).map(w=>`<option value="${w}" ${w===o.src?'selected':''}>${w}</option>`).join('')}</select></label>`;
+    const thumb=textMode
+      ? `<div class="th" style="display:flex;align-items:center;justify-content:center;height:48px;font:900 22px '${st.fontFamily||'Ma Shan Zheng'}', 'Long Cang', serif;color:${st.fill||'#ffe66d'};-webkit-text-stroke:2px ${st.stroke||'#000'};background:#0a1418;border-radius:4px">${(o.text||'?').slice(0,4)}</div>`
+      : `<img class="th" src="../${o.src||''}" onerror="this.style.opacity=.3">`;
+    return `<div class="ovrow${sel}" data-oi="${i}">
+      <div class="fields">
+        <label>id<input data-of="id" value="${o.id||''}"></label>
+        <label>kind<select data-of="kind"><option value="text" ${textMode?'selected':''}>text</option><option value="image" ${!textMode?'selected':''}>image</option></select></label>
+        ${styleBlock}
+        <label>effect<select data-of="effectType">${OV_EFFECTS.map(e=>`<option value="${e}" ${e===spec.type?'selected':''}>${e}</option>`).join('')}</select></label>
+        <label>intensity<input type="range" min="0.25" max="2" step="0.05" data-of="intensity" value="${spec.intensity}"><span data-iv>${(+spec.intensity).toFixed(2)}</span></label>
+        <label>t_start<input type="number" step="0.05" min="0" data-of="t_start" value="${o.t_start??0}"></label>
+        <label>t_end<input type="number" step="0.05" min="0" data-of="t_end" value="${o.t_end??1}"></label>
+        <label>x<input type="number" step="1" data-of="x" value="${o.x??640}"></label>
+        <label>y<input type="number" step="1" data-of="y" value="${o.y??200}"></label>
+        <label>scale<input type="number" step="0.05" min="0.05" data-of="scale" value="${o.scale??1}"></label>
+        <label>opacity<input type="number" step="0.05" min="0" max="1" data-of="opacity" value="${o.opacity??1}"></label>
+        <label>z<input type="number" step="1" data-of="z" value="${o.z??10}"></label>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">
+        ${thumb}
+        <button class="small" data-orm="${i}">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.ovrow').forEach(row=>{
+    row.onclick=e=>{ if(e.target.closest('button')) return; SEL_OV=+row.dataset.oi; renderOverlays(); paintPreview(); };
+    row.querySelectorAll('[data-of]').forEach(el=>{
+      const apply=()=>{
+        const o=SHOW.overlays[+row.dataset.oi]; if(!o) return;
+        const k=el.dataset.of; let v=el.type==='checkbox'?el.checked:el.value;
+        if(k==='effectType'){
+          const cur=ovEffectSpec(o); o.effect={type:v, intensity:cur.intensity}; 
+        } else if(k==='intensity'){
+          const cur=ovEffectSpec(o); o.effect={type:cur.type, intensity:+v}; const sp=row.querySelector('[data-iv]'); if(sp) sp.textContent=(+v).toFixed(2);
+        } else if(k==='kind'){
+          o.kind=v;
+          if(v==='text'){ if(!o.text) o.text='砰'; if(!o.style) o.style=defaultTextStyle(); delete o.src; }
+          else { if(!o.src) o.src=(CAT.wording&&CAT.wording[0])||''; }
+          pushHist(); markDirty(); renderOverlays(); paintPreview(); return;
+        } else if(['t_start','t_end','x','y','scale','opacity','z'].includes(k)) v=+v;
+        o[k]=v; pushHist(); markDirty(); renderOvLane(); paintPreview();
+      };
+      el.onchange=apply; if(el.type==='range') el.oninput=apply;
+      el.onclick=e=>e.stopPropagation();
+    });
+    row.querySelectorAll('[data-st]').forEach(el=>{
+      const apply=()=>{
+        const o=SHOW.overlays[+row.dataset.oi]; if(!o) return;
+        if(!o.style) o.style=defaultTextStyle();
+        const k=el.dataset.st;
+        let v=el.type==='checkbox'?el.checked:el.value;
+        if(['strokeWidth','fontSize'].includes(k)) v=+v;
+        o.style[k]=v; o.kind='text';
+        if(k==='fontFamily' && (v==='Ma Shan Zheng'||v==='Long Cang') && String(o.style.fontWeight)==='900'){ o.style.fontWeight='400'; const wsel=row.querySelector('[data-st=fontWeight]'); if(wsel) wsel.value='400'; }
+        if(k==='fontFamily' && (v==='Noto Sans CJK SC'||v==='Noto Serif CJK SC') && String(o.style.fontWeight)==='400'){ o.style.fontWeight='900'; const wsel=row.querySelector('[data-st=fontWeight]'); if(wsel) wsel.value='900'; }
+        pushHist(); markDirty(); paintPreview();
+        // refresh thumb color without full re-render
+        const th=row.querySelector('.th'); if(th && !th.tagName.match(/IMG/i)){ th.style.color=o.style.fill; th.style.webkitTextStroke=`2px ${o.style.stroke}`; th.style.fontFamily=`"${o.style.fontFamily||'Ma Shan Zheng'}", "Long Cang", serif`; th.textContent=(o.text||'?').slice(0,4); }
+      };
+      el.onchange=apply; if(el.type==='color') el.oninput=apply;
+      el.onclick=e=>e.stopPropagation();
+    });
+  });
+  box.querySelectorAll('[data-orm]').forEach(btn=>btn.onclick=e=>{e.stopPropagation(); SHOW.overlays.splice(+btn.dataset.orm,1); SEL_OV=-1; pushHist(); markDirty(); renderOverlays(); paintPreview();});
+  renderOvLane();
+}
+
+function renderOvLane(){
+  const lane=$('ovLane'); if(!lane||!SHOW) return;
+  const d=Math.max(0.01, totalDur());
+  const list=ensureOverlays();
+  lane.innerHTML='';
+  drawLoopMarkers(lane, d);
+  list.forEach((o,i)=>{
+    const t0=+o.t_start||0, t1=Math.max(t0+0.05, +o.t_end||t0+1);
+    const el=document.createElement('div'); el.className='ovm'+(i===SEL_OV?' sel':'');
+    el.style.left=(t0/d*100)+'%'; el.style.width=((t1-t0)/d*100)+'%';
+    const label=isTextOverlay(o)?(o.text||o.id):(o.id||'ov');
+    el.innerHTML=`<span class="hL"></span><span class="lab"></span><span class="hR"></span>`;
+    el.querySelector('.lab').textContent=String(label).slice(0,10);
+    el.title=`${o.id} ${t0.toFixed(2)}–${t1.toFixed(2)} · z=${o.z??10} · ${ovEffectSpec(o).type}`;
+    el.onpointerdown=(e)=>{
+      if(e.target.classList.contains('hL')||e.target.classList.contains('hR')) return;
+      SEL_OV=i; SCRUB=t0+0.01; updateScrub(); renderOverlays(); paintPreview();
+    };
+    function startTrim(edge, ev){
+      ev.preventDefault(); ev.stopPropagation();
+      SEL_OV=i; const startX=ev.clientX, st0=t0, st1=t1;
+      const rect=lane.getBoundingClientRect();
+      function move(ev2){
+        const dx=(ev2.clientX-startX)/rect.width*d;
+        if(edge==='L'){ o.t_start=Math.max(0, Math.min(st1-0.05, +(st0+dx).toFixed(3))); }
+        else { o.t_end=Math.max(st0+0.05, Math.min(d, +(st1+dx).toFixed(3))); }
+        el.style.left=((+o.t_start||0)/d*100)+'%';
+        el.style.width=((Math.max((+o.t_end||0)-(+o.t_start||0),0.05))/d*100)+'%';
+        paintPreview();
+      }
+      function up(){
+        window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+        pushHist(); markDirty(); renderOverlays(); paintPreview();
+      }
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+    }
+    el.querySelector('.hL').onpointerdown=e=>startTrim('L',e);
+    el.querySelector('.hR').onpointerdown=e=>startTrim('R',e);
+    lane.appendChild(el);
+  });
+  const ph=document.createElement('div'); ph.className='playhead'; ph.style.left=(SCRUB/d*100)+'%'; lane.appendChild(ph);
+  // also paint loop on duration bar
+  const bar=$('bar');
+  if(bar){
+    bar.querySelectorAll('.loopA,.loopB,.loopRange').forEach(n=>n.remove());
+    drawLoopMarkers(bar, Math.max(60, totalDur()));
+    // bar uses scale max(60,T.d) for atom widths — loop markers use same d as scrub for consistency on ovLane; for bar remount on renderTL
+  }
+}
+
+function updateScrub(){
+  const d=Math.max(0.01, totalDur());
+  const scrub=$('scrub'); if(!scrub) return;
+  scrub.max=String(d); if(+scrub.value>d) scrub.value=String(d);
+  SCRUB=Math.min(SCRUB, d); scrub.value=String(SCRUB); $('scrubT').textContent=SCRUB.toFixed(2)+'s';
+  if(typeof renderOvLane==='function') renderOvLane();
+  updateLoopLbl();
+  if($('abDock')&&$('abDock').classList.contains('on')) syncAbPlayer();
+}
+/* === Editor v4 core (injected) === */
+function poseEntry(side, poseId){
+  const lib=libFor(side); if(!lib) return null;
+  return (lib.poses||[]).find(q=>q.pose_id===poseId)||null;
+}
+function atomCamAt(pl, scrub){
+  if(!pl||!LIVE_CAM) return {x:0,y:0,s:1,r:0};
+  const a=pl.atom; const pid=(a.camera&&a.camera.preset)||null;
+  const P=pid&&PRESETS[pid]; if(!P||!P.curves) return {x:0,y:0,s:1,r:0};
+  const d=Math.max(1e-6,+a.duration_s||1);
+  const tl=Math.max(0, scrub-pl.t0);
+  const u=Math.min(1, tl/d);
+  const c=cam(P.curves, u, tl);
+  const n=(a.camera&&a.camera.nudge)||{};
+  return {x:c.x+(+n.x||0), y:c.y+(+n.y||0), s:c.s+(+n.s||0), r:c.r+(+n.r||0)};
+}
+function approxPlace(pl){
+  /* lightweight mirror of compose place_library_plate for guides */
+  const floor=SHOW.floor_y||684;
+  const out={L:null,R:null,contact:null,gapLR:null};
+  if(!pl||pl.atom.pose_mode!=='library'||!pl.atom.poses) return out;
+  const sides={};
+  for(const side of ['L','R']){
+    const need=side==='L'?'right':'left';
+    const poseId=Array.isArray(pl.atom.poses[side])?pl.atom.poses[side][Math.min(pl.plateIdx,pl.atom.poses[side].length-1)]:pl.atom.poses[side];
+    const p=poseEntry(side, poseId); if(!p) continue;
+    const xf=atomXf(pl.atom, side);
+    const k=(SHOW.char_screen_scale||1)*(p.scale||1)*xf.scale;
+    const flip=(p.facing||'right')!==need;
+    const size=p.size||[768,768];
+    sides[side]={pose:p,k,flip,size,xf,poseId};
+  }
+  if(!sides.L||!sides.R) return out;
+  let c=pl.atom.contact||{}; if(Array.isArray(c)) c=c[Math.min(pl.plateIdx,c.length-1)]||{};
+  const att=c.attacker||'none';
+  function screenPt(S, footX, xy){
+    const fx=S.pose.foot_anchor_xy[0], fy=S.pose.foot_anchor_xy[1];
+    const dx=(xy[0]-fx)*S.k*(S.flip?-1:1);
+    return [footX+dx, floor-(fy-xy[1])*S.k];
+  }
+  function tgt(S, target){
+    if(target==='head') return S.pose.head_xy;
+    if(target==='guard'||target==='fist') return S.pose.hand_hit_xy;
+    const hx=S.pose.head_xy[0], hy=S.pose.head_xy[1], fx=S.pose.foot_anchor_xy[0], fy=S.pose.foot_anchor_xy[1];
+    return [hx+(fx-hx)*0.4, hy+(fy-hy)*0.4];
+  }
+  function ext(S){ const w=S.size[0], fx=S.pose.foot_anchor_xy[0], k=S.k; return S.flip?[(w-fx)*k, fx*k]:[fx*k,(w-fx)*k]; }
+  let gapLR;
+  if(att==='L'||att==='R'){
+    const dfd=att==='L'?'R':'L'; const A=sides[att], D=sides[dfd];
+    if(A.pose.hand_hit_xy && D.pose.head_xy){
+      const ax=screenPt(A,0,A.pose.hand_hit_xy)[0];
+      const tx=screenPt(D,0,tgt(D,c.target||'body'))[0];
+      const depth=c.depth_px!=null?+c.depth_px:12;
+      gapLR = att==='L' ? (ax-tx-depth) : (tx-ax-depth);
+    }
+  }
+  if(gapLR==null) gapLR = ext(sides.L)[1] + (c.gap_px!=null?+c.gap_px:40) + ext(sides.R)[0];
+  const minGap=ext(sides.L)[1]*0.35+ext(sides.R)[0]*0.35;
+  if(gapLR<minGap) gapLR=minGap;
+  const cx=640+((pl.atom.layout_hints&&pl.atom.layout_hints.pair_offset_x)||0);
+  const foot={L:cx-gapLR/2, R:cx+gapLR/2};
+  for(const side of ['L','R']){
+    const S=sides[side]; const fx=S.pose.foot_anchor_xy[0], fy=S.pose.foot_anchor_xy[1];
+    const w=S.size[0], h=S.size[1];
+    const left=foot[side]-((S.flip?(w-fx):fx)*S.k)+S.xf.x;
+    const top=floor-fy*S.k+S.xf.y;
+    out[side]={left,top,w:w*S.k,h:h*S.k,footX:foot[side]+S.xf.x,footY:floor+S.xf.y,flip:S.flip,pose:S.pose,k:S.k,xf:S.xf,poseId:S.poseId};
+  }
+  if(att==='L'||att==='R'){
+    const A=out[att];
+    if(A&&A.pose.hand_hit_xy){
+      const pt=screenPt(sides[att], foot[att], A.pose.hand_hit_xy);
+      out.contact=[pt[0]+sides[att].xf.x, pt[1]+sides[att].xf.y];
+    }
+  }
+  out.gapLR=gapLR;
+  return out;
+}
+function drawGuideMark(g,x,y,color,label){
+  g.save(); g.strokeStyle=color; g.fillStyle=color; g.lineWidth=2;
+  g.beginPath(); g.arc(x,y,7,0,7); g.stroke();
+  g.beginPath(); g.moveTo(x-10,y); g.lineTo(x+10,y); g.moveTo(x,y-10); g.lineTo(x,y+10); g.stroke();
+  g.font='10px monospace'; g.fillText(label, x+10, y-8);
+  g.restore();
+}
+function drawLoopMarkers(host, d){
+  if(!host||LOOP_A==null||LOOP_B==null) return;
+  const a=Math.min(LOOP_A,LOOP_B), b=Math.max(LOOP_A,LOOP_B);
+  const rg=document.createElement('div'); rg.className='loopRange'; rg.style.left=(a/d*100)+'%'; rg.style.width=((b-a)/d*100)+'%'; host.appendChild(rg);
+  const mA=document.createElement('div'); mA.className='loopA'; mA.style.left=(a/d*100)+'%'; host.appendChild(mA);
+  const mB=document.createElement('div'); mB.className='loopB'; mB.style.left=(b/d*100)+'%'; host.appendChild(mB);
+}
+function updateLoopLbl(){
+  const el=$('loopLbl'); if(!el) return;
+  if(LOOP_A==null||LOOP_B==null) el.textContent='loop off';
+  else el.textContent=`A ${Math.min(LOOP_A,LOOP_B).toFixed(2)} → B ${Math.max(LOOP_A,LOOP_B).toFixed(2)}`;
+}
+function selectedAtomIndices(){
+  if(SEL_SET.size) return [...SEL_SET].sort((a,b)=>a-b);
+  return SEL>=0?[SEL]:[];
+}
+function bumpOverlayZ(dir){
+  const list=ensureOverlays(); if(SEL_OV<0||!list[SEL_OV]){status('select an overlay',true);return}
+  const o=list[SEL_OV]; o.z=(+o.z||10)+dir;
+  pushHist(); markDirty(); renderOverlays(); paintPreview(); status('z → '+o.z);
+}
+async function paintPreviewOnto(cv, opts){
+  opts=opts||{};
+  if(!cv||!SHOW) return null;
+  const g=cv.getContext('2d'), W=1280, H=720;
+  g.setTransform(1,0,0,1,0,0); g.fillStyle='#0b2a33'; g.fillRect(0,0,W,H);
+  const bgIm=await loadImg('../'+(SHOW.bg.base||''));
+  if(bgIm) g.drawImage(bgIm,0,0,W,H);
+  const floor=SHOW.floor_y||684;
+  const pl=plateAtTime(SCRUB);
+  const c=atomCamAt(pl, SCRUB);
+  g.save();
+  if(LIVE_CAM){ g.translate(W/2+c.x, H/2+c.y); g.rotate(c.r*Math.PI/180); g.scale(c.s,c.s); g.translate(-W/2,-H/2); }
+  g.strokeStyle='rgba(127,221,221,.35)'; g.beginPath(); g.moveTo(0,floor); g.lineTo(W,floor); g.stroke();
+  const handles=[];
+  const place=approxPlace(pl);
+  if(pl && pl.atom.pose_mode==='library' && pl.atom.poses){
+    for(const side of ['L','R']){
+      const P=place[side];
+      const poseId=P?P.poseId:(Array.isArray(pl.atom.poses[side])?pl.atom.poses[side][Math.min(pl.plateIdx,pl.atom.poses[side].length-1)]:pl.atom.poses[side]);
+      const url=posePng(side, poseId); const im=await loadImg(url);
+      const xf=atomXf(pl.atom, side);
+      if(P && im && im.naturalWidth){
+        g.save();
+        if(P.flip){ g.translate(P.left+P.w, P.top); g.scale(-1,1); g.drawImage(im, 0, 0, P.w, P.h); }
+        else g.drawImage(im, P.left, P.top, P.w, P.h);
+        g.restore();
+        handles.push({kind:'char', side, x:P.footX, y:P.footY-40, color: side==='L'?'#19e0d0':'#ff8a1e'});
+        if(SHOW_GUIDES && P.pose){
+          const foot=[P.footX, P.footY];
+          const hit=P.pose.hand_hit_xy? (()=>{ const fx=P.pose.foot_anchor_xy[0],fy=P.pose.foot_anchor_xy[1]; const dx=(P.pose.hand_hit_xy[0]-fx)*P.k*(P.flip?-1:1); return [P.footX+dx, floor-(fy-P.pose.hand_hit_xy[1])*P.k+xf.y]; })() : null;
+          const head=P.pose.head_xy? (()=>{ const fx=P.pose.foot_anchor_xy[0],fy=P.pose.foot_anchor_xy[1]; const dx=(P.pose.head_xy[0]-fx)*P.k*(P.flip?-1:1); return [P.footX+dx, floor-(fy-P.pose.head_xy[1])*P.k+xf.y]; })() : null;
+          drawGuideMark(g, foot[0], foot[1], side==='L'?'#19e0d0':'#ff8a1e', side+'.foot');
+          if(hit) drawGuideMark(g, hit[0], hit[1], '#f6a', side+'.hand');
+          if(head) drawGuideMark(g, head[0], head[1], '#8af', side+'.head');
+        }
+      } else {
+        const baseX=side==='L'?400:880;
+        g.fillStyle=side==='L'?'#19e0d055':'#ff8a1e55';
+        g.fillRect(baseX-60+xf.x, floor-400+xf.y, 120*xf.scale, 400*xf.scale);
+        handles.push({kind:'char', side, x:baseX+xf.x, y:floor-40+xf.y, color: side==='L'?'#19e0d0':'#ff8a1e'});
+      }
+    }
+    if(SHOW_GUIDES && place.contact){
+      drawGuideMark(g, place.contact[0], place.contact[1], '#ffe66d', 'hit');
+      if(CONTACT_GHOST){
+        g.save(); g.globalAlpha=0.25; g.fillStyle='#ffe66d'; g.beginPath(); g.arc(place.contact[0], place.contact[1], 28, 0, 7); g.fill(); g.restore();
+      }
+    }
+  } else if(pl && pl.atom.pose_mode==='hero'){
+    // Live hero / parity plate preview (HM-COMPOSE-02)
+    const a=pl.atom; const pls=(a.hero&&a.hero.plates)||[];
+    const pid=pls[pl.plateIdx];
+    const layoutSrc=a.hero&&a.hero.layout_source;
+    let drawn=false;
+    if(pid && layoutSrc){
+      const lay=await loadLayoutJson(layoutSrc);
+      const se=lay && lay[pid];
+      if(se){
+        // bg already drawn from show.bg.base; per-plate bg swap if different file available
+        const parts=se.parts||[];
+        const shadows=se.shadows||[];
+        const floorY=se.floor!=null?se.floor:(SHOW.floor_y||684);
+        // pair framing (same as compose unsided path)
+        const xfL=atomXf(a,'L'), xfR=atomXf(a,'R');
+        const pair={x:xfL.x+xfR.x, y:Math.abs(xfL.y)>1e-9?xfL.y:xfR.y, scale:(xfL.scale||1)*(xfR.scale||1)*(SHOW.char_screen_scale||1)};
+        for(let i=0;i<parts.length;i++){
+          const part=parts[i];
+          const srcRel=part.src.startsWith('assets/')||part.src.startsWith('uploads/') ? part.src
+            : (layoutSrc.replace(/[^/]+$/,'') + part.src.replace(/^\.\//,''));
+          // layout_source dirname + part.src (part.src is usually cutout/Pxx.png)
+          const baseDir=layoutSrc.includes('/')?layoutSrc.slice(0,layoutSrc.lastIndexOf('/')+1):'';
+          const url='../'+(part.src.startsWith('assets/')||part.src.startsWith('uploads/')?part.src:(baseDir+part.src));
+          const im=await loadImg(url);
+          if(!im||!im.naturalWidth) continue;
+          let x=part.x, y=part.y, w=part.w, h=part.h;
+          const sh=shadows[i]||shadows[0];
+          const cx=sh?sh.cx:(x+w/2);
+          const sx=pair.scale||1, dx=pair.x||0, dy=pair.y||0;
+          if(Math.abs(sx-1)>1e-9 || Math.abs(dx)>1e-9 || Math.abs(dy)>1e-9){
+            const ox=x-cx, oy=y-floorY;
+            w=w*sx; h=h*sx;
+            x=cx+ox*sx+dx; y=floorY+oy*sx+dy;
+          }
+          g.drawImage(im, x, y, w, h);
+          drawn=true;
+          handles.push({kind:'char', side: part.side||'L', x: (sh?sh.cx:x+w/2)+dx, y: floorY-40+dy, color: (part.side==='R')?'#ff8a1e':'#19e0d0'});
+        }
+        if(SHOW_GUIDES){
+          g.fillStyle='#fff8'; g.font='14px monospace';
+          g.fillText(`${pid} · ${a.id}`, 24, 36);
+        }
+      }
+    }
+    if(!drawn){
+      g.fillStyle='#fff6'; g.font='22px monospace';
+      g.fillText((pl.atom.pose_mode||'')+' · '+pl.atom.id+(pid?(' · '+pid):''), 40, 80);
+    }
+  } else if(pl){
+    g.fillStyle='#fff6'; g.font='22px monospace'; g.fillText((pl.atom.pose_mode||'')+' · '+pl.atom.id, 40, 80);
+  }
+  const ovs=[...ensureOverlays()].map((o,i)=>({o,i})).sort((a,b)=>(+a.o.z||10)-(+b.o.z||10));
+  for(const {o,i} of ovs){
+    if(!(SCRUB>=(+o.t_start||0) && SCRUB<(+o.t_end||0))) continue;
+    const dur=Math.max(1e-6, (+o.t_end||0)-(+o.t_start||0));
+    const u=Math.max(0, Math.min(1, (SCRUB-(+o.t_start||0))/dur));
+    const xf=ovEffectXform(ovEffectSpec(o), u);
+    const sc=+o.scale||1, op=((o.opacity!=null&&o.opacity!=='')?+o.opacity:1)*xf.opMul;
+    const cx=(+o.x||640)+xf.tx, cy=(+o.y||200)+xf.ty;
+    g.save(); g.translate(cx, cy); g.rotate(xf.rot*Math.PI/180); g.scale(xf.sx*sc, xf.sy*sc); g.globalAlpha=op;
+    if(xf.flash>0.01){ g.filter=`brightness(${1+xf.flash*2})`; }
+    if(isTextOverlay(o)){
+      const st=o.style||defaultTextStyle();
+      const fs=+(st.fontSize||96); const ff=st.fontFamily||'Ma Shan Zheng';
+      g.font=`${st.italic?'italic ':''}${st.fontWeight||900} ${fs}px "${ff}","Ma Shan Zheng","Long Cang","Noto Serif CJK SC",serif`;
+      g.textAlign='center'; g.textBaseline='middle'; g.lineJoin='round'; g.miterLimit=2;
+      const sw=+(st.strokeWidth!=null?st.strokeWidth:8);
+      if(sw>0){ g.strokeStyle=st.stroke||'#1a0a00'; g.lineWidth=sw; g.strokeText(o.text||'', 0, 0); }
+      g.fillStyle=st.fill||'#ffe66d'; g.fillText(o.text||'', 0, 0);
+    } else {
+      const im=await loadImg('../'+(o.src||''));
+      if(im&&im.naturalWidth){ g.drawImage(im, -im.naturalWidth/2, -im.naturalHeight/2); }
+      else { g.fillStyle='#ff2'; g.fillRect(-80,-30,160,60); }
+    }
+    g.restore();
+    handles.push({kind:'ov', idx:i, x:cx, y:cy, color: i===SEL_OV?'#ffe66d':'#ffe66d88'});
+  }
+  g.restore(); // end cam
+  if(!opts.noHandles){
+    for(const h of handles){
+      g.fillStyle=h.color; g.strokeStyle='#000a'; g.lineWidth=2;
+      g.beginPath(); g.arc(h.x, h.y, 14, 0, 7); g.fill(); g.stroke();
+      g.fillStyle='#000'; g.font='11px monospace'; g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(h.kind==='char'?h.side:'W', h.x, h.y);
+    }
+  }
+  if(!opts.skipGlobal) window.__pvHandles=handles;
+  return {pl, c, handles};
+}
+
+function updateFxBanner(pl){
+  const el=$('fxBanner'); if(!el) return;
+  const hooks=pl&&pl.atom&&pl.atom.fx_hooks;
+  const has=Array.isArray(hooks)&&hooks.length>0;
+  el.classList.toggle('on', !!has);
+  if(has){
+    const types=hooks.map(h=>typeof h==='string'?h:(h&&h.type)||'?').filter(Boolean);
+    el.textContent='Compose to see FX ('+types.slice(0,4).join(', ')+(types.length>4?'…':'')+') — live preview shows plates + wording only';
+  }
+}
+async function paintPreview(){
+  const cv=$('pv'); if(!cv||!SHOW) return;
+  // HM-COMPOSE-03: paint offscreen then blit — avoids dark blank first-frame flash
+  if(!window.__pvOff){ window.__pvOff=document.createElement('canvas'); window.__pvOff.width=1280; window.__pvOff.height=720; }
+  const off=window.__pvOff;
+  const info=await paintPreviewOnto(off, {});
+  const g=cv.getContext('2d');
+  g.setTransform(1,0,0,1,0,0);
+  g.drawImage(off,0,0);
+  const hud=$('pvHud');
+  const pl=info&&info.pl; const c=info&&info.c;
+  const camTxt = (LIVE_CAM&&c) ? ` · cam x${c.x.toFixed(0)} y${c.y.toFixed(0)} s${c.s.toFixed(2)} r${c.r.toFixed(1)}` : '';
+  if(hud) hud.textContent = pl ? `${SCRUB.toFixed(2)}s · ${pl.atom.id} · plate ${pl.plateIdx+1}${camTxt}` : `${SCRUB.toFixed(2)}s`;
+  updateFxBanner(pl);
+  if($('abDock')&&$('abDock').classList.contains('on')){
+    const ab=$('abLive'); if(ab) await paintPreviewOnto(ab, {noHandles:true, skipGlobal:true});
+    syncAbPlayer();
+  }
+}
+
+function clientCheck(){const e=[],T=totals();
+ if(!/^[a-z0-9][a-z0-9_-]*$/.test(SHOW.show_id)) e.push('show_id must be lowercase a-z0-9_-');
+ if(!SHOW.atoms.length) e.push('no atoms'); if(!SHOW.draft&&(T.d<30||T.d>60)) e.push(`duration ${T.d}s outside 30–60s`);
+ SHOW.atoms.forEach(a=>{if(a.pose_mode==='library'&&!SHOW.chars.L.pose_library) e.push(`${a.id}: library atom but L has no pose library`);
+  if(a.pose_mode==='library'&&!SHOW.chars.R.pose_library) e.push(`${a.id}: library atom but R has no pose library`)}); return e}
+function spec(){const s=JSON.parse(JSON.stringify(SHOW)); s.grounded=true; return s}
+async function postCompose(body){const r=await fetch('/api/compose',{method:'POST',body:JSON.stringify(body)});return r.json()}
+function showOut(r){$('out').style.color=r.ok?'var(--ok)':'var(--bad)'; $('out').textContent=r.ok?`✓ ${r.out}\n${r.duration_s}s · ${JSON.stringify(r.stats)}\n`+(r.warnings||[]).map(w=>'⚠ '+w).join('\n'):(r.errors||[]).join('\n')}
+
+function playerUrl(sid, t, bust){
+  const q=new URLSearchParams(); q.set('show', sid); if(t!=null && t!=='') q.set('t', String(+t||0)); if(bust) q.set('_', String(bust));
+  return `/player/index.html?${q.toString()}`;
+}
+function showPlayerDock(force){
+  const dock=$('playerDock'); if(!dock) return;
+  if(force || hasComposed){ dock.classList.add('on'); document.body.classList.add('dockVisible'); }
+}
+function refreshDockedPlayer(bust){
+  if(!SHOW) return;
+  const fr=$('playerFrame'); if(!fr) return;
+  showPlayerDock(true);
+  fr.src = playerUrl(SHOW.show_id, SCRUB, bust||Date.now());
+}
+async function probeComposed(sid){
+  // HM-COMPOSE-07: local FE out first, then static /out/<id>/timeline.json
+  try{ if(window.HMFeStore && HMFeStore.hasOut(sid)) return true; }catch(e){}
+  try{
+    const r=await fetch('/out/'+encodeURIComponent(sid)+'/timeline.json',{method:'GET',cache:'no-store'});
+    if(r.ok) return true;
+  }catch(e){}
+  try{
+    const r=await fetch('../out/'+encodeURIComponent(sid)+'/timeline.json',{method:'GET',cache:'no-store'});
+    if(r.ok) return true;
+  }catch(e){}
+  if(apiOK){
+    try{
+      const r=await fetch('/api/composed?show='+encodeURIComponent(sid)).then(x=>x.json());
+      return !!(r && r.exists);
+    }catch(e){return false}
+  }
+  return false;
+}
+
+$('exportBtn').onclick=async()=>{const e=clientCheck(); if(e.length){status(e[0],true);$('out').textContent=e.join('\n');return}
+ // HM-COMPOSE-07: client checks + optional JS dry compose
+ if(window.HMComposeClient){
+   try{
+     const r=await HMComposeClient.composeShow(spec(),{cameraPresets:{presets:CAT.presets},fxPresets:{hooks:CAT.fx},loadJson:feLoadJson});
+     showOut(r); if(!r.ok){status('compose check failed — not exported',true);return}
+   }catch(err){ status('compose check failed: '+err.message,true); return; }
+ }
+ const blob=new Blob([JSON.stringify(spec(),null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=SHOW.show_id+'.json'; a.click(); status('exported '+SHOW.show_id+'.json (FE-only validated)');};
+
+async function doSave(){
+  if(!SHOW) return;
+  if(!/^[a-z0-9][a-z0-9_-]*$/.test(SHOW.show_id)){status('bad show_id',true);return}
+  status('saving…');
+  // HM-COMPOSE-07: persist in browser (localStorage) + download / File System Access
+  try{
+    if(window.HMFeStore) HMFeStore.putLocalShow(spec());
+    dirtyDisk=false; lastSavedHash=showHash(); clearDraft();
+    updateBanner();
+    const r=await HMFeStore.saveWithFilePicker(SHOW.show_id+'.json', spec());
+    if(r&&r.aborted){ status('save cancelled'); return; }
+    status('saved locally'+(r&&r.via?(' · '+r.via):'')+' · '+SHOW.show_id);
+    mergeLocalShowsIntoCatalog();
+    refreshExamplePicker(true);
+  }catch(e){
+    status('save failed: '+e.message,true);
+    $('out').textContent=String(e);
+  }
+}
+
+async function feLoadJson(path){
+  const p=String(path||'').replace(/^\//,'');
+  if(FE_ASSET_MAP[p] && String(FE_ASSET_MAP[p]).startsWith('json:')) return JSON.parse(FE_ASSET_MAP[p].slice(5));
+  if(FE_ASSET_MAP[path] && String(FE_ASSET_MAP[path]).startsWith('json:')) return JSON.parse(FE_ASSET_MAP[path].slice(5));
+  // show.meta.layout_inline for imported packs
+  if(SHOW&&SHOW.meta&&SHOW.meta.layout_inline&&/layout\.json$/i.test(p)) return SHOW.meta.layout_inline;
+  const urls=['/'+p, '../'+p];
+  for(const u of urls){
+    try{ const r=await fetch(u); if(r.ok) return await r.json(); }catch(e){}
+  }
+  throw new Error('cannot load '+p);
+}
+async function doCompose(){
+  const e=clientCheck(); if(e.length){status(e[0],true);$('out').textContent=e.join('\n');return}
+  status('composing…');
+  let r;
+  // HM-COMPOSE-07: in-browser compose is the product path
+  if(window.HMComposeClient && typeof HMComposeClient.composeShow==='function'){
+    try{
+      const cam=CAT&&CAT.presets? {presets:CAT.presets} : await feLoadJson('presets/camera_presets.json');
+      const fx=CAT&&CAT.fx? {hooks:CAT.fx} : await feLoadJson('presets/fx_presets.json');
+      r=await HMComposeClient.composeShow(spec(), {cameraPresets:cam, fxPresets:fx, loadJson:feLoadJson});
+      if(r.ok && r.timeline && r.layout && window.HMFeStore){
+        HMFeStore.putOut(SHOW.show_id, r.timeline, r.layout, {stats:r.stats, warnings:r.warnings});
+        // also keep show draft
+        try{ HMFeStore.putLocalShow(spec()); }catch(_){}
+      }
+    }catch(err){
+      r={ok:false, errors:[String(err&&err.message||err)]};
+    }
+  } else if(apiOK){
+    r=await postCompose({show:spec(),save:true});
+  } else {
+    r={ok:false, errors:['compose-client.js not loaded']};
+  }
+  showOut(r);
+  if(r.ok){
+    dirtyDisk=false; clearDraft();
+    lastComposedHash=showHash(); lastSavedHash=lastComposedHash;
+    lastComposedSnap=JSON.parse(JSON.stringify(SHOW));
+    hasComposed=true;
+    updateBanner(); updatePreviewBtn();
+    refreshDockedPlayer(Date.now());
+    ensureDockInView();
+    const toast=$('dockToast');
+    if(toast){ toast.textContent='composed — Play / Pause below'; toast.classList.add('on'); setTimeout(()=>toast.classList.remove('on'), 5000); }
+    if($('dockScrub') && SHOW){
+      const dur=(SHOW.atoms||[]).reduce((s,a)=>s+(+a.duration_s||0),0)||30;
+      $('dockScrub').max=String(dur); $('dockScrub').value=String(SCRUB||0);
+      if($('dockScrubT')) $('dockScrubT').textContent=(+SCRUB||0).toFixed(2)+'s';
+    }
+    status('composed → '+(r.out||SHOW.show_id)+' · FE-only · docked player refreshed');
+    mergeLocalShowsIntoCatalog();
+  } else status('compose failed',true);
+}
+
+$('saveBtn').onclick=()=>doSave();
+$('composeBtn').onclick=()=>doCompose();
+$('previewBtn').onclick=()=>{
+  const stale=hasComposed && lastComposedHash && showHash()!==lastComposedHash;
+  if(!hasComposed) status('no compose yet — use Compose & Preview',true);
+  else if(stale) status('player may be stale — recompose recommended');
+  window.open(playerUrl(SHOW.show_id, SCRUB),'_blank');
+};
+$('copyUrlBtn').onclick=async()=>{
+  const u=new URL(location.href);
+  u.searchParams.set('show', SHOW.show_id);
+  u.searchParams.set('t', String(SCRUB.toFixed(2)));
+  const abs=u.toString();
+  try{ await navigator.clipboard.writeText(abs); status('copied '+abs); }
+  catch(e){ try{prompt('Copy URL:', abs);}catch(_){} status('URL: '+abs); }
+};
+$('undoBtn').onclick=()=>undo();
+$('redoBtn').onclick=()=>redo();
+$('revertBtn').onclick=()=>{
+  if(!lastComposedSnap){status('no composed snapshot',true);return}
+  histApplying=true;
+  SHOW=JSON.parse(JSON.stringify(lastComposedSnap));
+  histApplying=false;
+  pushHist();
+  dirtyDisk=false; clearDraft();
+  lastComposedHash=showHash();
+  SEL=SHOW.atoms.length?0:-1; SEL_OV=-1;
+  renderShow(); renderTL(); updateBanner(); updatePreviewBtn(); paintPreview();
+  status('reverted to last composed');
+};
+$('bannerDismiss').onclick=()=>{$('banner').classList.remove('on'); document.documentElement.style.setProperty('--banH','0px');};
+$('dockHide').onclick=()=>{ $('playerDock').classList.remove('on'); document.body.classList.remove('dockVisible'); };
+$('dockOpenTab').onclick=()=>window.open(playerUrl(SHOW.show_id, SCRUB),'_blank');
+if($('dockReplay')) $('dockReplay').onclick=()=>{
+  if(!SHOW) return;
+  ensureDockInView();
+  refreshDockedPlayer(Date.now());
+  if(FOLLOW_PLAYHEAD) startFollowTicker();
+  status('Play @ '+SCRUB.toFixed(2)+'s');
+};
+if($('dockPause')) $('dockPause').onclick=()=>{
+  if(!SHOW) return;
+  stopFollowTicker();
+  const fr=$('playerFrame'); if(!fr) return;
+  showPlayerDock(true);
+  fr.src=playerUrl(SHOW.show_id, SCRUB, Date.now())+'&capture=1';
+  status('Pause @ '+SCRUB.toFixed(2)+'s');
+};
+if($('dockScrub')){
+  $('dockScrub').oninput=()=>{
+    const t=+$('dockScrub').value||0;
+    if($('dockScrubT')) $('dockScrubT').textContent=t.toFixed(2)+'s';
+    SCRUB=t; if($('scrub')){ $('scrub').value=String(t); if($('scrubT')) $('scrubT').textContent=t.toFixed(2)+'s'; }
+    if($('playerFrame')&&$('playerDock')&&$('playerDock').classList.contains('on')&&SHOW){
+      $('playerFrame').src=playerUrl(SHOW.show_id, t, Date.now());
+    }
+    if(typeof paintPreview==='function') paintPreview();
+    if(typeof renderPlateStrip==='function') renderPlateStrip();
+    if(FOLLOW_PLAYHEAD) scrollStripToScrub();
+  };
+}
+
+function loadShow(s, opts){
+  opts=opts||{};
+  PLATE_INV=null; // refresh plate inventory for strip placeholders
+  SHOW=JSON.parse(JSON.stringify(s)); SHOW.bg=SHOW.bg||{base:CAT.bgs[0]}; if(!SHOW.overlays) SHOW.overlays=[];
+  SEL=SHOW.atoms.length?0:-1; SEL_OV=-1;
+  if(opts.scrub!=null) SCRUB=+opts.scrub||0; else SCRUB=0;
+  hist=[]; histI=-1; histApplying=false;
+  dirtyDisk=false; lastSavedHash=showHash();
+  // keep lastComposed* if same show_id and we already know; else reset
+  if(!opts.keepCompose || !lastComposedSnap || (lastComposedSnap.show_id!==SHOW.show_id)){
+    lastComposedHash=''; lastComposedSnap=null; hasComposed=false;
+  }
+  pushHist();
+  renderShow(); renderTL(); renderCards(); updateScrub(); paintPreview();
+  updateBanner(); updatePreviewBtn(); updateHistBtns();
+  // draft check
+  const d=checkDraftRestore(SHOW.show_id);
+  if(d && d.ts && JSON.stringify(d.show)!==JSON.stringify(SHOW)){
+    pendingDraft=d;
+    $('draftMsg').textContent=`Draft from ${new Date(d.ts).toLocaleString()} for ${SHOW.show_id}. Restore or discard?`;
+    $('draftModal').classList.add('on');
+  }
+  // probe composed output
+  probeComposed(SHOW.show_id).then(ex=>{
+    if(ex){ hasComposed=true; if(!lastComposedHash) lastComposedHash=showHash(); lastComposedSnap=lastComposedSnap||JSON.parse(JSON.stringify(SHOW));
+      refreshDockedPlayer(); updateBanner(); updatePreviewBtn(); }
+  });
+  // HM-COMPOSE-04: pin recent plate-pack for Open fight / next land
+  if(isPlatePackShow()) rememberFight(SHOW.show_id);
+  updateHdrProject();
+  if(!LAND_MODE) setFxHonesty(true);
+}
+$('draftRestore').onclick=()=>{
+  if(!pendingDraft) return;
+  $('draftModal').classList.remove('on');
+  const t=pendingDraft.scrub; const sh=pendingDraft.show; pendingDraft=null;
+  histApplying=true; SHOW=sh; histApplying=false;
+  if(t!=null) SCRUB=+t||0;
+  pushHist(); markDirty();
+  SEL=SHOW.atoms.length?0:-1; renderShow(); renderTL(); updateScrub(); paintPreview(); status('draft restored');
+};
+$('draftDiscard').onclick=()=>{
+  if(pendingDraft) clearDraft();
+  pendingDraft=null; $('draftModal').classList.remove('on'); status('draft discarded');
+};
+
+$('loadEx').onclick=()=>{const s=CAT.shows.find(x=>x.path===$('example').value); if(s) {loadShow(s.show); status('loaded '+s.path)}};
+$('newShow').onclick=()=>loadShow({show_id:'new-show',title:'New show',duration_target_s:30,grounded:true,floor_y:684,
+ chars:{L:{name:'L fighter',pose_library:(CAT.libraries.find(l=>/zhao/.test(l.path))||CAT.libraries[0]||{}).path},R:{name:'R fighter',pose_library:(CAT.libraries.find(l=>/hua/.test(l.path))||CAT.libraries[1]||{}).path}},bg:{base:CAT.bgs[0]},overlays:[],atoms:[]});
+$('more').onclick=()=>{LIMIT+=24;renderCards()};
+['fFamily','fPreset','fBeat','fDur','fMode'].forEach(id=>$(id).onchange=()=>{LIMIT=48;renderCards()}); $('fText').oninput=()=>{LIMIT=48;renderCards()};
+
+function resolveDeepLink(){
+  const q=new URLSearchParams(location.search);
+  let showParam=q.get('show')||'';
+  const tParam=q.get('t');
+  if(tParam!=null && tParam!=='') SCRUB=+tParam||0;
+  if(!showParam) return null;
+  // accept show_id or shows/<id>.json or <id>.json
+  showParam=showParam.replace(/^shows\//,'').replace(/\.json$/,'');
+  const byId=CAT.shows.find(s=>s.show && s.show.show_id===showParam);
+  if(byId) return byId;
+  const byPath=CAT.shows.find(s=>s.path===`shows/${showParam}.json` || s.path.endsWith('/'+showParam+'.json') || s.path===showParam);
+  return byPath||null;
+}
+
+function refreshExamplePicker(preserve){
+  const el=$('example'); if(!el||!CAT||!CAT.shows) return;
+  const prev=preserve?el.value:'';
+  const wantId=(SHOW&&SHOW.show_id)||null;
+  el.innerHTML=CAT.shows.map(s=>`<option value="${s.path}">${s.path}</option>`).join('');
+  if(prev && [...el.options].some(o=>o.value===prev)){ el.value=prev; return; }
+  if(wantId){
+    const hit=CAT.shows.find(s=>s.show&&s.show.show_id===wantId) || CAT.shows.find(s=>s.path.endsWith('/'+wantId+'.json')||s.path.endsWith(wantId+'.json'));
+    if(hit){ el.value=hit.path; return; }
+  }
+}
+function mergeLocalShowsIntoCatalog(){
+  if(!CAT||!window.HMFeStore) return;
+  const locals=HMFeStore.listLocalShows();
+  if(!locals.length) return;
+  const byId=new Map((CAT.shows||[]).map(s=>[s.show&&s.show.show_id, s]));
+  locals.forEach(s=>{
+    const id=s.show&&s.show.show_id;
+    if(!id) return;
+    if(byId.has(id)){
+      const hit=byId.get(id);
+      hit.show=s.show; hit.local=true; hit.path=s.path;
+    } else {
+      CAT.shows.push(s); byId.set(id,s);
+    }
+  });
+}
+
+async function loadCatalog(keep){
+ // HM-COMPOSE-07: static catalog first — product path never requires /api/*
+ apiOK=false;
+ let loaded=false;
+ const catalogUrls=['/catalog.json','../catalog.json','./catalog.json'];
+ for(const u of catalogUrls){
+   try{
+     const r=await fetch(u,{cache:'no-store'});
+     if(!r.ok) continue;
+     CAT=await r.json();
+     loaded=true;
+     break;
+   }catch(e){}
+ }
+ // Optional legacy probe — do not treat as product dependency
+ if(!loaded){
+   try{
+     const r=await fetch('/api/catalog',{cache:'no-store'});
+     if(r.ok){ CAT=await r.json(); loaded=true; apiOK=true; }
+   }catch(e){}
+ }
+ if(!loaded){
+   // Kit static fallback (local python3 -m http.server)
+   const [cp,fx,s1]=await Promise.all([
+     fetch('../presets/camera_presets.json').then(r=>r.json()),
+     fetch('../presets/fx_presets.json').then(r=>r.json()),
+     fetch('../shows/daiyu-wang-codex-import.json').then(r=>r.json()).catch(()=>null),
+   ]);
+   let s2=null;
+   try{ s2=await fetch('../shows/zhao-hua-parity.json').then(r=>r.json()); }catch(e){}
+   const shows=[];
+   if(s1) shows.push({path:'shows/daiyu-wang-codex-import.json',show:s1});
+   if(s2) shows.push({path:'shows/zhao-hua-parity.json',show:s2});
+   CAT={presets:cp.presets,fx:fx.hooks,families:{fight:['windup','jab','straight','hook','uppercut','elbow','knee','front_kick','spin_kick','sweep','block','parry','duck','slip','clash','skid','leap_short','cartwheel','guard_recover','impact_hold']},
+    bgs:[s1&&s1.bg&&s1.bg.base,'assets/daiyu-wang-codex-import/bg/bg_rooftop.png'].filter(Boolean),
+    wording:['assets/wording/bang_zh.png','assets/wording/clash_en.png','assets/wording/end_zh.png'],
+    libraries:[],layouts:['assets/daiyu-wang-codex-import/layout.json'],shows,uploads:[],templates:[],cloud:true,fe_only:true};
+ }
+ FE_ONLY=true;
+ if(CAT.cloud) FE_ONLY=true;
+ mergeLocalShowsIntoCatalog();
+ PRESETS=Object.fromEntries((CAT.presets||[]).map(p=>[p.id,p]));
+ // HM-COMPOSE-03: always refresh example-shows picker (even on keep) so Save as ids appear
+ refreshExamplePicker(!!keep);
+ if(keep) return;
+ if($('fFamily')&&CAT.families) $('fFamily').innerHTML=Object.keys(CAT.families).map(f=>`<option>${f}</option>`).join('')+'<option disabled>locomotion (P2+)</option><option disabled>performance (P2+)</option>';
+ if($('fPreset')) $('fPreset').innerHTML='<option value="">all 25 cam presets</option>'+(CAT.presets||[]).map(p=>`<option value="${p.id}">${p.id}${p.derived?'':' (invented)'}</option>`).join('');
+ if($('fBeat')&&CAT.families&&CAT.families.fight) $('fBeat').innerHTML='<option value="">all beats</option>'+CAT.families.fight.map(b=>`<option>${b}</option>`).join('');
+ const deep=resolveDeepLink();
+ // HM-COMPOSE-04: land on recent / pinned Codex plate-pack, not editor-features demos
+ const first=pickLandShow(deep);
+ if(first){$('example').value=first.path; loadShow(first.show, {scrub: SCRUB});}
+ // HM-COMPOSE-05: cold open (no deep link) shows Stitch land shell; show stays preloaded for ≤60s Open
+ if(!deep){ enterLandShell(); }
+ else { setLandMode(false); setFxHonesty(true); }
+ const nLib=(CAT.libraries||[]).length, nBg=(CAT.bgs||[]).length;
+ status('ready · frontend-only · in-browser compose · '+nLib+' pose libraries · '+nBg+' bgs'+(apiOK?' · (legacy /api also reachable)':''), false);
+ // setup panel options
+ const st=$('setupTemplate');
+ if(st){
+   const tpls=(CAT.templates||[]).map(x=>({id:x.id||x.path, label:x.label||x.path||x.id}));
+   const fromShows=(CAT.shows||[]).filter(s=>s.show).map(s=>({id:s.path, label:'show: '+s.show.show_id}));
+   const all=tpls.length?tpls:fromShows;
+   st.innerHTML=all.map(x=>`<option value="${x.id}">${x.label}</option>`).join('');
+ }
+ ['setupLibL','setupLibR'].forEach((id,i)=>{
+   const el=$(id); if(!el) return;
+   const prefer=i===0?/zhao/: /hua/;
+   const libs=CAT.libraries||[];
+   el.innerHTML=libs.map(l=>`<option value="${l.path}">${l.path}${l.placeholder?' [ph]':''}</option>`).join('');
+   const hit=libs.find(l=>prefer.test(l.path)); if(hit) el.value=hit.path;
+ });
+}
+
+$('scrub').oninput=()=>{SCRUB=+$('scrub').value; $('scrubT').textContent=SCRUB.toFixed(2)+'s'; if(typeof renderOvLane==='function') renderOvLane(); if(typeof renderPlateStrip==='function') renderPlateStrip(); paintPreview(); if(FOLLOW_PLAYHEAD && typeof scrollStripToScrub==='function') scrollStripToScrub();};
+$('ovAdd').onclick=()=>{
+  const src=$('ovPick').value || (CAT.wording&&CAT.wording[0]);
+  if(!src){status('no wording assets',true);return}
+  const d=totalDur()||8;
+  ensureOverlays().push({id:nextOvId(), kind:'image', src, t_start:Math.min(SCRUB, Math.max(0,d-1)), t_end:Math.min(SCRUB+1.5, d||SCRUB+1.5), x:640, y:180, scale:1, opacity:1, z:10, effect:defaultEffect('pop')});
+  SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('PNG overlay added');
+};
+if($('ovAddText')) $('ovAddText').onclick=()=>{
+  const t=($('ovCustomText').value||'').trim() || '砰';
+  addTextOverlay(t);
+};
+if($('ovDup')) $('ovDup').onclick=()=>{
+  const list=ensureOverlays(); if(SEL_OV<0||!list[SEL_OV]){status('select an overlay first',true);return}
+  const c=JSON.parse(JSON.stringify(list[SEL_OV])); c.id=nextOvId(); c.x=(+c.x||640)+40; c.y=(+c.y||200)+20;
+  list.splice(SEL_OV+1,0,c); SEL_OV=SEL_OV+1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('overlay duplicated');
+};
+if($('ovSnapAtom')) $('ovSnapAtom').onclick=()=>{
+  const list=ensureOverlays(); if(SEL_OV<0||!list[SEL_OV]){status('select an overlay first',true);return}
+  const a=nearestAtomAt(SCRUB); if(!a){status('no atoms',true);return}
+  const o=list[SEL_OV]; const dur=Math.max(0.3, (+o.t_end||0)-(+o.t_start||0));
+  o.t_start=+a.t0.toFixed(3); o.t_end=Math.min(a.t1, a.t0+dur); pushHist(); markDirty(); renderOverlays(); paintPreview(); status('snapped to atom '+a.id);
+};
+if($('ovSnapHit')) $('ovSnapHit').onclick=async()=>{
+  const list=ensureOverlays(); if(SEL_OV<0||!list[SEL_OV]){status('select an overlay first',true);return}
+  if(apiOK && SHOW) await fetchComposedHits(SHOW.show_id);
+  const ht=nearestHitTime(SCRUB);
+  const o=list[SEL_OV]; const dur=Math.max(0.4, (+o.t_end||0)-(+o.t_start||0));
+  o.t_start=+ht.toFixed(3); o.t_end=+(ht+Math.min(dur,1.2)).toFixed(3);
+  SCRUB=ht; updateScrub(); pushHist(); markDirty(); renderOverlays(); paintPreview(); status('snapped start → '+ht.toFixed(2)+'s');
+};
+if($('ovGenPng')) $('ovGenPng').onclick=async()=>{
+  status('gen PNG unavailable in frontend-only mode (needs local Pillow / serve.py)',true);return;
+  const text=($('ovCustomText').value||'').trim() || (SEL_OV>=0 && SHOW.overlays[SEL_OV] && SHOW.overlays[SEL_OV].text) || '砰';
+  const st=(SEL_OV>=0 && SHOW.overlays[SEL_OV] && SHOW.overlays[SEL_OV].style) || defaultTextStyle();
+  status('generating wording PNG…');
+  const res=await fetch('/api/wording',{method:'POST',body:JSON.stringify({
+    text, lang:/[\u2e80-\u9fff]/.test(text)?'zh':'en',
+    fontSize:st.fontSize||96, fill:st.fill||'#ffe66d', stroke:st.stroke||'#1a0a00',
+    strokeWidth:st.strokeWidth||8, italic:!!st.italic, fontWeight:st.fontWeight||'900',
+    fontFamily:st.fontFamily||'Ma Shan Zheng'
+  })}).then(r=>r.json());
+  if(!res.ok){status('wording gen failed',true); $('out').textContent=(res.errors||[]).join('\n');return}
+  CAT.wording=CAT.wording||[]; if(!CAT.wording.includes(res.path)) CAT.wording.push(res.path);
+  const d=totalDur()||8;
+  ensureOverlays().push({id:nextOvId(), kind:'image', src:res.path, t_start:SCRUB, t_end:Math.min(SCRUB+1.2,d||SCRUB+1.2), x:640, y:180, scale:1, opacity:1, z:20, effect:defaultEffect(($('ovDefaultFx')&&$('ovDefaultFx').value)||'impact')});
+  SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('PNG → '+res.path);
+};
+$('ovUp').onchange=async()=>{
+  const f=$('ovUp').files[0]; if(!f) return;
+  status('upload unavailable in frontend-only mode',true);return;
+  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(f)});
+  const name='wording_'+f.name.replace(/[^A-Za-z0-9._-]/g,'_');
+  const res=await fetch('/api/upload',{method:'POST',body:JSON.stringify({name, data_b64:b64})}).then(r=>r.json());
+  CAT.wording=CAT.wording||[]; if(!CAT.wording.includes(res.path)) CAT.wording.push(res.path);
+  ensureOverlays().push({id:nextOvId(), kind:'image', src:res.path, t_start:SCRUB, t_end:SCRUB+1.5, x:640, y:180, scale:1, opacity:1, z:10, effect:defaultEffect('pop')});
+  SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('uploaded '+res.path);
+};
+(function wireDrag(){
+  const wrap=$('pvWrap'); if(!wrap) return;
+  function toStage(e){
+    const r=wrap.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width*1280, y:(e.clientY-r.top)/r.height*720};
+  }
+  let dragPushed=false;
+  wrap.onpointerdown=e=>{
+    const p=toStage(e); const hs=window.__pvHandles||[];
+    let hit=null, best=1e9;
+    for(const h of hs){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<28 && d<best){best=d; hit=h;} }
+    if(!hit) return;
+    DRAG={...hit, ox:p.x, oy:p.y}; dragPushed=false;
+    if(hit.kind==='ov'){ SEL_OV=hit.idx; renderOverlays(); }
+    wrap.setPointerCapture(e.pointerId);
+  };
+  wrap.onpointermove=e=>{
+    if(!DRAG) return;
+    const p=toStage(e); const dx=p.x-DRAG.ox, dy=p.y-DRAG.oy; DRAG.ox=p.x; DRAG.oy=p.y;
+    if(DRAG.kind==='char'){
+      const c=SHOW.chars[DRAG.side]; if(!c.transform) c.transform={x:0,y:0,scale:1};
+      c.transform.x=(+c.transform.x||0)+dx; c.transform.y=(+c.transform.y||0)+dy;
+      const sx=$('slots').querySelector(`[data-xf="${DRAG.side}"][data-k="x"]`);
+      const sy=$('slots').querySelector(`[data-xf="${DRAG.side}"][data-k="y"]`);
+      if(sx) sx.value=Math.round(c.transform.x);
+      if(sy) sy.value=Math.round(c.transform.y);
+      const wy=$('slots').querySelector(`[data-wy="${DRAG.side}"]`);
+      if(wy) wy.classList.toggle('on', Math.abs(c.transform.y)>1e-6);
+      paintPreview();
+    } else if(DRAG.kind==='ov'){
+      const o=SHOW.overlays[DRAG.idx]; if(!o) return;
+      o.x=(+o.x||0)+dx; o.y=(+o.y||0)+dy;
+      const row=$('ovList').querySelector(`[data-oi="${DRAG.idx}"]`);
+      if(row){ const ix=row.querySelector('[data-of="x"]'), iy=row.querySelector('[data-of="y"]'); if(ix) ix.value=Math.round(o.x); if(iy) iy.value=Math.round(o.y); }
+      paintPreview();
+    }
+  };
+  wrap.onpointerup=()=>{ if(DRAG){ pushHist(); markDirty(); } DRAG=null; };
+  wrap.onpointercancel=()=>{DRAG=null;};
+  wrap.addEventListener('wheel', e=>{
+    if(!e.altKey || !SHOW) return;
+    e.preventDefault();
+    const p=toStage(e); const hs=window.__pvHandles||[];
+    let hit=null, best=1e9;
+    for(const h of hs){ if(h.kind!=='char') continue; const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<120 && d<best){best=d; hit=h;} }
+    if(!hit && hs.length){ // fallback nearest char handle
+      for(const h of hs){ if(h.kind!=='char') continue; const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<best){best=d; hit=h;} }
+    }
+    if(!hit) return;
+    const side=hit.side; const c=SHOW.chars[side]; if(!c.transform) c.transform={x:0,y:0,scale:1};
+    const fac=e.deltaY<0?1.06:1/1.06;
+    c.transform.scale=Math.max(0.15, Math.min(5, (+c.transform.scale||1)*fac));
+    const ss=$('slots')&&$('slots').querySelector(`[data-xf="${side}"][data-k="scale"]`);
+    if(ss) ss.value=(+c.transform.scale).toFixed(2);
+    paintPreview();
+    clearTimeout(wrap._scaleHistT);
+    wrap._scaleHistT=setTimeout(()=>{ pushHist(); markDirty(); }, 180);
+  }, {passive:false});
+})();
+
+function inEditable(el){
+  if(!el) return false;
+  const t=(el.tagName||'').toLowerCase();
+  return t==='input'||t==='textarea'||t==='select'||el.isContentEditable;
+}
+function toggleAutoplay(){
+  autoplay=!autoplay;
+  if(!autoplay){ if(autoplayRAF) cancelAnimationFrame(autoplayRAF); autoplayRAF=null; status('scrub paused'); return; }
+  const loopOn=LOOP_A!=null&&LOOP_B!=null;
+  status(loopOn?'loop A–B playing (Space to pause)':'scrub playing (Space to pause)');
+  let last=null;
+  function tick(now){
+    if(!autoplay) return;
+    if(last==null) last=now;
+    const dt=(now-last)/1000; last=now;
+    const d=Math.max(0.01, totalDur());
+    let a=0, b=d;
+    if(LOOP_A!=null&&LOOP_B!=null){ a=Math.min(LOOP_A,LOOP_B); b=Math.max(LOOP_A,LOOP_B); if(b-a<0.05){a=0;b=d;} }
+    SCRUB += dt;
+    if(SCRUB>=b) SCRUB=a;
+    if(SCRUB<a) SCRUB=a;
+    const scrub=$('scrub'); if(scrub) scrub.value=String(SCRUB);
+    $('scrubT').textContent=SCRUB.toFixed(2)+'s';
+    if(typeof renderOvLane==='function') renderOvLane();
+    paintPreview();
+    autoplayRAF=requestAnimationFrame(tick);
+  }
+  autoplayRAF=requestAnimationFrame(tick);
+}
+function nudgeOverlay(dx,dy){
+  const list=ensureOverlays(); if(SEL_OV<0||!list[SEL_OV]) return false;
+  const o=list[SEL_OV]; o.x=(+o.x||0)+dx; o.y=(+o.y||0)+dy;
+  pushHist(); markDirty(); renderOverlays(); paintPreview(); return true;
+}
+function jumpAtom(dir){
+  const b=atomBounds(); if(!b.length) return;
+  const cur=nearestAtomAt(SCRUB); let idx=cur?b.indexOf(b.find(x=>x.id===cur.id)):-1;
+  if(idx<0){ for(let i=0;i<b.length;i++){ if(SCRUB>=b[i].t0&&SCRUB<b[i].t1){idx=i;break;} } }
+  if(idx<0) idx=0;
+  let next=idx+dir;
+  if(next<0) next=0; if(next>=b.length) next=b.length-1;
+  // prefer composed hits when Shift and hits exist nearby
+  if(window.__lastHits && window.__lastHits.length && dir!==0){
+    const hits=[...window.__lastHits].sort((a,b)=>a-b);
+    if(dir>0){ const h=hits.find(x=>x>SCRUB+1e-3); if(h!=null){ SCRUB=h; updateScrub(); paintPreview(); SEL=nearestAtomAt(SCRUB)?SHOW.atoms.indexOf(nearestAtomAt(SCRUB).atom):SEL; renderTL(); return; } }
+    else { const h=[...hits].reverse().find(x=>x<SCRUB-1e-3); if(h!=null){ SCRUB=h; updateScrub(); paintPreview(); SEL=nearestAtomAt(SCRUB)?SHOW.atoms.indexOf(nearestAtomAt(SCRUB).atom):SEL; renderTL(); return; } }
+  }
+  SCRUB=b[next].t0+0.01; SEL=SHOW.atoms.indexOf(b[next].atom); SEL_SET.clear(); SEL_SET.add(SEL);
+  updateScrub(); renderTL(); paintPreview();
+}
+function copySelectedAtoms(){
+  const idxs=selectedAtomIndices(); if(!idxs.length){status('no atoms selected',true);return}
+  CLIP_ATOMS=idxs.map(i=>JSON.parse(JSON.stringify(SHOW.atoms[i])));
+  status('copied '+CLIP_ATOMS.length+' atom(s)');
+}
+function pasteAtoms(){
+  if(!CLIP_ATOMS||!CLIP_ATOMS.length){status('clipboard empty',true);return}
+  let at=SEL>=0?SEL+1:SHOW.atoms.length;
+  CLIP_ATOMS.forEach(a=>{ const c=JSON.parse(JSON.stringify(a)); addAtom(c, at); at++; });
+  status('pasted '+CLIP_ATOMS.length+' atom(s)');
+}
+function dupSelectedAtoms(){
+  const idxs=selectedAtomIndices(); if(!idxs.length){status('no atoms selected',true);return}
+  const copies=idxs.map(i=>JSON.parse(JSON.stringify(SHOW.atoms[i])));
+  let at=Math.max(...idxs)+1;
+  copies.forEach(a=>{ addAtom(a, at); at++; });
+  status('duplicated '+copies.length);
+}
+function deleteSelectedAtoms(){
+  const idxs=selectedAtomIndices().sort((a,b)=>b-a); if(!idxs.length) return;
+  idxs.forEach(i=>SHOW.atoms.splice(i,1));
+  SEL=Math.min(SEL, SHOW.atoms.length-1); SEL_SET.clear();
+  pushHist(); markDirty(); renderTL();
+}
+function shiftSelectedDur(delta){
+  const idxs=selectedAtomIndices(); if(!idxs.length){status('no atoms selected',true);return}
+  idxs.forEach(i=>setAtomDuration(SHOW.atoms[i], (+SHOW.atoms[i].duration_s||1)+delta));
+}
+function syncAbPlayer(){
+  const fr=$('abPlayer'); if(!fr||!SHOW) return;
+  if(!hasComposed){ fr.src='about:blank'; return; }
+  const want=playerUrl(SHOW.show_id, SCRUB, null);
+  // avoid reload thrash: only set if show changed or first
+  if(!fr.dataset.sid || fr.dataset.sid!==SHOW.show_id){ fr.dataset.sid=SHOW.show_id; fr.src=want; return; }
+  try{ fr.contentWindow.postMessage({type:'html-motion-seek', t:SCRUB}, '*'); }catch(e){}
+  // fallback: update query if player doesn't listen
+  if(Math.abs((+fr.dataset.t||0)-SCRUB)>0.2){ fr.dataset.t=String(SCRUB); fr.src=playerUrl(SHOW.show_id, SCRUB, Date.now()); }
+}
+async function exportScrubStill(name){
+  const cv=$('pv'); if(!cv) return null;
+  await paintPreview();
+  const data=cv.toDataURL('image/png');
+  const a=document.createElement('a'); a.href=data; a.download=name||((SHOW.show_id||'show')+'_t'+SCRUB.toFixed(2).replace('.','p')+'.png'); a.click();
+  if(apiOK){
+    const b64=data.split(',')[1];
+    const res=await fetch('/api/qa_png',{method:'POST',body:JSON.stringify({name:a.download, data_b64:b64})}).then(r=>r.json());
+    status(res.ok?('still → '+res.path):'still downloaded (qa write failed)', !res.ok);
+    return res;
+  }
+  status('still downloaded'); return {ok:true, path:a.download};
+}
+async function exportScrubStrip(n){
+  n=Math.max(2, Math.min(24, +n||8));
+  const d=Math.max(0.01, totalDur());
+  const W=320, H=180;
+  const strip=document.createElement('canvas'); strip.width=W*n; strip.height=H;
+  const sg=strip.getContext('2d');
+  const saved=SCRUB;
+  const tmp=document.createElement('canvas'); tmp.width=1280; tmp.height=720;
+  for(let i=0;i<n;i++){
+    SCRUB = (i/(n-1))*d;
+    await paintPreviewOnto(tmp, {noHandles:true, skipGlobal:true});
+    sg.drawImage(tmp, 0,0,1280,720, i*W, 0, W, H);
+  }
+  SCRUB=saved; updateScrub(); await paintPreview();
+  const data=strip.toDataURL('image/png');
+  const name=(SHOW.show_id||'show')+'_strip'+n+'.png';
+  const a=document.createElement('a'); a.href=data; a.download=name; a.click();
+  if(apiOK){
+    const res=await fetch('/api/qa_png',{method:'POST',body:JSON.stringify({name, data_b64:data.split(',')[1]})}).then(r=>r.json());
+    status(res.ok?('strip → '+res.path):'strip downloaded', !res.ok); return res;
+  }
+  status('strip downloaded'); return {ok:true};
+}
+document.addEventListener('keydown', e=>{
+  if(inEditable(e.target)) return;
+  const meta=e.metaKey||e.ctrlKey;
+  if(meta && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
+  if(meta && e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
+  if(meta && e.key.toLowerCase()==='c'){ e.preventDefault(); copySelectedAtoms(); return; }
+  if(meta && e.key.toLowerCase()==='v'){ e.preventDefault(); pasteAtoms(); return; }
+  if(meta && e.key.toLowerCase()==='d'){ e.preventDefault(); dupSelectedAtoms(); return; }
+  if(e.code==='Space'){ e.preventDefault(); toggleAutoplay(); return; }
+  if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); deleteSelectedAtoms(); return; }
+  if(e.key===','||e.code==='Comma'){ e.preventDefault(); SCRUB=Math.max(0, SCRUB-1/24); updateScrub(); paintPreview(); return; }
+  if(e.key==='.'||e.code==='Period'){ e.preventDefault(); SCRUB=Math.min(totalDur(), SCRUB+1/24); updateScrub(); paintPreview(); return; }
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+    e.preventDefault();
+    const dir=e.key==='ArrowRight'?1:-1;
+    if(e.altKey){ nudgeOverlay(dir*(e.shiftKey?10:1), 0); return; }
+    if(e.shiftKey){ jumpAtom(dir); return; }
+    SCRUB=Math.max(0, Math.min(totalDur(), SCRUB+dir*0.05)); updateScrub(); paintPreview(); return;
+  }
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+    if(e.altKey){ e.preventDefault(); nudgeOverlay(0, (e.key==='ArrowDown'?1:-1)*(e.shiftKey?10:1)); return; }
+  }
+  if(e.key==='['){ e.preventDefault(); shiftSelectedDur(-0.5); return; }
+  if(e.key===']'){ e.preventDefault(); shiftSelectedDur(0.5); return; }
+  if(e.key==='s'||e.key==='S'){ e.preventDefault(); doSave(); return; }
+});
+
+function wireV4Controls(){
+  if($('loopInBtn')) $('loopInBtn').onclick=()=>{ LOOP_A=SCRUB; if(LOOP_B==null) LOOP_B=Math.min(totalDur(), SCRUB+1); updateLoopLbl(); renderOvLane(); status('loop In='+LOOP_A.toFixed(2)); };
+  if($('loopOutBtn')) $('loopOutBtn').onclick=()=>{ LOOP_B=SCRUB; if(LOOP_A==null) LOOP_A=Math.max(0, SCRUB-1); updateLoopLbl(); renderOvLane(); status('loop Out='+LOOP_B.toFixed(2)); };
+  if($('loopClearBtn')) $('loopClearBtn').onclick=()=>{ LOOP_A=LOOP_B=null; updateLoopLbl(); renderOvLane(); status('loop cleared'); };
+  if($('guidesChk')) $('guidesChk').onchange=()=>{ SHOW_GUIDES=$('guidesChk').checked; paintPreview(); };
+  if($('camLiveChk')) $('camLiveChk').onchange=()=>{ LIVE_CAM=$('camLiveChk').checked; paintPreview(); };
+  if($('contactGhostChk')) $('contactGhostChk').onchange=()=>{ CONTACT_GHOST=$('contactGhostChk').checked; paintPreview(); };
+  if($('abToggle')) $('abToggle').onclick=()=>{
+    const d=$('abDock'); if(!d) return; d.classList.toggle('on');
+    if(d.classList.contains('on')){ paintPreview(); syncAbPlayer(); status('A/B dock on'); }
+    else status('A/B dock off');
+  };
+  if($('abHide')) $('abHide').onclick=()=>$('abDock').classList.remove('on');
+  if($('abWipeChk')) $('abWipeChk').onchange=()=>{
+    const on=$('abWipeChk').checked; $('abGrid').classList.toggle('wipe', on);
+    $('abWipe').style.display=on?'block':'none';
+  };
+  if($('abWipe')) $('abWipe').oninput=()=>{ $('abGrid').style.setProperty('--wipe', $('abWipe').value+'%'); };
+  if($('exportStillBtn')) $('exportStillBtn').onclick=()=>exportScrubStill();
+  if($('exportStripBtn')) $('exportStripBtn').onclick=()=>exportScrubStrip(+$('stripN').value||8);
+  if($('ovBringUp')) $('ovBringUp').onclick=()=>bumpOverlayZ(1);
+  if($('ovSendDown')) $('ovSendDown').onclick=()=>bumpOverlayZ(-1);
+  if($('setupRun')) $('setupRun').onclick=()=>runTemplateSetup();
+  if($('impRun')) $('impRun').onclick=()=>runImportPack();
+  // HM-COMPOSE-02
+  function openDupModal(){
+    if(!SHOW){status('load a show first',true);return}
+    $('dupFrom').value=SHOW.show_id||'';
+    const base=(SHOW.show_id||'show').replace(/-v\d+$/,'');
+    $('dupTo').value=base+'-v2';
+    $('dupTitle').value='';
+    if($('dupCompose')) $('dupCompose').checked=false; // HM-COMPOSE-03: default = duplicate only
+    $('dupOut').textContent='—';
+    $('dupModal').classList.add('on');
+  }
+  if($('dupShowBtn')) $('dupShowBtn').onclick=openDupModal;
+  if($('dupShowBtn2')) $('dupShowBtn2').onclick=openDupModal;
+  if($('dupCancel')) $('dupCancel').onclick=()=>$('dupModal').classList.remove('on');
+  if($('dupRun')) $('dupRun').onclick=()=>runDuplicate();
+  if($('splitAtomBtn')) $('splitAtomBtn').onclick=()=>splitSelectedAtom();
+  if($('mergeAtomBtn')) $('mergeAtomBtn').onclick=()=>mergeWithNext();
+  if($('swapPlateBtn')) $('swapPlateBtn').onclick=()=>{
+    const pl=plateAtTime(SCRUB);
+    if(!pl){status('no plate at scrub',true);return}
+    const ai=SHOW.atoms.indexOf(pl.atom);
+    openPlatePicker(ai, pl.plateIdx);
+  };
+  if($('platePickCancel')) $('platePickCancel').onclick=()=>{ $('platePick').classList.remove('on'); PICK_CTX=null; };
+  if($('platePickApply')) $('platePickApply').onclick=()=>applyPlatePick();
+  document.querySelectorAll('input[name="plateSrc"]').forEach(r=>r.onchange=()=>renderPlatePickGrid());
+  if($('platePickFilter')) $('platePickFilter').oninput=()=>renderPlatePickGrid();
+}
+
+async function runDuplicate(){
+  const from_id=($('dupFrom').value||'').trim() || (SHOW&&SHOW.show_id);
+  const to_id=($('dupTo').value||'').trim();
+  const title=($('dupTitle').value||'').trim()||undefined;
+  const compose=!!$('dupCompose').checked;
+  if(!from_id||!to_id){status('from/to show_id required',true);return}
+  if(!/^[a-z0-9][a-z0-9_-]*$/.test(to_id)){status('bad to_id',true);return}
+  $('dupOut').textContent=compose?'duplicating + composing (FE)…':'duplicating only (FE)…';
+  status((compose?'duplicate+compose ':'duplicate only ')+from_id+' → '+to_id);
+  // HM-COMPOSE-07: in-browser duplicate
+  let srcShow=null;
+  if(SHOW&&SHOW.show_id===from_id) srcShow=spec();
+  if(!srcShow){
+    const hit=(CAT.shows||[]).find(s=>s.show&&s.show.show_id===from_id);
+    if(hit) srcShow=JSON.parse(JSON.stringify(hit.show));
+  }
+  if(!srcShow && window.HMFeStore) srcShow=HMFeStore.getLocalShow(from_id);
+  if(!srcShow){
+    try{ srcShow=await fetch('/shows/'+from_id+'.json').then(r=>r.json()); }catch(e){}
+  }
+  if(!srcShow){
+    $('dupOut').textContent='source show not found: '+from_id;
+    status('duplicate failed',true); return;
+  }
+  const dup=JSON.parse(JSON.stringify(srcShow));
+  dup.show_id=to_id;
+  if(title) dup.title=title;
+  else dup.title=(srcShow.title||from_id)+' (copy)';
+  try{ HMFeStore.putLocalShow(dup); }catch(e){
+    $('dupOut').textContent=String(e); status('duplicate failed',true); return;
+  }
+  let msg='ok · local:'+to_id+'.json · FE-only';
+  let composedOk=false;
+  if(compose){
+    try{
+      const cam={presets:CAT.presets}; const fx={hooks:CAT.fx};
+      const cr=await HMComposeClient.composeShow(dup,{cameraPresets:cam,fxPresets:fx,loadJson:feLoadJson});
+      if(cr.ok){
+        HMFeStore.putOut(to_id, cr.timeline, cr.layout, {stats:cr.stats});
+        msg+=' · composed '+cr.duration_s+'s';
+        composedOk=true;
+      } else {
+        msg+=' · COMPOSE FAILED: '+(cr.errors||[]).join('; ');
+        $('dupOut').textContent=msg; status('duplicated but compose failed',true);
+        mergeLocalShowsIntoCatalog(); refreshExamplePicker(true); return;
+      }
+    }catch(e){
+      msg+=' · COMPOSE FAILED: '+e.message;
+      $('dupOut').textContent=msg; status('duplicated but compose failed',true); return;
+    }
+  } else msg+=' · duplicate only (compose off)';
+  $('dupOut').textContent=msg;
+  status('duplicated → '+to_id+(compose?' (composed)':' (duplicate only)'));
+  $('dupModal').classList.remove('on');
+  mergeLocalShowsIntoCatalog();
+  await loadCatalog(true);
+  refreshExamplePicker(true);
+  const hit2=(CAT.shows||[]).find(s=>s.show && s.show.show_id===to_id);
+  if(hit2){ $('example').value=hit2.path; loadShow(hit2.show); }
+  else { loadShow(dup); }
+  if(composedOk){
+    hasComposed=true; lastComposedHash=showHash(); lastComposedSnap=JSON.parse(JSON.stringify(SHOW));
+    if(typeof refreshDockedPlayer==='function') refreshDockedPlayer(Date.now());
+  }
+}
+
+async function runImportPack(){
+  const sid=($('impShowId').value||'').trim();
+  const zipEl=$('impZip');
+  const folderEl=$('impFolder');
+  if(!sid){status('show_id required',true);return}
+  if(!/^[a-z0-9][a-z0-9_-]*$/.test(sid)){status('bad show_id',true);return}
+  // HM-COMPOSE-07: File API import (folder preferred). Zip without server = not available unless folder.
+  let fileList=null;
+  if(folderEl && folderEl.files && folderEl.files.length){
+    fileList=folderEl.files;
+  } else if(zipEl && zipEl.files && zipEl.files[0]){
+    $('impOut').textContent='Zip import needs a folder in frontend-only mode. Use “Choose folder” (or unzip locally first). Pillow/server path retired.';
+    status('zip import unavailable in FE-only — use folder',true); return;
+  } else {
+    // Prompt directory picker
+    try{
+      const inp=document.createElement('input');
+      inp.type='file'; inp.webkitdirectory=true; inp.multiple=true;
+      fileList=await new Promise((res)=>{
+        inp.onchange=()=>res(inp.files);
+        inp.oncancel=()=>res(null);
+        inp.click();
+      });
+    }catch(e){ fileList=null; }
+  }
+  if(!fileList || !fileList.length){ status('folder required for FE import',true); return; }
+  $('impOut').textContent='importing folder (FE)…'; status('importing plate pack…');
+  const r=await HMFeStore.importPackFromFiles(sid, fileList, {title:sid});
+  if(!r.ok){
+    const err=(r.errors||['import failed']).join('\n');
+    $('impOut').textContent=err; status('import failed',true); return;
+  }
+  FE_ASSET_MAP=Object.assign({}, FE_ASSET_MAP, r.assetMap||{});
+  // Compose in-browser
+  let cr={ok:false};
+  try{
+    cr=await HMComposeClient.composeShow(r.show,{cameraPresets:{presets:CAT.presets},fxPresets:{hooks:CAT.fx},loadJson:feLoadJson});
+    if(cr.ok) HMFeStore.putOut(sid, cr.timeline, cr.layout, {stats:cr.stats});
+  }catch(e){ cr={ok:false, errors:[String(e)]}; }
+  $('impOut').textContent='ok · local:'+sid+' · plates '+(r.plate_count||'?')+(cr.ok?' · composed '+cr.duration_s+'s':' · compose failed');
+  status(cr.ok?('imported '+sid+' → player ready'):('imported '+sid+' but compose failed'), !cr.ok);
+  showOut(cr.ok?cr:{ok:false, errors:cr.errors||r.errors});
+  mergeLocalShowsIntoCatalog();
+  await loadCatalog(true);
+  loadShow(r.show);
+  if(cr.ok){
+    hasComposed=true; lastComposedHash=showHash(); lastComposedSnap=JSON.parse(JSON.stringify(SHOW));
+    if(typeof refreshDockedPlayer==='function') refreshDockedPlayer(Date.now());
+  }
+}
+
+async function runTemplateSetup(){
+  status('template setup unavailable in frontend-only mode (local serve.py only)',true);return;
+  const template=$('setupTemplate').value;
+  const sid=($('setupShowId').value||'').trim();
+  const L=$('setupLibL').value, R=$('setupLibR').value;
+  const costume=($('setupCostume').value||'').trim();
+  if(!template||!sid){status('pick template + show id',true);return}
+  status('running template setup…');
+  const r=await fetch('/api/setup',{method:'POST',body:JSON.stringify({template, show_id:sid, chars:{L:{pose_library:L}, R:{pose_library:R}}, costume_lock:costume||undefined, generate_local:true})}).then(x=>x.json());
+  $('out').style.color=r.ok?'var(--ok)':'var(--bad)';
+  $('out').textContent=r.ok?JSON.stringify(r,null,2):(r.errors||[]).join('\n');
+  if(r.ok){
+    await loadCatalog(true);
+    const s=CAT.shows.find(x=>x.show&&x.show.show_id===sid);
+    if(s) loadShow(s.show);
+    status(`setup → ${r.show_path} · ${r.generated||0} local assets · ${r.pending_generate||0} pending GenImg`);
+  } else status('setup failed',true);
+}
+
+// HM-COMPOSE-03: small read-only test/debug hook (proof scripts; not used by Motion UI)
+window.__composer = {
+  getShow: () => SHOW,
+  getSel: () => SEL,
+  setSel: (i) => { SEL=i; SEL_SET=new Set([i]); if(typeof renderTL==='function') renderTL(); },
+  split: () => splitSelectedAtom(),
+  merge: () => mergeWithNext(),
+  paint: () => paintPreview(),
+  flatPlates: () => flatPlates(),
+  isPlatePack: () => isPlatePackShow(),
+  loadShow: (s, opts) => loadShow(s, opts),
+  loadCatalog: (keep) => loadCatalog(keep),
+  refreshPicker: (preserve) => refreshExamplePicker(!!preserve),
+  // HM-COMPOSE-04
+  openFight: () => openFightShow(),
+  enterLand: () => enterLandShell(),
+  exitLand: (o) => exitLandToComposer(o||{}),
+  isLandMode: () => !!LAND_MODE,
+  paintLand: () => paintLandShell(),
+  setBeatFocus: (on) => setBeatFocus(!!on),
+  getBeatFocus: () => BEAT_FOCUS,
+  isMobileShell: () => isMobileShell(),
+  applyMobileShell: () => applyMobileShell(),
+  setFollowPlayhead: (on) => { FOLLOW_PLAYHEAD=!!on; if($('followPlayheadChk')) $('followPlayheadChk').checked=FOLLOW_PLAYHEAD; if(FOLLOW_PLAYHEAD) scrollStripToScrub(); else stopFollowTicker(); },
+  scrollStripToAtom: (ai) => scrollStripToAtom(ai, {smooth:false}),
+  readRecentFight: () => readRecentFight(),
+  ensureDockInView: () => ensureDockInView(),
+  // HM-COMPOSE-07
+  feOnly: () => !!FE_ONLY,
+  hasFeOut: (sid) => !!(window.HMFeStore && HMFeStore.hasOut(sid||(SHOW&&SHOW.show_id))),
+  getFeOut: (sid) => window.HMFeStore && HMFeStore.getOut(sid||(SHOW&&SHOW.show_id)),
+  doCompose: () => doCompose(),
+  doSave: () => doSave(),
+  // HM-COMPOSE-03b: layout-visible strip metrics (not isolated btnH)
+  plateStripMetrics: () => {
+    const box=document.getElementById('plateStrip');
+    if(!box) return null;
+    const r=box.getBoundingClientRect();
+    const btn=box.querySelector('.pth');
+    const br=btn&&btn.getBoundingClientRect();
+    const cs=getComputedStyle(box);
+    return {
+      visibleH: r.height, visibleW: r.width, top: r.top, bottom: r.bottom,
+      btnH: br?br.height:0, btnW: br?br.width:0,
+      scrollWidth: box.scrollWidth, clientWidth: box.clientWidth, scrollLeft: box.scrollLeft,
+      flexShrink: cs.flexShrink, flex: cs.flex, minHeight: cs.minHeight, height: cs.height,
+      count: box.querySelectorAll('.pth').length, on: box.classList.contains('on')
+    };
+  },
+};
+loadCatalog().then(()=>{
+  if(typeof wireV4Controls==='function') wireV4Controls();
+  // card thumbs: static by default (animate opt-in). Collapse + FPS-cap when on.
+  if($('cardAnimChk')){
+    ANIMATE_CARDS=!!$('cardAnimChk').checked;
+    $('cardAnimChk').onchange=()=>{ ANIMATE_CARDS=!!$('cardAnimChk').checked; renderCards(); status(ANIMATE_CARDS?'card thumbs animating (8fps visible only)':'card thumbs static'); };
+  }
+  if($('atomCollapse')){
+    $('atomCollapse').onclick=()=>{
+      // manual collapse — remember if beat focus owns the collapse
+      const on=!document.body.classList.contains('atomPickCollapsed');
+      setAtomPickCollapsed(on);
+      if(BEAT_FOCUS && !on){ /* exiting collapse while focus: keep focus flag but picker open */ }
+      status(on?'atom library collapsed — more room for preview':'atom library expanded');
+    };
+  }
+  if($('openFightBtn')) $('openFightBtn').onclick=()=>openFightShow();
+  if($('beatFocusBtn')) $('beatFocusBtn').onclick=()=>setBeatFocus(!BEAT_FOCUS);
+  if($('hdrMore')) $('hdrMore').onclick=()=>{
+    const h=$('appHeader'); if(!h) return;
+    h.classList.toggle('toolsOpen');
+    $('hdrMore').textContent=h.classList.contains('toolsOpen')?'Less ▴':'More ▾';
+  };
+  if($('landOpenHero')) $('landOpenHero').onclick=()=>exitLandToComposer({});
+  if($('landBeatFocus')) $('landBeatFocus').onclick=()=>exitLandToComposer({beatFocus:true});
+  if($('landGotoImport')) $('landGotoImport').onclick=()=>{
+    exitLandToComposer({});
+    const g=document.querySelector('aside .grp h3'); // scroll import into view
+    const imp=[...document.querySelectorAll('aside .grp h3')].find(h=>/Import plate pack/i.test(h.textContent||''));
+    if(imp) try{ imp.parentElement.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+  };
+  if($('navFights')) $('navFights').onclick=()=>enterLandShell();
+  if($('navPacks')) $('navPacks').onclick=()=>{ if(LAND_MODE) exitLandToComposer({}); };
+  if($('followPlayheadChk')){
+    $('followPlayheadChk').onchange=()=>{
+      FOLLOW_PLAYHEAD=!!$('followPlayheadChk').checked;
+      if(FOLLOW_PLAYHEAD){ scrollStripToScrub({smooth:true}); status('follow playhead on'); }
+      else { stopFollowTicker(); status('follow playhead off'); }
+    };
+  }
+  if($('dockCompose')) $('dockCompose').onclick=()=>{ if($('composeBtn')) $('composeBtn').click(); };
+  applyMobileShell();
+  try{
+    if(window.matchMedia){
+      const mq=window.matchMedia('(max-width:640px)');
+      const onchg=()=>applyMobileShell();
+      if(mq.addEventListener) mq.addEventListener('change', onchg);
+      else if(mq.addListener) mq.addListener(onchg);
+    }
+  }catch(e){}
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopCardLoop(); else if(ANIMATE_CARDS) startCardLoop(); });
+});
+</script></body></html>

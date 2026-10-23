@@ -1,0 +1,12 @@
+node_modules/
+.wrangler/
+dist/
+*.bak
+*.bak-*
+.env
+.env.*
+kit/uploads/
+kit/qa/frames/
+__pycache__/
+*.pyc
+.DS_Store

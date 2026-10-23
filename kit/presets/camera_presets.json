@@ -1,0 +1,684 @@
+{
+ "version": "p0",
+ "source": "fight-zhao-min-hua-fei-rooftop-2026-10-19/index.html camBase(t)",
+ "curve_doc": "Generate presets/camera_presets.json + presets/fx_presets.json.\nCamera curves are faithful transcriptions of camBase(t) in\nfight-zhao-min-hua-fei-rooftop-2026-10-19/index.html L59-87.\nCurve types (u = normalized 0..1 time inside the atom, tl = seconds since atom start):\n  const   {v}\n  lerp    {a,b,ease: smooth|linear|sine}          a + (b-a)*ease(u)\n  saw     {a,b,period_s}                          a + (b-a)*frac(tl/period_s)   (micro jitter pulse)\n  sin     {offset,amp,cycles|omega,phase}        offset + amp*sin(2pi*cycles*u + phase)  or  sin(omega*tl + phase)\n  alt_bump{offset,amp,n}                          k=n*u; offset + (floor(k)%2?1:-1)*amp*sin(frac(k)*pi)\nDefaults when a channel is absent: x=0, y=0, s=1.12, r=0. Player/composer clamp s >= 1+|sin(r)|*0.9 (as camBase).\n",
+ "defaults": {
+  "x": 0,
+  "y": 0,
+  "s": 1.12,
+  "r": 0
+ },
+ "roll_scale_clamp": 0.9,
+ "presets": [
+  {
+   "id": "low_rise",
+   "angle": "low",
+   "move": "rise",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[0,1): y 170→0, s 1.4→1.12",
+   "source_plates": "P01-P02",
+   "curves": {
+    "y": {
+     "type": "lerp",
+     "a": 170,
+     "b": 0,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.4,
+     "b": 1.12,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "eye_orbit",
+   "angle": "eye",
+   "move": "orbit",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[1,2): x −70→70, roll −3→3",
+   "source_plates": "P03-P04",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": -70,
+     "b": 70,
+     "ease": "smooth"
+    },
+    "r": {
+     "type": "lerp",
+     "a": -3,
+     "b": 3,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "eye_push",
+   "angle": "eye",
+   "move": "push_in",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[2,3): y 0→50, s 1.14→1.26",
+   "source_plates": "P05-P06",
+   "curves": {
+    "y": {
+     "type": "lerp",
+     "a": 0,
+     "b": 50,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.14,
+     "b": 1.26,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "ecu_jitter",
+   "angle": "ecu",
+   "move": "hold",
+   "native_duration_s": 1.5,
+   "default_kind": "close",
+   "derived": true,
+   "comment": "camBase seg t∈[4,5.5): 0.5s saw pulse on s 1.0→1.1 and x −12→12 (variants t∈[14,15) y-pulse, t∈[21,22) s-only via params)",
+   "source_plates": "P09-P11 / P29-P30 / P43-P44",
+   "curves": {
+    "s": {
+     "type": "saw",
+     "a": 1.0,
+     "b": 1.1,
+     "period_s": 0.5
+    },
+    "x": {
+     "type": "saw",
+     "a": -12,
+     "b": 12,
+     "period_s": 0.5
+    }
+   }
+  },
+  {
+   "id": "low_dive_under",
+   "angle": "low",
+   "move": "dive",
+   "native_duration_s": 0.5,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[5.5,6): s 1.2, y −50→−20 (0.5s native; use inside camera.segments)",
+   "source_plates": "P12",
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.2
+    },
+    "y": {
+     "type": "lerp",
+     "a": -50,
+     "b": -20,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "upward_inside",
+   "angle": "upward_inside",
+   "move": "push_in",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[6,7): s 1.32→1.22, y 60→30, roll 4→1",
+   "source_plates": "P13-P14",
+   "curves": {
+    "s": {
+     "type": "lerp",
+     "a": 1.32,
+     "b": 1.22,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": 60,
+     "b": 30,
+     "ease": "smooth"
+    },
+    "r": {
+     "type": "lerp",
+     "a": 4,
+     "b": 1,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "ots_R_hold",
+   "angle": "waist_ots_R",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[7,8): s 1.26, x 50→10 (R fighter nearer camera)",
+   "source_plates": "P15-P16",
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.26
+    },
+    "x": {
+     "type": "lerp",
+     "a": 50,
+     "b": 10,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "eye_lateral",
+   "angle": "eye",
+   "move": "lateral",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[8,9): x −90→90, s 1.18 (t∈[12,13) = reverse x 90→−90, y −45, s 1.2 via params)",
+   "source_plates": "P17-P18 / P25-P26",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": -90,
+     "b": 90,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "const",
+     "v": 1.18
+    }
+   }
+  },
+  {
+   "id": "waist_ots_chase",
+   "angle": "waist_ots_L",
+   "move": "lateral",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[9,10): x 0→−70, s 1.15, y=sin(t*20)*4 (parity sets phase=180 = 20*9)",
+   "source_plates": "P19-P20",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": 0,
+     "b": -70,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "const",
+     "v": 1.15
+    },
+    "y": {
+     "type": "sin",
+     "offset": 0,
+     "amp": 4,
+     "omega": 20,
+     "phase": 0
+    }
+   }
+  },
+  {
+   "id": "fence_sweep_roll",
+   "angle": "low",
+   "move": "fence_sweep",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[10,11): y 0→90, roll 0→−7, s 1.22",
+   "source_plates": "P21-P22",
+   "curves": {
+    "y": {
+     "type": "lerp",
+     "a": 0,
+     "b": 90,
+     "ease": "smooth"
+    },
+    "r": {
+     "type": "lerp",
+     "a": 0,
+     "b": -7,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "const",
+     "v": 1.22
+    }
+   }
+  },
+  {
+   "id": "floor_hold",
+   "angle": "floor",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[11,12): y −30→−60, s 1.24, roll −4→0",
+   "source_plates": "P23-P24",
+   "curves": {
+    "y": {
+     "type": "lerp",
+     "a": -30,
+     "b": -60,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "const",
+     "v": 1.24
+    },
+    "r": {
+     "type": "lerp",
+     "a": -4,
+     "b": 0,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "eye_hold",
+   "angle": "eye",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[13,14): x −20→−50, s 1.34",
+   "source_plates": "P27-P28",
+   "curves": {
+    "x": {
+     "type": "lerp",
+     "a": -20,
+     "b": -50,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "const",
+     "v": 1.34
+    }
+   }
+  },
+  {
+   "id": "floor_race",
+   "angle": "floor",
+   "move": "push_in",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[15,16): s 1.08→1.42, y −30 (racing through gap)",
+   "source_plates": "P31-P32",
+   "curves": {
+    "s": {
+     "type": "lerp",
+     "a": 1.08,
+     "b": 1.42,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "const",
+     "v": -30
+    }
+   }
+  },
+  {
+   "id": "whip_A_to_B",
+   "angle": "eye",
+   "move": "whip_pan",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[16,17): x=sin((t−16)*4π)*190, s 1.25 (t∈[19,21) variant: offset −90, amp 140, cycles 1, s 1.4→1.5 linear via params)",
+   "source_plates": "P33-P34 / P39-P42",
+   "curves": {
+    "x": {
+     "type": "sin",
+     "offset": 0,
+     "amp": 190,
+     "cycles": 2,
+     "phase": 0
+    },
+    "s": {
+     "type": "const",
+     "v": 1.25
+    }
+   }
+  },
+  {
+   "id": "high_dive",
+   "angle": "high",
+   "move": "dive",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[17,18): s 1.0→1.5, y −80→−20, x 0→−180",
+   "source_plates": "P35-P36",
+   "curves": {
+    "s": {
+     "type": "lerp",
+     "a": 1.0,
+     "b": 1.5,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": -80,
+     "b": -20,
+     "ease": "smooth"
+    },
+    "x": {
+     "type": "lerp",
+     "a": 0,
+     "b": -180,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "box_side_pan",
+   "angle": "low_side",
+   "move": "lateral",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[18,19): s 1.42, x −180→−90, y −20→−40",
+   "source_plates": "P37-P38",
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.42
+    },
+    "x": {
+     "type": "lerp",
+     "a": -180,
+     "b": -90,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": -20,
+     "b": -40,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "face_whip",
+   "angle": "eye",
+   "move": "whip_pan",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[22,23): alternating whip x=−80±120*sin(frac(4u)π), s 1.45",
+   "source_plates": "P45-P46",
+   "curves": {
+    "x": {
+     "type": "alt_bump",
+     "offset": -80,
+     "amp": 120,
+     "n": 4
+    },
+    "s": {
+     "type": "const",
+     "v": 1.45
+    }
+   }
+  },
+  {
+   "id": "pass_between",
+   "angle": "eye",
+   "move": "orbit",
+   "native_duration_s": 3.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[23,26): x=−80+sin(2πk)*130 (3 cycles), s 1.35→1.55 smooth, y −20→−40 linear; parity splits with u_range",
+   "source_plates": "P47-P52",
+   "curves": {
+    "x": {
+     "type": "sin",
+     "offset": -80,
+     "amp": 130,
+     "cycles": 3,
+     "phase": 0
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.35,
+     "b": 1.55,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": -20,
+     "b": -40,
+     "ease": "linear"
+    }
+   }
+  },
+  {
+   "id": "dutch_spiral",
+   "angle": "dutch",
+   "move": "spiral",
+   "native_duration_s": 4.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[26,30): roll −8→−24, s 1.12→1.45, y −30→10 linear, x=sin(1.5πk)*40",
+   "source_plates": "P53-P60",
+   "curves": {
+    "r": {
+     "type": "lerp",
+     "a": -8,
+     "b": -24,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.12,
+     "b": 1.45,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": -30,
+     "b": 10,
+     "ease": "linear"
+    },
+    "x": {
+     "type": "sin",
+     "offset": 0,
+     "amp": 40,
+     "cycles": 0.75,
+     "phase": 0
+    }
+   }
+  },
+  {
+   "id": "ecu_fist_lens",
+   "angle": "ecu",
+   "move": "push_in",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": true,
+   "comment": "camBase seg t∈[3,4): s 1.2→1.38, x 20→−30 (fist toward lens)",
+   "source_plates": "P07-P08",
+   "curves": {
+    "s": {
+     "type": "lerp",
+     "a": 1.2,
+     "b": 1.38,
+     "ease": "smooth"
+    },
+    "x": {
+     "type": "lerp",
+     "a": 20,
+     "b": -30,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "low_hold",
+   "angle": "low",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": false,
+   "comment": "INVENTED: low static hold with 10px settle",
+   "source_plates": null,
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.18
+    },
+    "y": {
+     "type": "lerp",
+     "a": 30,
+     "b": 20,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "high_hold",
+   "angle": "high",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": false,
+   "comment": "INVENTED: high static hold with slight drift",
+   "source_plates": null,
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.1
+    },
+    "y": {
+     "type": "lerp",
+     "a": -40,
+     "b": -50,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "ots_L_hold",
+   "angle": "waist_ots_L",
+   "move": "hold",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": false,
+   "comment": "INVENTED: mirror of ots_R_hold (camBase t∈[7,8))",
+   "source_plates": null,
+   "curves": {
+    "s": {
+     "type": "const",
+     "v": 1.26
+    },
+    "x": {
+     "type": "lerp",
+     "a": -50,
+     "b": -10,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "pull_aftermath",
+   "angle": "eye",
+   "move": "pull_out",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": false,
+   "comment": "INVENTED: pull-out aftermath",
+   "source_plates": null,
+   "curves": {
+    "s": {
+     "type": "lerp",
+     "a": 1.4,
+     "b": 1.1,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "lerp",
+     "a": -20,
+     "b": 0,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "rise_from_floor",
+   "angle": "floor",
+   "move": "rise",
+   "native_duration_s": 1.0,
+   "default_kind": "duo",
+   "derived": false,
+   "comment": "INVENTED: floor-to-eye rise (inverse of low_dive_under)",
+   "source_plates": null,
+   "curves": {
+    "y": {
+     "type": "lerp",
+     "a": 120,
+     "b": 0,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.3,
+     "b": 1.15,
+     "ease": "smooth"
+    },
+    "r": {
+     "type": "lerp",
+     "a": 2,
+     "b": 0,
+     "ease": "smooth"
+    }
+   }
+  },
+  {
+   "id": "dutch_snap",
+   "angle": "dutch",
+   "move": "snap",
+   "native_duration_s": 0.6,
+   "default_kind": "close",
+   "derived": false,
+   "comment": "AIMIKODA craft: short Dutch-angle whip for rapid-cut chaos (inspired by @aimikoda dutch-horror). roll ±12→0 settle, mild push. Additive 2026-10-22; remove object to revert.",
+   "source_plates": null,
+   "curves": {
+    "r": {
+     "type": "lerp",
+     "a": -12,
+     "b": 4,
+     "ease": "smooth"
+    },
+    "s": {
+     "type": "lerp",
+     "a": 1.28,
+     "b": 1.38,
+     "ease": "smooth"
+    },
+    "x": {
+     "type": "lerp",
+     "a": -18,
+     "b": 10,
+     "ease": "smooth"
+    },
+    "y": {
+     "type": "const",
+     "v": 20
+    }
+   }
+  }
+ ]
+}

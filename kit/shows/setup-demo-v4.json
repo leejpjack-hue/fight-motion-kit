@@ -1,0 +1,470 @@
+{
+ "show_id": "setup-demo-v4",
+ "title": "Editor v3 — artificial wording + action effects (setup)",
+ "draft": true,
+ "grounded": true,
+ "floor_y": 684,
+ "chars": {
+  "L": {
+   "name": "趙敏 Zhao Min (Sprite Forge real)",
+   "pose_library": "pose_library/zhao-min/pose_library.json"
+  },
+  "R": {
+   "name": "華妃 Hua Fei (Sprite Forge real)",
+   "pose_library": "pose_library/hua-fei/pose_library.json"
+  }
+ },
+ "bg": {
+  "base": "assets/zhao-hua/bg/bg_rooftop.png",
+  "swap": "assets/zhao-hua/bg/bg_rooftop_dented.png",
+  "swap_t": 6
+ },
+ "atoms": [
+  {
+   "id": "sf_eye_push__jab_vs_block__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_push"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "jab",
+    "left_pose_brief": "jab",
+    "right_pose_brief": "forearm block mid"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "guard_stance",
+     "jab",
+     "jab",
+     "recover"
+    ],
+    "R": [
+     "guard_stance",
+     "block_forearm_mid",
+     "block_forearm_mid",
+     "guard_stance"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "guard"
+    },
+    {
+     "attacker": "L",
+     "target": "guard",
+     "depth_px": 30
+    },
+    {
+     "attacker": "none",
+     "gap_px": -40
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "smear_trail",
+     "params": {
+      "dir": 1
+     }
+    },
+    {
+     "t_rel": 0.27,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust"
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   },
+   "compat": {
+    "prev_exit_tags": [
+     "grounded"
+    ],
+    "next_entry_tags": [
+     "grounded"
+    ]
+   }
+  },
+  {
+   "id": "sf_eye_orbit__hook_vs_duck__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "hook",
+    "left_pose_brief": "duck",
+    "right_pose_brief": "hook"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "guard_stance",
+     "duck",
+     "duck",
+     "hit_body_fold"
+    ],
+    "R": [
+     "windup",
+     "hook",
+     "hook",
+     "backstep"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "R",
+     "target": "head",
+     "depth_px": -150
+    },
+    {
+     "attacker": "R",
+     "target": "head",
+     "depth_px": -130
+    },
+    {
+     "attacker": "none",
+     "gap_px": -40
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "smear_trail",
+     "params": {
+      "dir": -1
+     }
+    },
+    {
+     "t_rel": 0.5,
+     "type": "dust",
+     "params": {
+      "k": 1.2
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  },
+  {
+   "id": "sf_low_rise__kick_vs_parry__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "low_rise"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "front_kick",
+    "left_pose_brief": "front kick",
+    "right_pose_brief": "parry / hit react"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "crouch",
+     "front_kick",
+     "front_kick",
+     "recover"
+    ],
+    "R": [
+     "guard_stance",
+     "parry",
+     "hit_head_snap",
+     "stagger"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "guard"
+    },
+    {
+     "attacker": "L",
+     "target": "head"
+    },
+    {
+     "attacker": "L",
+     "target": "body"
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.27,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.52,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.52,
+     "type": "sparks",
+     "params": {
+      "n": 40
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  },
+  {
+   "id": "sf_whip_A_to_B__clash__2s",
+   "duration_s": 2,
+   "plates_needed": 4,
+   "kind": "duo",
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash",
+    "left_pose_brief": "clash fist",
+    "right_pose_brief": "clash fist"
+   },
+   "pose_mode": "library",
+   "poses": {
+    "L": [
+     "step_in",
+     "clash_fist",
+     "clash_fist",
+     "recover"
+    ],
+    "R": [
+     "step_in",
+     "clash_fist",
+     "clash_fist",
+     "recover"
+    ]
+   },
+   "contact": [
+    {
+     "attacker": "none",
+     "gap_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "fist",
+     "depth_px": 0
+    },
+    {
+     "attacker": "L",
+     "target": "fist",
+     "depth_px": 0
+    },
+    {
+     "attacker": "none",
+     "gap_px": 0
+    }
+   ],
+   "fx_hooks": [
+    {
+     "t_rel": 0.25,
+     "type": "hit_orange"
+    },
+    {
+     "t_rel": 0.25,
+     "type": "sparks",
+     "params": {
+      "n": 60
+     }
+    },
+    {
+     "t_rel": 0.5,
+     "type": "hit_pink"
+    },
+    {
+     "t_rel": 0.75,
+     "type": "dust",
+     "params": {
+      "k": 1.5
+     }
+    },
+    {
+     "t_rel": 0.75,
+     "type": "speed_lines",
+     "t_rel_end": 1,
+     "params": {
+      "mode": "radial"
+     }
+    }
+   ],
+   "layout_hints": {
+    "shadow_policy": "contact"
+   }
+  }
+ ],
+ "overlays": [
+  {
+   "id": "ov_clash",
+   "kind": "text",
+   "text": "CLASH",
+   "style": {
+    "fill": "#ffe66d",
+    "stroke": "#1a0a00",
+    "strokeWidth": 8,
+    "fontSize": 110,
+    "fontWeight": "400",
+    "fontFamily": "Long Cang"
+   },
+   "effect": {
+    "type": "impact",
+    "intensity": 1.2
+   },
+   "t_start": 0.4,
+   "t_end": 1.6,
+   "x": 640,
+   "y": 140,
+   "scale": 1,
+   "opacity": 1,
+   "z": 20
+  },
+  {
+   "id": "ov_bang",
+   "kind": "text",
+   "text": "砰",
+   "style": {
+    "fill": "#ff6b3d",
+    "stroke": "#2a0800",
+    "strokeWidth": 8,
+    "fontSize": 140,
+    "fontWeight": "400",
+    "fontFamily": "Ma Shan Zheng"
+   },
+   "effect": {
+    "type": "slam",
+    "intensity": 1.4
+   },
+   "t_start": 2.4,
+   "t_end": 3.5,
+   "x": 720,
+   "y": 260,
+   "scale": 1,
+   "opacity": 1,
+   "z": 25
+  },
+  {
+   "id": "ov_whoosh",
+   "kind": "text",
+   "text": "WHOOSH",
+   "style": {
+    "fill": "#9ef",
+    "stroke": "#023",
+    "strokeWidth": 6,
+    "fontSize": 72,
+    "fontWeight": "400",
+    "italic": true,
+    "fontFamily": "Long Cang"
+   },
+   "effect": {
+    "type": "slide_left",
+    "intensity": 1.0
+   },
+   "t_start": 4.3,
+   "t_end": 5.4,
+   "x": 640,
+   "y": 200,
+   "scale": 1,
+   "opacity": 0.95,
+   "z": 15
+  },
+  {
+   "id": "ov_hit",
+   "kind": "text",
+   "text": "HIT",
+   "style": {
+    "fill": "#fff",
+    "stroke": "#f06",
+    "strokeWidth": 8,
+    "fontSize": 96,
+    "fontWeight": "400",
+    "fontFamily": "Long Cang"
+   },
+   "effect": {
+    "type": "pop",
+    "intensity": 1.1
+   },
+   "t_start": 4.55,
+   "t_end": 5.5,
+   "x": 560,
+   "y": 300,
+   "scale": 1,
+   "opacity": 1,
+   "z": 22
+  },
+  {
+   "id": "ov_ko",
+   "kind": "text",
+   "text": "KO",
+   "style": {
+    "fill": "#ff2f9a",
+    "stroke": "#200018",
+    "strokeWidth": 8,
+    "fontSize": 160,
+    "fontWeight": "400",
+    "fontFamily": "Long Cang"
+   },
+   "effect": {
+    "type": "bounce",
+    "intensity": 1.3
+   },
+   "t_start": 6.2,
+   "t_end": 7.4,
+   "x": 640,
+   "y": 320,
+   "scale": 1,
+   "opacity": 1,
+   "z": 30
+  },
+  {
+   "id": "ov_end",
+   "kind": "text",
+   "text": "終",
+   "style": {
+    "fill": "#ffe66d",
+    "stroke": "#1a0a00",
+    "strokeWidth": 8,
+    "fontSize": 128,
+    "fontWeight": "400",
+    "fontFamily": "Ma Shan Zheng"
+   },
+   "effect": {
+    "type": "fade",
+    "intensity": 1.0
+   },
+   "t_start": 7.2,
+   "t_end": 8.0,
+   "x": 640,
+   "y": 360,
+   "scale": 1.1,
+   "opacity": 0.95,
+   "z": 35
+  }
+ ]
+}

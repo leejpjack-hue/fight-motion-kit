@@ -1,0 +1,28 @@
+{
+  "plan_id": "aimikoda-v2",
+  "title": "Aimikoda-craft v2 hand-authored CU fight edit",
+  "status": "COMPOSED",
+  "parent_approval": "approve_library (v1 pillars) — Jack rejected v1 quality; polish under same pillars, no new storyboard gate",
+  "vs_v1": {
+    "framing": "cam s ~2.05–2.45 + y ~210–245 + L/R bias (v1 ~1.3–1.72 soft mid)",
+    "spacing": "x±155 scale 1.35 y=0 (v1/v4 was ±125 / 1.28)",
+    "editorial": "hand beat sheet; no catalog auto-fill",
+    "poses": "attack vs hit_react/block/clash — skip idle guard pairs except settle/end",
+    "sfx": "overlays locked to contact midpoints"
+  },
+  "refs": {
+    "storyboard": "STORYBOARD-zh-aimikoda-30s.md",
+    "craft_brief": "refs/aimikoda/CRAFT_BRIEF.md",
+    "baseline_spacing": "shows/head-cu-30s.json (v4 L/R x±125 scale 1.28 y=0)",
+    "rejected": "shows/aimikoda-v1.json"
+  },
+  "composed": {
+    "show": "shows/aimikoda-v2.json",
+    "out": "out/aimikoda-v2/",
+    "player": "http://127.0.0.1:8770/player/index.html?show=aimikoda-v2",
+    "atoms": 40,
+    "duration_s": 30.0,
+    "overlays": 20,
+    "build_status": "BUILD_STATUS-aimikoda-v2.md"
+  }
+}

@@ -1,0 +1,414 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "atom.schema.json",
+ "title": "HTML Motion atom (0.5–3 s template; plates = duration_s * 2)",
+ "type": "object",
+ "required": [
+  "id",
+  "duration_s",
+  "plates_needed",
+  "kind",
+  "camera",
+  "motion",
+  "pose_mode"
+ ],
+ "properties": {
+  "id": {
+   "type": "string",
+   "minLength": 1
+  },
+  "duration_s": {
+   "enum": [
+    0.5,
+    1,
+    1.5,
+    2,
+    2.5,
+    3
+   ],
+   "description": "half-second grid; Aimikoda punch cuts use 0.5"
+  },
+  "plates_needed": {
+   "enum": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "description": "duration_s * 2 (2 plates/s)"
+  },
+  "kind": {
+   "enum": [
+    "duo",
+    "close",
+    "split",
+    "tight",
+    "leap",
+    "full"
+   ]
+  },
+  "camera": {
+   "type": "object",
+   "properties": {
+    "preset": {
+     "type": "string",
+     "description": "id in presets/camera_presets.json"
+    },
+    "angle": {
+     "type": "string"
+    },
+    "move": {
+     "type": "string"
+    },
+    "params": {
+     "$ref": "#/$defs/curve_overrides"
+    },
+    "u_range": {
+     "type": "array",
+     "items": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+     },
+     "minItems": 2,
+     "maxItems": 2,
+     "description": "slice of a longer preset (e.g. 3 s pass_between split across two atoms)"
+    },
+    "segments": {
+     "type": "array",
+     "minItems": 1,
+     "description": "compound camera: sub-cuts inside one atom",
+     "items": {
+      "type": "object",
+      "required": [
+       "preset",
+       "dur_s"
+      ],
+      "properties": {
+       "preset": {
+        "type": "string"
+       },
+       "dur_s": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "params": {
+        "$ref": "#/$defs/curve_overrides"
+       },
+       "u_range": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+       }
+      }
+     }
+    }
+   },
+   "anyOf": [
+    {
+     "required": [
+      "preset"
+     ]
+    },
+    {
+     "required": [
+      "segments"
+     ]
+    }
+   ]
+  },
+  "motion": {
+   "type": "object",
+   "required": [
+    "family",
+    "beat_class"
+   ],
+   "properties": {
+    "family": {
+     "enum": [
+      "fight",
+      "locomotion",
+      "performance",
+      "idle_reaction"
+     ]
+    },
+    "beat_class": {
+     "type": "string"
+    },
+    "left_pose_brief": {
+     "type": "string"
+    },
+    "right_pose_brief": {
+     "type": "string"
+    }
+   }
+  },
+  "pose_mode": {
+   "enum": [
+    "library",
+    "hero"
+   ]
+  },
+  "poses": {
+   "type": "object",
+   "description": "library mode: pose_id per side, single id or one per plate",
+   "properties": {
+    "L": {
+     "$ref": "#/$defs/pose_ref"
+    },
+    "R": {
+     "$ref": "#/$defs/pose_ref"
+    }
+   }
+  },
+  "contact": {
+   "description": "library mode contact rule; one object or one per plate",
+   "oneOf": [
+    {
+     "$ref": "#/$defs/contact"
+    },
+    {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/contact"
+     },
+     "minItems": 1
+    }
+   ]
+  },
+  "hero": {
+   "type": "object",
+   "description": "hero mode: existing plates from a plate-pipeline layout.json (empty = pending GenerateImage, rendered as slate)",
+   "properties": {
+    "layout_source": {
+     "type": "string"
+    },
+    "plates": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "pose_briefs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "fx_hooks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "t_rel",
+     "type"
+    ],
+    "properties": {
+     "t_rel": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+     },
+     "t_rel_end": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+     },
+     "type": {
+      "type": "string",
+      "description": "id in presets/fx_presets.json"
+     },
+     "params": {
+      "type": "object"
+     }
+    }
+   }
+  },
+  "bg": {
+   "type": "object",
+   "properties": {
+    "key": {
+     "type": "string"
+    },
+    "zoom": {
+     "type": [
+      "number",
+      "null"
+     ]
+    }
+   }
+  },
+  "layout_hints": {
+   "type": "object",
+   "properties": {
+    "floor_y": {
+     "type": [
+      "boolean",
+      "number"
+     ]
+    },
+    "shadow_policy": {
+     "enum": [
+      "contact",
+      "none",
+      "plate"
+     ]
+    },
+    "full_plate": {
+     "type": "boolean"
+    },
+    "char_scale": {
+     "type": "number"
+    }
+   }
+  },
+  "assets": {
+   "type": "object",
+   "properties": {
+    "char_slots": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "L",
+       "R"
+      ]
+     }
+    },
+    "requires_costume_lock": {
+     "type": "boolean"
+    }
+   }
+  },
+  "compat": {
+   "type": "object",
+   "properties": {
+    "prev_exit_tags": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "next_entry_tags": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "source_refs": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "char_overrides": {
+   "type": "object",
+   "description": "Per-atom L/R transform overrides (merged over chars.*.transform). Same shape: {x,y,scale}.",
+   "properties": {
+    "L": {
+     "$ref": "show.schema.json#/$defs/transform"
+    },
+    "R": {
+     "$ref": "show.schema.json#/$defs/transform"
+    }
+   },
+   "additionalProperties": false
+  }
+ },
+ "allOf": [
+  {
+   "if": {
+    "properties": {
+     "pose_mode": {
+      "const": "library"
+     }
+    }
+   },
+   "then": {
+    "required": [
+     "poses"
+    ]
+   }
+  },
+  {
+   "if": {
+    "properties": {
+     "pose_mode": {
+      "const": "hero"
+     }
+    }
+   },
+   "then": {
+    "required": [
+     "hero"
+    ]
+   }
+  }
+ ],
+ "$defs": {
+  "pose_ref": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "minItems": 1
+    }
+   ]
+  },
+  "curve_overrides": {
+   "type": "object",
+   "description": "per-channel overrides merged into the preset curve (x,y,s,r); include 'type' to replace",
+   "propertyNames": {
+    "enum": [
+     "x",
+     "y",
+     "s",
+     "r"
+    ]
+   },
+   "additionalProperties": {
+    "type": "object"
+   }
+  },
+  "contact": {
+   "type": "object",
+   "properties": {
+    "attacker": {
+     "enum": [
+      "L",
+      "R",
+      "none"
+     ]
+    },
+    "target": {
+     "enum": [
+      "head",
+      "body",
+      "guard",
+      "fist"
+     ]
+    },
+    "depth_px": {
+     "type": "number"
+    },
+    "gap_px": {
+     "type": "number",
+     "description": "silhouette clearance (bbox to bbox, px) when attacker=none"
+    }
+   }
+  }
+ }
+}
