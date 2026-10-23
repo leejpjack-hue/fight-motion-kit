@@ -1,0 +1,19 @@
+{
+  "version": "p0",
+  "packs": [
+    {
+      "id": "fight_8pack",
+      "label": "Fight-cam 8-pack",
+      "presets": [
+        "low_rise",
+        "eye_orbit",
+        "eye_push",
+        "ecu_fist_lens",
+        "upward_inside",
+        "whip_A_to_B",
+        "dutch_snap",
+        "pull_aftermath"
+      ]
+    }
+  ]
+}
