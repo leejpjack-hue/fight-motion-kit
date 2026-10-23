@@ -349,9 +349,11 @@
     for (const a of atoms) {
       const d = +a.duration_s;
       const npl = +a.plates_needed;
-      if (Math.abs(npl - d * FPS_PLATES) > 1e-6) {
-        errors.push(a.id + ': plates_needed ' + npl + ' != duration_s*2');
+      if (!Number.isFinite(d) || d < 0.1 || !Number.isInteger(npl) || npl < 1 || npl > 1000) {
+        errors.push(a.id + ': duration must be at least 0.1s and plates_needed a positive integer');
+        continue;
       }
+      const plateDuration = d / npl;
       const t0 = t;
       const t1 = t + d;
       const cam = a.camera || {};
@@ -385,7 +387,7 @@
       for (let i = 0; i < npl; i++) {
         nPlate += 1;
         const pid = 'S' + String(nPlate).padStart(3, '0');
-        const pt0 = t0 + i / FPS_PLATES;
+        const pt0 = t0 + i * plateDuration;
         const bgkey = swapT != null && pt0 + 1e-6 >= swapT ? 'swap' : 'base';
         const entry = {
           id: pid, t: pt0, atom: a.id, kind: a.kind, pose_mode: mode, bg: bgkey,
@@ -448,7 +450,7 @@
         plates.push({
           id: pid,
           t0: Math.round(pt0 * 10000) / 10000,
-          t1: Math.round((pt0 + 0.5) * 10000) / 10000,
+          t1: Math.round((pt0 + plateDuration) * 10000) / 10000,
         });
       }
 
@@ -494,10 +496,8 @@
     if (errors.length) return { ok: false, errors, warnings: warns };
 
     const dur = Math.round(t * 10000) / 10000;
-    if (!(dur >= 30 - 1e-6 && dur <= 60 + 1e-6)) {
-      const msg = 'total duration ' + dur + 's outside 30-60s' + (show.draft ? ' (draft: allowed)' : '');
-      if (show.draft) warns.push(msg);
-      else errors.push(msg);
+    if (!Number.isFinite(dur) || dur < 0.1 || dur > 120) {
+      errors.push('total duration must be between 0.1 and 120 seconds');
     }
     const lo = (6 * dur) / 30;
     const hi = (8 * dur) / 30;
@@ -533,7 +533,8 @@
       show_id: show.show_id,
       title: show.title || show.show_id,
       duration_s: dur,
-      fps_plates: FPS_PLATES,
+      fps_plates: plates.every(p => Math.abs(p.t1 - p.t0 - 0.5) < 1e-6) ? FPS_PLATES : null,
+      plate_timing: 'explicit',
       floor_y: floor,
       bg: {
         base: bg.base,

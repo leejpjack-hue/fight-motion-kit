@@ -1,0 +1,24 @@
+{
+  "checks": [
+    "default eight-plate, five-second project and all thumbnails load",
+    "play/pause resumes in place without reloading",
+    "scrub, restart, previous/next and loop toggle",
+    "fullscreen, keyboard playback and duration stepper",
+    "fractional clip timing and undo/redo",
+    "camera, zoom, pan, reset, effect and caption settings",
+    "duplicate, delete and drag reorder",
+    "replace plate, add clip, library search and fit-to-five",
+    "keyboard shortcut dialog",
+    "portable project download and reopen with embedded images",
+    "self-contained HTML plays offline and PNG export works",
+    "five-second video recording downloads a nonempty video",
+    "original rooftop show still loads all 63 plates",
+    "blank project, image import, and image/draft persistence across reload",
+    "invalid project JSON reports an error without losing the current edit",
+    "mobile layout has no horizontal overflow and playback works",
+    "standalone player play/pause is a real transport",
+    "zero uncaught browser errors or failed asset requests"
+  ],
+  "errors": [],
+  "failed": []
+}

@@ -10,3 +10,6 @@ kit/qa/frames/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local previews, test downloads, and scratch captures
+work/
