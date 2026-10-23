@@ -1,7 +1,7 @@
 /* Shared deterministic renderer: the editor, player, HTML export and video use this same code. */
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
-  const images = new Map();
+  const images = new Map(), keyedImages = new Map();
   let timeline, layout;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const ease = (u, kind) => kind === 'linear' ? u : kind === 'sine' ? .5 - .5 * Math.cos(Math.PI * u) : u * u * (3 - 2 * u);
@@ -34,18 +34,42 @@ function createMotionRenderer(canvas, assets = {}) {
       try { await im.decode(); } catch (_) { throw new Error('Image could not load: ' + path.slice(0, 120)); }
       images.set(path, im);
     }));
+    if(timeline.bg?.key_white)for(const l of Object.values(layout)){if(l.full&&!keyedImages.has(l.full))keyedImages.set(l.full,removeWhiteBackdrop(images.get(l.full)));}
   }
-  function image(path, x, y, w, h, contain = false, flip = false) {
-    const im = images.get(path); if (!im) return;
+  // Flood only edge-connected neutral whites, preserving enclosed white clothing/highlights.
+  function removeWhiteBackdrop(im) {
+    const c=document.createElement('canvas');c.width=im.width;c.height=im.height;
+    const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);
+    const frame=g.getImageData(0,0,c.width,c.height),d=frame.data,w=c.width,h=c.height;
+    const seen=new Uint8Array(w*h),queue=new Uint32Array(w*h);let head=0,tail=0;
+    function add(i){if(seen[i])return;seen[i]=1;const k=i*4;const lo=Math.min(d[k],d[k+1],d[k+2]),hi=Math.max(d[k],d[k+1],d[k+2]);if(d[k+3]<8||(lo>=245&&hi-lo<=12))queue[tail++]=i;}
+    for(let x=0;x<w;x++){add(x);add((h-1)*w+x);}for(let y=1;y<h-1;y++){add(y*w);add(y*w+w-1);}
+    while(head<tail){const i=queue[head++],x=i%w;d[i*4+3]=0;if(x>0)add(i-1);if(x<w-1)add(i+1);if(i>=w)add(i-w);if(i<w*(h-1))add(i+w);}
+    g.putImageData(frame,0,0);return c;
+  }
+  function backgroundImage(path){const im=images.get(path);if(!im)return;const s=Math.max(1280/im.width,720/im.height);ctx.drawImage(im,(1280-im.width*s)/2,(720-im.height*s)/2,im.width*s,im.height*s);}
+  function image(path, x, y, w, h, contain = false, flip = false, keyWhite = false) {
+    const im = (keyWhite&&keyedImages.get(path)) || images.get(path); if (!im) return;
     if (contain) { const s = Math.min(w / im.width, h / im.height); x += (w - im.width * s) / 2; y += (h - im.height * s) / 2; w = im.width * s; h = im.height * s; }
     ctx.save(); if (flip) {ctx.translate(x + w, y); ctx.scale(-1, 1); x = 0; y = 0;} ctx.drawImage(im, x, y, w, h); ctx.restore();
   }
-  function render(time) {
+  function drawScene(l, bgOnly = false) {
+    const bg = (timeline.bg || {})[l.bg || 'base']; if (bg && bgOnly) {ctx.save();ctx.translate(640,360);ctx.scale(l.bg_zoom||1,l.bg_zoom||1);ctx.translate(-640,-360);backgroundImage(bg);ctx.restore();}
+    if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!bg && timeline.bg?.key_white);
+    else {
+      (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
+      (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
+      if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
+    }
+  }
+  function render(time, opts = {}) {
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
     if (!timeline || !timeline.plates.length) { ctx.restore(); return; }
     const t = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
-    const plate = timeline.plates.find(p => t >= p.t0 && t < p.t1) || timeline.plates.at(-1);
+    const pIdx = timeline.plates.findIndex(p => t >= p.t0 && t < p.t1);
+    const plateIndex = pIdx >= 0 ? pIdx : timeline.plates.length - 1;
+    const plate = timeline.plates[plateIndex];
     const l = layout[plate.id]; if (!l) {ctx.restore(); return;}
     const segments = timeline.atoms.flatMap(a => a.cam);
     const seg = segments.find(s => t >= s.t0 && t < s.t1) || segments.at(-1);
@@ -57,12 +81,13 @@ function createMotionRenderer(canvas, assets = {}) {
     (fx.shake || []).forEach(([h, a, d]) => { if (t >= h && t < h + d) amp = Math.max(amp, a * (1 - (t - h) / d)); });
     (fx.hits || []).forEach(([h]) => { if (t >= h && t < h + .28) amp = Math.max(amp, 9 * (1 - (t - h) / .28)); });
     ctx.save(); ctx.translate(640 + camera.x + Math.sin(t * 157) * amp, 360 + camera.y + Math.cos(t * 131) * amp * .6); ctx.rotate(camera.r * Math.PI / 180); ctx.scale(camera.s, camera.s); ctx.translate(-640, -360);
-    const bg = (timeline.bg || {})[l.bg || 'base']; if (bg && !l.full) {ctx.save();ctx.translate(640,360);ctx.scale(l.bg_zoom||1,l.bg_zoom||1);ctx.translate(-640,-360);image(bg,0,0,1280,720);ctx.restore();}
-    if (l.full) image(l.full, 0, 0, 1280, 720, true);
-    else {
-      (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
-      (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
-      if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
+    drawScene(l, true);
+    if (opts.onion) {
+      const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
+      ctx.save(); ctx.globalAlpha = 0.25;
+      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id], false);
+      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id], false);
+      ctx.restore();
     }
     ctx.restore();
     // Deterministic particles avoid a different random result on every frame/export.

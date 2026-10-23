@@ -10,7 +10,7 @@ A browser-based plate animation editor. Import images, arrange clips, adjust tim
 npm run dev
 ```
 
-Open **http://127.0.0.1:8765/ui/**. Python 3 and Node.js are sufficient for local development; the editor itself has no npm runtime dependencies. Cloudflare Workers still serves `public/` through the existing `wrangler.jsonc`. This change does not deploy the live Worker.
+Open **http://127.0.0.1:8765/ui/**. Python 3 and Node.js are sufficient for local development; the editor itself has no npm runtime dependencies. Cloudflare Workers serves `public/` through the existing `wrangler.jsonc`.
 
 The default project is **Daiyu × Xifeng · First exchange**: the eight original generated PNGs, in order, over exactly five seconds. Select **Open original rooftop edit** to open the existing 31.5-second / 63-plate project.
 
@@ -20,6 +20,8 @@ The default project is **Daiyu × Xifeng · First exchange**: the eight original
 - Click a library image to replace the selected plate. Its **＋** button adds a new clip. Drag timeline clips to reorder them; Duplicate, Delete, Undo and Redo are available.
 - Use Play/Pause, the scrubber, previous/next clip, restart, or loop. Space toggles playback. **Keyboard shortcuts** lists the other shortcuts.
 - Import PNG/JPG/WebP images. Imported images and the current draft are stored in IndexedDB across reloads, subject to browser storage limits. Save a project before loading a demo or starting a blank project: those actions replace the active draft.
+- Use **Scene background → Change background** to choose a PNG/JPG/WebP (up to 20 MB). Backgrounds use a centered cover crop and are included in saved projects and exports. Existing two-background projects let you select **Base scene** or **After switch**. **Remove** clears that layer; Undo/Redo restores changes.
+- For opaque white plates, **Remove white backdrop** reveals the new background by removing only edge-connected near-white pixels during rendering. It auto-enables when choosing a background behind a white-corner plate; switch it off to retain the original plate. Transparent PNGs work directly. Other opaque backgrounds need transparent character assets.
 - **Save project** downloads `.motion.json` with embedded images, layouts and edits. **Open project** restores it on another device or origin. Old show-only JSON is supported when its layouts are shipped on the host.
 - **Export → Playable HTML** produces one offline file with its images embedded. **Current frame** saves a PNG. **Record video** records the canvas in real time (WebM in Chrome; a supported MP4 recorder may be used by other browsers). Keep the tab visible during recording; interrupted recordings report an error.
 
@@ -65,7 +67,9 @@ npm run dev                    # leave running in another terminal
 npm run test:browser
 ```
 
-Set `BROWSER_CHANNEL=chrome` to test an installed Chrome instead. Browser tests cover editing, transport, undo/redo, imports surviving reload, portable save/reopen, offline HTML, PNG/video downloads, the original project, and a 390px mobile layout. Local screenshots and downloads go under ignored `work/qa/`.
+Set `BROWSER_CHANNEL=chrome` to test an installed Chrome instead. Browser tests cover editing, transport, undo/redo, imports and background changes surviving reload, portable save/reopen, offline HTML, PNG/video downloads, the ten-second continuation, and a 390px mobile layout. Local screenshots and downloads go under ignored `work/qa/`.
+
+To deploy the existing Cloudflare Worker after verification, authenticate with Wrangler, then run `npx wrangler deploy`. The hosted editor is [html-motion-composer.leejpjack.workers.dev/ui/](https://html-motion-composer.leejpjack.workers.dev/ui/).
 
 ```sh
 npm run build:demos

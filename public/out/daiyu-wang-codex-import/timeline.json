@@ -8,7 +8,8 @@
   "bg": {
     "base": "assets/daiyu-wang-codex-import/bg/bg_rooftop.png",
     "swap": "assets/daiyu-wang-codex-import/bg/bg_rooftop_dented.png",
-    "swap_t": 18.5
+    "swap_t": 18.5,
+    "key_white": false
   },
   "chars": {
     "L": {

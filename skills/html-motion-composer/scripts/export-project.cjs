@@ -17,6 +17,8 @@ const serve=root=>new Promise((resolve,reject)=>{const s=http.createServer((req,
   browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||undefined});
   const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1,acceptDownloads:true});page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)failed.push(r.status()+' '+r.url());});
   await page.goto(`http://127.0.0.1:${server.address().port}/ui/`);await page.evaluate(()=>window.ready);await page.evaluate(p=>HMStudio.load(p),project);await page.evaluate(()=>HMStudio.compile());
+  // Onion skins are editor guides, never part of deterministic video frames.
+  await page.evaluate(()=>{if(HMStudio.onion)document.getElementById('onionToggle')?.click();});
   const data=await page.evaluate(()=>({duration:HMStudio.duration,timeline:HMStudio.composed.timeline}));const duration=data.duration;
   checks.timeline_contiguous=data.timeline.plates.every((p,i,a)=>p.t1>p.t0&&(!i||Math.abs(p.t0-a[i-1].t1)<1e-6))&&Math.abs(data.timeline.plates.at(-1).t1-duration)<1e-6;
   if(!checks.timeline_contiguous)throw Error('Timeline contains gaps or wrong end');

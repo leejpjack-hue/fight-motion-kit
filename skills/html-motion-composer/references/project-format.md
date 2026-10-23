@@ -34,7 +34,7 @@ The actual compose engine is `HMComposeClient.composeShow(show, {cameraPresets,f
 }
 ```
 
-`show_id` uses lowercase ASCII letters/numbers/hyphens/underscores. Keep atom IDs unique. `t_rel` is normalized inside the atom, not global seconds. For static background changes, `bg.swap`, `bg.swap_t`, and per-layout `bg: "base" | "swap"` are supported. Layout background tokens must match the show's asset stem for the compose engine to preserve that choice.
+`show_id` uses lowercase ASCII letters/numbers/hyphens/underscores. Keep atom IDs unique. `t_rel` is normalized inside the atom, not global seconds. For static background changes, `bg.swap`, `bg.swap_t`, and per-layout `bg: "base" | "swap"` are supported. Legacy layout tokens can match the show's asset stem; `bg.aliases.base` / `.swap` preserve those tokens when a background is replaced.
 
 ## Layout, transparency, and paths
 
@@ -51,6 +51,8 @@ The actual compose engine is `HMComposeClient.composeShow(show, {cameraPresets,f
 Part/full paths are relative to the directory of `hero.layout_source`, unless embedded as image data. The virtual stage is 1280×720. Use real transparent character PNGs for `parts`; the renderer paints the background first. A full-scene opaque plate uses `{"full":"P01.png"}` and deliberately covers the background. Adding an empty background under such a plate changes nothing. Avoid using whole-image shadow ellipses as huge character shadows.
 
 The legacy rooftop layout refers to PNG cutouts/full plates, but the deployed files are WebP/JPG. The build helper checks for those alternatives on disk without altering original images.
+
+The editor's **Scene background → Change background** imports PNG/JPG/WebP into portable assets. **Remove white backdrop** sets `show.bg.key_white: true` and removes edge-connected near-white pixels from full plates during rendering, preserving enclosed whites. It auto-enables for white-corner full plates when choosing a background; inspect the result and disable it when unsuitable. Source images stay intact. Leave it off when preserving an existing opaque sequence; use transparent parts for newly generated scenes. Background edits support undo/redo, device drafts, portable projects, and offline/video exports.
 
 ## Cameras, effects, captions
 

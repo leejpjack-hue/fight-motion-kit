@@ -20,7 +20,7 @@ Inspect the last existing plates and character references. Map the continuation 
 
 Use the available built-in image generator (and its imagegen skill) for new illustrations or backgrounds. Label each reference's purpose. Generate animation plates individually; a contact sheet is a review artifact, not a substitute for separately usable PNGs. Keep generated originals and record the final prompts.
 
-**Background compositing matters:** this renderer's `full` image hides the separate background. To show a new background behind characters, obtain actual alpha-transparent PNGs and use `parts` entries instead. A white PNG is opaque; setting `show.bg` will not remove it. Preserve opaque original plates if the existing section must remain unchanged. Inspect alpha and composite edges, and request a targeted image-generation correction if transparency is missing. Do not assume a visible checkerboard means there is alpha.
+**Background compositing matters:** an opaque `full` image covers the separate background. Prefer actual alpha-transparent character PNGs in `parts` entries for new scenes. A white PNG remains opaque unless the editor's optional **Remove white backdrop** (`show.bg.key_white`) is enabled; this removes edge-connected near-white pixels during rendering and needs visual inspection. Preserve opaque original plates and leave that option off if the existing section must remain unchanged. Inspect alpha and composite edges, and request a targeted image-generation correction if transparency is missing. Do not assume a visible checkerboard means there is alpha.
 
 Read [references/project-format.md](references/project-format.md) when authoring layouts, atoms, backgrounds, camera curves or portable JSON.
 
