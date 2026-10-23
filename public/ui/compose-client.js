@@ -78,6 +78,30 @@
     return cur;
   }
 
+  function applyCamIntensity(curves, intensity) {
+    if (intensity == null) return curves;
+    const k = +intensity;
+    if (!isFinite(k) || Math.abs(k - 1) < 1e-12) return curves;
+    const scale = Math.max(0, Math.min(2, k));
+    const out = deepClone(curves);
+    for (const ch of Object.keys(out)) {
+      const c = out[ch];
+      if (!c || typeof c !== 'object') continue;
+      const base = ch === 's' ? 1 : 0;
+      const t = c.type;
+      if (t === 'const') {
+        c.v = base + (+(c.v ?? DEFAULTS[ch]) - base) * scale;
+      } else if (t === 'lerp' || t === 'saw') {
+        c.a = base + (+c.a - base) * scale;
+        c.b = base + (+c.b - base) * scale;
+      } else if (t === 'sin' || t === 'alt_bump') {
+        c.offset = base + (+(c.offset || base) - base) * scale;
+        c.amp = (+c.amp || 0) * scale;
+      }
+    }
+    return out;
+  }
+
   function applyCamNudge(curves, nudge) {
     if (!nudge) return curves;
     const out = deepClone(curves);
@@ -287,13 +311,6 @@
     return r.json();
   }
 
-  /**
-   * @param {object} show — show spec
-   * @param {object} opts
-   * @param {object} opts.cameraPresets — {presets:[...]} or array
-   * @param {object} opts.fxPresets — {hooks:[...]} or array
-   * @param {function(string):Promise<object>} [opts.loadJson] — resolve kit-relative JSON
-   */
   async function composeShow(show, opts) {
     opts = opts || {};
     const errors = [];
@@ -320,7 +337,6 @@
     }
     if (!(show.atoms || []).length) errors.push('no atoms');
 
-    // Library mode unsupported in FE-only essential path
     for (const a of atoms) {
       if (a.pose_mode === 'library') {
         errors.push(
@@ -358,13 +374,14 @@
       const t1 = t + d;
       const cam = a.camera || {};
       const segs = cam.segments || [
-        { preset: cam.preset, dur_s: d, params: cam.params, u_range: cam.u_range, nudge: cam.nudge },
+        { preset: cam.preset, dur_s: d, params: cam.params, u_range: cam.u_range, nudge: cam.nudge, intensity: cam.intensity },
       ];
       const segSum = segs.reduce((s, x) => s + +x.dur_s, 0);
       if (Math.abs(segSum - d) > 1e-6) errors.push(a.id + ': camera segments sum != duration');
       const cs = [];
       let st = t0;
       const atomNudge = cam.nudge && typeof cam.nudge === 'object' ? cam.nudge : {};
+      const atomIntensity = cam.intensity != null ? +cam.intensity : 1;
       for (const s of segs) {
         if (!cams[s.preset]) {
           errors.push(a.id + ': unknown camera preset ' + s.preset);
@@ -373,7 +390,9 @@
         const u0 = (s.u_range || [0, 1])[0];
         const u1 = (s.u_range || [0, 1])[1];
         const segNudge = s.nudge && typeof s.nudge === 'object' ? s.nudge : atomNudge;
-        const curves = applyCamNudge(mergeCurves(cams[s.preset], s.params), segNudge);
+        const segIntensity = s.intensity != null ? +s.intensity : atomIntensity;
+        const scaled = applyCamIntensity(mergeCurves(cams[s.preset], s.params), segIntensity);
+        const curves = applyCamNudge(scaled, segNudge);
         cs.push({
           t0: Math.round(st * 10000) / 10000,
           t1: Math.round((st + s.dur_s) * 10000) / 10000,
@@ -527,7 +546,6 @@
     }
 
     const overlays = normalizeOverlays(show, dur, warns);
-    // src paths already kit-relative in show; leave as-is
 
     const timeline = {
       show_id: show.show_id,
@@ -576,6 +594,7 @@
     composeShow,
     FPS_PLATES,
     applyCamNudge,
+    applyCamIntensity,
     isParityMode,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
