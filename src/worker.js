@@ -29,6 +29,10 @@ export default {
       return Response.redirect(new URL("/ui/index.html", url), 302);
     }
 
+    if (path === "/docs" || path === "/docs/") {
+      return Response.redirect(new URL("/docs/index.html", url), 302);
+    }
+
     if (path.startsWith("/api/")) {
       if (request.method === "OPTIONS") {
         return new Response(null, {

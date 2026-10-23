@@ -3,6 +3,7 @@
 <!-- HM-COMPOSE-07: frontend-only product path -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HTML Motion Composer</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16">
 <style>
 @font-face{font-family:"Ma Shan Zheng";src:url("../assets/fonts/MaShanZheng-Regular.ttf") format("truetype");font-weight:400 900;font-display:swap}
 @font-face{font-family:"Long Cang";src:url("../assets/fonts/LongCang-Regular.ttf") format("truetype");font-weight:400 900;font-display:swap}
@@ -460,7 +461,7 @@
   </div>
   <div class="landFoot">
    <span>HTML Motion v2.4 · Live cam &amp; plates preview ready · Engine sync OK</span>
-   <span>Jack-speed 60fps · <a href="../docs/" target="_blank" rel="noopener">DOCS</a> · SHORTCUTS · SYSTEM DIAGNOSTIC</span>
+   <span>Jack-speed 60fps · <a href="../docs/index.html" target="_blank" rel="noopener">DOCS</a> · SHORTCUTS · SYSTEM DIAGNOSTIC</span>
   </div>
  </div>
 </div>
@@ -619,6 +620,7 @@ let FE_ASSET_MAP={}; // imported pack object URLs / inline json
 let dirtyDisk=false, lastComposedHash='', lastSavedHash='', lastComposedSnap=null, hasComposed=false;
 let hist=[], histI=-1, histApplying=false, HIST_CAP=40;
 let autoplay=false, autoplayRAF=null, autosaveTimer=null, pendingDraft=null;
+const draftDismissed=new Set();
 let LOOP_A=null, LOOP_B=null, SHOW_GUIDES=true, LIVE_CAM=true, CONTACT_GHOST=false;
 let SEL_SET=new Set(), CLIP_ATOMS=null;
 
@@ -710,6 +712,29 @@ function checkDraftRestore(showId){
     if(!d||!d.show||!d.ts) return null;
     return d;
   }catch(e){return null}
+}
+function draftSig(d){ return (d&&d.show&&d.show.show_id||'')+'@'+(d&&d.ts||0); }
+function offerDraftRestore(opts){
+  opts=opts||{};
+  const modal=$('draftModal');
+  if(!SHOW){ pendingDraft=null; if(modal) modal.classList.remove('on'); return; }
+  const d=checkDraftRestore(SHOW.show_id);
+  const same=!!(d&&JSON.stringify(d.show)===JSON.stringify(SHOW));
+  const skipped=!d||same||draftDismissed.has(draftSig(d));
+  if(skipped){
+    pendingDraft=null;
+    if(modal) modal.classList.remove('on');
+    return;
+  }
+  pendingDraft=d;
+  // Land shell sits under the modal (z-index). Keep Open clickable; ask once after leaving land.
+  if(opts.deferDraft||LAND_MODE){
+    if(modal) modal.classList.remove('on');
+    return;
+  }
+  if(!modal||modal.classList.contains('on')) return;
+  $('draftMsg').textContent=`Draft from ${new Date(d.ts).toLocaleString()} for ${SHOW.show_id}. Restore or discard?`;
+  modal.classList.add('on');
 }
 function xfOf(side){const t=(SHOW.chars[side]&&SHOW.chars[side].transform)||{}; return {x:+(t.x||0), y:+(t.y||0), scale:+(t.scale??1)||1};}
 function setXf(side, field, val, opts){const c=SHOW.chars[side]; if(!c.transform) c.transform={x:0,y:0,scale:1}; c.transform[field]=val;
@@ -818,12 +843,20 @@ async function loadLayoutJson(rel){
   if(!rel) return null;
   if(LAYOUT_CACHE[rel]) return LAYOUT_CACHE[rel];
   try{
-    const r=await fetch('../'+rel.replace(/^\.\//,'')).then(x=>x.json());
-    LAYOUT_CACHE[rel]=r; return r;
+    const r=await fetch('../'+rel.replace(/^\.\//,''));
+    if(!r.ok){ LAYOUT_CACHE[rel]=null; return null; }
+    const data=await r.json();
+    LAYOUT_CACHE[rel]=data; return data;
   }catch(e){ LAYOUT_CACHE[rel]=null; return null; }
 }
 function loadImg(url){
   if(!url) return Promise.resolve(null);
+  const rel=String(url).match(/^(\.\.\/|\/)?(assets\/.+)$/);
+  if(rel){
+    const fixed=cloudAssetPath(rel[2]);
+    if(!fixed) return Promise.resolve(null);
+    url=(rel[1]||'')+fixed;
+  }
   if(POSE_CACHE[url] && POSE_CACHE[url].complete) return Promise.resolve(POSE_CACHE[url]);
   return new Promise(res=>{ const im=POSE_CACHE[url]||new Image(); POSE_CACHE[url]=im; if(im.complete&&im.naturalWidth) return res(im);
     im.onload=()=>res(im); im.onerror=()=>res(null); if(!im.src) im.src=url; });
@@ -837,7 +870,13 @@ function defaultFx(beat){
  if(beat==='impact_hold') return [{t_rel:0,type:'shake'}];
  return [];
 }
-function libFor(side){const p=SHOW&&SHOW.chars[side].pose_library;return CAT.libraries.find(l=>l.path===p)}
+function poseLibs(){ return (CAT&&CAT.libraries)||[]; }
+function libFor(side){
+  const ch=SHOW&&SHOW.chars&&SHOW.chars[side];
+  const p=ch&&ch.pose_library;
+  if(!p) return null;
+  return poseLibs().find(l=>l.path===p)||null;
+}
 function pickPose(lib,tags){if(!lib||!lib.poses||!lib.poses.length)return null;const m=lib.poses.find(p=>p.tags.some(t=>tags.includes(t)));return (m||lib.poses[0]).pose_id}
 function makeAtom(pid,beat,dur,mode){
  const P=PRESETS[pid], n=dur*2;
@@ -972,14 +1011,20 @@ function isPlatePackShow(){
 const HM_RECENT_KEY='hm.composer.recentPlatePack';
 const HM_PIN_KEY='hm.composer.pinPlatePack';
 const HM_DEFAULT_FIGHT='daiyu-wang-codex-import';
+let SHIPPED_IDS=[];
 let BEAT_FOCUS=false, BEAT_FOCUS_PREV_COLLAPSE=false, FOLLOW_PLAYHEAD=false;
 let FOLLOW_RAF=0, FOLLOW_T0=0, FOLLOW_BASE=0;
 
 function readRecentFight(){
   try{ return (localStorage.getItem(HM_PIN_KEY)||localStorage.getItem(HM_RECENT_KEY)||'').trim(); }catch(e){ return ''; }
 }
+function rememberShippedCatalog(){
+  SHIPPED_IDS=(CAT&&CAT.shows||[]).map(s=>s.show&&s.show.show_id).filter(Boolean);
+}
+function isShippedId(id){ return !!id && SHIPPED_IDS.indexOf(id)>=0; }
 function rememberFight(sid){
-  if(!sid) return;
+  // Land recent is only for shows that ship assets. Local duplicates stay in the picker.
+  if(!sid||!isShippedId(sid)) return;
   try{
     if(SHOW && isPlatePackShow()) localStorage.setItem(HM_RECENT_KEY, sid);
     else if(/daiyu-wang-codex/.test(sid)) localStorage.setItem(HM_RECENT_KEY, sid);
@@ -990,15 +1035,63 @@ function findShowById(sid){
   return CAT.shows.find(s=>s.show&&s.show.show_id===sid)
     || CAT.shows.find(s=>s.path && (s.path.endsWith('/'+sid+'.json')||s.path.endsWith(sid+'.json')));
 }
+function findShippedShowById(sid){
+  if(!isShippedId(sid)) return null;
+  const hit=findShowById(sid);
+  if(hit&&String(hit.path||'').startsWith('local:')&&!isShippedId(sid)) return null;
+  return hit;
+}
+function layoutAssetRoot(show){
+  const sh=show||SHOW;
+  if(!sh) return null;
+  for(const a of (sh.atoms||[])){
+    const ls=a.hero&&a.hero.layout_source;
+    if(!ls||!/layout\.json$/i.test(ls)) continue;
+    const i=ls.lastIndexOf('/');
+    if(i>0) return ls.slice(0,i);
+  }
+  const base=sh.bg&&sh.bg.base;
+  const m=base&&String(base).match(/^(assets\/[^/]+)\//);
+  return m?m[1]:null;
+}
+function shippedAssetRoot(){
+  const hit=findShowById(HM_DEFAULT_FIGHT);
+  return layoutAssetRoot(hit&&hit.show)||('assets/'+HM_DEFAULT_FIGHT);
+}
+function cloudAssetPath(rel){
+  if(rel==null||rel==='') return rel;
+  const m=String(rel).match(/^assets\/([^/]+)\/(.*)$/);
+  if(!m) return rel;
+  if(m[1]==='wording'||m[1]==='fonts'||isShippedId(m[1])) return rel;
+  const root=shippedAssetRoot();
+  return root? (root+'/'+m[2]) : null;
+}
+function normalizeShowAssets(show){
+  if(!show) return show;
+  const fix=s=>{
+    if(typeof s!=='string') return s;
+    const n=cloudAssetPath(s);
+    return n==null?s:n;
+  };
+  if(show.bg){
+    if(show.bg.base) show.bg.base=fix(show.bg.base);
+    if(show.bg.swap) show.bg.swap=fix(show.bg.swap);
+  }
+  (show.atoms||[]).forEach(a=>{
+    if(a.hero&&a.hero.layout_source) a.hero.layout_source=fix(a.hero.layout_source);
+  });
+  (show.overlays||[]).forEach(o=>{ if(o.src) o.src=fix(o.src); });
+  return show;
+}
 function isFightPath(path){
   return /daiyu-wang-codex/.test(path||'') || /plate.?pack/i.test(path||'');
 }
 function pickLandShow(deep){
   if(deep) return deep;
   const recent=readRecentFight();
-  if(recent){ const hit=findShowById(recent); if(hit) return hit; }
-  const pin=findShowById(HM_DEFAULT_FIGHT); if(pin) return pin;
-  const any=(CAT.shows||[]).find(s=>isFightPath(s.path)); if(any) return any;
+  if(recent){ const hit=findShippedShowById(recent); if(hit) return hit; }
+  const pin=findShippedShowById(HM_DEFAULT_FIGHT); if(pin) return pin;
+  const any=(CAT.shows||[]).find(s=>isShippedId(s.show&&s.show.show_id)&&isFightPath(s.path)); if(any) return any;
   // last resort: keep prior demo fallback only if no plate-pack exists
   return (CAT.shows||[]).find(s=>s.path.endsWith('editor-features.json'))
     || (CAT.shows||[]).find(s=>s.path.endsWith('zhao-hua-parity.json'))
@@ -1007,8 +1100,8 @@ function pickLandShow(deep){
 function openFightShow(){
   if(!CAT||!CAT.shows){ status('catalog not ready',true); return; }
   const want=readRecentFight()||HM_DEFAULT_FIGHT;
-  const hit=findShowById(want) || findShowById(HM_DEFAULT_FIGHT)
-    || (CAT.shows||[]).find(s=>isFightPath(s.path));
+  const hit=findShippedShowById(want) || findShippedShowById(HM_DEFAULT_FIGHT)
+    || (CAT.shows||[]).find(s=>isShippedId(s.show&&s.show.show_id)&&isFightPath(s.path));
   if(!hit){ status('no Codex plate-pack show in catalog',true); return; }
   $('example').value=hit.path;
   loadShow(hit.show);
@@ -1148,7 +1241,8 @@ function fmtDur(s){
   return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
 }
 function platePackShows(){
-  return (CAT&&CAT.shows||[]).filter(s=>s.show && (isFightPath(s.path) || (()=>{
+  // Catalog fights only. localStorage duplicates (hm-compose-07-usertest, …) have no asset tree.
+  return (CAT&&CAT.shows||[]).filter(s=>s.show && isShippedId(s.show.show_id) && (isFightPath(s.path) || (()=>{
     try{ const sh=s.show; const atoms=sh.atoms||[];
       return atoms.length>=8 && atoms.every(a=>a.pose_mode==='hero');
     }catch(e){return false}
@@ -1174,10 +1268,12 @@ function setLandMode(on){
     setFxHonesty(false);
     if($('navFights')){ $('navFights').classList.add('hnavOn'); }
     if($('navPacks')) $('navPacks').classList.remove('hnavOn');
+    const modal=$('draftModal'); if(modal) modal.classList.remove('on');
   } else {
     setFxHonesty(true);
     if($('navFights')) $('navFights').classList.remove('hnavOn');
     if($('navPacks')) $('navPacks').classList.add('hnavOn');
+    if(typeof offerDraftRestore==='function') offerDraftRestore();
   }
   updateHdrProject();
 }
@@ -1198,8 +1294,8 @@ function paintLandShell(){
   const packs=platePackShows();
   const recentId=(()=>{ try{return (localStorage.getItem(HM_RECENT_KEY)||'').trim()}catch(e){return ''} })();
   const pinId=(()=>{ try{return (localStorage.getItem(HM_PIN_KEY)||HM_DEFAULT_FIGHT).trim()}catch(e){return HM_DEFAULT_FIGHT} })();
-  const hero = (SHOW && isPlatePackShow() ? {show:SHOW, path:($('example')&&$('example').value)||''} : null)
-    || findShowById(recentId) || findShowById(pinId) || findShowById(HM_DEFAULT_FIGHT) || packs[0];
+  const hero = (SHOW && isPlatePackShow() && isShippedId(SHOW.show_id) ? {show:SHOW, path:($('example')&&$('example').value)||''} : null)
+    || findShippedShowById(recentId) || findShippedShowById(pinId) || findShippedShowById(HM_DEFAULT_FIGHT) || packs[0];
   const hm=fightMeta(hero&&hero.show);
   const hid=(hero&&hero.show&&hero.show.show_id)||HM_DEFAULT_FIGHT;
   if($('landHeroTitle')){
@@ -1213,7 +1309,7 @@ function paintLandShell(){
   if($('landPrevDur')) $('landPrevDur').textContent=fmtDur(hm.dur);
   // pinned: default + any pin key
   const pinned=[];
-  const pinHit=findShowById(pinId)||findShowById(HM_DEFAULT_FIGHT);
+  const pinHit=findShippedShowById(pinId)||findShippedShowById(HM_DEFAULT_FIGHT);
   if(pinHit) pinned.push(pinHit);
   for(const s of packs){
     if(pinned.length>=3) break;
@@ -1222,7 +1318,7 @@ function paintLandShell(){
   if($('landPinned')) $('landPinned').innerHTML=pinned.map(s=>landCardHtml(s,'pinned')).join('')||'<div class="empty">no pinned plate-packs</div>';
   // recent: other packs excluding hero
   const recent=[];
-  if(recentId){ const r=findShowById(recentId); if(r) recent.push(r); }
+  if(recentId){ const r=findShippedShowById(recentId); if(r) recent.push(r); }
   for(const s of packs){
     if(recent.length>=4) break;
     const sid=s.show&&s.show.show_id;
@@ -1277,28 +1373,39 @@ function flatPlates(){
 }
 
 function assetPrefix(){
-  // Prefer assets/<show_id>/ ; fall back to layout_source dirname
+  // Shipped pack root (layout_source), never assets/<local-duplicate-id>/.
   if(!SHOW) return null;
-  const sid=SHOW.show_id;
-  if(sid) return `assets/${sid}`;
-  for(const a of (SHOW.atoms||[])){
-    const ls=a.hero&&a.hero.layout_source;
-    if(ls){ const i=ls.lastIndexOf('/'); return i>=0?ls.slice(0,i):null; }
+  const fromLayout=layoutAssetRoot(SHOW);
+  if(fromLayout){
+    const fixed=cloudAssetPath(fromLayout+'/x');
+    if(fixed) return fixed.replace(/\/x$/,'');
+    return null;
   }
+  const sid=SHOW.show_id;
+  if(sid&&isShippedId(sid)) return `assets/${sid}`;
   return null;
 }
 
 let PLATE_INV=null; // {plates, cutouts}
+function plateInvMatchesShow(inv, sid){
+  if(!inv||!inv.ok) return false;
+  if(!sid||!inv.show_id||inv.show_id===sid) return true;
+  const root=layoutAssetRoot(SHOW);
+  if(root&&(root===('assets/'+inv.show_id)||root.endsWith('/'+inv.show_id))) return true;
+  // FE duplicate ids are not a second asset pack.
+  if(sid&&!isShippedId(sid)&&isShippedId(inv.show_id)) return true;
+  return false;
+}
 async function fetchPlateInv(sid){
   sid=sid||(SHOW&&SHOW.show_id)||'';
   // HM-COMPOSE-07: static plates.json first (no /api/plates)
   try{
     const r=await fetch('/plates.json',{cache:'no-store'}).then(x=>x.ok?x.json():null);
-    if(r&&r.ok&&(!sid||!r.show_id||r.show_id===sid)){ PLATE_INV=r; return r; }
+    if(r&&r.ok&&plateInvMatchesShow(r,sid)){ PLATE_INV=r; return r; }
   }catch(e){}
   try{
     const r=await fetch('../plates.json',{cache:'no-store'}).then(x=>x.ok?x.json():null);
-    if(r&&r.ok&&(!sid||!r.show_id||r.show_id===sid)){ PLATE_INV=r; return r; }
+    if(r&&r.ok&&plateInvMatchesShow(r,sid)){ PLATE_INV=r; return r; }
   }catch(e){}
   // Derive from hero layout_source (plate-pack path)
   try{
@@ -1329,11 +1436,11 @@ async function fetchPlateInv(sid){
       }
     }
   }catch(e){}
-  // Legacy API only if somehow online (not product path)
-  if(apiOK){
+  // Legacy read only when not frontend-only. Never call on FE_ONLY (Workers returns stubs).
+  if(!FE_ONLY && apiOK){
     try{
-      const r=await fetch('/api/plates?show='+encodeURIComponent(sid)).then(x=>x.json());
-      if(r&&r.ok){ PLATE_INV=r; return r; }
+      const rr=await fetch('/api/plates?show='+encodeURIComponent(sid));
+      if(rr.ok){ const r=await rr.json(); if(r&&r.ok){ PLATE_INV=r; return r; } }
     }catch(e){}
   }
   return null;
@@ -1345,20 +1452,26 @@ function plateThumbUrl(pid){
   // Prefer cutout; fall back plates/ via inventory when available (HM-COMPOSE-03)
   if(PLATE_INV){
     const cut=(PLATE_INV.cutouts||[]).find(p=>p.id===pid);
-    if(cut&&cut.src) return '../'+cut.src;
+    if(cut&&cut.src){ const p=cloudAssetPath(cut.src); return p?('../'+p):null; }
     const pl=(PLATE_INV.plates||[]).find(p=>p.id===pid);
-    if(pl&&pl.src) return '../'+pl.src;
+    if(pl&&pl.src){ const p=cloudAssetPath(pl.src); return p?('../'+p):null; }
     return null; // neither exists → caller shows placeholder
   }
-  return `../${pref}/cutout/${pid}.png`;
+  return null; // inventory not loaded yet; do not guess cutout/*.png (404 storm)
 }
 
 function renderPlateStrip(){
   const box=$('plateStrip'); if(!box) return;
   if(!isPlatePackShow()){ box.classList.remove('on'); box.innerHTML=''; return; }
   box.classList.add('on');
-  // Ensure inventory so missing cutouts get placeholders without waiting for lazy onerror
-  if(apiOK && !PLATE_INV){ fetchPlateInv(SHOW.show_id).then(()=>{ if(isPlatePackShow()) renderPlateStrip(); }); }
+  // Static plates.json (webp cutouts in-repo). Missing ids stay placeholders — no invented art.
+  if(!PLATE_INV && SHOW && !window.__plateInvPending){
+    window.__plateInvPending=true;
+    fetchPlateInv(SHOW.show_id).finally(()=>{
+      window.__plateInvPending=false;
+      if(PLATE_INV && isPlatePackShow()) renderPlateStrip();
+    });
+  }
   const flat=flatPlates();
   const scrubPl=plateAtTime(SCRUB);
   const prevScroll=box.scrollLeft;
@@ -1426,8 +1539,11 @@ function renderPlatePickGrid(){
   const list=(PLATE_INV&&(src==='plates'?PLATE_INV.plates:PLATE_INV.cutouts))||[];
   const cur=PICK_CTX && SHOW.atoms[PICK_CTX.atomIdx] && (SHOW.atoms[PICK_CTX.atomIdx].hero.plates||[])[PICK_CTX.plateIdx];
   const filtered=list.filter(p=>!filter || p.id.toLowerCase().includes(filter));
-  grid.innerHTML=filtered.map(p=>`<button type="button" class="pth ${p.id===cur?'on':''}" data-pid="${p.id}">
-    <img src="../${p.src}" alt="${p.id}" loading="lazy"><span>${p.id}</span></button>`).join('')
+  grid.innerHTML=filtered.map(p=>{
+    const src=cloudAssetPath(p.src);
+    const img=src?`<img src="../${src}" alt="${p.id}" loading="lazy" onerror="this.style.display='none'">`:'';
+    return `<button type="button" class="pth ${p.id===cur?'on':''}" data-pid="${p.id}">${img}<span>${p.id}</span></button>`;
+  }).join('')
     || '<div class="empty">no plates in inventory</div>';
   grid.querySelectorAll('.pth[data-pid]').forEach(b=>b.onclick=()=>{
     grid.querySelectorAll('.pth').forEach(x=>x.classList.remove('on')); b.classList.add('on'); b.dataset.sel='1';
@@ -1725,10 +1841,11 @@ function renderShow(){
  const opts=(sel,list,v,none)=>{sel.innerHTML=(none?'<option value="">(none)</option>':'')+list.map(b=>`<option ${b===v?'selected':''}>${b}</option>`).join('')};
  opts($('bgBase'),CAT.bgs,SHOW.bg.base); opts($('bgSwap'),CAT.bgs,SHOW.bg.swap||'',true); $('bgSwapT').value=SHOW.bg.swap_t??'';
  $('bgthumb').src='../'+SHOW.bg.base; BGIMG.src='../'+SHOW.bg.base;
- $('slots').innerHTML=['L','R'].map(s=>{const c=SHOW.chars[s]; const lib=CAT.libraries.find(l=>l.path===c.pose_library); const xf=xfOf(s);
+ const libs=poseLibs();
+ $('slots').innerHTML=['L','R'].map(s=>{const c=SHOW.chars[s]||{}; const lib=libs.find(l=>l.path===c.pose_library); const xf=xfOf(s);
   return `<div class="slot"><b style="color:${s==='L'?'var(--lib)':'var(--hero)'}">${s} · screen-${s==='L'?'LEFT':'RIGHT'}</b>
    <label>name<input data-s="${s}" data-f="name" value="${c.name||''}"></label>
-   <label>pose lib<select data-s="${s}" data-f="pose_library"><option value="">(none — hero only)</option>${CAT.libraries.map(l=>`<option value="${l.path}" ${l.path===c.pose_library?'selected':''}>${l.path}${l.placeholder?' [placeholder]':''}</option>`).join('')}</select></label>
+   <label>pose lib<select data-s="${s}" data-f="pose_library"><option value="">(none — hero only)</option>${libs.map(l=>`<option value="${l.path}" ${l.path===c.pose_library?'selected':''}>${l.path}${l.placeholder?' [placeholder]':''}</option>`).join('')}</select></label>
    <label>key image<input data-s="${s}" data-f="image" value="${c.image||''}" placeholder="path or upload"></label>
    <label>upload<input type="file" accept="image/*" data-up="${s}"></label>
    <div class="thumb">${lib&&lib.poses?lib.poses.slice(0,8).map(p=>`<img src="../${p.png}" title="${p.pose_id}" loading="lazy" decoding="async">`).join(''):(c.image?`<img src="../${c.image}" loading="lazy">`:'<span class="tag">no library / image</span>')}</div>
@@ -1742,11 +1859,10 @@ function renderShow(){
    <button class="small" data-xfreset="${s}">reset transform</button>
    </div>`}).join('');
  $('slots').querySelectorAll('[data-f]').forEach(el=>el.onchange=()=>{const c=SHOW.chars[el.dataset.s]; if(el.value) c[el.dataset.f]=el.value; else delete c[el.dataset.f]; pushHist(); markDirty(); renderShow(); renderTL();});
- $('slots').querySelectorAll('[data-up]').forEach(el=>el.onchange=async()=>{const f=el.files[0]; if(!f) return;
-  status('upload unavailable in frontend-only mode',true);return;
-  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(f)});
-  const res=await fetch('/api/upload',{method:'POST',body:JSON.stringify({name:f.name,data_b64:b64})}).then(r=>r.json());
-  SHOW.chars[el.dataset.up].image=res.path; pushHist(); markDirty(); status('uploaded '+res.path); renderShow();});
+ $('slots').querySelectorAll('[data-up]').forEach(el=>el.onchange=()=>{
+  el.value='';
+  status('upload unavailable in frontend-only mode',true);
+ });
  $('slots').querySelectorAll('[data-xf]').forEach(el=>{
    const apply=(commit)=>{
      const v=+el.value; const k=el.dataset.k; const side=el.dataset.xf;
@@ -2222,12 +2338,27 @@ function clientCheck(){const e=[],T=totals();
  SHOW.atoms.forEach(a=>{if(a.pose_mode==='library'&&!SHOW.chars.L.pose_library) e.push(`${a.id}: library atom but L has no pose library`);
   if(a.pose_mode==='library'&&!SHOW.chars.R.pose_library) e.push(`${a.id}: library atom but R has no pose library`)}); return e}
 function spec(){const s=JSON.parse(JSON.stringify(SHOW)); s.grounded=true; return s}
-async function postCompose(body){const r=await fetch('/api/compose',{method:'POST',body:JSON.stringify(body)});return r.json()}
+async function postCompose(){
+  // FE_ONLY product path never POSTs /api/compose (Workers 501). Compose is HMComposeClient.
+  return {ok:false, skipped:true, errors:['frontend-only: /api/compose is not called']};
+}
 function showOut(r){$('out').style.color=r.ok?'var(--ok)':'var(--bad)'; $('out').textContent=r.ok?`✓ ${r.out}\n${r.duration_s}s · ${JSON.stringify(r.stats)}\n`+(r.warnings||[]).map(w=>'⚠ '+w).join('\n'):(r.errors||[]).join('\n')}
 
 function playerUrl(sid, t, bust){
   const q=new URLSearchParams(); q.set('show', sid); if(t!=null && t!=='') q.set('t', String(+t||0)); if(bust) q.set('_', String(bust));
   return `/player/index.html?${q.toString()}`;
+}
+let playerSrcTimer=0;
+function setPlayerFrameSrc(fr, url){
+  if(!fr||!url) return;
+  fr.dataset.want=url;
+  clearTimeout(playerSrcTimer);
+  // One navigation after a burst. Play then Pause inside ~400ms must not abort an in-flight /player/ load.
+  playerSrcTimer=setTimeout(()=>{
+    if(!fr.dataset.want||fr.dataset.applied===fr.dataset.want) return;
+    fr.dataset.applied=fr.dataset.want;
+    fr.src=fr.dataset.want;
+  }, 400);
 }
 function showPlayerDock(force){
   const dock=$('playerDock'); if(!dock) return;
@@ -2237,11 +2368,13 @@ function refreshDockedPlayer(bust){
   if(!SHOW) return;
   const fr=$('playerFrame'); if(!fr) return;
   showPlayerDock(true);
-  fr.src = playerUrl(SHOW.show_id, SCRUB, bust||Date.now());
+  setPlayerFrameSrc(fr, playerUrl(SHOW.show_id, SCRUB, bust||Date.now()));
 }
 async function probeComposed(sid){
   // HM-COMPOSE-07: local FE out first, then static /out/<id>/timeline.json
   try{ if(window.HMFeStore && HMFeStore.hasOut(sid)) return true; }catch(e){}
+  // Local duplicates have no /out/<id>/ on the worker. Don't 404 a second tree.
+  if(sid&&SHIPPED_IDS.length&&!isShippedId(sid)) return false;
   try{
     const r=await fetch('/out/'+encodeURIComponent(sid)+'/timeline.json',{method:'GET',cache:'no-store'});
     if(r.ok) return true;
@@ -2250,9 +2383,11 @@ async function probeComposed(sid){
     const r=await fetch('../out/'+encodeURIComponent(sid)+'/timeline.json',{method:'GET',cache:'no-store'});
     if(r.ok) return true;
   }catch(e){}
-  if(apiOK){
+  if(!FE_ONLY && apiOK){
     try{
-      const r=await fetch('/api/composed?show='+encodeURIComponent(sid)).then(x=>x.json());
+      const rr=await fetch('/api/composed?show='+encodeURIComponent(sid));
+      if(!rr.ok) return false;
+      const r=await rr.json();
       return !!(r && r.exists);
     }catch(e){return false}
   }
@@ -2319,7 +2454,7 @@ async function doCompose(){
     }catch(err){
       r={ok:false, errors:[String(err&&err.message||err)]};
     }
-  } else if(apiOK){
+  } else if(!FE_ONLY && apiOK){
     r=await postCompose({show:spec(),save:true});
   } else {
     r={ok:false, errors:['compose-client.js not loaded']};
@@ -2390,7 +2525,7 @@ if($('dockPause')) $('dockPause').onclick=()=>{
   stopFollowTicker();
   const fr=$('playerFrame'); if(!fr) return;
   showPlayerDock(true);
-  fr.src=playerUrl(SHOW.show_id, SCRUB, Date.now())+'&capture=1';
+  setPlayerFrameSrc(fr, playerUrl(SHOW.show_id, SCRUB, Date.now())+'&capture=1');
   status('Pause @ '+SCRUB.toFixed(2)+'s');
 };
 if($('dockScrub')){
@@ -2399,7 +2534,7 @@ if($('dockScrub')){
     if($('dockScrubT')) $('dockScrubT').textContent=t.toFixed(2)+'s';
     SCRUB=t; if($('scrub')){ $('scrub').value=String(t); if($('scrubT')) $('scrubT').textContent=t.toFixed(2)+'s'; }
     if($('playerFrame')&&$('playerDock')&&$('playerDock').classList.contains('on')&&SHOW){
-      $('playerFrame').src=playerUrl(SHOW.show_id, t, Date.now());
+      setPlayerFrameSrc($('playerFrame'), playerUrl(SHOW.show_id, t, Date.now()));
     }
     if(typeof paintPreview==='function') paintPreview();
     if(typeof renderPlateStrip==='function') renderPlateStrip();
@@ -2410,7 +2545,8 @@ if($('dockScrub')){
 function loadShow(s, opts){
   opts=opts||{};
   PLATE_INV=null; // refresh plate inventory for strip placeholders
-  SHOW=JSON.parse(JSON.stringify(s)); SHOW.bg=SHOW.bg||{base:CAT.bgs[0]}; if(!SHOW.overlays) SHOW.overlays=[];
+  SHOW=JSON.parse(JSON.stringify(s)); SHOW.bg=SHOW.bg||{base:(CAT.bgs||[])[0]}; if(!SHOW.overlays) SHOW.overlays=[];
+  normalizeShowAssets(SHOW);
   SEL=SHOW.atoms.length?0:-1; SEL_OV=-1;
   if(opts.scrub!=null) SCRUB=+opts.scrub||0; else SCRUB=0;
   hist=[]; histI=-1; histApplying=false;
@@ -2422,13 +2558,7 @@ function loadShow(s, opts){
   pushHist();
   renderShow(); renderTL(); renderCards(); updateScrub(); paintPreview();
   updateBanner(); updatePreviewBtn(); updateHistBtns();
-  // draft check
-  const d=checkDraftRestore(SHOW.show_id);
-  if(d && d.ts && JSON.stringify(d.show)!==JSON.stringify(SHOW)){
-    pendingDraft=d;
-    $('draftMsg').textContent=`Draft from ${new Date(d.ts).toLocaleString()} for ${SHOW.show_id}. Restore or discard?`;
-    $('draftModal').classList.add('on');
-  }
+  offerDraftRestore({deferDraft: !!opts.deferDraft});
   // probe composed output
   probeComposed(SHOW.show_id).then(ex=>{
     if(ex){ hasComposed=true; if(!lastComposedHash) lastComposedHash=showHash(); lastComposedSnap=lastComposedSnap||JSON.parse(JSON.stringify(SHOW));
@@ -2441,21 +2571,25 @@ function loadShow(s, opts){
 }
 $('draftRestore').onclick=()=>{
   if(!pendingDraft) return;
+  draftDismissed.add(draftSig(pendingDraft));
   $('draftModal').classList.remove('on');
   const t=pendingDraft.scrub; const sh=pendingDraft.show; pendingDraft=null;
-  histApplying=true; SHOW=sh; histApplying=false;
+  histApplying=true; SHOW=sh; normalizeShowAssets(SHOW); histApplying=false;
   if(t!=null) SCRUB=+t||0;
   pushHist(); markDirty();
   SEL=SHOW.atoms.length?0:-1; renderShow(); renderTL(); updateScrub(); paintPreview(); status('draft restored');
 };
 $('draftDiscard').onclick=()=>{
-  if(pendingDraft) clearDraft();
+  if(pendingDraft){ draftDismissed.add(draftSig(pendingDraft)); clearDraft(); }
   pendingDraft=null; $('draftModal').classList.remove('on'); status('draft discarded');
 };
 
 $('loadEx').onclick=()=>{const s=CAT.shows.find(x=>x.path===$('example').value); if(s) {loadShow(s.show); status('loaded '+s.path)}};
-$('newShow').onclick=()=>loadShow({show_id:'new-show',title:'New show',duration_target_s:30,grounded:true,floor_y:684,
- chars:{L:{name:'L fighter',pose_library:(CAT.libraries.find(l=>/zhao/.test(l.path))||CAT.libraries[0]||{}).path},R:{name:'R fighter',pose_library:(CAT.libraries.find(l=>/hua/.test(l.path))||CAT.libraries[1]||{}).path}},bg:{base:CAT.bgs[0]},overlays:[],atoms:[]});
+$('newShow').onclick=()=>{
+ const libs=poseLibs();
+ loadShow({show_id:'new-show',title:'New show',duration_target_s:30,grounded:true,floor_y:684,
+ chars:{L:{name:'L fighter',pose_library:(libs.find(l=>/zhao/.test(l.path))||libs[0]||{}).path},R:{name:'R fighter',pose_library:(libs.find(l=>/hua/.test(l.path))||libs[1]||libs[0]||{}).path}},bg:{base:(CAT.bgs||[])[0]},overlays:[],atoms:[]});
+};
 $('more').onclick=()=>{LIMIT+=24;renderCards()};
 ['fFamily','fPreset','fBeat','fDur','fMode'].forEach(id=>$(id).onchange=()=>{LIMIT=48;renderCards()}); $('fText').oninput=()=>{LIMIT=48;renderCards()};
 
@@ -2485,7 +2619,9 @@ function refreshExamplePicker(preserve){
   }
 }
 function mergeLocalShowsIntoCatalog(){
-  if(!CAT||!window.HMFeStore) return;
+  if(!CAT) return;
+  if(!SHIPPED_IDS.length) rememberShippedCatalog();
+  if(!window.HMFeStore) return;
   const locals=HMFeStore.listLocalShows();
   if(!locals.length) return;
   const byId=new Map((CAT.shows||[]).map(s=>[s.show&&s.show.show_id, s]));
@@ -2515,8 +2651,8 @@ async function loadCatalog(keep){
      break;
    }catch(e){}
  }
- // Optional legacy probe — do not treat as product dependency
- if(!loaded){
+ // Optional legacy probe — skipped on the frontend-only product path
+ if(!loaded && !FE_ONLY){
    try{
      const r=await fetch('/api/catalog',{cache:'no-store'});
      if(r.ok){ CAT=await r.json(); loaded=true; apiOK=true; }
@@ -2524,13 +2660,18 @@ async function loadCatalog(keep){
  }
  if(!loaded){
    // Kit static fallback (local python3 -m http.server)
+   async function fetchJsonOk(u){
+     const r=await fetch(u,{cache:'no-store'});
+     if(!r.ok) throw new Error('HTTP '+r.status+' '+u);
+     return r.json();
+   }
    const [cp,fx,s1]=await Promise.all([
-     fetch('../presets/camera_presets.json').then(r=>r.json()),
-     fetch('../presets/fx_presets.json').then(r=>r.json()),
-     fetch('../shows/daiyu-wang-codex-import.json').then(r=>r.json()).catch(()=>null),
+     fetchJsonOk('../presets/camera_presets.json'),
+     fetchJsonOk('../presets/fx_presets.json'),
+     fetchJsonOk('../shows/daiyu-wang-codex-import.json').catch(()=>null),
    ]);
    let s2=null;
-   try{ s2=await fetch('../shows/zhao-hua-parity.json').then(r=>r.json()); }catch(e){}
+   try{ s2=await fetchJsonOk('../shows/zhao-hua-parity.json'); }catch(e){}
    const shows=[];
    if(s1) shows.push({path:'shows/daiyu-wang-codex-import.json',show:s1});
    if(s2) shows.push({path:'shows/zhao-hua-parity.json',show:s2});
@@ -2552,7 +2693,7 @@ async function loadCatalog(keep){
  const deep=resolveDeepLink();
  // HM-COMPOSE-04: land on recent / pinned Codex plate-pack, not editor-features demos
  const first=pickLandShow(deep);
- if(first){$('example').value=first.path; loadShow(first.show, {scrub: SCRUB});}
+ if(first){$('example').value=first.path; loadShow(first.show, {scrub: SCRUB, deferDraft: !deep});}
  // HM-COMPOSE-05: cold open (no deep link) shows Stitch land shell; show stays preloaded for ≤60s Open
  if(!deep){ enterLandShell(); }
  else { setLandMode(false); setFxHonesty(true); }
@@ -2569,7 +2710,7 @@ async function loadCatalog(keep){
  ['setupLibL','setupLibR'].forEach((id,i)=>{
    const el=$(id); if(!el) return;
    const prefer=i===0?/zhao/: /hua/;
-   const libs=CAT.libraries||[];
+   const libs=poseLibs();
    el.innerHTML=libs.map(l=>`<option value="${l.path}">${l.path}${l.placeholder?' [ph]':''}</option>`).join('');
    const hit=libs.find(l=>prefer.test(l.path)); if(hit) el.value=hit.path;
  });
@@ -2606,32 +2747,12 @@ if($('ovSnapHit')) $('ovSnapHit').onclick=async()=>{
   o.t_start=+ht.toFixed(3); o.t_end=+(ht+Math.min(dur,1.2)).toFixed(3);
   SCRUB=ht; updateScrub(); pushHist(); markDirty(); renderOverlays(); paintPreview(); status('snapped start → '+ht.toFixed(2)+'s');
 };
-if($('ovGenPng')) $('ovGenPng').onclick=async()=>{
-  status('gen PNG unavailable in frontend-only mode (needs local Pillow / serve.py)',true);return;
-  const text=($('ovCustomText').value||'').trim() || (SEL_OV>=0 && SHOW.overlays[SEL_OV] && SHOW.overlays[SEL_OV].text) || '砰';
-  const st=(SEL_OV>=0 && SHOW.overlays[SEL_OV] && SHOW.overlays[SEL_OV].style) || defaultTextStyle();
-  status('generating wording PNG…');
-  const res=await fetch('/api/wording',{method:'POST',body:JSON.stringify({
-    text, lang:/[\u2e80-\u9fff]/.test(text)?'zh':'en',
-    fontSize:st.fontSize||96, fill:st.fill||'#ffe66d', stroke:st.stroke||'#1a0a00',
-    strokeWidth:st.strokeWidth||8, italic:!!st.italic, fontWeight:st.fontWeight||'900',
-    fontFamily:st.fontFamily||'Ma Shan Zheng'
-  })}).then(r=>r.json());
-  if(!res.ok){status('wording gen failed',true); $('out').textContent=(res.errors||[]).join('\n');return}
-  CAT.wording=CAT.wording||[]; if(!CAT.wording.includes(res.path)) CAT.wording.push(res.path);
-  const d=totalDur()||8;
-  ensureOverlays().push({id:nextOvId(), kind:'image', src:res.path, t_start:SCRUB, t_end:Math.min(SCRUB+1.2,d||SCRUB+1.2), x:640, y:180, scale:1, opacity:1, z:20, effect:defaultEffect(($('ovDefaultFx')&&$('ovDefaultFx').value)||'impact')});
-  SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('PNG → '+res.path);
+if($('ovGenPng')) $('ovGenPng').onclick=()=>{
+  status('gen PNG unavailable in frontend-only mode (needs local Pillow / serve.py)',true);
 };
-$('ovUp').onchange=async()=>{
-  const f=$('ovUp').files[0]; if(!f) return;
-  status('upload unavailable in frontend-only mode',true);return;
-  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(f)});
-  const name='wording_'+f.name.replace(/[^A-Za-z0-9._-]/g,'_');
-  const res=await fetch('/api/upload',{method:'POST',body:JSON.stringify({name, data_b64:b64})}).then(r=>r.json());
-  CAT.wording=CAT.wording||[]; if(!CAT.wording.includes(res.path)) CAT.wording.push(res.path);
-  ensureOverlays().push({id:nextOvId(), kind:'image', src:res.path, t_start:SCRUB, t_end:SCRUB+1.5, x:640, y:180, scale:1, opacity:1, z:10, effect:defaultEffect('pop')});
-  SEL_OV=SHOW.overlays.length-1; pushHist(); markDirty(); renderOverlays(); paintPreview(); status('uploaded '+res.path);
+$('ovUp').onchange=()=>{
+  if($('ovUp')) $('ovUp').value='';
+  status('upload unavailable in frontend-only mode',true);
 };
 (function wireDrag(){
   const wrap=$('pvWrap'); if(!wrap) return;
@@ -2786,12 +2907,6 @@ async function exportScrubStill(name){
   await paintPreview();
   const data=cv.toDataURL('image/png');
   const a=document.createElement('a'); a.href=data; a.download=name||((SHOW.show_id||'show')+'_t'+SCRUB.toFixed(2).replace('.','p')+'.png'); a.click();
-  if(apiOK){
-    const b64=data.split(',')[1];
-    const res=await fetch('/api/qa_png',{method:'POST',body:JSON.stringify({name:a.download, data_b64:b64})}).then(r=>r.json());
-    status(res.ok?('still → '+res.path):'still downloaded (qa write failed)', !res.ok);
-    return res;
-  }
   status('still downloaded'); return {ok:true, path:a.download};
 }
 async function exportScrubStrip(n){
@@ -2811,10 +2926,6 @@ async function exportScrubStrip(n){
   const data=strip.toDataURL('image/png');
   const name=(SHOW.show_id||'show')+'_strip'+n+'.png';
   const a=document.createElement('a'); a.href=data; a.download=name; a.click();
-  if(apiOK){
-    const res=await fetch('/api/qa_png',{method:'POST',body:JSON.stringify({name, data_b64:data.split(',')[1]})}).then(r=>r.json());
-    status(res.ok?('strip → '+res.path):'strip downloaded', !res.ok); return res;
-  }
   status('strip downloaded'); return {ok:true};
 }
 document.addEventListener('keydown', e=>{
@@ -2915,7 +3026,10 @@ async function runDuplicate(){
   }
   if(!srcShow && window.HMFeStore) srcShow=HMFeStore.getLocalShow(from_id);
   if(!srcShow){
-    try{ srcShow=await fetch('/shows/'+from_id+'.json').then(r=>r.json()); }catch(e){}
+    try{
+      const rr=await fetch('/shows/'+from_id+'.json');
+      if(rr.ok) srcShow=await rr.json();
+    }catch(e){}
   }
   if(!srcShow){
     $('dupOut').textContent='source show not found: '+from_id;
@@ -3015,22 +3129,7 @@ async function runImportPack(){
 }
 
 async function runTemplateSetup(){
-  status('template setup unavailable in frontend-only mode (local serve.py only)',true);return;
-  const template=$('setupTemplate').value;
-  const sid=($('setupShowId').value||'').trim();
-  const L=$('setupLibL').value, R=$('setupLibR').value;
-  const costume=($('setupCostume').value||'').trim();
-  if(!template||!sid){status('pick template + show id',true);return}
-  status('running template setup…');
-  const r=await fetch('/api/setup',{method:'POST',body:JSON.stringify({template, show_id:sid, chars:{L:{pose_library:L}, R:{pose_library:R}}, costume_lock:costume||undefined, generate_local:true})}).then(x=>x.json());
-  $('out').style.color=r.ok?'var(--ok)':'var(--bad)';
-  $('out').textContent=r.ok?JSON.stringify(r,null,2):(r.errors||[]).join('\n');
-  if(r.ok){
-    await loadCatalog(true);
-    const s=CAT.shows.find(x=>x.show&&x.show.show_id===sid);
-    if(s) loadShow(s.show);
-    status(`setup → ${r.show_path} · ${r.generated||0} local assets · ${r.pending_generate||0} pending GenImg`);
-  } else status('setup failed',true);
+  status('template setup unavailable in frontend-only mode (local serve.py only)',true);
 }
 
 // HM-COMPOSE-03: small read-only test/debug hook (proof scripts; not used by Motion UI)
