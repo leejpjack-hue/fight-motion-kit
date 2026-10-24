@@ -801,10 +801,82 @@
     };
   }
 
+  function plateCatalog(composed) {
+    const plates = composed && composed.timeline && composed.timeline.plates;
+    if (!Array.isArray(plates) || !plates.length) return [];
+    const layout = composed.layout || {};
+    const atoms = composed.timeline.atoms || [];
+    return plates.map((plate, index) => {
+      const entry = layout[plate.id] || {};
+      const atomId = entry.atom || null;
+      let atomIndex = atoms.findIndex((atom) => atom.id === atomId);
+      if (atomIndex < 0) {
+        atomIndex = atoms.findIndex((atom) => plate.t0 >= atom.t0 && plate.t0 < atom.t1);
+      }
+      if (atomIndex < 0) atomIndex = 0;
+      return {
+        index,
+        slot_id: plate.id,
+        source_plate: entry.source_plate || plate.id,
+        t0: plate.t0,
+        t1: plate.t1,
+        atom_index: atomIndex,
+        atom_id: atomId || (atoms[atomIndex] && atoms[atomIndex].id) || null,
+      };
+    });
+  }
+
+  function plateJumpOption(mark) {
+    const t0 = Math.round(Number(mark.t0) * 100) / 100;
+    return mark.source_plate + ' @ ' + t0.toFixed(2);
+  }
+
+  function plateJumpChips(catalog, every) {
+    const step = Number.isInteger(every) && every > 0 ? every : 10;
+    const chips = [];
+    if (!Array.isArray(catalog)) return chips;
+    for (let i = 0; i < catalog.length; i += step) chips.push(catalog[i]);
+    return chips;
+  }
+
+  function resolvePlateJump(catalog, query, currentIndex) {
+    if (!Array.isArray(catalog) || !catalog.length) return null;
+    if (query && typeof query === 'object') {
+      if (Number.isInteger(query.index)) return catalog[query.index] || null;
+      if (Number.isInteger(query.step)) {
+        const cur = Number.isInteger(currentIndex) ? currentIndex : 0;
+        const next = cur + query.step;
+        if (next < 0 || next >= catalog.length) return null;
+        return catalog[next];
+      }
+      if (typeof query.text === 'string') return resolvePlateJump(catalog, query.text, currentIndex);
+      return null;
+    }
+    const text = String(query ?? '').trim();
+    if (!text) return null;
+    const byOption = catalog.find((mark) => plateJumpOption(mark) === text);
+    if (byOption) return byOption;
+    const norm = text.toUpperCase().replace(/\s+/g, '');
+    const byId = catalog.find((mark) => mark.source_plate.toUpperCase() === norm || mark.slot_id.toUpperCase() === norm);
+    if (byId) return byId;
+    if (/^\d+$/.test(norm)) {
+      const n = String(+norm);
+      return catalog.find((mark) => {
+        const digits = String(mark.source_plate).toUpperCase().match(/(\d+)/);
+        return digits && String(+digits[1]) === n;
+      }) || null;
+    }
+    return null;
+  }
+
   global.HMComposeClient = {
     composeShow,
     inspectAt,
     compareAt,
+    plateCatalog,
+    plateJumpOption,
+    plateJumpChips,
+    resolvePlateJump,
     classifyFxHook,
     classifyFxHooks,
     LIVE_FX_COMPONENTS,
