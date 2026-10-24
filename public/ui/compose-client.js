@@ -606,8 +606,91 @@
     };
   }
 
+  function inspectAt(composed, time) {
+    if (!composed || !composed.timeline || !Array.isArray(composed.timeline.plates) || !composed.timeline.plates.length) {
+      return null;
+    }
+    const tl = composed.timeline;
+    const ly = composed.layout || {};
+    const dur = +(tl.duration_s || 0);
+    const rawT = Math.max(0, Number(time) || 0);
+    const tc = Math.min(rawT, Math.max(0, dur - 1e-7));
+    const pIdx = tl.plates.findIndex((p) => tc >= p.t0 && tc < p.t1);
+    const plateIndex = pIdx >= 0 ? pIdx : tl.plates.length - 1;
+    const plate = tl.plates[plateIndex] || null;
+    const lEntry = plate ? ly[plate.id] : null;
+    const sourcePlate = (lEntry && lEntry.source_plate) || (plate && plate.id) || null;
+    const atoms = tl.atoms || [];
+    const aIdx = atoms.findIndex((a) => tc >= a.t0 && tc < a.t1);
+    const atomIndex = aIdx >= 0 ? aIdx : Math.max(0, atoms.length - 1);
+    const atom = atoms[atomIndex] || null;
+    const segs = atoms.flatMap((a) => a.cam || []);
+    const seg = segs.find((s) => tc >= s.t0 && tc < s.t1) || segs[segs.length - 1] || null;
+    let camPose = { x: 0, y: 0, s: 1, r: 0 };
+    if (seg && seg.curves) {
+      const span = Math.max(1e-7, seg.t1 - seg.t0);
+      const u = seg.u0 + (seg.u1 - seg.u0) * Math.min(1, Math.max(0, (tc - seg.t0) / span));
+      camPose = evalCam(seg.curves, u, tc - seg.t0);
+    }
+    return {
+      show_id: tl.show_id || '',
+      title: tl.title || tl.show_id || '',
+      t: Math.round(rawT * 10000) / 10000,
+      t_clamped: Math.round(tc * 10000) / 10000,
+      duration_s: dur,
+      plate_index: plateIndex,
+      plate_id: plate ? plate.id : null,
+      source_plate: sourcePlate,
+      atom_index: atomIndex,
+      atom_id: atom ? atom.id : null,
+      atom_duration_s: atom ? Math.round((atom.t1 - atom.t0) * 10000) / 10000 : 0,
+      cam_preset: seg ? seg.preset || 'static_hold' : 'static_hold',
+      cam_pose: {
+        x: Math.round(camPose.x * 1000) / 1000,
+        y: Math.round(camPose.y * 1000) / 1000,
+        s: Math.round(camPose.s * 1000) / 1000,
+        r: Math.round(camPose.r * 1000) / 1000,
+      },
+    };
+  }
+
+  function compareAt(composedA, composedB, time) {
+    const t = Math.round(Math.max(0, Number(time) || 0) * 10000) / 10000;
+    const a = inspectAt(composedA, t);
+    const b = inspectAt(composedB, t);
+    const plate = !!(a && b && a.source_plate !== b.source_plate);
+    const cam = !!(
+      a &&
+      b &&
+      (a.cam_preset !== b.cam_preset ||
+        Math.abs(a.cam_pose.x - b.cam_pose.x) > 1e-3 ||
+        Math.abs(a.cam_pose.y - b.cam_pose.y) > 1e-3 ||
+        Math.abs(a.cam_pose.s - b.cam_pose.s) > 1e-3 ||
+        Math.abs(a.cam_pose.r - b.cam_pose.r) > 1e-3)
+    );
+    const timing = !!(
+      a &&
+      b &&
+      (Math.abs(a.atom_duration_s - b.atom_duration_s) > 1e-4 ||
+        Math.abs(a.duration_s - b.duration_s) > 1e-4)
+    );
+    return {
+      t,
+      a,
+      b,
+      diff: {
+        plate,
+        cam,
+        timing,
+        any: plate || cam || timing,
+      },
+    };
+  }
+
   global.HMComposeClient = {
     composeShow,
+    inspectAt,
+    compareAt,
     FPS_PLATES,
     applyCamNudge,
     applyCamIntensity,

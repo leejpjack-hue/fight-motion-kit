@@ -66,3 +66,39 @@ test('invalid background motion and image settings fail explicitly',async()=>{
   }
   const show=demo();show.bg.motion={preset:'push_in',amount:2};assert.equal((await compose(show)).ok,false);
 });
+test('HM-P1-SCRUB: compareAt and inspectAt detect plate, camera, and timing edits at linked scrub time t',async()=>{
+  const gold=await compose(demo());
+  const draftShow=demo();
+  draftShow.atoms[0].hero.plates=['P08'];
+  draftShow.atoms[1].camera={preset:'slow_push',nudge:{x:20,y:-10,s:0.05,r:5}};
+  draftShow.atoms[2].duration_s=0.75;
+  const draft=await compose(draftShow);
+  // Identical gold vs gold at t=0.25 has no diffs
+  const same=HMComposeClient.compareAt(gold,gold,0.25);
+  assert.equal(same.t,0.25);
+  assert.equal(same.a.show_id,'daiyu-wang-five-seconds');
+  assert.equal(same.b.show_id,'daiyu-wang-five-seconds');
+  assert.deepEqual(same.diff,{plate:false,cam:false,timing:false,any:false});
+  // At t=0.25 (beat-01): plate differs (P08 vs P01) and total timing differs (5.25s vs 5.00s)
+  const c0=HMComposeClient.compareAt(draft,gold,0.25);
+  assert.equal(c0.a.source_plate,'P08');
+  assert.equal(c0.b.source_plate,'P01');
+  assert.equal(c0.diff.plate,true);
+  assert.equal(c0.diff.cam,false);
+  assert.equal(c0.diff.timing,true);
+  assert.equal(c0.diff.any,true);
+  // At t=0.75 (beat-02): cam preset & pose differ (slow_push vs static_hold)
+  const c1=HMComposeClient.compareAt(draft,gold,0.75);
+  assert.equal(c1.a.cam_preset,'slow_push');
+  assert.equal(c1.b.cam_preset,'static_hold');
+  assert.equal(c1.diff.cam,true);
+  assert.equal(c1.diff.plate,false);
+  // At t=1.60: draft is still in extended beat-03 (P03, 0.75s) while gold is in beat-04 (P04, 0.50s)
+  const c2=HMComposeClient.compareAt(draft,gold,1.6);
+  assert.equal(c2.a.source_plate,'P03');
+  assert.equal(c2.b.source_plate,'P04');
+  assert.equal(c2.a.atom_duration_s,0.75);
+  assert.equal(c2.b.atom_duration_s,0.5);
+  assert.equal(c2.diff.plate,true);
+  assert.equal(c2.diff.timing,true);
+});

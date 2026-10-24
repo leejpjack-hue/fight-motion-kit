@@ -5,6 +5,7 @@
   const SHOW_PREFIX = 'html-motion-composer:local-show:';
   const INDEX_KEY = 'html-motion-composer:local-show-index';
   const MODE_KEY = 'html-motion-composer:fe-only';
+  const REF_B_KEY = 'html-motion-composer:ab-ref-b';
 
   function safeParse(raw, fallback) {
     try {
@@ -260,9 +261,32 @@
     return JSON.parse(JSON.stringify(o));
   }
 
+  function putRefB(meta) {
+    const payload = Object.assign({ ts: Date.now() }, meta || {});
+    try {
+      localStorage.setItem(REF_B_KEY, JSON.stringify(payload));
+    } catch (e) {}
+    return payload;
+  }
+
+  function getRefB() {
+    try {
+      return safeParse(localStorage.getItem(REF_B_KEY), null);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearRefB() {
+    try {
+      localStorage.removeItem(REF_B_KEY);
+    } catch (e) {}
+  }
+
   global.HMFeStore = {
     OUT_PREFIX,
     SHOW_PREFIX,
+    REF_B_KEY,
     putOut,
     getOut,
     hasOut,
@@ -270,6 +294,9 @@
     putLocalShow,
     getLocalShow,
     listLocalShows,
+    putRefB,
+    getRefB,
+    clearRefB,
     downloadJson,
     saveWithFilePicker,
     openShowFile,

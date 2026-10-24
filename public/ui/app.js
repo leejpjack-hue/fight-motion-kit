@@ -10,10 +10,14 @@
   const CONTINUATION = 'daiyu-wang-ten-seconds';
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   let project, presets, effects, fightPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
-  let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
+  let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
+  let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0;
-  let loadRequest = 0, loading = false;
-  const duration = () => Math.round((project?.show.atoms.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
+  let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false;
+  const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
+  const duration = () => durationOf(project);
+  const durationB = () => projectB ? durationOf(projectB) : Math.round((resultB?.timeline?.duration_s || 0) * 10000) / 10000;
+  const maxScrubDuration = () => Math.max(duration(), abEnabled ? durationB() : 0);
   const atom = () => project?.show.atoms[selected];
   const startOf = index => project.show.atoms.slice(0,index).reduce((s,a) => s + a.duration_s, 0);
   const format = t => `${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(2).padStart(5,'0')}`;
@@ -121,7 +125,188 @@
       result=r;renderer=next;renderedVersion=v;draw();window.dispatchEvent(new Event('hm:projectchange'));status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
     }catch(e){if(v===compileVersion){result=null;renderer=null;status('Preview unavailable: '+e.message,true);}throw e;}
   }
-  function activeAt(t) {let s=0;const idx=project.show.atoms.findIndex(a=>{s+=a.duration_s;return t<s-1e-7;});return idx>=0?idx:Math.max(0,project.show.atoms.length-1);}
+  function activeAtFor(p, t) {
+    if (!p?.show?.atoms?.length) return 0;
+    let s = 0;
+    const idx = p.show.atoms.findIndex(a => { s += a.duration_s; return t < s - 1e-7; });
+    return idx >= 0 ? idx : Math.max(0, p.show.atoms.length - 1);
+  }
+  function activeAt(t) { return activeAtFor(project, t); }
+  async function normalizeReferenceInput(parsed) {
+    if (!parsed || typeof parsed !== 'object') throw new Error('Choose an HTML Motion project JSON file.');
+    let p = copy(parsed);
+    if (!p.show && p.show_id && Array.isArray(p.atoms)) {
+      const layouts = {};
+      for (const key of new Set(p.atoms.map(a => a.hero?.layout_source).filter(Boolean))) {
+        if (project?.layouts?.[key]) { layouts[key] = copy(project.layouts[key]); continue; }
+        if (!/^assets\/[a-zA-Z0-9_./-]+\.json$/.test(key) || key.includes('..')) throw new Error('Open a portable .motion.json project to include local images.');
+        const layout = await json('/' + key);
+        if (p.show_id === ORIGINAL) {
+          for (const l of Object.values(layout)) {
+            if (l.full) l.full = l.full.replace(/(plates\/[^/]+)\.png$/, '$1.jpg');
+            for (const part of l.parts || []) part.src = part.src.replace(/(cutout\/[^/]+)\.png$/, '$1.webp');
+          }
+        }
+        layouts[key] = layout;
+      }
+      const media = [];
+      for (const [key, l] of Object.entries(layouts)) {
+        const dir = key.slice(0, key.lastIndexOf('/') + 1);
+        for (const [id, e] of Object.entries(l)) {
+          const src = e.full ? dir + e.full : e.parts?.[0]?.src ? dir + e.parts[0].src : null;
+          if (src) media.push({ id: uid(), name: id, src, layoutSource: key, plateId: id });
+        }
+      }
+      p = { version: 1, show: p, layouts, media, assets: copy(p.assets || {}) };
+    }
+    validate(p);
+    return p;
+  }
+  function refreshAbSourceOptions() {
+    const customGroup = $('abCustomGroup');
+    if (!customGroup) return;
+    customGroup.replaceChildren();
+    const snapOpt = document.createElement('option');
+    snapOpt.value = 'snapshot:current';
+    snapOpt.textContent = 'Snapshot · Current A draft';
+    customGroup.append(snapOpt);
+    if (importedProjectB?.show?.show_id) {
+      const impOpt = document.createElement('option');
+      impOpt.value = 'import:' + importedProjectB.show.show_id;
+      impOpt.textContent = `Import · ${importedProjectB.show.title || importedProjectB.show.show_id} (${importedProjectB.show.show_id})`;
+      customGroup.append(impOpt);
+    }
+    const locals = window.HMFeStore?.listLocalShows?.() || [];
+    for (const entry of locals) {
+      const sid = entry?.show?.show_id;
+      if (!sid || (importedProjectB?.show?.show_id === sid && sourceValueB === 'import:' + sid)) continue;
+      const opt = document.createElement('option');
+      opt.value = 'local:' + sid;
+      opt.textContent = `Local · ${entry.show.title || sid} (${sid})`;
+      customGroup.append(opt);
+    }
+    const sel = $('abSource');
+    if (sel && [...sel.options].some(o => o.value === sourceValueB)) sel.value = sourceValueB;
+  }
+  function updateAbUI() {
+    if (!$('abContainer')) return;
+    $('abToggle')?.setAttribute('aria-pressed', String(abEnabled));
+    $('abContainer').dataset.ab = String(abEnabled);
+    if ($('paneB')) $('paneB').hidden = !abEnabled;
+    if ($('abCompareBar')) $('abCompareBar').hidden = !abEnabled;
+    const dA = duration(), countA = project?.show?.atoms?.length || 0;
+    if ($('paneALabel')) $('paneALabel').textContent = 'A · Current draft';
+    if ($('paneAShowId')) $('paneAShowId').textContent = project?.show?.show_id || '—';
+    if ($('paneAMeta')) $('paneAMeta').textContent = `${countA} clips · ${dA.toFixed(2)}s`;
+    const dB = durationB(), countB = projectB?.show?.atoms?.length || 0;
+    if ($('paneBLabel')) {
+      $('paneBLabel').textContent = sourceKindB === 'import' ? 'B · Import reference' : sourceKindB === 'snapshot' ? 'B · Snapshot reference' : 'B · Gold reference';
+    }
+    if ($('paneBShowId')) $('paneBShowId').textContent = projectB?.show?.show_id || '—';
+    if ($('paneBMeta')) $('paneBMeta').textContent = projectB ? `${countB} clips · ${dB.toFixed(2)}s` : 'No reference';
+    if ($('emptyStageB')) $('emptyStageB').hidden = !!countB;
+    if ($('stageLabelB')) $('stageLabelB').hidden = !countB;
+    if ($('scrub')) $('scrub').max = maxScrubDuration() || 1;
+  }
+  async function compileB() {
+    const v = ++compileVersionB;
+    if (!projectB?.show?.atoms?.length) {
+      resultB = null; rendererB = null;
+      $('stageB')?.getContext('2d').clearRect(0, 0, 1280, 720);
+      updateAbUI(); updateTransport();
+      return null;
+    }
+    const snapshotB = copy(projectB); captionOverlays(snapshotB.show);
+    try {
+      const r = await HMComposeClient.composeShow(snapshotB.show, {
+        cameraPresets: presets,
+        fxPresets: effects,
+        loadJson: async p => { if (snapshotB.layouts[p]) return snapshotB.layouts[p]; return json('/' + p); }
+      });
+      if (!r.ok) throw new Error(r.errors.join('; '));
+      const nextB = HMMotion($('stageB'), snapshotB.assets || {});
+      await nextB.load(r);
+      if (v !== compileVersionB) return null;
+      resultB = r; rendererB = nextB;
+      updateAbUI(); draw();
+      return r;
+    } catch (e) {
+      if (v === compileVersionB) { resultB = null; rendererB = null; status('Reference B unavailable: ' + e.message, true); }
+      throw e;
+    }
+  }
+  async function loadB(nextProject, kind = 'gold', valueKey = '') {
+    const request = ++loadRequestB; loadingB = true;
+    try {
+      const normalized = await normalizeReferenceInput(nextProject);
+      if (request !== loadRequestB) return false;
+      pause();
+      projectB = copy(normalized);
+      sourceKindB = kind;
+      sourceValueB = valueKey || (kind === 'snapshot' ? 'snapshot:current' : kind === 'import' ? 'import:' + projectB.show.show_id : projectB.show.show_id);
+      if (kind === 'import') {
+        importedProjectB = copy(projectB);
+        try { window.HMFeStore?.putLocalShow?.(copy(projectB.show)); } catch (_) {}
+      }
+      try { window.HMFeStore?.putRefB?.({ kind: sourceKindB, value: sourceValueB, show_id: projectB.show.show_id, title: projectB.show.title || projectB.show.show_id }); } catch (_) {}
+      refreshAbSourceOptions();
+      await compileB();
+      if (request !== loadRequestB) return false;
+      updateAbUI(); draw();
+      return true;
+    } finally {
+      if (request === loadRequestB) loadingB = false;
+    }
+  }
+  async function openReferenceB(source, kind = 'gold', valueKey = '') {
+    const request = ++loadRequestB; loadingB = true; pause();
+    try {
+      const next = await source;
+      if (request === loadRequestB) return await loadB(next, kind, valueKey);
+      return false;
+    } finally {
+      if (request === loadRequestB) loadingB = false;
+    }
+  }
+  async function snapshotAToB() {
+    if (!project?.show?.atoms?.length) throw new Error('Add at least one clip to A before taking a snapshot.');
+    abEnabled = true;
+    const snap = copy(project);
+    const ok = await loadB(snap, 'snapshot', 'snapshot:current');
+    if (ok) status(`Snapshotted current A draft (${snap.show.show_id}) to B reference`);
+    return ok;
+  }
+  async function selectBSource(rawValue) {
+    const val = String(rawValue || '').trim();
+    if (!val) return false;
+    abEnabled = true;
+    const cleanGold = val.replace(/^gold:/, '');
+    if ([DEMO, CONTINUATION, ORIGINAL].includes(cleanGold)) {
+      const ok = await openReferenceB(builtIn(cleanGold), 'gold', cleanGold);
+      if (ok) status(`Reference B set to Gold · ${projectB.show.title || cleanGold} (${cleanGold}) · Draft A unchanged`);
+      return ok;
+    }
+    if (val === 'snapshot:current') return await snapshotAToB();
+    if (val.startsWith('import:') && importedProjectB) {
+      const ok = await loadB(importedProjectB, 'import', val);
+      if (ok) status(`Reference B set to Import · ${projectB.show.title || projectB.show.show_id} · Draft A unchanged`);
+      return ok;
+    }
+    if (val.startsWith('local:')) {
+      const sid = val.slice(6);
+      const localShow = window.HMFeStore?.getLocalShow?.(sid);
+      if (!localShow) throw new Error('Local show not found: ' + sid);
+      const ok = await loadB(localShow, 'import', val);
+      if (ok) status(`Reference B set to Local · ${projectB.show.title || sid} · Draft A unchanged`);
+      return ok;
+    }
+    throw new Error('Unknown reference source: ' + val);
+  }
+  function toggleAb(force) {
+    abEnabled = typeof force === 'boolean' ? force : !abEnabled;
+    updateAbUI();
+    draw();
+  }
   function mediaFor(a) {return project.media.find(m=>m.layoutSource===a?.hero?.layout_source&&m.plateId===a.hero.plates[0]);}
   function assetSrc(path) {return project.assets?.[path] || (/^(data:|blob:|\/)/.test(path)?path:'/'+path);}
   function thumbnail(a) {return assetSrc(mediaFor(a)?.src || '');}
@@ -147,8 +332,10 @@
     $('emptyStage').hidden=!!project.show.atoms.length;$('stageLabel').hidden=!project.show.atoms.length;
     $('undo').disabled=historyIndex<=0;$('redo').disabled=historyIndex>=history.length-1;
     ['play','previous','next','restart','exportOpen','fitThree','fitFive','fitEight','fitTen','fightCamPack'].forEach(id=>{if($(id))$(id).disabled=!project.show.atoms.length||recording;});
+    ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
+    if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    renderMedia();renderTimeline();renderInspector();updateTransport();window.dispatchEvent(new Event('hm:projectchange'));
+    renderMedia();renderTimeline();renderInspector();updateAbUI();updateTransport();window.dispatchEvent(new Event('hm:projectchange'));
   }
   function renderMedia() {
     const query=$('mediaSearch').value.toLowerCase();$('mediaGrid').replaceChildren();
@@ -175,7 +362,7 @@
       b.ondragend=()=>{dragIndex=-1;};$('timelineClips').append(b);
     });
     $('ruler').replaceChildren();for(let i=0;i<=5;i++){const s=document.createElement('span');s.textContent=(d*i/5).toFixed(d<10?1:0)+'s';s.style.left=i*20+'%';$('ruler').append(s);}
-    $('scrub').max=d||1;
+    $('scrub').max=maxScrubDuration()||1;
   }
   function renderInspector() {
     const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a)return;
@@ -207,8 +394,30 @@
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
   }
   function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
-  function updateTransport() {const d=duration();$('scrub').value=time;$('playhead').style.left=(d?time/d*100:0)+'%';$('timecode').innerHTML=`${format(time)} <span>/ ${format(d)}</span>`;$('play').textContent=preparing?'…':playing?'Ⅱ':'▶';$('play').setAttribute('aria-label',preparing?'Cancel playback preparation':playing?'Pause':'Play');const i=activeAt(Math.min(time,Math.max(0,d-.00001)));const a=project.show.atoms[i];$('stageLabel').textContent=a?`${a.hero.plates[0]} · ${a.label||a.id}`:'';updateOnionGhost();}
-  function draw() {renderer?.render(time,{onion:onion&&!playing&&!recording});updateTransport();}
+  function updateTransport() {
+    const d=duration(),maxD=maxScrubDuration();
+    $('scrub').max=maxD||1;$('scrub').value=time;
+    $('playhead').style.left=(d?Math.min(1,Math.max(0,time/d))*100:0)+'%';
+    $('timecode').innerHTML=`${format(time)} <span>/ ${format(d)}</span>`;
+    $('play').textContent=preparing?'…':playing?'Ⅱ':'▶';
+    $('play').setAttribute('aria-label',preparing?'Cancel playback preparation':playing?'Pause':'Play');
+    const i=activeAt(Math.min(time,Math.max(0,d-.00001)));
+    const a=project?.show?.atoms?.[i];
+    $('stageLabel').textContent=a?`${a.hero.plates[0]} · ${a.label||a.id}`:'';
+    if(projectB?.show?.atoms?.length&&$('stageLabelB')){
+      const dB=durationB(),iB=activeAtFor(projectB,Math.min(time,Math.max(0,dB-.00001))),aB=projectB.show.atoms[iB];
+      $('stageLabelB').textContent=aB?`${aB.hero.plates[0]} · ${aB.label||aB.id}`:'';
+    }else if($('stageLabelB')){$('stageLabelB').textContent='';}
+    if($('abLinkedTime'))$('abLinkedTime').textContent=`Linked t = ${format(time)}`;
+    const cmp=HMComposeClient.compareAt(result,resultB,time);
+    if(cmp.a&&cmp.b){
+      if($('abDiffPlate')){$('abDiffPlate').dataset.diff=cmp.diff.plate?'changed':'same';$('abDiffPlate').textContent=cmp.diff.plate?`Plate: ${cmp.a.source_plate} vs ${cmp.b.source_plate}`:`Plate: ${cmp.a.source_plate} = ${cmp.b.source_plate}`;}
+      if($('abDiffCam')){$('abDiffCam').dataset.diff=cmp.diff.cam?'changed':'same';$('abDiffCam').textContent=cmp.diff.cam?`Cam: ${cmp.a.cam_preset} vs ${cmp.b.cam_preset}`:`Cam: ${cmp.a.cam_preset} = ${cmp.b.cam_preset}`;}
+      if($('abDiffTiming')){$('abDiffTiming').dataset.diff=cmp.diff.timing?'changed':'same';$('abDiffTiming').textContent=cmp.diff.timing?`Timing: ${cmp.a.atom_duration_s.toFixed(2)}s vs ${cmp.b.atom_duration_s.toFixed(2)}s (${cmp.a.duration_s.toFixed(2)}s vs ${cmp.b.duration_s.toFixed(2)}s)`:`Timing: ${cmp.a.atom_duration_s.toFixed(2)}s = ${cmp.b.atom_duration_s.toFixed(2)}s (${cmp.a.duration_s.toFixed(2)}s)`;}
+    }
+    updateOnionGhost();
+  }
+  function draw() {renderer?.render(time,{onion:onion&&!playing&&!recording});rendererB?.render(time,{onion:false});updateTransport();}
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
   function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
   async function play() {if(!duration()||recording)return;if(playing||preparing){pause();return;}const token=++playToken;preparing=true;updateTransport();try{if(!renderer||renderedVersion!==compileVersion)await compile();if(token!==playToken||!renderer)return;if(time>=duration()-.001)time=0;timeStart=time;clockStart=performance.now();playing=true;playbackFrame=requestAnimationFrame(tick);}finally{if(token===playToken){preparing=false;updateTransport();}}}
@@ -283,12 +492,29 @@
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
-    if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(await builtIn(DEMO));}}
-    else if(sid&&![DEMO,ORIGINAL,CONTINUATION].includes(sid)){await load(await builtIn(DEMO));status('Requested project is not stored here. Open its saved project JSON.',true);}
-    else await load(await builtIn(sid||DEMO));
-    const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(duration(),Math.max(0,requestedTime));draw();}
+    const goldDefault=[DEMO,ORIGINAL,CONTINUATION].includes(sid)?sid:DEMO;
+    const defaultGold=await builtIn(goldDefault);
+    await loadB(defaultGold,'gold',goldDefault);
+    if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
+    else if(sid&&![DEMO,ORIGINAL,CONTINUATION].includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else await load(copy(defaultGold));
+    const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
   on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));
+  on('abToggle',()=>toggleAb());
+  $('abSource')?.addEventListener('change',safe(e=>selectBSource(e.target.value)));
+  on('abSnapshot',()=>snapshotAToB());
+  on('abImport',()=>$('abInput').click());
+  if($('abInput'))$('abInput').onchange=safe(async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{
+      if(f.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
+      let parsed;try{parsed=JSON.parse(await f.text());}catch(_){throw new Error('Choose an HTML Motion project JSON file.');}
+      abEnabled=true;
+      const opened=await openReferenceB(Promise.resolve(parsed),'import');
+      if(opened)status(`Reference B loaded: ${projectB.show.title||projectB.show.show_id} (${projectB.show.show_id}) · Draft A unchanged`);
+    }finally{e.target.value='';}
+  });
   on('fightCamPack',applyFightCamPack);
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
@@ -414,6 +640,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,renderAt(t){pause();time=Math.min(duration(),Math.max(0,t));draw();},load,openProject,download,safe,on,$,copy,get renderer(){return renderer;},pause,get duration(){return duration();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
