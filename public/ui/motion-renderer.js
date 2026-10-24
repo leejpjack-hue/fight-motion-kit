@@ -1,4 +1,59 @@
 /* Shared deterministic renderer: the editor, player, HTML export and video use this same code. */
+
+// HM-BG-MOTION: the crop rect is a window on the source.
+// Pan/zoom slide that window when the source has room outside it.
+// A crop that already fills the source (no 2% margin) uses the older zoom-and-slide,
+// so a full-frame background still moves. A pan into an edge with no source holds still.
+// `u` is beat progress 0..1 (the renderer passes the smoothed value).
+function backgroundMotionFrame(crop, preset, amount, u) {
+  const MIN = 0.02, SLACK = 0.02, round4 = v => Math.round(v * 10000) / 10000;
+  function clamp(rect) {
+    let w = Math.min(1, Math.max(MIN, +rect.w || MIN)), h = Math.min(1, Math.max(MIN, +rect.h || MIN));
+    const x = Math.min(1 - w, Math.max(0, +rect.x || 0)), y = Math.min(1 - h, Math.max(0, +rect.y || 0));
+    return { x: round4(x), y: round4(y), w: round4(w), h: round4(h) };
+  }
+  const home = !crop || ![crop.x, crop.y, crop.w, crop.h].every(Number.isFinite) ? { x: 0, y: 0, w: 1, h: 1 } : clamp(crop);
+  const slack = { left: home.x, right: round4(1 - (home.x + home.w)), up: home.y, down: round4(1 - (home.y + home.h)) };
+  const inset = slack.left < SLACK && slack.right < SLACK && slack.up < SLACK && slack.down < SLACK;
+  const p = preset || 'follow_camera';
+  const a = Math.min(1, Math.max(0, Number.isFinite(+amount) ? +amount : 0.4));
+  const t = Math.min(1, Math.max(0, Number.isFinite(+u) ? +u : 0));
+  const reasons = {
+    pan_left: 'Pan left needs image to the left of this crop. The crop holds still.',
+    pan_right: 'Pan right needs image to the right of this crop. The crop holds still.',
+    pan_up: 'Pan up needs image above this crop. The crop holds still.',
+    pan_down: 'Pan down needs image below this crop. The crop holds still.',
+    push_in: 'Crop is already as tight as zoom-in allows. The crop holds still.',
+  };
+  if (p === 'follow_camera' || p === 'static') return { mode: 'hold', crop: home, reason: '' };
+  const axis = { pan_left: 'left', pan_right: 'right', pan_up: 'up', pan_down: 'down' }[p];
+  if (axis && !inset && slack[axis] < SLACK) return { mode: 'still', crop: home, reason: reasons[p] };
+  if (p === 'push_in' && !inset && home.w <= MIN + 0.01 && home.h <= MIN + 0.01) return { mode: 'still', crop: home, reason: reasons.push_in };
+  if (inset && (axis || p === 'push_in' || p === 'pull_out')) return { mode: 'inset', crop: home, reason: '' };
+  if (axis) {
+    const travel = slack[axis] * a * t;
+    let x = home.x, y = home.y;
+    if (p === 'pan_left') x -= travel;
+    if (p === 'pan_right') x += travel;
+    if (p === 'pan_up') y -= travel;
+    if (p === 'pan_down') y += travel;
+    return { mode: 'window', crop: clamp({ x, y, w: home.w, h: home.h }), reason: '' };
+  }
+  if (p === 'push_in') {
+    const k = 1 - 0.55 * a * t, w = Math.max(MIN, home.w * k), h = Math.max(MIN, home.h * k);
+    return { mode: 'window', crop: clamp({ x: home.x + (home.w - w) / 2, y: home.y + (home.h - h) / 2, w, h }), reason: '' };
+  }
+  if (p === 'pull_out') return { mode: 'window', crop: clamp({ x: home.x - slack.left * a * t, y: home.y - slack.up * a * t, w: home.w + (slack.left + slack.right) * a * t, h: home.h + (slack.up + slack.down) * a * t }), reason: '' };
+  return { mode: 'still', crop: home, reason: 'This background motion is not available.' };
+}
+function backgroundMotionSupport(crop) {
+  const out = {};
+  for (const preset of ['follow_camera', 'static', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out']) {
+    const frame = backgroundMotionFrame(crop, preset, 1, 1);
+    out[preset] = { ok: frame.mode !== 'still', reason: frame.reason || '' };
+  }
+  return out;
+}
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
@@ -64,15 +119,21 @@ function createMotionRenderer(canvas, assets = {}) {
     const own=l.background||{},global=timeline.bg||{};
     return {src:Object.hasOwn(own,'src')?own.src:global[l.bg||'base'],key_white:own.key_white??global.key_white,motion:own.motion??global.motion,crop:own.crop??(Object.hasOwn(own,'src')?null:global.crops?.[l.bg||'base'])??null};
   }
+  function paintBackground(path, crop, x, y, s) {
+    ctx.save(); ctx.translate(640 + x, 360 + y); ctx.scale(s, s); ctx.translate(-640, -360); backgroundImage(path, crop); ctx.restore();
+  }
   function drawBackground(l, t) {
     const b=backgroundFor(l);if(!b.src)return;
     const a=timeline.atoms.find(a=>a.id===l.atom),u=a?ease(clamp((t-a.t0)/(a.t1-a.t0),0,1),'smooth'):0;
-    const m=b.motion||{},amount=m.amount??.4,extra=amount*.25;
-    let s=1,x=0,y=0;
-    if(m.preset==='push_in')s=1+extra*u;
-    if(m.preset==='pull_out')s=1+extra*(1-u);
-    if(m.preset?.startsWith('pan_')){s=1+extra;const v=1-2*u;if(m.preset==='pan_left')x=640*extra*v;if(m.preset==='pan_right')x=-640*extra*v;if(m.preset==='pan_up')y=360*extra*v;if(m.preset==='pan_down')y=-360*extra*v;}
-    s*=l.bg_zoom||1;ctx.save();ctx.translate(640+x,360+y);ctx.scale(s,s);ctx.translate(-640,-360);backgroundImage(b.src,b.crop);ctx.restore();
+    const m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
+    const frame=backgroundMotionFrame(b.crop,preset,amount,u);
+    if(frame.mode==='inset'){
+      const extra=amount*.25;let s=1,x=0,y=0;
+      if(preset==='push_in')s=1+extra*u;
+      if(preset==='pull_out')s=1+extra*(1-u);
+      if(preset.startsWith('pan_')){s=1+extra;const v=1-2*u;if(preset==='pan_left')x=640*extra*v;if(preset==='pan_right')x=-640*extra*v;if(preset==='pan_up')y=360*extra*v;if(preset==='pan_down')y=-360*extra*v;}
+      paintBackground(b.src,frame.crop,x,y,s*zoom);
+    }else paintBackground(b.src,frame.crop,0,0,zoom);
   }
   function drawScene(l) {
     const b=backgroundFor(l);
@@ -341,4 +402,11 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   return { load, render, images, get lastTime() { return lastTime; }, get duration() { return timeline?.duration_s || 0; } };
 }
-window.HMMotion = createMotionRenderer;
+const hmRoot = typeof globalThis !== 'undefined' ? globalThis : window;
+hmRoot.backgroundMotionFrame = backgroundMotionFrame;
+hmRoot.backgroundMotionSupport = backgroundMotionSupport;
+if (hmRoot.HMComposeClient) {
+  hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;
+  hmRoot.HMComposeClient.backgroundMotionSupport = backgroundMotionSupport;
+}
+hmRoot.HMMotion = createMotionRenderer;
