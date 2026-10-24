@@ -12,7 +12,7 @@
   let project, presets, effects, fightPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
-  let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0;
+  let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false;
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
@@ -115,15 +115,15 @@
   }
   async function compile() {
     const v=++compileVersion;
-    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();return null;}
+    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();return null;}
     const snapshot=copy(project);captionOverlays(snapshot.show);
     try {
       const r=await HMComposeClient.composeShow(snapshot.show,{cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;draw();window.dispatchEvent(new Event('hm:projectchange'));status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
-    }catch(e){if(v===compileVersion){result=null;renderer=null;status('Preview unavailable: '+e.message,true);}throw e;}
+      result=r;renderer=next;renderedVersion=v;draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
+    }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();status('Preview unavailable: '+e.message,true);}throw e;}
   }
   function activeAtFor(p, t) {
     if (!p?.show?.atoms?.length) return 0;
@@ -335,7 +335,74 @@
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    renderMedia();renderTimeline();renderInspector();updateAbUI();updateTransport();window.dispatchEvent(new Event('hm:projectchange'));
+    renderMedia();renderTimeline();renderInspector();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+  }
+  function renderPlateJump() {
+    const box=$('plateJumpChips'), list=$('plateJumpList');
+    if(!box||!list) return;
+    const catalog=HMComposeClient.plateCatalog(result);
+    const sig=catalog.map(p=>p.slot_id+'@'+p.t0+':'+p.source_plate+':'+p.atom_index).join('|');
+    if(sig!==plateJumpSig){
+      plateJumpSig=sig;
+      const chips=HMComposeClient.plateJumpChips(catalog);
+      const names=chips.map(p=>p.source_plate);
+      const dup=new Set(names.filter((name,i)=>names.indexOf(name)!==i));
+      box.replaceChildren();
+      for(const mark of chips){
+        const b=document.createElement('button');
+        b.type='button';
+        b.className='plate-jump-chip';
+        b.dataset.index=String(mark.index);
+        b.textContent=dup.has(mark.source_plate)?HMComposeClient.plateJumpOption(mark):mark.source_plate;
+        b.title=`Jump to ${mark.source_plate} at ${format(mark.t0)}`;
+        b.setAttribute('aria-label', b.title);
+        b.onclick=()=>jumpToPlate({index:mark.index});
+        box.append(b);
+      }
+      list.replaceChildren();
+      for(const mark of catalog){
+        const o=document.createElement('option');
+        o.value=HMComposeClient.plateJumpOption(mark);
+        list.append(o);
+      }
+    }
+    syncPlateJumpState();
+  }
+  function syncPlateJumpState() {
+    const catalog=result?HMComposeClient.plateCatalog(result):[];
+    const here=catalog.length?HMComposeClient.inspectAt(result,time):null;
+    const idx=here?here.plate_index:-1;
+    if($('platePrev')) $('platePrev').disabled=!catalog.length||idx<=0||recording;
+    if($('plateNext')) $('plateNext').disabled=!catalog.length||idx<0||idx>=catalog.length-1||recording;
+    if($('plateJumpSearch')) $('plateJumpSearch').disabled=!catalog.length||recording;
+    let active=-1;
+    document.querySelectorAll('.plate-jump-chip').forEach(b=>{const i=+b.dataset.index;if(i<=idx)active=i;});
+    document.querySelectorAll('.plate-jump-chip').forEach(b=>{
+      const on=+b.dataset.index===active;
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function jumpToPlate(query) {
+    if(recording||!result||jumpingPlate) return false;
+    const catalog=HMComposeClient.plateCatalog(result);
+    const here=HMComposeClient.inspectAt(result,time);
+    const mark=HMComposeClient.resolvePlateJump(catalog, query, here?here.plate_index:-1);
+    if(!mark){
+      if(typeof query==='string'&&query.trim()) status('No plate matches "'+query.trim()+'".', true);
+      return false;
+    }
+    jumpingPlate=true;
+    try {
+      pause();
+      selected=Math.max(0, Math.min(mark.atom_index, Math.max(0, project.show.atoms.length-1)));
+      time=mark.t0;
+      renderTimeline();renderInspector();renderMedia();draw();
+      const label=HMComposeClient.plateJumpOption(mark);
+      if($('plateJumpSearch')&&$('plateJumpSearch').value!==label) $('plateJumpSearch').value=label;
+      status(`Jumped to ${mark.source_plate} · ${format(mark.t0)}`);
+      document.querySelector('.timeline-clip.active')?.scrollIntoView({block:'nearest', inline:'nearest'});
+      return true;
+    } finally { jumpingPlate=false; }
   }
   function renderMedia() {
     const query=$('mediaSearch').value.toLowerCase();$('mediaGrid').replaceChildren();
@@ -440,10 +507,12 @@
     $('play').setAttribute('aria-label',preparing?'Cancel playback preparation':playing?'Pause':'Play');
     const i=activeAt(Math.min(time,Math.max(0,d-.00001)));
     const a=project?.show?.atoms?.[i];
-    $('stageLabel').textContent=a?`${a.hero.plates[0]} · ${a.label||a.id}`:'';
+    const here=result?HMComposeClient.inspectAt(result,time):null;
+    $('stageLabel').textContent=a?`${here?.source_plate||a.hero.plates[0]} · ${a.label||a.id}`:'';
     if(projectB?.show?.atoms?.length&&$('stageLabelB')){
       const dB=durationB(),iB=activeAtFor(projectB,Math.min(time,Math.max(0,dB-.00001))),aB=projectB.show.atoms[iB];
-      $('stageLabelB').textContent=aB?`${aB.hero.plates[0]} · ${aB.label||aB.id}`:'';
+      const hereB=resultB?HMComposeClient.inspectAt(resultB,time):null;
+      $('stageLabelB').textContent=aB?`${hereB?.source_plate||aB.hero.plates[0]} · ${aB.label||aB.id}`:'';
     }else if($('stageLabelB')){$('stageLabelB').textContent='';}
     if($('abLinkedTime'))$('abLinkedTime').textContent=`Linked t = ${format(time)}`;
     const cmp=HMComposeClient.compareAt(result,resultB,time);
@@ -454,6 +523,7 @@
     }
     updateOnionGhost();
     updateFxHonestyUI();
+    syncPlateJumpState();
   }
   function drawStageA() {
     const standIn=!playing&&!recording;
@@ -578,6 +648,19 @@
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;
   on('play',play);on('restart',()=>{pause();time=0;draw();});on('previous',()=>select(Math.max(0,(activeAt(Math.min(time,duration()-.0001))) - 1)));on('next',()=>select(Math.min(project.show.atoms.length-1,activeAt(Math.min(time,duration()-.0001))+1)));
+  on('platePrev',()=>jumpToPlate({step:-1}));on('plateNext',()=>jumpToPlate({step:1}));
+  if($('plateJumpSearch')){
+    $('plateJumpSearch').addEventListener('input', safe(()=>{
+      const value=$('plateJumpSearch').value;
+      const catalog=HMComposeClient.plateCatalog(result);
+      if(catalog.some(mark=>HMComposeClient.plateJumpOption(mark)===value)) jumpToPlate(value);
+    }));
+    $('plateJumpSearch').addEventListener('keydown', e=>{
+      if(e.key!=='Enter') return;
+      e.preventDefault();
+      jumpToPlate($('plateJumpSearch').value);
+    });
+  }
   on('loop',()=>{looping=!looping;$('loop').setAttribute('aria-pressed',String(looping));});
   on('onionToggle',()=>{onion=!onion;$('onionToggle').setAttribute('aria-pressed',String(onion));draw();});
   on('fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('stage').requestFullscreen();});
@@ -700,7 +783,7 @@
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
     const mod=e.metaKey||e.ctrlKey;
-    if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
+    if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
   window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
