@@ -43,11 +43,16 @@
     $('inheritBackground').hidden=!clip;$('inheritBackground').disabled=inherited&&settings.key_white===undefined&&!settings.crop;
     const keyWhite=(clip?settings.key_white:undefined)??global.key_white??false;
     $('backgroundKeyWhite').checked=keyWhite;$('backgroundKeyWhite').disabled=!src;
-    const m=settings.motion??(clip?global.motion:undefined),preset=m?.preset||'follow_camera';
-    $('backgroundMotion').value=preset;$('backgroundMotionAmount').value=m?.amount??.4;
+    const m=settings.motion??(clip?global.motion:undefined),preset=m?.preset||'follow_camera',cropNow=currentCrop(p,context());
+    const support=backgroundMotionSupport(cropNow),motionSel=$('backgroundMotion');
+    for(const opt of motionSel.options)opt.disabled=false;
+    motionSel.value=preset;
+    for(const opt of motionSel.options){const info=support[opt.value];opt.disabled=!!(info&&!info.ok);opt.title=info&&!info.ok?info.reason:'';}
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
-    $('backgroundMotionAmount').disabled=['follow_camera','static'].includes(preset);
+    const blocked=!!(support[preset]&&!support[preset].ok);
+    $('backgroundMotionAmount').disabled=['follow_camera','static'].includes(preset)||blocked;
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
+    const note=motionCopy(cropNow,preset);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
     p.media.forEach(m=>library.add(new Option(m.name,m.id)));
     const prefix=clip?(inherited?'Using project image. ':'Only clip '+(S.selectedIndex+1)+'. '):'Project default for clips without an override. ';
@@ -86,6 +91,18 @@
   on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{clearCrop(s,c,key);if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
   on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;delete s.crop;}));
   $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked;edit(context(),s=>s.key_white=enabled);});
+  function motionCopy(crop,preset){
+    const info=(backgroundMotionSupport(crop)||{})[preset]||{ok:false,reason:'This background motion is not available.'};
+    if(!info.ok)return {blocked:true,text:info.reason};
+    if(preset==='follow_camera')return {blocked:false,text:'Follows the clip camera, including shake, inside this crop.'};
+    if(preset==='static')return {blocked:false,text:'Holds the crop still while the clip camera and shake move the plates.'};
+    const mode=backgroundMotionFrame(crop,preset,1,1).mode;
+    if(mode==='inset')return {blocked:false,text:'This crop fills the source, so the move zooms in slightly and slides that view.'};
+    if(String(preset).startsWith('pan_'))return {blocked:false,text:'Slides the crop window across the source. Plates stay put.'};
+    if(preset==='push_in')return {blocked:false,text:'Zooms into the crop by tightening the window.'};
+    if(preset==='pull_out')return {blocked:false,text:'Zooms out by widening the window across the rest of the source.'};
+    return {blocked:false,text:''};
+  }
   function changeMotion(){const motion={preset:$('backgroundMotion').value,amount:Number($('backgroundMotionAmount').value)};edit(context(),s=>s.motion=motion);}
   $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);
   on('resetBackgroundMotion',()=>edit(context(),s=>delete s.motion));

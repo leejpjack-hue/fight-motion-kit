@@ -2,6 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 require('../public/ui/compose-client.js');
+require('../public/ui/motion-renderer.js');
 const read=p=>JSON.parse(fs.readFileSync('public/'+p,'utf8'));
 const demo=()=>read('shows/daiyu-wang-five-seconds.json');
 const compose=show=>HMComposeClient.composeShow(show,{cameraPresets:read('presets/camera_presets.json'),fxPresets:read('presets/fx_presets.json'),loadJson:async p=>read(p)});
@@ -204,6 +205,33 @@ test('HM-BG-CROP: project and clip crops compile into the timeline and layout wi
   const l1=Object.values(r.layout).find(l=>l.atom===s.atoms[1].id);assert.deepEqual(l1.background.crop,{x:0,y:.5,w:.4,h:.4});
   assert.deepEqual(HMComposeClient.resolveBackgroundCrop(l1,r.timeline.bg),{x:0,y:.5,w:.4,h:.4});
   const l0=Object.values(r.layout).find(l=>l.atom===s.atoms[0].id);assert.deepEqual(HMComposeClient.resolveBackgroundCrop(l0,r.timeline.bg),{x:.2,y:.1,w:.5,h:.5});
+});
+test('HM-BG-MOTION: pan slides the crop window across source slack and holds a flush edge',()=>{
+  const frame=HMComposeClient.backgroundMotionFrame,support=HMComposeClient.backgroundMotionSupport;
+  const crop={x:.3,y:.2,w:.4,h:.5};
+  assert.equal(frame(crop,'pan_left',1,0).mode,'window');
+  assert.deepEqual(frame(crop,'pan_left',1,0).crop,crop);
+  assert.deepEqual(frame(crop,'pan_left',1,1).crop,{x:0,y:.2,w:.4,h:.5});
+  assert.deepEqual(frame(crop,'pan_right',.5,1).crop,{x:.45,y:.2,w:.4,h:.5});
+  assert.deepEqual(frame(crop,'pan_up',1,1).crop,{x:.3,y:0,w:.4,h:.5});
+  assert.deepEqual(frame(crop,'pan_down',1,1).crop,{x:.3,y:.5,w:.4,h:.5});
+  assert.equal(frame(crop,'pan_left',0,1).crop.x,.3);
+  const zoomIn=frame(crop,'push_in',1,1);assert.equal(zoomIn.mode,'window');assert.ok(zoomIn.crop.w<crop.w&&zoomIn.crop.h<crop.h);
+  assert.deepEqual(frame(crop,'pull_out',1,1).crop,{x:0,y:0,w:1,h:1});
+  assert.equal(frame(crop,'follow_camera',1,1).mode,'hold');
+  assert.equal(frame(null,'static',1,1).mode,'hold');
+  assert.equal(frame(null,'pan_left',.4,.5).mode,'inset');
+  assert.equal(frame({x:0,y:0,w:1,h:1},'push_in',1,1).mode,'inset');
+  const flush={x:0,y:.2,w:.4,h:.4};
+  const blocked=frame(flush,'pan_left',1,1);assert.equal(blocked.mode,'still');assert.equal(blocked.crop.x,0);assert.match(blocked.reason,/left/i);
+  const avail=support(flush);assert.equal(avail.pan_left.ok,false);assert.match(avail.pan_left.reason,/left/i);assert.equal(avail.pan_right.ok,true);assert.equal(avail.pan_up.ok,true);
+  assert.equal(support(null).pan_left.ok,true);assert.equal(support(null).pan_down.ok,true);assert.equal(support({x:0,y:0,w:.02,h:.02}).push_in.ok,false);
+});
+test('HM-BG-MOTION: crop and motion compile together without changing plate timing',async()=>{
+  const s=demo();const before=await compose(s);s.bg={...(s.bg||{}),crops:{base:{x:.2,y:.1,w:.5,h:.5}},motion:{preset:'pan_right',amount:.8}};s.atoms[0].background={crop:{x:.1,y:.2,w:.4,h:.4},motion:{preset:'pan_left',amount:1}};
+  const r=await compose(s);assert.equal(r.ok,true);assert.equal(r.duration_s,before.duration_s);assert.deepEqual(r.timeline.plates.map(p=>[p.t0,p.t1]),before.timeline.plates.map(p=>[p.t0,p.t1]));
+  assert.deepEqual(r.timeline.bg.crops.base,{x:.2,y:.1,w:.5,h:.5});assert.deepEqual(r.timeline.bg.motion,{preset:'pan_right',amount:.8});
+  const first=Object.values(r.layout).find(l=>l.atom===s.atoms[0].id);assert.deepEqual(first.background.crop,{x:.1,y:.2,w:.4,h:.4});assert.deepEqual(first.background.motion,{preset:'pan_left',amount:1});
 });
 test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
   for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}

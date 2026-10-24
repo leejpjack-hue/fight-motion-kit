@@ -23,3 +23,5 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 .bg-crop-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px}
 .bg-crop-fields label{display:flex;flex-direction:column;font-size:9px;color:var(--muted);gap:2px}
 .bg-crop-fields input{width:100%;font-size:11px;padding:5px 4px;min-width:0}
+#backgroundMotionNote.is-blocked{color:#ffb1a8}
+#backgroundMotion option:disabled{color:#6d7874}
