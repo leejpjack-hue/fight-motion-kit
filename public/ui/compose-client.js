@@ -8,6 +8,42 @@
   const DEFAULTS = { x: 0, y: 0, s: 1.12, r: 0 };
 
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // HM-BG-CROP: background crop rects are normalized {x,y,w,h} in 0..1 of the source image.
+  const BG_CROP_MIN = 0.02;
+  const BG_CROP_FULL = Object.freeze({ x: 0, y: 0, w: 1, h: 1 });
+  function validBackgroundCrop(c) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return false;
+    const { x, y, w, h } = c, eps = 1e-6;
+    return [x, y, w, h].every(Number.isFinite) && x >= -eps && y >= -eps && w >= BG_CROP_MIN - eps && h >= BG_CROP_MIN - eps && x + w <= 1 + eps && y + h <= 1 + eps;
+  }
+  const round4 = v => Math.round(v * 10000) / 10000;
+  // Clamp any rect into the image, keeping at least BG_CROP_MIN on each side.
+  function clampBackgroundCrop(c) {
+    const n = v => (Number.isFinite(+v) ? +v : 0);
+    let w = Math.min(1, Math.max(BG_CROP_MIN, n(c && c.w))), h = Math.min(1, Math.max(BG_CROP_MIN, n(c && c.h)));
+    const x = Math.min(1 - w, Math.max(0, n(c && c.x))), y = Math.min(1 - h, Math.max(0, n(c && c.y)));
+    return { x: round4(x), y: round4(y), w: round4(w), h: round4(h) };
+  }
+  function isFullBackgroundCrop(c) {
+    return !c || (Math.abs(c.x) < 1e-4 && Math.abs(c.y) < 1e-4 && Math.abs(c.w - 1) < 1e-4 && Math.abs(c.h - 1) < 1e-4);
+  }
+  // Fit a rect to the stage aspect (16:9 by default) around its centre, given source image pixel aspect (w/h).
+  function lockBackgroundCropAspect(c, imageAspect, stageAspect = 16 / 9, anchor = 'center') {
+    const r = clampBackgroundCrop(c), k = (imageAspect || stageAspect) / stageAspect; // normalized h = w * k
+    let w = r.w, h = w * k;
+    if (h > 1) { h = 1; w = h / k; }
+    if (anchor === 'height') { h = r.h; w = h / k; if (w > 1) { w = 1; h = w * k; } }
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    return clampBackgroundCrop({ x: cx - w / 2, y: cy - h / 2, w, h });
+  }
+  // The crop that applies for a compiled layout entry (clip override, else project crop for its bg layer).
+  function resolveBackgroundCrop(entry, timelineBg) {
+    const own = (entry && entry.background) || {};
+    if (own.crop) return own.crop;
+    if (Object.prototype.hasOwnProperty.call(own, 'src')) return null;
+    return ((timelineBg && timelineBg.crops) || {})[(entry && entry.bg) || 'base'] || null;
+  }
   function basename(p) {
     const s = String(p || '');
     const i = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
@@ -359,6 +395,11 @@
       if (value.key_white !== undefined && typeof value.key_white !== 'boolean') errors.push(label + ': white-backdrop setting must be true or false');
       const m = value.motion;
       if (m !== undefined && (!m || !backgroundMoves.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1)) errors.push(label + ': invalid background motion');
+      if (value.crop !== undefined && !validBackgroundCrop(value.crop)) errors.push(label + ': invalid background crop');
+      if (value.crops !== undefined) {
+        if (!value.crops || typeof value.crops !== 'object' || Array.isArray(value.crops)) errors.push(label + ': invalid background crops');
+        else for (const [k, c] of Object.entries(value.crops)) if (!['base', 'swap'].includes(k) || !validBackgroundCrop(c)) errors.push(label + ': invalid background crop for ' + k);
+      }
     }
     validateBackground(bg, 'Project');
     const swapT = bg.swap ? bg.swap_t : null;
@@ -588,6 +629,7 @@
         swap_t: swapT,
         key_white: bg.key_white === true,
         ...(bg.motion ? {motion: deepClone(bg.motion)} : {}),
+        ...(bg.crops ? {crops: deepClone(bg.crops)} : {}),
       },
       chars: show.chars,
       atoms: tlAtoms,
@@ -885,5 +927,12 @@
     applyCamNudge,
     applyCamIntensity,
     isParityMode,
+    BG_CROP_MIN,
+    BG_CROP_FULL,
+    validBackgroundCrop,
+    clampBackgroundCrop,
+    isFullBackgroundCrop,
+    lockBackgroundCropAspect,
+    resolveBackgroundCrop,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

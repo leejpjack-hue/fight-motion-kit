@@ -168,6 +168,61 @@ async function ensureServer(urlStr){
     const clipOffline=await browser.newPage();const network=[];await clipOffline.route(/^https?:/,r=>{network.push(r.request().url());return r.abort();});await clipOffline.goto('file://'+clipHtml);await clipOffline.evaluate(()=>window.ready);await clipOffline.evaluate(()=>renderAt(.95));
     assert.deepEqual(await clipOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(80,40,1,1).data)),motionEnd.background);assert.deepEqual(network,[]);await clipOffline.close();
     check('per-clip images and independent motion survive drafts, portable reopen, offline HTML and video export');
+    // HM-BG-CROP: the background crop region is editable (drag-rect, handles, fields), persists and drives the preview.
+    await p.evaluate(async()=>{
+      const make=draw=>{const c=document.createElement('canvas');c.width=1280;c.height=720;draw(c.getContext('2d'));return c.toDataURL('image/png');};
+      const foreground=make(g=>{g.fillStyle='#1eb446';g.fillRect(580,300,120,120);});
+      const gradient=make(g=>{const v=g.createLinearGradient(0,0,1280,0);v.addColorStop(0,'#ff0000');v.addColorStop(1,'#0000ff');g.fillStyle=v;g.fillRect(0,0,1280,720);});
+      const current=HMStudio.project,key='embedded/bg-crop-test/layout.json';
+      const atoms=[0,1].map(i=>({id:'crop-'+i,label:'Crop test '+(i+1),kind:'duo',duration_s:1,plates_needed:1,pose_mode:'hero',hero:{layout_source:key,plates:['P01']},camera:{preset:'static_hold',params:{s:{type:'const',v:1},x:{type:'const',v:0},y:{type:'const',v:0}}},fx_hooks:[]}));
+      await HMStudio.load({version:1,show:{...current.show,show_id:'bg-crop-test',title:'Background crop test',atoms,bg:{base:gradient},overlays:[]},layouts:{[key]:{P01:{full:foreground}}},media:[{id:'marker',name:'Marker',src:foreground,layoutSource:key,plateId:'P01'}],assets:{}});
+    });
+    await settle();if((await state()).onion)await p.click('#onionToggle');
+    await p.click('.timeline-clip[data-index="0"]');await p.selectOption('#backgroundScope','project');await settle();
+    const cropPx=(x,t=.5)=>p.evaluate(([x,t])=>{HMStudio.renderAt(t);return Array.from(document.getElementById('stage').getContext('2d').getImageData(x,40,1,1).data);},[x,t]);
+    assert.equal(await p.locator('#backgroundCropControls').isVisible(),true);assert.equal(await p.locator('#backgroundCropValue').textContent(),'Full frame');
+    const fullLeft=await cropPx(40),fullRight=await cropPx(1240);assert.ok(fullLeft[0]>200&&fullLeft[2]<60,String(fullLeft));assert.ok(fullRight[2]>200&&fullRight[0]<60,String(fullRight));
+    // Drag-rect on the thumbnail over the right (blue) part of the image.
+    await p.locator('#backgroundCropFrame').scrollIntoViewIfNeeded();await p.waitForFunction(()=>document.getElementById('backgroundThumb').naturalWidth>0);
+    const thumb=await p.locator('#backgroundThumb').boundingBox();const at=(fx,fy)=>[thumb.x+thumb.width*fx,thumb.y+thumb.height*fy];
+    await p.mouse.move(...at(.6,.2));await p.mouse.down();await p.mouse.move(...at(.8,.4),{steps:4});await p.mouse.move(...at(.95,.5),{steps:4});await p.mouse.up();await settle();
+    let crop=(await state()).project.show.bg.crops.base;assert.ok(Math.abs(crop.x-.6)<.02&&Math.abs(crop.y-.2)<.02&&Math.abs(crop.w-.35)<.02,JSON.stringify(crop));
+    assert.ok(Math.abs(crop.h-crop.w)<.01,'16:9 lock on a 16:9 image keeps w==h normalized: '+JSON.stringify(crop));
+    const croppedLeft=await cropPx(40);assert.ok(croppedLeft[2]>croppedLeft[0],'only the cropped (bluer) region is visible: '+croppedLeft);assert.notDeepEqual(croppedLeft,fullLeft);
+    assert.equal((await state()).project.show.atoms[0].background,undefined);assert.match(await p.locator('#backgroundCropValue').textContent(),/35% × 35% @ 60, 20/);
+    // Corner handle resize, move-by-drag, and numeric field edit.
+    const se=await p.locator('.bg-crop-handle[data-handle="nw"]').boundingBox();await p.mouse.move(se.x+4,se.y+4);await p.mouse.down();await p.mouse.move(...at(.5,.1),{steps:5});await p.mouse.up();await settle();
+    crop=(await state()).project.show.bg.crops.base;assert.ok(Math.abs(crop.x+crop.w-.95)<.02&&crop.x<.55&&crop.w>.4,'nw handle keeps the se corner: '+JSON.stringify(crop));
+    const box=await p.locator('#backgroundCropRect').boundingBox();const beforeMove=crop;
+    await p.mouse.move(box.x+box.width/2,box.y+box.height/2);await p.mouse.down();await p.mouse.move(box.x+box.width/2-thumb.width*.2,box.y+box.height/2,{steps:5});await p.mouse.up();await settle();
+    crop=(await state()).project.show.bg.crops.base;assert.ok(Math.abs(crop.x-(beforeMove.x-.2))<.02&&Math.abs(crop.w-beforeMove.w)<1e-3,'move keeps size: '+JSON.stringify(crop));
+    await change('backgroundCropW',25);crop=(await state()).project.show.bg.crops.base;assert.equal(crop.w,.25);assert.ok(Math.abs(crop.h-.25)<1e-3);
+    await change('backgroundCropX',70);await change('backgroundCropY',10);crop=(await state()).project.show.bg.crops.base;assert.deepEqual([crop.x,crop.y,crop.w],[.7,.1,.25]);
+    const narrowLeft=await cropPx(40);assert.ok(narrowLeft[2]>narrowLeft[0]&&narrowLeft[2]>croppedLeft[2]-30,String(narrowLeft));
+    await click('undo');assert.notEqual((await state()).project.show.bg.crops.base.y,.1);assert.equal((await state()).project.show.bg.crops.base.x,.7);await click('redo');assert.equal((await state()).project.show.bg.crops.base.y,.1);
+    check('HM-BG-CROP: drag-rect, corner handle, move and numeric fields edit the project crop; preview shows only the cropped region');
+    // Clip override stays separate from the project crop.
+    await p.selectOption('#backgroundScope','clip');await settle();assert.match(await p.locator('#backgroundCropValue').textContent(),/25% × 25% @ 70, 10/);
+    await p.uncheck('#backgroundCropLock');await change('backgroundCropX',0);await change('backgroundCropW',30);await change('backgroundCropH',60);
+    assert.deepEqual((await state()).project.show.atoms[0].background.crop,{x:0,y:.1,w:.3,h:.6});assert.deepEqual((await state()).project.show.bg.crops.base,{x:.7,y:.1,w:.25,h:.25});
+    const clipLeft=await cropPx(40);assert.ok(clipLeft[0]>clipLeft[2],'clip crop shows the red side: '+clipLeft);
+    await p.click('.timeline-clip[data-index="1"]');await settle();assert.deepEqual(await cropPx(40,1.5),narrowLeft);await p.click('.timeline-clip[data-index="0"]');await settle();
+    check('HM-BG-CROP: a clip crop overrides the project crop for that clip only');
+    // Persist: draft reload + portable motion JSON reopen restore both crops.
+    const cropProjectPath=await downloadFrom('saveProject','bg-crop.motion.json');const cropProject=JSON.parse(fs.readFileSync(cropProjectPath));
+    assert.deepEqual(cropProject.show.bg.crops.base,{x:.7,y:.1,w:.25,h:.25});assert.deepEqual(cropProject.show.atoms[0].background.crop,{x:0,y:.1,w:.3,h:.6});
+    await p.reload();await p.evaluate(()=>window.ready);await settle();assert.deepEqual((await state()).project.show.bg.crops.base,{x:.7,y:.1,w:.25,h:.25});
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.setInputFiles('#projectInput',cropProjectPath);await p.waitForFunction(()=>document.getElementById('exportStatus').textContent==='Project opened.');await settle();if((await state()).onion)await p.click('#onionToggle');
+    await p.click('.timeline-clip[data-index="0"]');await p.selectOption('#backgroundScope','project');await settle();
+    assert.deepEqual((await state()).project.show.bg.crops.base,{x:.7,y:.1,w:.25,h:.25});assert.match(await p.locator('#backgroundCropValue').textContent(),/25% × 25% @ 70, 10/);
+    assert.equal(await p.locator('#backgroundCropRect').evaluate(e=>e.style.left),'70%');assert.deepEqual(await cropPx(40),clipLeft);
+    await p.click('.timeline-clip[data-index="1"]');await settle();assert.deepEqual(await cropPx(40,1.5),narrowLeft);await p.click('.timeline-clip[data-index="0"]');await settle();
+    await click('resetBackgroundCrop');assert.equal((await state()).project.show.bg.crops,undefined);assert.equal(await p.locator('#backgroundCropValue').textContent(),'Full frame');
+    await p.selectOption('#backgroundScope','clip');await click('inheritBackground');assert.equal((await state()).project.show.atoms[0].background,undefined);assert.deepEqual(await cropPx(40),fullLeft);await p.check('#backgroundCropLock');
+    check('HM-BG-CROP: crop rects persist through draft reload and motion JSON reopen; reset returns to full frame');
+    // Restore the clip-background project the following checks build on.
+    await p.setInputFiles('#projectInput',clipProjectPath);await p.waitForFunction(()=>HMStudio.project.show.show_id==='background-feature-test');await settle();if((await state()).onion)await p.click('#onionToggle');await p.click('.timeline-clip[data-index="0"]');await settle();
     const beforeBuiltIn=(await state()).project;
     await p.click('#importProjectImages');await p.selectOption('#projectMediaSource','daiyu-wang-ten-seconds');await p.waitForFunction(()=>document.querySelectorAll('.project-media-card').length===17);
     await p.getByRole('checkbox',{name:'Import Project background',exact:true}).check();await p.click('#importSelectedProjectImages');await p.waitForFunction(()=>!document.getElementById('projectMediaDialog').open);await settle();

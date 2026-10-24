@@ -15,11 +15,17 @@
       }else{p.show.bg||={};fn(p.show.bg,p,c.key);}
     });
   }
-  function projectImage(p,a){
+  function projectLayer(p,a){
     const layout=S.composed?.layout,compiled=layout&&Object.values(layout).find(l=>l.atom===a?.id);
     const t=p.show.atoms.slice(0,S.selectedIndex).reduce((sum,a)=>sum+a.duration_s,0);
-    const key=compiled?.bg||(p.show.bg?.swap&&t>=p.show.bg.swap_t?'swap':'base');
-    return p.show.bg?.[key];
+    return compiled?.bg||(p.show.bg?.swap&&t>=p.show.bg.swap_t?'swap':'base');
+  }
+  function projectImage(p,a){return p.show.bg?.[projectLayer(p,a)];}
+  // HM-BG-CROP: crop rect for the current scope; null means full frame.
+  function currentCrop(p,c){
+    const a=p.show.atoms.find(a=>a.id===c.atomId),global=p.show.bg||{};
+    if(c.scope==='clip'){const own=a?.background||{};return own.crop||(Object.hasOwn(own,'src')?null:global.crops?.[projectLayer(p,a)])||null;}
+    return global.crops?.[c.key]||null;
   }
   function refresh(){
     const p=S.project;if(!p)return;
@@ -32,7 +38,9 @@
     $('backgroundThumb').hidden=!src;$('backgroundPlaceholder').hidden=!!src;
     if(src){const url=resolve(p,src);if($('backgroundThumb').getAttribute('src')!==url)$('backgroundThumb').src=url;}else $('backgroundThumb').removeAttribute('src');
     $('backgroundPlaceholder').textContent='White canvas';$('removeBackground').disabled=!src;
-    $('inheritBackground').hidden=!clip;$('inheritBackground').disabled=inherited&&settings.key_white===undefined;
+    $('backgroundCropControls').hidden=!src;$('backgroundCropRect').hidden=!src;
+    if(src&&!drag)showCrop(currentCrop(p,context()));
+    $('inheritBackground').hidden=!clip;$('inheritBackground').disabled=inherited&&settings.key_white===undefined&&!settings.crop;
     const keyWhite=(clip?settings.key_white:undefined)??global.key_white??false;
     $('backgroundKeyWhite').checked=keyWhite;$('backgroundKeyWhite').disabled=!src;
     const m=settings.motion??(clip?global.motion:undefined),preset=m?.preset||'follow_camera';
@@ -64,7 +72,7 @@
     edit(c,(settings,next,key)=>{
       const previous=settings[key];
       if(c.scope==='project'&&previous&&stem(previous)){settings.aliases||={};settings.aliases[key]=[...new Set([...(settings.aliases[key]||[]),stem(previous)])];}
-      if(data){next.assets||={};next.assets[src]=data;}settings[key]=src;
+      if(data){next.assets||={};next.assets[src]=data;}settings[key]=src;clearCrop(settings,c,key);
       if(settings.key_white==null&&autoKey)settings.key_white=true;
     });
   }
@@ -75,12 +83,73 @@
     finally{e.target.value='';}
   });
   $('backgroundLibrary').onchange=safe(async e=>{const c=context(),m=S.project.media.find(m=>m.id===e.target.value);if(m)await setImage(c,m.src);});
-  on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
-  on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;}));
+  on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{clearCrop(s,c,key);if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
+  on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;delete s.crop;}));
   $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked;edit(context(),s=>s.key_white=enabled);});
   function changeMotion(){const motion={preset:$('backgroundMotion').value,amount:Number($('backgroundMotionAmount').value)};edit(context(),s=>s.motion=motion);}
   $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);
   on('resetBackgroundMotion',()=>edit(context(),s=>delete s.motion));
+  // ---- HM-BG-CROP: editable crop region (drag-rect, corner handles, numeric fields) ----
+  const C=window.HMComposeClient,pct=v=>Math.round(v*1000)/10;
+  let drag=null;
+  function clearCrop(s,c,key){if(c.scope==='clip')delete s.crop;else if(s.crops){delete s.crops[key];if(!Object.keys(s.crops).length)delete s.crops;}}
+  function imageAspect(){const im=$('backgroundThumb');return im.naturalWidth&&im.naturalHeight?im.naturalWidth/im.naturalHeight:16/9;}
+  const cropAspectK=()=>imageAspect()/(16/9); // normalized h = w * k for a 16:9 visible region
+  function showCrop(c){
+    const r=c||C.BG_CROP_FULL,box=$('backgroundCropRect').style;
+    box.left=r.x*100+'%';box.top=r.y*100+'%';box.width=r.w*100+'%';box.height=r.h*100+'%';
+    [['X','x'],['Y','y'],['W','w'],['H','h']].forEach(([id,k])=>{const el=$('backgroundCrop'+id);if(document.activeElement!==el)el.value=pct(r[k]);});
+    $('backgroundCropValue').textContent=C.isFullBackgroundCrop(r)?'Full frame':`${pct(r.w)}% × ${pct(r.h)}% @ ${pct(r.x)}, ${pct(r.y)}`;
+    $('resetBackgroundCrop').disabled=C.isFullBackgroundCrop(r);
+  }
+  function commitCrop(rect){
+    const c=context(),r=C.clampBackgroundCrop(rect),full=C.isFullBackgroundCrop(r);
+    edit(c,(s,p,key)=>{
+      if(c.scope==='clip'){
+        const a=p.show.atoms.find(a=>a.id===c.atomId),inherited=Object.hasOwn(s,'src')?null:p.show.bg?.crops?.[projectLayer(p,a)];
+        if(full&&C.isFullBackgroundCrop(inherited))delete s.crop;else s.crop=full?{...C.BG_CROP_FULL}:r;
+      }else if(full)clearCrop(s,c,key);else{s.crops||={};s.crops[key]=r;}
+    });
+  }
+  function pointIn(e){const b=$('backgroundThumb').getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/(b.width||1))),y:Math.min(1,Math.max(0,(e.clientY-b.top)/(b.height||1)))};}
+  // Rect from a fixed anchor corner to the pointer, optionally locked to the stage aspect.
+  function anchoredRect(ax,ay,px,py,lock){
+    const dx=px>=ax?1:-1,dy=py>=ay?1:-1,maxW=dx>0?1-ax:ax,maxH=dy>0?1-ay:ay;
+    let w=Math.abs(px-ax),h=Math.abs(py-ay);
+    if(lock){const k=cropAspectK();w=Math.max(w,h/k);h=w*k;if(w>maxW){w=maxW;h=w*k;}if(h>maxH){h=maxH;w=h/k;}}
+    w=Math.min(maxW,Math.max(C.BG_CROP_MIN,w));h=Math.min(maxH,Math.max(C.BG_CROP_MIN,h));
+    return {x:dx>0?ax:ax-w,y:dy>0?ay:ay-h,w,h};
+  }
+  const frame=$('backgroundCropFrame');
+  frame.addEventListener('pointerdown',e=>{
+    if($('backgroundThumb').hidden||e.button!==0)return;
+    e.preventDefault();const start=pointIn(e),r=currentCrop(S.project,context())||{...C.BG_CROP_FULL},h=e.target.dataset?.handle;
+    if(h)drag={mode:'resize',ax:h.includes('w')?r.x+r.w:r.x,ay:h.includes('n')?r.y+r.h:r.y,rect:r,moved:false};
+    else if(e.target.closest('#backgroundCropRect')&&!C.isFullBackgroundCrop(r))drag={mode:'move',start,origin:r,rect:r,moved:false};
+    else drag={mode:'draw',ax:start.x,ay:start.y,rect:r,moved:false};
+    frame.setPointerCapture?.(e.pointerId);
+  });
+  frame.addEventListener('pointermove',e=>{
+    if(!drag)return;const pt=pointIn(e),lock=$('backgroundCropLock').checked;
+    if(drag.mode==='move'){const o=drag.origin;drag.rect=C.clampBackgroundCrop({x:o.x+pt.x-drag.start.x,y:o.y+pt.y-drag.start.y,w:o.w,h:o.h});}
+    else{if(drag.mode==='draw'&&!drag.moved&&Math.hypot(pt.x-drag.ax,pt.y-drag.ay)<.01)return;drag.rect=C.clampBackgroundCrop(anchoredRect(drag.ax,drag.ay,pt.x,pt.y,lock));}
+    drag.moved=true;showCrop(drag.rect);
+  });
+  frame.addEventListener('pointerup',safe(async e=>{
+    if(!drag)return;const d=drag;drag=null;frame.releasePointerCapture?.(e.pointerId);
+    if(!d.moved){refresh();return;}
+    commitCrop(d.rect);
+  }));
+  frame.addEventListener('pointercancel',()=>{drag=null;refresh();});
+  const cropFromFields=safe(e=>{
+    const v=id=>Number($('backgroundCrop'+id).value)/100;let r=C.clampBackgroundCrop({x:v('X'),y:v('Y'),w:v('W'),h:v('H')});
+    if($('backgroundCropLock').checked)r=C.lockBackgroundCropAspect(r,imageAspect(),16/9,e?.target?.id==='backgroundCropH'?'height':'width');
+    commitCrop(r);
+  });
+  ['X','Y','W','H'].forEach(id=>$('backgroundCrop'+id).onchange=cropFromFields);
+  $('backgroundCropLock').onchange=safe(()=>{const r=currentCrop(S.project,context());if($('backgroundCropLock').checked&&r&&!C.isFullBackgroundCrop(r))commitCrop(C.lockBackgroundCropAspect(r,imageAspect()));});
+  on('resetBackgroundCrop',()=>commitCrop(C.BG_CROP_FULL));
+  $('backgroundThumb').addEventListener('load',()=>{if(!drag)refresh();});
   $('backgroundScope').onchange=refresh;$('backgroundTarget').onchange=refresh;
   window.addEventListener('hm:projectchange',refresh);window.ready.then(refresh).catch(()=>{});
 })();
