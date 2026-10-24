@@ -487,15 +487,19 @@
         });
       }
 
-      for (const hk of a.fx_hooks || []) {
+      const atomFx = [];
+      for (const rawHk of a.fx_hooks || []) {
+        const hk = typeof rawHk === 'string' ? { type: rawHk, t_rel: 0.08, params: {} } : rawHk;
         const p = fxp[hk.type];
         if (!p) {
           errors.push(a.id + ': unknown fx hook ' + hk.type);
           continue;
         }
+        const tRel = hk.t_rel != null ? +hk.t_rel : 0.08;
+        const tRelEnd = hk.t_rel_end != null ? +hk.t_rel_end : 1;
         const prm = Object.assign({}, p.defaults || {}, hk.params || {});
-        const ht = Math.round((t0 + hk.t_rel * d) * 10000) / 10000;
-        const he = Math.round((t0 + (hk.t_rel_end != null ? hk.t_rel_end : 1) * d) * 10000) / 10000;
+        const ht = Math.round((t0 + tRel * d) * 10000) / 10000;
+        const he = Math.round((t0 + tRelEnd * d) * 10000) / 10000;
         const col = prm.color != null ? prm.color : p.color;
         for (const comp of p.components || []) {
           if (comp === 'impact_burst') fx.hits.push([ht, col]);
@@ -511,6 +515,15 @@
           else if (comp === 'fence') fx.fence.push([ht, he, prm.k]);
           else if (comp === 'pink_cut') fx.pink_cut = ht;
         }
+        const cls = classifyFxHook(hk, fxp);
+        atomFx.push({
+          type: hk.type,
+          t_rel: tRel,
+          ...(hk.t_rel_end != null ? { t_rel_end: tRelEnd } : {}),
+          params: prm,
+          mode: cls.mode,
+          compose_only: cls.composeOnly,
+        });
       }
 
       tlAtoms.push({
@@ -521,6 +534,7 @@
         beat: (a.motion && a.motion.beat_class) || '',
         family: (a.motion && a.motion.family) || '',
         cam: cs,
+        fx_hooks: atomFx,
         source_refs: a.source_refs || [],
       });
       t = t1;
@@ -606,6 +620,103 @@
     };
   }
 
+  const LIVE_FX_COMPONENTS = [
+    'impact_burst', 'flash', 'shake', 'tint', 'trail', 'dust', 'speed', 'sparks', 'pink_cut',
+  ];
+  const COMPOSE_ONLY_FX_COMPONENTS = ['hitstop_2f', 'fence'];
+  const DEFAULT_FX_PRESETS = {
+    hit_orange: { id: 'hit_orange', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ff8a1e' },
+    hit_pink: { id: 'hit_pink', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ff3fa4' },
+    hitstop_2f: { id: 'hitstop_2f', components: ['hitstop_2f'], source: '2-frame 24fps grayscale/contrast/invert freeze' },
+    flash_orange: { id: 'flash_orange', components: ['flash'], color: '#ff8a1e' },
+    flash_pink: { id: 'flash_pink', components: ['flash'], color: '#ff3fa4' },
+    bg_flash_blue: { id: 'bg_flash_blue', components: ['tint'], color: '#2f7bff' },
+    bg_flash_teal: { id: 'bg_flash_teal', components: ['tint'], color: '#19e0d0' },
+    shake: { id: 'shake', components: ['shake'] },
+    smear_trail: { id: 'smear_trail', components: ['trail'] },
+    dust: { id: 'dust', components: ['dust'] },
+    speed_lines: { id: 'speed_lines', components: ['speed'], span: true },
+    sparks: { id: 'sparks', components: ['sparks'] },
+    fence_shake: { id: 'fence_shake', components: ['fence'], span: true, source: 'DOM background-only rattle pass' },
+    pink_cut: { id: 'pink_cut', components: ['pink_cut'], color: '#ff2f9a' },
+    impact_white: { id: 'impact_white', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ffffff' },
+  };
+
+  function resolveFxMap(fxPresets) {
+    if (!fxPresets) return DEFAULT_FX_PRESETS;
+    if (Array.isArray(fxPresets)) {
+      const m = Object.assign({}, DEFAULT_FX_PRESETS);
+      fxPresets.forEach((h) => { if (h && h.id) m[h.id] = h; });
+      return m;
+    }
+    if (Array.isArray(fxPresets.hooks)) {
+      const m = Object.assign({}, DEFAULT_FX_PRESETS);
+      fxPresets.hooks.forEach((h) => { if (h && h.id) m[h.id] = h; });
+      return m;
+    }
+    if (typeof fxPresets === 'object') return Object.assign({}, DEFAULT_FX_PRESETS, fxPresets);
+    return DEFAULT_FX_PRESETS;
+  }
+
+  function classifyFxHook(rawHook, fxPresets) {
+    if (!rawHook) return null;
+    const hk = typeof rawHook === 'string' ? { type: rawHook, t_rel: 0.08 } : rawHook;
+    const type = String(hk.type || '').trim();
+    if (!type || type === 'none') return null;
+    const map = resolveFxMap(fxPresets);
+    const p = map[type] || null;
+    const comps = (p && Array.isArray(p.components)) ? p.components.slice() : [];
+    const canPreviewLive = comps.some((c) => LIVE_FX_COMPONENTS.indexOf(c) >= 0);
+    const composeOnly = !canPreviewLive;
+    const tRel = hk.t_rel != null ? +hk.t_rel : 0.08;
+    const tRelEnd = hk.t_rel_end != null ? +hk.t_rel_end : (p && p.span ? 0.92 : undefined);
+    return {
+      type,
+      t_rel: tRel,
+      ...(tRelEnd !== undefined ? { t_rel_end: tRelEnd } : {}),
+      mode: composeOnly ? 'compose_only' : 'live',
+      canPreviewLive,
+      composeOnly,
+      color: (hk.params && hk.params.color) || (p && p.color) || null,
+      components: comps,
+      reason: composeOnly
+        ? 'Compose-only (' + type + ') — cannot preview live on canvas; full effect renders on Compose / export.'
+        : 'Live FX stand-in (' + type + ') — previewing on canvas.',
+    };
+  }
+
+  function classifyFxHooks(hooks, fxPresets) {
+    const list = (Array.isArray(hooks) ? hooks : [])
+      .map((h) => classifyFxHook(h, fxPresets))
+      .filter(Boolean);
+    const live = list.filter((h) => h.canPreviewLive);
+    const composeOnly = list.filter((h) => h.composeOnly);
+    const hasLive = live.length > 0;
+    const hasComposeOnly = composeOnly.length > 0;
+    const mode = hasComposeOnly && hasLive
+      ? 'mixed'
+      : hasComposeOnly
+        ? 'compose_only'
+        : hasLive
+          ? 'live'
+          : 'none';
+    const banner = hasComposeOnly
+      ? 'Compose-only FX (' + composeOnly.map((h) => h.type).join(', ') + ') — cannot preview live on canvas; full pass renders on Compose / export.'
+      : hasLive
+        ? 'Live FX stand-in (' + live.map((h) => h.type).join(', ') + ') — visible on preview canvas before Compose.'
+        : '';
+    return {
+      hooks: list,
+      live,
+      composeOnly,
+      hasAny: list.length > 0,
+      hasLive,
+      hasComposeOnly,
+      mode,
+      banner,
+    };
+  }
+
   function inspectAt(composed, time) {
     if (!composed || !composed.timeline || !Array.isArray(composed.timeline.plates) || !composed.timeline.plates.length) {
       return null;
@@ -632,6 +743,7 @@
       const u = seg.u0 + (seg.u1 - seg.u0) * Math.min(1, Math.max(0, (tc - seg.t0) / span));
       camPose = evalCam(seg.curves, u, tc - seg.t0);
     }
+    const atomFx = (atom && Array.isArray(atom.fx_hooks)) ? atom.fx_hooks : [];
     return {
       show_id: tl.show_id || '',
       title: tl.title || tl.show_id || '',
@@ -651,6 +763,8 @@
         s: Math.round(camPose.s * 1000) / 1000,
         r: Math.round(camPose.r * 1000) / 1000,
       },
+      fx_hooks: atomFx,
+      fx_state: classifyFxHooks(atomFx),
     };
   }
 
@@ -691,6 +805,10 @@
     composeShow,
     inspectAt,
     compareAt,
+    classifyFxHook,
+    classifyFxHooks,
+    LIVE_FX_COMPONENTS,
+    COMPOSE_ONLY_FX_COMPONENTS,
     FPS_PLATES,
     applyCamNudge,
     applyCamIntensity,

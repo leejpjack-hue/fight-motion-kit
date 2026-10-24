@@ -2,6 +2,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const http=require('node:http');
 const path=require('node:path');
 const base=process.env.TEST_BASE_URL||'http://127.0.0.1:8765';
 const out=path.resolve(process.env.TEST_OUTPUT||'work/qa');fs.mkdirSync(out,{recursive:true});
@@ -9,7 +10,27 @@ const syslib=path.resolve('work/sysroot/usr/lib/x86_64-linux-gnu');
 if(fs.existsSync(syslib))process.env.LD_LIBRARY_PATH=syslib+(process.env.LD_LIBRARY_PATH?':'+process.env.LD_LIBRARY_PATH:'');
 const fconf=path.resolve('work/sysroot/fonts.conf');
 if(fs.existsSync(fconf))process.env.FONTCONFIG_FILE=fconf;
+const MIMES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon'};
+async function ensureServer(urlStr){
+  const u=new URL(urlStr);
+  const ok=await new Promise(r=>{const req=http.get(urlStr+'/ui/',res=>{res.resume();r(res.statusCode===200);});req.on('error',()=>r(false));req.setTimeout(600,()=>{req.destroy();r(false);});});
+  if(ok)return null;
+  const root=path.resolve('public');
+  const srv=http.createServer((req,res)=>{
+    const clean=decodeURIComponent(new URL(req.url,urlStr).pathname).replace(/^\/+/,'');
+    let fp=path.resolve(root,clean);
+    if(!fp.startsWith(root)){res.writeHead(403).end();return;}
+    if(fs.existsSync(fp)&&fs.statSync(fp).isDirectory())fp=path.join(fp,'index.html');
+    if(!fs.existsSync(fp)||!fs.statSync(fp).isFile()){res.writeHead(404).end();return;}
+    res.writeHead(200,{'Content-Type':MIMES[path.extname(fp)]||'application/octet-stream'});
+    fs.createReadStream(fp).pipe(res);
+  });
+  await new Promise((resolve,reject)=>{srv.once('error',reject);srv.listen(+u.port||8765,u.hostname||'127.0.0.1',resolve);});
+  srv.unref();
+  return srv;
+}
 (async()=>{
+  const srv=await ensureServer(base);
   const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||undefined,env:process.env,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu']});
   const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   const p=await context.newPage(), errors=[], failed=[], checks=[];
@@ -226,9 +247,62 @@ if(fs.existsSync(fconf))process.env.FONTCONFIG_FILE=fconf;
     assert.equal(await p.evaluate(()=>HMStudio.abComparison.diff.any),false);
     await p.selectOption('#abSource','daiyu-wang-five-seconds');await settle();
     check('HM-P1-SCRUB: picking Gold, Import JSON, or Snapshot source for B never replaces A draft and rejects invalid files safely');
+    // HM-P1-FX checks: live cheap visual stand-ins on preview canvas before Compose + clear Compose-only honesty banner/label
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    await p.click('[data-effect="none"]');
+    const sampleStageHash=()=>p.evaluate(()=>{
+      const d=document.getElementById('stage').getContext('2d').getImageData(480,200,320,260).data;
+      let h=2166136261>>>0;
+      for(let i=0;i<d.length;i+=16){h^=d[i];h=Math.imul(h,16777619)>>>0;}
+      const c=document.getElementById('stage').getContext('2d').getImageData(640,320,1,1).data;
+      return {hash:h,center:Array.from(c)};
+    });
+    const cleanSample=await sampleStageHash();
+    assert.equal(await p.locator('#fxPreviewBadge').isVisible(),false);
+    assert.equal(await p.locator('#fxHonestyBanner').isVisible(),false);
+    assert.equal(await p.locator('#fxHonestyNote').getAttribute('data-fx-state'),'clean');
+    const fxStandInSamples={};
+    for(const fxType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange']){
+      // Click chip WITHOUT awaiting settle()/compile() first to prove live visual stand-in renders immediately while editing
+      await p.click(`[data-effect="${fxType}"]`);
+      const liveSample=await sampleStageHash();
+      assert.notEqual(liveSample.hash,cleanSample.hash,`FX chip ${fxType} must render a live visual stand-in on #stage immediately`);
+      fxStandInSamples[fxType]=liveSample;
+      assert.equal(await p.locator('#fxPreviewBadge').isVisible(),true);
+      assert.equal(await p.locator('#fxPreviewBadge').getAttribute('data-fx-mode'),'live-standin');
+      assert.match(await p.locator('#fxPreviewBadge').textContent(),new RegExp(fxType));
+      assert.equal(await p.locator('#fxHonestyBanner').isVisible(),false);
+      assert.equal(await p.locator('#fxHonestyNote').getAttribute('data-fx-state'),'live-standin');
+      await settle();
+      const postCompileSample=await sampleStageHash();
+      assert.notEqual(postCompileSample.hash,cleanSample.hash,`FX chip ${fxType} stand-in remains visible after compose`);
+    }
+    assert.notDeepEqual(fxStandInSamples.hit_pink.center,fxStandInSamples.flash_orange.center);
+    assert.notEqual(fxStandInSamples.sparks.hash,fxStandInSamples.smear_trail.hash);
+    check('HM-P1-FX: live cheap visual stand-ins (hit_pink, flash_orange, speed_lines, smear_trail, sparks, hit_orange) render on #stage while editing');
+    // Compose-only chip (hitstop_2f) shows clear honesty banner/label and never silent no-ops
+    await p.click('[data-effect="hitstop_2f"]');
+    assert.equal(await p.locator('#fxHonestyBanner').isVisible(),true);
+    assert.equal(await p.locator('#fxHonestyBanner').getAttribute('data-honesty'),'compose-only');
+    assert.match(await p.locator('#fxHonestyBanner').textContent(),/Compose-only.*hitstop_2f/);
+    assert.equal(await p.locator('#fxPreviewBadge').isVisible(),true);
+    assert.equal(await p.locator('#fxPreviewBadge').getAttribute('data-fx-mode'),'compose-only');
+    assert.equal(await p.locator('#fxHonestyNote').getAttribute('data-fx-state'),'compose-only');
+    assert.match(await p.locator('#fxHonestyNote').textContent(),/Compose-only/);
+    await settle();
+    assert.equal((await state()).composed.timeline.fx.hitstop.length,1);
+    // Verify Beat-focus / Play/Pause/scrub and plate/cam/timing edits still work without blocking
+    await p.click('[data-effect="sparks"]');await settle();
+    await p.selectOption('#camera','slow_push');await change('duration',0.6);
+    assert.equal((await state()).project.show.atoms[0].camera.preset,'slow_push');
+    assert.equal((await state()).project.show.atoms[0].duration_s,0.6);
+    await p.fill('#scrub','0.25');await p.locator('#scrub').dispatchEvent('input');assert.equal((await state()).time,0.25);
+    await p.click('#play');await p.waitForTimeout(120);await p.click('#play');assert.equal((await state()).playing,false);
+    check('HM-P1-FX: Compose-only honesty banner/label (hitstop_2f) is explicit and FX stand-ins do not block Beat-focus, Play/Pause/scrub, or plate/cam/timing edits');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({checks,errors,failed},null,2));
-  } finally {await browser.close();}
+  } finally {await browser.close();srv?.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

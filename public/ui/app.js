@@ -392,6 +392,43 @@
     $('caption').value=a.caption||'';
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
+    updateFxHonestyUI();
+  }
+  function updateFxHonestyUI() {
+    const badge=$('fxPreviewBadge'),banner=$('fxHonestyBanner'),note=$('fxHonestyNote');
+    const hasAtoms=!!project?.show?.atoms?.length;
+    const d=duration();
+    const activeIdx=hasAtoms?activeAt(Math.min(time,Math.max(0,d-1e-5))):-1;
+    const activeClip=activeIdx>=0?project.show.atoms[activeIdx]:null;
+    const stageInfo=HMComposeClient.classifyFxHooks(activeClip?.fx_hooks||[],effects);
+    const selClip=atom();
+    const selInfo=HMComposeClient.classifyFxHooks(selClip?.fx_hooks||[],effects);
+    if(badge){
+      if(!hasAtoms||!stageInfo.hasAny){
+        badge.hidden=true;badge.dataset.fxMode='none';badge.textContent='';
+      }else if(stageInfo.hasComposeOnly&&!stageInfo.hasLive){
+        badge.hidden=false;badge.dataset.fxMode='compose-only';badge.textContent=`Compose-only · ${stageInfo.composeOnly.map(h=>h.type).join(' + ')}`;
+      }else{
+        badge.hidden=false;badge.dataset.fxMode='live-standin';badge.textContent=`⚡ Live FX stand-in · ${stageInfo.live.map(h=>h.type).join(' + ')}`;
+      }
+    }
+    if(banner){
+      if(hasAtoms&&stageInfo.hasComposeOnly){
+        banner.hidden=false;banner.dataset.honesty='compose-only';
+        banner.textContent=`⚠ Compose-only FX (${stageInfo.composeOnly.map(h=>h.type).join(', ')}) — cannot preview live on canvas; full pass renders on Compose / export.`;
+      }else{
+        banner.hidden=true;banner.dataset.honesty=stageInfo.hasLive?'live-standin':'clean';banner.textContent='';
+      }
+    }
+    if(note){
+      if(!selClip||!selInfo.hasAny){
+        note.dataset.fxState='clean';note.textContent='An accent at the start of this clip.';
+      }else if(selInfo.hasComposeOnly){
+        note.dataset.fxState='compose-only';note.textContent=`⚠ Compose-only (${selInfo.composeOnly.map(h=>h.type).join(', ')}) — no live canvas stand-in; full pass renders on Compose / export.`;
+      }else{
+        note.dataset.fxState='live-standin';note.textContent=`⚡ Live FX stand-in (${selInfo.live.map(h=>h.type).join(', ')}) — previewing on canvas before Compose.`;
+      }
+    }
   }
   function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
   function updateTransport() {
@@ -416,8 +453,29 @@
       if($('abDiffTiming')){$('abDiffTiming').dataset.diff=cmp.diff.timing?'changed':'same';$('abDiffTiming').textContent=cmp.diff.timing?`Timing: ${cmp.a.atom_duration_s.toFixed(2)}s vs ${cmp.b.atom_duration_s.toFixed(2)}s (${cmp.a.duration_s.toFixed(2)}s vs ${cmp.b.duration_s.toFixed(2)}s)`:`Timing: ${cmp.a.atom_duration_s.toFixed(2)}s = ${cmp.b.atom_duration_s.toFixed(2)}s (${cmp.a.duration_s.toFixed(2)}s)`;}
     }
     updateOnionGhost();
+    updateFxHonestyUI();
   }
-  function draw() {renderer?.render(time,{onion:onion&&!playing&&!recording});rendererB?.render(time,{onion:false});updateTransport();}
+  function drawStageA() {
+    const standIn=!playing&&!recording;
+    if(project?.show?.atoms?.length){
+      const d=duration(),i=activeAt(Math.min(time,Math.max(0,d-1e-5))),a=project.show.atoms[i],t0=startOf(i),t1=t0+(a?.duration_s||.5);
+      renderer?.render(time,{onion:onion&&standIn,fxStandIn:standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1]});
+    }else{
+      $('stage')?.getContext('2d').clearRect(0,0,1280,720);
+    }
+  }
+  function draw() {
+    const standIn=!playing&&!recording;
+    drawStageA();
+    if(abEnabled&&projectB?.show?.atoms?.length){
+      const dB=durationB(),iB=activeAtFor(projectB,Math.min(time,Math.max(0,dB-1e-5))),aB=projectB.show.atoms[iB];
+      const t0B=projectB.show.atoms.slice(0,iB).reduce((s,x)=>s+x.duration_s,0),t1B=t0B+(aB?.duration_s||.5);
+      rendererB?.render(time,{onion:false,fxStandIn:standIn,liveHooks:aB?.fx_hooks||[],atomWindow:[t0B,t1B]});
+    }else if(!projectB?.show?.atoms?.length){
+      $('stageB')?.getContext('2d').clearRect(0,0,1280,720);
+    }
+    updateTransport();
+  }
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
   function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
   async function play() {if(!duration()||recording)return;if(playing||preparing){pause();return;}const token=++playToken;preparing=true;updateTransport();try{if(!renderer||renderedVersion!==compileVersion)await compile();if(token!==playToken||!renderer)return;if(time>=duration()-.001)time=0;timeStart=time;clockStart=performance.now();playing=true;playbackFrame=requestAnimationFrame(tick);}finally{if(token===playToken){preparing=false;updateTransport();}}}
@@ -600,7 +658,7 @@
     status('Pasted camera settings to all clips');
   });
   on('resetCamera',()=>edit(()=>{atom().camera={preset:'static_hold'};}));
-  on('impactPunch',()=>edit(()=>{
+  on('impactPunch',()=>{edit(()=>{
     const a=atom();if(!a)return;
     a.camera={...(a.camera||{}),preset:'slow_push',impact_macro:true};
     delete a.camera.segments;
@@ -609,17 +667,22 @@
       {type:'shake',t_rel:0.08,params:{amp:8,dur:0.2}}
     ];
     status('Applied Impact punch macro (push cam + hit/shake at 0.08)');
-  }));
+  });drawStageA();});
   function fxParamsFor(type) {
     if(type==='shake')return {amp:5,dur:.15};
     if(type==='dust')return {k:1};
     if(type==='smear_trail')return {dir:1};
     if(type==='speed_lines')return {mode:'up',k0:0,k1:1};
+    if(type==='sparks')return {n:40};
+    if(type==='fence_shake')return {k:1};
     return {};
   }
-  document.querySelectorAll('[data-effect]').forEach(b=>b.onclick=safe(()=>edit(()=>{
+  document.querySelectorAll('[data-effect]').forEach(b=>b.onclick=safe(()=>{edit(()=>{
     const type=b.dataset.effect;
     const a=atom();
+    if(!a)return;
+    const clipStart=startOf(selected),clipEnd=clipStart+a.duration_s;
+    if(time<clipStart||time>=clipEnd)time=clipStart;
     if(type==='none'){
       a.fx_hooks=[];
       if(a.camera?.impact_macro||a.camera?.preset==='slow_push'){
@@ -628,10 +691,10 @@
       }
     } else {
       const hk={type,t_rel:.08,params:fxParamsFor(type)};
-      if(type==='speed_lines')hk.t_rel_end=0.92;
+      if(type==='speed_lines'||type==='fence_shake')hk.t_rel_end=0.92;
       a.fx_hooks=[hk];
     }
-  })));
+  });drawStageA();}));
   on('replaceImage',()=>{replacing=!replacing;document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
   on('helpOpen',()=>$('helpDialog').showModal());
   document.addEventListener('keydown',safe(async e=>{
@@ -640,6 +703,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
