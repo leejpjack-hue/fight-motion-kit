@@ -102,3 +102,37 @@ test('HM-P1-SCRUB: compareAt and inspectAt detect plate, camera, and timing edit
   assert.equal(c2.diff.plate,true);
   assert.equal(c2.diff.timing,true);
 });
+
+test('HM-P1-FX: classifyFxHooks distinguishes live stand-in chips from Compose-only hooks with explicit honesty',async()=>{
+  const fxPresets=read('presets/fx_presets.json');
+  for(const liveType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange','dust','shake']){
+    const info=HMComposeClient.classifyFxHooks([{type:liveType,t_rel:0.08}],fxPresets);
+    assert.equal(info.hasLive,true,liveType);
+    assert.equal(info.hasComposeOnly,false,liveType);
+    assert.equal(info.mode,'live',liveType);
+    assert.equal(info.live[0].type,liveType);
+    assert.match(info.banner,/Live FX stand-in/);
+  }
+  for(const composeOnlyType of ['hitstop_2f','fence_shake']){
+    const info=HMComposeClient.classifyFxHooks([{type:composeOnlyType,t_rel:0.08}],fxPresets);
+    assert.equal(info.hasLive,false,composeOnlyType);
+    assert.equal(info.hasComposeOnly,true,composeOnlyType);
+    assert.equal(info.mode,'compose_only',composeOnlyType);
+    assert.equal(info.composeOnly[0].type,composeOnlyType);
+    assert.match(info.banner,/Compose-only/);
+  }
+  const s=demo();
+  s.atoms[0].fx_hooks=[{type:'sparks',t_rel:0.08,params:{n:40}}];
+  s.atoms[1].fx_hooks=[{type:'hitstop_2f',t_rel:0.08,params:{}}];
+  const r=await compose(s);
+  assert.equal(r.ok,true);
+  assert.equal(r.timeline.fx.sparks.length,1);
+  assert.equal(r.timeline.fx.hitstop.length,1);
+  const at0=HMComposeClient.inspectAt(r,0.1);
+  assert.equal(at0.fx_state.mode,'live');
+  assert.equal(at0.fx_state.live[0].type,'sparks');
+  const at1=HMComposeClient.inspectAt(r,0.6);
+  assert.equal(at1.fx_state.mode,'compose_only');
+  assert.equal(at1.fx_state.composeOnly[0].type,'hitstop_2f');
+  assert.match(at1.fx_state.banner,/Compose-only/);
+});
