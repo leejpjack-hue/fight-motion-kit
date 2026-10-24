@@ -182,3 +182,30 @@ test('HM-P1-JUMP: plate catalog resolves ids, steps, and decade chips without mo
   assert.ok(atomStart.t0<landed.t0);
   assert.equal(gold.timeline.plates.length,8);
 });
+// HM-BG-CROP
+test('HM-BG-CROP: crop helpers clamp, validate, aspect-lock and resolve per clip/layer',()=>{
+  const C=HMComposeClient;
+  assert.equal(C.validBackgroundCrop({x:0,y:0,w:1,h:1}),true);
+  for(const bad of [null,[],{x:0,y:0,w:0,h:1},{x:.5,y:0,w:.6,h:1},{x:-.1,y:0,w:.5,h:.5},{x:0,y:0,w:NaN,h:1},{x:'0',y:0,w:1,h:1}])assert.equal(C.validBackgroundCrop(bad),false,JSON.stringify(bad));
+  assert.deepEqual(C.clampBackgroundCrop({x:.9,y:-1,w:.5,h:2}),{x:.5,y:0,w:.5,h:1});
+  assert.deepEqual(C.clampBackgroundCrop({x:0,y:0,w:0,h:0}),{x:0,y:0,w:C.BG_CROP_MIN,h:C.BG_CROP_MIN});
+  assert.equal(C.isFullBackgroundCrop(null),true);assert.equal(C.isFullBackgroundCrop({x:0,y:0,w:1,h:1}),true);assert.equal(C.isFullBackgroundCrop({x:.1,y:0,w:.9,h:1}),false);
+  // Square image: a 16:9 visible region has normalized h = w * 9/16.
+  const locked=C.lockBackgroundCropAspect({x:.25,y:.25,w:.5,h:.5},1);assert.ok(Math.abs(locked.h-.5*9/16)<1e-3);assert.ok(Math.abs(locked.x+locked.w/2-.5)<1e-3);
+  const tl={crops:{base:{x:.1,y:.1,w:.5,h:.5},swap:{x:.5,y:.5,w:.5,h:.5}}};
+  assert.deepEqual(C.resolveBackgroundCrop({bg:'base'},tl),tl.crops.base);assert.deepEqual(C.resolveBackgroundCrop({bg:'swap'},tl),tl.crops.swap);
+  assert.deepEqual(C.resolveBackgroundCrop({bg:'base',background:{crop:{x:0,y:0,w:.3,h:.3}}},tl),{x:0,y:0,w:.3,h:.3});
+  assert.equal(C.resolveBackgroundCrop({bg:'base',background:{src:'own.png'}},tl),null);
+});
+test('HM-BG-CROP: project and clip crops compile into the timeline and layout without changing plate timing',async()=>{
+  const s=demo();s.bg={...(s.bg||{}),base:s.bg?.base||'backgrounds/x.png',crops:{base:{x:.2,y:.1,w:.5,h:.5}}};s.atoms[1].background={crop:{x:0,y:.5,w:.4,h:.4}};
+  const r=await compose(s);assert.equal(r.ok,true,JSON.stringify(r.errors));assert.equal(r.duration_s,5);assert.equal(r.timeline.plates.length,8);
+  assert.deepEqual(r.timeline.bg.crops.base,{x:.2,y:.1,w:.5,h:.5});
+  const l1=Object.values(r.layout).find(l=>l.atom===s.atoms[1].id);assert.deepEqual(l1.background.crop,{x:0,y:.5,w:.4,h:.4});
+  assert.deepEqual(HMComposeClient.resolveBackgroundCrop(l1,r.timeline.bg),{x:0,y:.5,w:.4,h:.4});
+  const l0=Object.values(r.layout).find(l=>l.atom===s.atoms[0].id);assert.deepEqual(HMComposeClient.resolveBackgroundCrop(l0,r.timeline.bg),{x:.2,y:.1,w:.5,h:.5});
+});
+test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
+  for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}
+  for(const crops of [{base:{x:0,y:0,w:0,h:0}},{other:{x:0,y:0,w:1,h:1}},[]]){const s=demo();s.bg={...(s.bg||{}),crops};assert.equal((await compose(s)).ok,false,JSON.stringify(crops));}
+});

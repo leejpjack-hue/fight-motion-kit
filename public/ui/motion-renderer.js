@@ -53,7 +53,8 @@ function createMotionRenderer(canvas, assets = {}) {
     while(head<tail){const i=queue[head++],x=i%w;d[i*4+3]=0;if(x>0)add(i-1);if(x<w-1)add(i+1);if(i>=w)add(i-w);if(i<w*(h-1))add(i+w);}
     g.putImageData(frame,0,0);return c;
   }
-  function backgroundImage(path){const im=images.get(path);if(!im)return;const s=Math.max(1280/im.width,720/im.height);ctx.drawImage(im,(1280-im.width*s)/2,(720-im.height*s)/2,im.width*s,im.height*s);}
+  // HM-BG-CROP: only the normalized crop region of the source is drawn, cover-fitted to the stage.
+  function backgroundImage(path,crop){const im=images.get(path);if(!im)return;const c=crop&&[crop.x,crop.y,crop.w,crop.h].every(Number.isFinite)?crop:{x:0,y:0,w:1,h:1};const sx=Math.max(0,c.x)*im.width,sy=Math.max(0,c.y)*im.height,sw=Math.max(1,Math.min(im.width-sx,c.w*im.width)),sh=Math.max(1,Math.min(im.height-sy,c.h*im.height));const s=Math.max(1280/sw,720/sh);ctx.drawImage(im,sx,sy,sw,sh,(1280-sw*s)/2,(720-sh*s)/2,sw*s,sh*s);}
   function image(path, x, y, w, h, contain = false, flip = false, keyWhite = false) {
     const im = (keyWhite&&keyedImages.get(path)) || images.get(path); if (!im) return;
     if (contain) { const s = Math.min(w / im.width, h / im.height); x += (w - im.width * s) / 2; y += (h - im.height * s) / 2; w = im.width * s; h = im.height * s; }
@@ -61,7 +62,7 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function backgroundFor(l) {
     const own=l.background||{},global=timeline.bg||{};
-    return {src:Object.hasOwn(own,'src')?own.src:global[l.bg||'base'],key_white:own.key_white??global.key_white,motion:own.motion??global.motion};
+    return {src:Object.hasOwn(own,'src')?own.src:global[l.bg||'base'],key_white:own.key_white??global.key_white,motion:own.motion??global.motion,crop:own.crop??(Object.hasOwn(own,'src')?null:global.crops?.[l.bg||'base'])??null};
   }
   function drawBackground(l, t) {
     const b=backgroundFor(l);if(!b.src)return;
@@ -71,7 +72,7 @@ function createMotionRenderer(canvas, assets = {}) {
     if(m.preset==='push_in')s=1+extra*u;
     if(m.preset==='pull_out')s=1+extra*(1-u);
     if(m.preset?.startsWith('pan_')){s=1+extra;const v=1-2*u;if(m.preset==='pan_left')x=640*extra*v;if(m.preset==='pan_right')x=-640*extra*v;if(m.preset==='pan_up')y=360*extra*v;if(m.preset==='pan_down')y=-360*extra*v;}
-    s*=l.bg_zoom||1;ctx.save();ctx.translate(640+x,360+y);ctx.scale(s,s);ctx.translate(-640,-360);backgroundImage(b.src);ctx.restore();
+    s*=l.bg_zoom||1;ctx.save();ctx.translate(640+x,360+y);ctx.scale(s,s);ctx.translate(-640,-360);backgroundImage(b.src,b.crop);ctx.restore();
   }
   function drawScene(l) {
     const b=backgroundFor(l);
