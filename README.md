@@ -10,7 +10,7 @@ A browser-based plate animation editor. Import images, arrange clips, adjust tim
 npm run dev
 ```
 
-Open **http://127.0.0.1:8765/ui/**. Python 3 and Node.js are sufficient for local development; the editor itself has no npm runtime dependencies. Cloudflare Workers still serves `public/` through the existing `wrangler.jsonc`. This change does not deploy the live Worker.
+Open **http://127.0.0.1:8765/ui/**. Python 3 and Node.js are sufficient for local development; the editor itself has no npm runtime dependencies. Cloudflare Workers serves `public/` through the existing `wrangler.jsonc`.
 
 The default project is **Daiyu × Xifeng · First exchange**: the eight original generated PNGs, in order, over exactly five seconds. Select **Open original rooftop edit** to open the existing 31.5-second / 63-plate project.
 
@@ -20,6 +20,11 @@ The default project is **Daiyu × Xifeng · First exchange**: the eight original
 - Click a library image to replace the selected plate. Its **＋** button adds a new clip. Drag timeline clips to reorder them; Duplicate, Delete, Undo and Redo are available.
 - Use Play/Pause, the scrubber, previous/next clip, restart, or loop. Space toggles playback. **Keyboard shortcuts** lists the other shortcuts.
 - Import PNG/JPG/WebP images. Imported images and the current draft are stored in IndexedDB across reloads, subject to browser storage limits. Save a project before loading a demo or starting a blank project: those actions replace the active draft.
+- Use **Background → Change background** to choose a PNG/JPG/WebP (up to 20 MB). Backgrounds use a centered cover crop and are included in saved projects and exports. When editing **Project default**, existing two-background projects let you select **Base scene** or **After switch**. **Remove** clears that layer; Undo/Redo restores changes.
+- For opaque white plates, **Remove white backdrop** reveals the new background by removing only edge-connected near-white pixels during rendering. It auto-enables when choosing a background behind a white-corner plate; switch it off to retain the original plate. Transparent PNGs work directly. Other opaque backgrounds need transparent character assets.
+- **Background → Apply to → Selected clip** gives each clip its own image. Clips inherit the project image until overridden; **Use project image** restores that inheritance, while **Remove** hides the background for just that clip. **Use library image** reuses an imported image as a background.
+- Expand **Background motion only** for still, pan and zoom moves with adjustable strength. These moves affect the scenery independently of the foreground camera. Choose **Project default** to set inherited motion across clips, or **Selected clip** to customize one clip. **Follow scene camera** preserves the original behavior.
+- **Import from project**, below **Import images**, opens a thumbnail picker for a sample project or a saved `.motion.json` file. Select images to add them to the current library with their own asset keys. The current timeline stays in place, and the import can be undone.
 - **Save project** downloads `.motion.json` with embedded images, layouts and edits. **Open project** restores it on another device or origin. Old show-only JSON is supported when its layouts are shipped on the host.
 - **Export → Playable HTML** produces one offline file with its images embedded. **Current frame** saves a PNG. **Record video** records the canvas in real time (WebM in Chrome; a supported MP4 recorder may be used by other browsers). Keep the tab visible during recording; interrupted recordings report an error.
 
@@ -38,6 +43,23 @@ The default project is **Daiyu × Xifeng · First exchange**: the eight original
 
 This is animation of existing plates with cuts, camera motion and effects. It does not synthesize new poses or interpolate limbs between the eight images. The originals are included without modifying their pixels.
 
+## AI skill and ten-second continuation
+
+The reusable skill lives in [`skills/html-motion-composer/SKILL.md`](skills/html-motion-composer/SKILL.md). It describes project authoring, new image generation, actual-alpha compositing, preservation of an existing edit, and verified offline/video exports. Its two helpers build a portable project and export through the actual editor in an isolated browser. They are parameterized by checkout, show/project, output paths, and fps.
+
+The editor's **Open 10-second continuation** button opens the extended sample: the original eight clips and first five seconds are preserved, then eight newly generated transparent character PNGs play over a new dusk rooftop background. It is also available at `/ui/?show=daiyu-wang-ten-seconds` and `/player/?show=daiyu-wang-ten-seconds`.
+
+```sh
+node skills/html-motion-composer/scripts/build-project.cjs --repo . \
+  --show public/shows/daiyu-wang-ten-seconds.json --out work/extended.motion.json \
+  --base-show public/shows/daiyu-wang-five-seconds.json --append-seconds 5
+node skills/html-motion-composer/scripts/export-project.cjs --repo . \
+  --project work/extended.motion.json --html work/extended.html \
+  --video work/extended.webm --report work/extended.verification.json --fps 30
+```
+
+These helpers require the dev dependencies and, for video, ffmpeg with VP8 support. `BROWSER_CHANNEL=chrome` uses installed Chrome; `FFMPEG` can select a binary. They do not publish projects or deploy the Worker.
+
 ## Verify
 
 ```sh
@@ -48,7 +70,9 @@ npm run dev                    # leave running in another terminal
 npm run test:browser
 ```
 
-Set `BROWSER_CHANNEL=chrome` to test an installed Chrome instead. Browser tests cover editing, transport, undo/redo, imports surviving reload, portable save/reopen, offline HTML, PNG/video downloads, the original project, and a 390px mobile layout. Local screenshots and downloads go under ignored `work/qa/`.
+Set `BROWSER_CHANNEL=chrome` to test an installed Chrome instead. Browser tests cover editing, transport, undo/redo, imports and background changes surviving reload, portable save/reopen, offline HTML, PNG/video downloads, the ten-second continuation, and a 390px mobile layout. Local screenshots and downloads go under ignored `work/qa/`.
+
+To deploy the existing Cloudflare Worker after verification, authenticate with Wrangler, then run `npx wrangler deploy`. The hosted editor is [html-motion-composer.leejpjack.workers.dev/ui/](https://html-motion-composer.leejpjack.workers.dev/ui/).
 
 ```sh
 npm run build:demos

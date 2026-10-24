@@ -7,7 +7,8 @@
   "floor_y": 684,
   "bg": {
     "swap": null,
-    "swap_t": null
+    "swap_t": null,
+    "key_white": false
   },
   "chars": {
     "L": {

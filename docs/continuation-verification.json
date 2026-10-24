@@ -1,0 +1,78 @@
+{
+  "video": {
+    "duration_s": 10,
+    "frames": 300,
+    "fps": 30,
+    "width": 1280,
+    "height": 720
+  },
+  "show_id": "daiyu-wang-ten-seconds",
+  "duration_s": 10,
+  "plates": 16,
+  "checks": {
+    "timeline_contiguous": true,
+    "html_offline": true,
+    "video_duration": true,
+    "video_dimensions": true,
+    "video_fps": true,
+    "no_browser_errors": true,
+    "no_failed_requests": true
+  },
+  "errors": [],
+  "failed": [],
+  "prefix_check": {
+    "total_s": 10,
+    "original_prefix_samples": [
+      {
+        "t": 0,
+        "identical": true
+      },
+      {
+        "t": 0.13,
+        "identical": true
+      },
+      {
+        "t": 0.9,
+        "identical": true
+      },
+      {
+        "t": 1.35,
+        "identical": true
+      },
+      {
+        "t": 2.4,
+        "identical": true
+      },
+      {
+        "t": 3.66,
+        "identical": true
+      },
+      {
+        "t": 4.55,
+        "identical": true
+      },
+      {
+        "t": 4.99,
+        "identical": true
+      }
+    ],
+    "new_background_visible": true,
+    "bg_pixel": [
+      31,
+      62,
+      124,
+      255
+    ],
+    "errors": [],
+    "failed_requests": []
+  },
+  "skill_validation": "Skill Creator quick_validate: valid",
+  "installed_skill_generic_duration_smoke": {
+    "seconds": 1,
+    "frames": 30,
+    "fps": 30,
+    "offline_html": true,
+    "dependency_resolution": "from selected repo without NODE_PATH"
+  },
+  "wrong_append_duration_rejected": true
+}

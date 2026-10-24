@@ -7,10 +7,12 @@
   const uid = () => 'clip-' + crypto.randomUUID();
   const DEMO = 'daiyu-wang-five-seconds';
   const ORIGINAL = 'daiyu-wang-codex-import';
+  const CONTINUATION = 'daiyu-wang-ten-seconds';
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   let project, presets, effects, fightPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0;
+  let loadRequest = 0, loading = false;
   const duration = () => Math.round((project?.show.atoms.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const atom = () => project?.show.atoms[selected];
   const startOf = index => project.show.atoms.slice(0,index).reduce((s,a) => s + a.duration_s, 0);
@@ -49,6 +51,7 @@
       if (a.pose_mode !== 'hero' || !a.hero || !p.layouts[a.hero.layout_source]) throw new Error('This editor needs a plate layout for each clip. Library pose synthesis remains a kit-only tool.');
       if (!Array.isArray(a.hero.plates) || a.hero.plates.length !== a.plates_needed || a.hero.plates.some(id => !p.layouts[a.hero.layout_source][id])) throw new Error('A clip refers to a missing plate.');
       if (a.camera?.segments?.length) syncSegmentsToDuration(a.camera, a.duration_s);
+      if(a.background)pathsSafe(a.background);
     }
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
     if(p.assets)for(const value of Object.values(p.assets))if(typeof value!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,/.test(value))throw new Error('Embedded assets must be image data, not external URLs.');
@@ -70,10 +73,20 @@
     return {version:1, show, layouts, media};
   }
   async function load(p) {
+    const request=++loadRequest;loading=true;
+    try {
     validate(p); pause(); project=copy(p); selected=project.show.atoms.length?0:-1;time=0;
     history=[copy(project)];historyIndex=0;result=null;
-    update(); await compile(); await persist();status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
+    update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
+    status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
     const url=new URL(location.href);url.searchParams.set('show',project.show.show_id);historyReplace(url);
+    return true;
+    } finally {if(request===loadRequest)loading=false;}
+  }
+  async function openProject(source) {
+    const request=++loadRequest;loading=true;pause();status('Opening project…');
+    try {const next=await source;if(request===loadRequest)return await load(next);return false;}
+    finally {if(request===loadRequest)loading=false;}
   }
   function historyReplace(url) { window.history.replaceState(null,'',url); }
   async function persist() {
@@ -105,7 +118,7 @@
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;draw();status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
+      result=r;renderer=next;renderedVersion=v;draw();window.dispatchEvent(new Event('hm:projectchange'));status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
     }catch(e){if(v===compileVersion){result=null;renderer=null;status('Preview unavailable: '+e.message,true);}throw e;}
   }
   function activeAt(t) {let s=0;const idx=project.show.atoms.findIndex(a=>{s+=a.duration_s;return t<s-1e-7;});return idx>=0?idx:Math.max(0,project.show.atoms.length-1);}
@@ -135,7 +148,7 @@
     $('undo').disabled=historyIndex<=0;$('redo').disabled=historyIndex>=history.length-1;
     ['play','previous','next','restart','exportOpen','fitThree','fitFive','fitEight','fitTen','fightCamPack'].forEach(id=>{if($(id))$(id).disabled=!project.show.atoms.length||recording;});
     ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    renderMedia();renderTimeline();renderInspector();updateTransport();
+    renderMedia();renderTimeline();renderInspector();updateTransport();window.dispatchEvent(new Event('hm:projectchange'));
   }
   function renderMedia() {
     const query=$('mediaSearch').value.toLowerCase();$('mediaGrid').replaceChildren();
@@ -193,7 +206,7 @@
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
   }
-  function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();}
+  function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
   function updateTransport() {const d=duration();$('scrub').value=time;$('playhead').style.left=(d?time/d*100:0)+'%';$('timecode').innerHTML=`${format(time)} <span>/ ${format(d)}</span>`;$('play').textContent=preparing?'…':playing?'Ⅱ':'▶';$('play').setAttribute('aria-label',preparing?'Cancel playback preparation':playing?'Pause':'Play');const i=activeAt(Math.min(time,Math.max(0,d-.00001)));const a=project.show.atoms[i];$('stageLabel').textContent=a?`${a.hero.plates[0]} · ${a.label||a.id}`:'';updateOnionGhost();}
   function draw() {renderer?.render(time,{onion:onion&&!playing&&!recording});updateTransport();}
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
@@ -271,11 +284,11 @@
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(await builtIn(DEMO));}}
-    else if(sid&&![DEMO,ORIGINAL].includes(sid)){await load(await builtIn(DEMO));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else if(sid&&![DEMO,ORIGINAL,CONTINUATION].includes(sid)){await load(await builtIn(DEMO));status('Requested project is not stored here. Open its saved project JSON.',true);}
     else await load(await builtIn(sid||DEMO));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(duration(),Math.max(0,requestedTime));draw();}
   }
-  on('loadDemo',async()=>load(await builtIn(DEMO)));on('loadOriginal',async()=>load(await builtIn(ORIGINAL)));
+  on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));
   on('fightCamPack',applyFightCamPack);
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
@@ -401,6 +414,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get composed(){return copy(result);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get copiedCam(){return copy(copiedCam);},compile,renderAt(t){pause();time=Math.min(duration(),Math.max(0,t));draw();},load,download,safe,on,$,copy,get renderer(){return renderer;},pause,get duration(){return duration();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,renderAt(t){pause();time=Math.min(duration(),Math.max(0,t));draw();},load,openProject,download,safe,on,$,copy,get renderer(){return renderer;},pause,get duration(){return duration();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

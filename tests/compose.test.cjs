@@ -41,3 +41,28 @@ test('HM-CAM-10: roll nudge (r), cam intensity scaling, dual segments, and expan
   assert.equal(r.timeline.fx.speed.length,1);
   assert.equal(r.timeline.fx.trails.length,1);
 });
+
+test('ten-second continuation preserves the original five-second prefix and adds layered background plates',async()=>{const original=demo(),extended=read('shows/daiyu-wang-ten-seconds.json');assert.deepEqual(extended.atoms.slice(0,8),original.atoms);const [a,b]=await Promise.all([compose(original),compose(extended)]);assert.equal(b.ok,true);assert.equal(b.duration_s,10);assert.equal(b.timeline.plates.length,16);assert.deepEqual(b.timeline.plates.slice(0,8),a.timeline.plates);assert.ok(Object.values(b.layout).slice(8).every(l=>!l.full&&l.parts?.length));assert.equal(b.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');});
+
+test('replacing backgrounds preserves named base/swap layout choices and white-key preference',async()=>{
+  const show=demo();show.atoms=show.atoms.slice(0,2);show.bg={base:'backgrounds/new-base.png',swap:'backgrounds/new-swap.png',swap_t:0,key_white:true,aliases:{base:['old-roof'],swap:['old-sunset']}};
+  const layout=read(show.atoms[0].hero.layout_source);layout.P01.bg='old-roof.png';layout.P02.bg='old-sunset';
+  const result=await HMComposeClient.composeShow(show,{cameraPresets:read('presets/camera_presets.json'),fxPresets:read('presets/fx_presets.json'),loadJson:async()=>layout});
+  assert.equal(result.ok,true);assert.deepEqual(Object.values(result.layout).map(l=>l.bg),['base','swap']);assert.equal(result.timeline.bg.key_white,true);assert.equal(result.timeline.bg.base,show.bg.base);assert.equal(result.timeline.bg.swap,show.bg.swap);
+  layout.P01.bg='base';layout.P02.bg='swap';const named=await HMComposeClient.composeShow(show,{cameraPresets:read('presets/camera_presets.json'),fxPresets:read('presets/fx_presets.json'),loadJson:async()=>layout});assert.deepEqual(Object.values(named.layout).map(l=>l.bg),['base','swap']);
+});
+
+test('clip backgrounds override only their own plates and keep camera curves intact',async()=>{
+  const show=demo(),before=await compose(show);show.bg={base:'project.png',motion:{preset:'pan_right',amount:.4}};
+  show.atoms[0].background={src:'first.png',key_white:true,motion:{preset:'push_in',amount:.8}};
+  show.atoms[1].background={src:null,motion:{preset:'static',amount:0}};
+  const result=await compose(show);assert.equal(result.ok,true);
+  assert.deepEqual(result.layout.S001.background,show.atoms[0].background);assert.equal(result.layout.S002.background.src,null);assert.equal(result.layout.S003.background,undefined);
+  assert.deepEqual(result.timeline.bg.motion,show.bg.motion);assert.deepEqual(result.timeline.atoms.map(a=>a.cam),before.timeline.atoms.map(a=>a.cam));
+});
+test('invalid background motion and image settings fail explicitly',async()=>{
+  for(const background of [{src:42},{key_white:'true'},{motion:{preset:'missing',amount:.5}},{motion:{preset:'pan_left',amount:Infinity}},{motion:{preset:'push_in',amount:-1}}]){
+    const show=demo();show.atoms[0].background=background;assert.equal((await compose(show)).ok,false);
+  }
+  const show=demo();show.bg.motion={preset:'push_in',amount:2};assert.equal((await compose(show)).ok,false);
+});

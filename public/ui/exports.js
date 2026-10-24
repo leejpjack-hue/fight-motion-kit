@@ -15,22 +15,25 @@
     const project=S.project; const assets={...(project.assets||{})};
     // Include library images as well as timeline assets so a project is editable offline.
     const paths=new Set(project.media.map(m=>m.src));
+    Object.values(project.show.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));
+    project.show.atoms.forEach(a=>{if(a.background?.src)paths.add(a.background.src);});
     const result=project.show.atoms.length?await S.compile():null;
-    if(result){Object.values(result.layout).forEach(l=>{if(l.full)paths.add(l.full);(l.parts||[]).forEach(p=>paths.add(p.src));});Object.values(result.timeline.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));(result.timeline.overlays||[]).forEach(o=>{if(o.src)paths.add(o.src);});}
+    if(result){Object.values(result.layout).forEach(l=>{if(l.full)paths.add(l.full);if(l.background?.src)paths.add(l.background.src);(l.parts||[]).forEach(p=>paths.add(p.src));});Object.values(result.timeline.bg||{}).filter(x=>typeof x==='string').forEach(p=>paths.add(p));(result.timeline.overlays||[]).forEach(o=>{if(o.src)paths.add(o.src);});}
     await Promise.all([...paths].map(async p=>{if(!p.startsWith('data:image/'))assets[p]=await embeddedAsset(p,project);}));
     project.assets=assets;
     return {project,result,assets};
   }
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;
-    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadOriginal','newProject','importImages'].forEach(id=>$(id).disabled=true);
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadOriginal','newProject','importImages'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
+    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';}));
   on('openProject',()=>$('projectInput').click());
   $('projectInput').onchange=safe(async e=>{
     const f=e.target.files[0];if(!f)return;
     try{
+      const opened=await S.openProject((async()=>{
       if(f.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
       const parsed=JSON.parse(await f.text());let p=parsed;
       if(!p.show&&p.show_id){
@@ -39,15 +42,16 @@
         const media=[];for(const [key,l] of Object.entries(layouts)){const dir=key.slice(0,key.lastIndexOf('/')+1);for(const [id,e] of Object.entries(l)){if(e.full)e.full=e.full.replace(/(plates\/[^/]+)\.png$/,'$1.jpg');for(const part of e.parts||[])part.src=part.src.replace(/(cutout\/[^/]+)\.png$/,'$1.webp');const src=e.full?dir+e.full:dir+e.parts?.[0]?.src;if(src)media.push({id:crypto.randomUUID(),name:id,src,layoutSource:key,plateId:id});}}
         p={version:1,show:p,layouts,media};
       }
-      await S.load(p);report('Project opened.');
+      return p;
+      })());if(opened)report('Project opened.');
     }finally{e.target.value='';}
   });
   on('exportOpen',()=>{S.pause();report('');$('exportDialog').showModal();});
-  on('exportFrame',()=>task(async()=>{await S.compile();const blob=await new Promise(resolve=>$('stage').toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
+  on('exportFrame',()=>task(async()=>{await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportHtml',()=>task(async()=>{
     report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
     const data=JSON.stringify({...result,assets}).replace(/</g,'\\u003c');
-    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Eight-plate camera animation · Plays offline</p></main><script>${createMotionRenderer.toString()}\nconst DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
+    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p></main><script>${createMotionRenderer.toString()}\nconst DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
     download(project.show.show_id+'.html',new Blob([html],{type:'text/html'}));report('Playable HTML downloaded. All images are embedded.');
   }));
   function standalonePlayer(data) {

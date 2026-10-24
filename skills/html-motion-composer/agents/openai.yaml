@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Motion Composer"
+  short_description: "Create and extend plate-based HTML videos"
+  default_prompt: "Use $html-motion-composer to create or extend an editable video with new plates, camera motion, and backgrounds."

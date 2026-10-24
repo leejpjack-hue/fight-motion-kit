@@ -1,0 +1,733 @@
+{
+  "show_id": "daiyu-wang-ten-seconds",
+  "title": "Daiyu × Xifeng · Rooftop counter",
+  "duration_target_s": 10,
+  "floor_y": 684,
+  "grounded": true,
+  "parity_mode": true,
+  "compose_mode": "parity",
+  "chars": {
+    "L": {
+      "name": "Lin Daiyu"
+    },
+    "R": {
+      "name": "Wang Xifeng"
+    }
+  },
+  "bg": {
+    "base": "assets/daiyu-wang-continuation/rooftop-dusk.png"
+  },
+  "overlays": [],
+  "atoms": [
+    {
+      "id": "beat-01",
+      "label": "Opening clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P01"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -3,
+            "b": 3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.08,
+          "params": {
+            "amp": 5,
+            "dur": 0.15
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-02",
+      "label": "Recoil",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P02"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 3,
+            "b": -3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-03",
+      "label": "Straight & duck",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P03"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -3,
+            "b": 3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-04",
+      "label": "Rising uppercut",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P04"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 3,
+            "b": -3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-05",
+      "label": "Forearm block",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P05"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -3,
+            "b": 3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.08,
+          "params": {
+            "amp": 5,
+            "dur": 0.15
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-06",
+      "label": "Left jab",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P06"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 3,
+            "b": -3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-07",
+      "label": "Right cross",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P07"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -3,
+            "b": 3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.08,
+          "params": {
+            "amp": 5,
+            "dur": 0.15
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-08",
+      "label": "Push kick",
+      "kind": "duo",
+      "duration_s": 1,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P08"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.01,
+            "b": 1.045,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 3,
+            "b": -3
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.08,
+          "params": {
+            "amp": 5,
+            "dur": 0.15
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-09",
+      "label": "Kick retract",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P09"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.0,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "dust",
+          "t_rel": 0.05,
+          "params": {
+            "k": 0.45
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-10",
+      "label": "Slip inside",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P10"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-11",
+      "label": "Body counter",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P11"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 4,
+            "dur": 0.16
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-12",
+      "label": "Parry and turn",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P12"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-13",
+      "label": "Hook meets guard",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P13"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 4,
+            "dur": 0.16
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-14",
+      "label": "Low sweep evasion",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P14"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "dust",
+          "t_rel": 0.05,
+          "params": {
+            "k": 0.45
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-15",
+      "label": "Final fist clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P15"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 7,
+            "dur": 0.16
+          }
+        }
+      ]
+    },
+    {
+      "id": "beat-16",
+      "label": "Guarded standoff",
+      "kind": "duo",
+      "duration_s": 1,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "guard_recover"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P16"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.0,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": []
+    }
+  ],
+  "meta": {
+    "description": "First five seconds preserved, then eight new transparent PNG plates over a newly generated dusk rooftop. Ten seconds total.",
+    "source_show_id": "daiyu-wang-five-seconds",
+    "preserved_prefix_s": 5,
+    "append_s": 5,
+    "created_with_skill": "html-motion-composer"
+  }
+}
