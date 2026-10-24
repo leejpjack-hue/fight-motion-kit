@@ -2,7 +2,7 @@
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout;
+  let timeline, layout, lastTime = 0;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const ease = (u, kind) => kind === 'linear' ? u : kind === 'sine' ? .5 - .5 * Math.cos(Math.PI * u) : u * u * (3 - 2 * u);
   function curve(c, u, t) {
@@ -77,6 +77,7 @@ function createMotionRenderer(canvas, assets = {}) {
     }
   }
   function render(time, opts = {}) {
+    lastTime = Math.round((Number(time) || 0) * 10000) / 10000;
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
     if (!timeline || !timeline.plates.length) { ctx.restore(); return; }
@@ -121,6 +122,6 @@ function createMotionRenderer(canvas, assets = {}) {
     });
     ctx.restore();
   }
-  return { load, render, images };
+  return { load, render, images, get lastTime() { return lastTime; }, get duration() { return timeline?.duration_s || 0; } };
 }
 window.HMMotion = createMotionRenderer;
