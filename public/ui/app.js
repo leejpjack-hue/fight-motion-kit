@@ -493,7 +493,8 @@
       }else if(selInfo.hasComposeOnly){
         note.dataset.fxState='compose-only';note.textContent=`⚠ Compose-only (${selInfo.composeOnly.map(h=>h.type).join(', ')}) — no live canvas stand-in; full pass renders on Compose / export.`;
       }else{
-        note.dataset.fxState='live-standin';note.textContent=`⚡ Live FX stand-in (${selInfo.live.map(h=>h.type).join(', ')}) — previewing on canvas before Compose.`;
+        const warm=(selClip.fx_hooks||[]).some(h=>(h.type||h)==='exposure_warm_crush');
+        note.dataset.fxState='live-standin';note.textContent=`⚡ Live FX stand-in (${selInfo.live.map(h=>h.type).join(', ')}) — previewing on canvas before Compose.${warm?' Warm crush duration is authorable (demo 0.10s / 3 frames) and does not gray the colored FX.':''}`;
       }
     }
   }
@@ -758,6 +759,10 @@
     if(type==='speed_lines')return {mode:'up',k0:0,k1:1};
     if(type==='sparks')return {n:40};
     if(type==='fence_shake')return {k:1};
+    if(type==='exposure_warm_crush')return {dur:0.10};
+    if(type==='fist_pressure')return {dur:0.36,path:[[430,390],[610,300],[760,250]]};
+    if(type==='leg_arc')return {dur:0.28,path:[[800,560],[1020,340],[1160,150]]};
+    if(type==='tornado_spiral')return {dur:0.50,path:[[640,480],[660,300]]};
     return {};
   }
   document.querySelectorAll('[data-effect]').forEach(b=>b.onclick=safe(()=>{edit(()=>{

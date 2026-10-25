@@ -9,6 +9,40 @@
 
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
+  // Screen-space paths for parametric punch / leg FX. Preset defaults win;
+  // these are only used when a hook or overlay omits a path.
+  const FX_FIST_PATH = [[430, 390], [610, 300], [760, 250]];
+  const FX_LEG_PATH = [[800, 560], [1020, 340], [1160, 150]];
+  const FX_TORNADO_PATH = [[640, 480], [660, 300]];
+  const PROCEDURAL_OVERLAYS = {
+    exposure_warm_crush: 0.10,
+    fist_pressure: 0.36,
+    leg_arc: 0.28,
+    tornado_spiral: 0.50,
+  };
+
+  function cloneFxPath(raw) {
+    if (!Array.isArray(raw)) return null;
+    const pts = [];
+    for (const p of raw) {
+      if (Array.isArray(p) && Number.isFinite(+p[0]) && Number.isFinite(+p[1])) pts.push([round4(+p[0]), round4(+p[1])]);
+      else if (p && typeof p === 'object' && Number.isFinite(+p.x) && Number.isFinite(+p.y)) pts.push([round4(+p.x), round4(+p.y)]);
+    }
+    return pts.length ? pts : null;
+  }
+
+  function fxSpanSeconds(hk, prm, atomDur) {
+    const explicit = hk && hk.params && hk.params.dur;
+    if (Number.isFinite(+explicit) && +explicit > 0) return round4(+explicit);
+    if (hk && hk.t_rel_end != null && Number.isFinite(+hk.t_rel_end)) {
+      const tRel = hk.t_rel != null ? +hk.t_rel : 0.08;
+      const span = (+hk.t_rel_end - tRel) * atomDur;
+      if (span > 0) return round4(span);
+    }
+    if (prm && Number.isFinite(+prm.dur) && +prm.dur > 0) return round4(+prm.dur);
+    return 0.10;
+  }
+
   // HM-BG-CROP: background crop rects are normalized {x,y,w,h} in 0..1 of the source image.
   const BG_CROP_MIN = 0.02;
   const BG_CROP_FULL = Object.freeze({ x: 0, y: 0, w: 1, h: 1 });
@@ -285,17 +319,19 @@
       const kind = o.kind || (o.text ? 'text' : 'image');
       const src = o.src;
       const text = o.text;
+      const proceduralDur = PROCEDURAL_OVERLAYS[kind];
       if (kind === 'text') {
         if (!(text && String(text).trim())) {
           warns.push('overlay ' + oid + ': kind=text but empty text, skipped');
           return;
         }
-      } else if (!src) {
+      } else if (proceduralDur == null && !src) {
         warns.push('overlay ' + oid + ': missing src, skipped');
         return;
       }
       const t0 = +(o.t_start || 0);
-      const t1 = +(o.t_end != null ? o.t_end : t0 + 1);
+      const authoredDur = Number.isFinite(+o.dur) && +o.dur > 0 ? +o.dur : proceduralDur;
+      const t1 = +(o.t_end != null ? o.t_end : t0 + (proceduralDur != null ? authoredDur : 1));
       if (t1 <= t0) {
         warns.push('overlay ' + oid + ': t_end <= t_start, skipped');
         return;
@@ -317,6 +353,11 @@
       };
       if (src) row.src = src;
       if (text != null) row.text = String(text);
+      if (proceduralDur != null) {
+        const fallback = kind === 'fist_pressure' ? FX_FIST_PATH : kind === 'leg_arc' ? FX_LEG_PATH : kind === 'tornado_spiral' ? FX_TORNADO_PATH : null;
+        const path = cloneFxPath(o.path) || cloneFxPath(fallback);
+        if (path) row.path = path;
+      }
       if (o.style && typeof o.style === 'object') {
         row.style = {};
         ['fill', 'stroke', 'strokeWidth', 'fontSize', 'fontWeight', 'italic', 'fontFamily'].forEach((k) => {
@@ -553,6 +594,7 @@
     const fx = {
       hits: [], flash: [], hitstop: [], shake: [], bgflash: [], dust: [],
       sparks: [], speed: [], fence: [], trails: [], pink_cut: null,
+      exposure: [], fist: [], leg: [], tornado: [],
     };
     const heroLayouts = {};
     let t = 0;
@@ -686,6 +728,7 @@
         const ht = Math.round((t0 + tRel * d) * 10000) / 10000;
         const he = Math.round((t0 + tRelEnd * d) * 10000) / 10000;
         const col = prm.color != null ? prm.color : p.color;
+        const span = fxSpanSeconds(hk, prm, d);
         for (const comp of p.components || []) {
           if (comp === 'impact_burst') fx.hits.push([ht, col]);
           else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push([ht, col]);
@@ -699,6 +742,10 @@
           else if (comp === 'sparks') fx.sparks.push([ht, prm.n, prm.at]);
           else if (comp === 'fence') fx.fence.push([ht, he, prm.k]);
           else if (comp === 'pink_cut') fx.pink_cut = ht;
+          else if (comp === 'exposure_warm_crush') fx.exposure.push([ht, span]);
+          else if (comp === 'fist_pressure') fx.fist.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH)]);
+          else if (comp === 'leg_arc') fx.leg.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH)]);
+          else if (comp === 'tornado_spiral') fx.tornado.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH)]);
         }
         const cls = classifyFxHook(hk, fxp);
         atomFx.push({
@@ -811,6 +858,7 @@
 
   const LIVE_FX_COMPONENTS = [
     'impact_burst', 'flash', 'shake', 'tint', 'trail', 'dust', 'speed', 'sparks', 'pink_cut',
+    'exposure_warm_crush', 'fist_pressure', 'leg_arc', 'tornado_spiral',
   ];
   const COMPOSE_ONLY_FX_COMPONENTS = ['hitstop_2f', 'fence'];
   const DEFAULT_FX_PRESETS = {
@@ -829,6 +877,10 @@
     fence_shake: { id: 'fence_shake', components: ['fence'], span: true, source: 'DOM background-only rattle pass' },
     pink_cut: { id: 'pink_cut', components: ['pink_cut'], color: '#ff2f9a' },
     impact_white: { id: 'impact_white', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ffffff' },
+    exposure_warm_crush: { id: 'exposure_warm_crush', components: ['exposure_warm_crush'], defaults: { dur: 0.10 }, craft_demo_times_s: [2.8, 7.3, 12.5, 17.5, 22.8, 29.7] },
+    fist_pressure: { id: 'fist_pressure', components: ['fist_pressure'], color: '#e10600', defaults: { dur: 0.36, path: FX_FIST_PATH } },
+    leg_arc: { id: 'leg_arc', components: ['leg_arc'], color: '#f4fbff', defaults: { dur: 0.28, path: FX_LEG_PATH } },
+    tornado_spiral: { id: 'tornado_spiral', components: ['tornado_spiral'], color: '#e7f6ff', defaults: { dur: 0.50, path: FX_TORNADO_PATH } },
   };
 
   function resolveFxMap(fxPresets) {

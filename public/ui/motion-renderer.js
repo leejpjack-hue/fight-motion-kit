@@ -145,6 +145,145 @@ function fgBreakState(prop, t) {
   const age = +t - +effect.t;
   return { broken: true, src: effect.broken_src || src, age, procedural: !effect.broken_src };
 }
+// Parametric punch / leg FX and the warm crush. Paths are 1280×720 screen points.
+const FX_FIST_PATH = [[430, 390], [610, 300], [760, 250]];
+const FX_LEG_PATH = [[800, 560], [1020, 340], [1160, 150]];
+const FX_TORNADO_PATH = [[640, 480], [660, 300]];
+function fxPointOnPath(path, u) {
+  const pts = Array.isArray(path) && path.length ? path : [[640, 360]];
+  const t = Math.min(1, Math.max(0, Number(u) || 0));
+  if (pts.length === 1) return [+pts[0][0] || 0, +pts[0][1] || 0];
+  const f = t * (pts.length - 1);
+  const i = Math.min(pts.length - 2, Math.floor(f));
+  const k = f - i;
+  const a = pts[i], b = pts[i + 1];
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+}
+// Luma crush only. Strong chroma (red-black fist) and cold-white strokes are left
+// unchanged — this is not hitstop's grayscale / invert.
+function exposureWarmCrushPixels(data, amount) {
+  const a = amount < 0 ? 0 : amount > 1 ? 1 : amount;
+  if (!(a > 0) || !data) return;
+  for (let i = 0; i < data.length; i += 4) {
+    const r0 = data[i], g0 = data[i + 1], b0 = data[i + 2];
+    const y = 0.2126 * r0 + 0.7152 * g0 + 0.0722 * b0;
+    const max = r0 > g0 ? (r0 > b0 ? r0 : b0) : (g0 > b0 ? g0 : b0);
+    const min = r0 < g0 ? (r0 < b0 ? r0 : b0) : (g0 < b0 ? g0 : b0);
+    const chroma = max - min;
+    if (chroma > 70) continue;
+    // Cold-white blade (core and pale-blue edge). Neutral white still crushes warm.
+    if (y > 185 && chroma < 90 && b0 > r0 + 4 && b0 + 1 >= g0) continue;
+    const yn = y / 255;
+    const crushed = yn <= 0.5 ? Math.pow(yn * 2, 1.7) * 0.5 : 1 - Math.pow((1 - yn) * 2, 1.2) * 0.5;
+    const scale = y > 0.5 ? (crushed * 255) / y : 0;
+    let nr = r0 * scale, ng = g0 * scale, nb = b0 * scale;
+    const ny = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb;
+    if (ny > 168) {
+      const k = Math.min(1, (ny - 168) / 87);
+      nr += (255 - nr) * k * 0.8;
+      ng += (232 - ng) * k * 0.45;
+      nb += (188 - nb) * k * 0.2;
+    }
+    if (ny < 64) {
+      const k = 1 - ny / 64;
+      nr *= 1 - k * 0.8;
+      ng *= 1 - k * 0.8;
+      nb *= 1 - k * 0.88;
+    }
+    data[i] = r0 + (nr - r0) * a;
+    data[i + 1] = g0 + (ng - g0) * a;
+    data[i + 2] = b0 + (nb - b0) * a;
+  }
+}
+function drawFistPressure(ctx, x, y, u) {
+  const grow = 0.84 + 0.22 * Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
+  const R = 268 * grow;
+  ctx.save();
+  const g = ctx.createRadialGradient(x, y, R * 0.05, x, y, R);
+  g.addColorStop(0, 'rgba(70, 0, 0, 0.2)');
+  g.addColorStop(0.4, 'rgba(176, 8, 8, 0.62)');
+  g.addColorStop(0.68, 'rgba(12, 0, 0, 0.82)');
+  g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.95;
+  ctx.strokeStyle = '#ff1a1a';
+  ctx.lineWidth = 24;
+  ctx.beginPath();
+  ctx.arc(x, y, R * 0.56, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#120000';
+  ctx.beginPath();
+  ctx.arc(x, y, 58, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e10600';
+  ctx.beginPath();
+  ctx.arc(x - 8, y - 10, 36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+function drawLegArc(ctx, path, u) {
+  const uu = Math.max(0.08, Math.min(1, Number(u) || 0));
+  const steps = 32;
+  function stroke(width, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const p = fxPointOnPath(path, (i / steps) * uu);
+      if (i === 0) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  stroke(30, '#b9dcff', 0.96);
+  stroke(10, '#f4fbff', 1);
+}
+function drawTornado(ctx, x, y, u) {
+  ctx.save();
+  ctx.translate(x, y);
+  const spin = (Number(u) || 0) * Math.PI * 5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let arm = 0; arm < 2; arm++) {
+    ctx.beginPath();
+    ctx.globalAlpha = arm === 0 ? 0.95 : 0.8;
+    ctx.strokeStyle = arm === 0 ? '#f4fbff' : '#9fd4ff';
+    ctx.lineWidth = arm === 0 ? 6 : 3.5;
+    const steps = 72;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const ang = spin + arm * Math.PI + t * Math.PI * 2 * 3.4;
+      const rad = 14 + t * 220;
+      const px = Math.cos(ang) * rad;
+      const py = Math.sin(ang) * rad * 0.4 - t * 210;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function collectProceduralOverlays(overlays, t) {
+  const out = { exposure: [], fist: [], leg: [], tornado: [] };
+  for (const o of overlays || []) {
+    if (!(t >= o.t_start && t < o.t_end)) continue;
+    const dur = Math.max(0.01, o.t_end - o.t_start);
+    if (o.kind === 'exposure_warm_crush') out.exposure.push([o.t_start, dur]);
+    else if (o.kind === 'fist_pressure') out.fist.push([o.t_start, dur, o.path || FX_FIST_PATH]);
+    else if (o.kind === 'leg_arc') out.leg.push([o.t_start, dur, o.path || FX_LEG_PATH]);
+    else if (o.kind === 'tornado_spiral') out.tornado.push([o.t_start, dur, o.path || FX_TORNADO_PATH]);
+  }
+  return out;
+}
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
@@ -271,7 +410,7 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function hooksToFx(hooks, t0, t1) {
     const d = Math.max(0.05, t1 - t0);
-    const out = { hits: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null };
+    const out = { hits: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [] };
     for (const raw of hooks || []) {
       const type = typeof raw === 'string' ? raw : raw?.type;
       if (!type || type === 'none') continue;
@@ -280,6 +419,7 @@ function createMotionRenderer(canvas, assets = {}) {
       const tRelEnd = raw?.t_rel_end != null ? +raw.t_rel_end : 0.92;
       const ht = t0 + tRel * d;
       const he = t0 + tRelEnd * d;
+      const span = Number.isFinite(+prm.dur) && +prm.dur > 0 ? +prm.dur : (raw?.t_rel_end != null ? Math.max(0.01, he - ht) : (type === 'exposure_warm_crush' ? 0.10 : type === 'leg_arc' ? 0.28 : type === 'tornado_spiral' ? 0.50 : 0.36));
       if (type === 'hit_orange') out.hits.push([ht, prm.color || '#ff8a1e']);
       else if (type === 'hit_pink') out.hits.push([ht, prm.color || '#ff3fa4']);
       else if (type === 'impact_white') out.hits.push([ht, prm.color || '#ffffff']);
@@ -293,8 +433,36 @@ function createMotionRenderer(canvas, assets = {}) {
       else if (type === 'speed_lines') out.speed.push([ht, he, prm.mode || 'up', prm.k0 ?? 0, prm.k1 ?? 1]);
       else if (type === 'sparks') out.sparks.push([ht, prm.n ?? 40, prm.at]);
       else if (type === 'pink_cut') out.pink_cut = ht;
+      else if (type === 'exposure_warm_crush') out.exposure.push([ht, span]);
+      else if (type === 'fist_pressure') out.fist.push([ht, span, prm.path || FX_FIST_PATH]);
+      else if (type === 'leg_arc') out.leg.push([ht, span, prm.path || FX_LEG_PATH]);
+      else if (type === 'tornado_spiral') out.tornado.push([ht, span, prm.path || FX_TORNADO_PATH]);
     }
     return out;
+  }
+  function drawParametric(fxSource, delta) {
+    (fxSource.tornado || []).forEach(([h, dur = 0.5, path]) => {
+      const d = delta(h, dur);
+      if (d < 0) return;
+      const u = dur > 0 ? d / dur : 0;
+      const at = fxPointOnPath(path, u);
+      drawTornado(ctx, at[0], at[1], u);
+    });
+    (fxSource.leg || []).forEach(([h, dur = 0.28, path]) => {
+      const d = delta(h, dur);
+      if (d < 0) return;
+      drawLegArc(ctx, path, dur > 0 ? d / dur : 0);
+    });
+    (fxSource.fist || []).forEach(([h, dur = 0.36, path]) => {
+      const d = delta(h, dur);
+      if (d < 0) return;
+      const u = dur > 0 ? d / dur : 0;
+      const at = fxPointOnPath(path, u);
+      drawFistPressure(ctx, at[0], at[1], u);
+    });
+  }
+  function exposureLive(list, delta) {
+    return (list || []).some(([h, dur]) => delta(h, dur > 0 ? dur : 0.10) >= 0);
   }
   function render(time, opts = {}) {
     lastTime = Math.round((Number(time) || 0) * 10000) / 10000;
@@ -516,11 +684,27 @@ function createMotionRenderer(canvas, assets = {}) {
         ctx.restore();
       });
     }
-    if (fxSource.pink_cut != null && (t >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)))) {
+    const overlayFx = collectProceduralOverlays(timeline.overlays, t);
+    // Inside the authored window, follow the path with real time (scrub and play).
+    // Outside it, the editor stand-in still shows one representative frame.
+    const phase = (h, dur) => {
+      const d = t - h;
+      if (d >= 0 && d <= dur) return d;
+      return fxDelta(h, dur);
+    };
+    drawParametric(fxSource, phase);
+    drawParametric(overlayFx, phase);
+    const pinkOn = fxSource.pink_cut != null && (t >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)));
+    if (!pinkOn && (exposureLive(fxSource.exposure, fxDelta) || exposureLive(overlayFx.exposure, fxDelta))) {
+      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      exposureWarmCrushPixels(frame.data, 1);
+      ctx.putImageData(frame, 0, 0);
+    }
+    if (pinkOn) {
       ctx.fillStyle = '#ff2f9a';
       ctx.fillRect(0, 0, 1280, 720);
     }
-    (timeline.overlays || []).filter(o => t >= o.t_start && t < o.t_end).sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
+    (timeline.overlays || []).filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
       ctx.save();ctx.globalAlpha=clamp(o.opacity??1,0,1);ctx.translate(o.x??640,o.y??640);ctx.scale(o.scale||1,o.scale||1);
       if(o.kind==='text'||o.text){const style=o.style||{};ctx.font=`${style.italic?'italic ':''}${style.fontWeight||700} ${style.fontSize||38}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';ctx.strokeStyle=style.stroke||'#15201c';ctx.lineWidth=style.strokeWidth??6;ctx.strokeText(o.text,0,0,1150);ctx.fillStyle=style.fill||'#ffffff';ctx.fillText(o.text,0,0,1150);}else if(o.src){const im=images.get(o.src);if(im)image(o.src,-im.width/2,-im.height/2,im.width,im.height);}ctx.restore();
     });
@@ -536,6 +720,17 @@ hmRoot.FG_CAM_PRESETS = FG_CAM_PRESETS;
 hmRoot.fgCameraFrame = fgCameraFrame;
 hmRoot.fgPropPose = fgPropPose;
 hmRoot.fgBreakState = fgBreakState;
+hmRoot.FX_FIST_PATH = FX_FIST_PATH;
+hmRoot.FX_LEG_PATH = FX_LEG_PATH;
+hmRoot.FX_TORNADO_PATH = FX_TORNADO_PATH;
+hmRoot.HMMotionFx = {
+  exposureWarmCrushPixels,
+  fxPointOnPath,
+  drawFistPressure,
+  drawLegArc,
+  drawTornado,
+  collectProceduralOverlays,
+};
 if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;
   hmRoot.HMComposeClient.backgroundMotionProgress = backgroundMotionProgress;
