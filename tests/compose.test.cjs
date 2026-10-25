@@ -353,3 +353,82 @@ test('HM-COMPOSE-FG: foreground props keep their own camera, keyframes and break
     const bad=demo();bad.fg=fg;assert.equal((await compose(bad)).ok,false,JSON.stringify(fg));
   }
 });
+
+test('HM-EXPOSURE-PARAM-FX: warm crush duration and craft times are authorable, and colored FX stay colored',async()=>{
+  const fx=read('presets/fx_presets.json');
+  const warm=fx.hooks.find(h=>h.id==='exposure_warm_crush');
+  const fist=fx.hooks.find(h=>h.id==='fist_pressure');
+  const leg=fx.hooks.find(h=>h.id==='leg_arc');
+  const tornado=fx.hooks.find(h=>h.id==='tornado_spiral');
+  assert.equal(warm.defaults.dur,0.10);
+  assert.deepEqual(warm.craft_demo_times_s,[2.8,7.3,12.5,17.5,22.8,29.7]);
+  assert.equal(warm.components.includes('hitstop_2f'),false);
+  assert.match(warm.source,/not grayscale or invert/i);
+  for(const id of ['exposure_warm_crush','fist_pressure','leg_arc','tornado_spiral']){
+    const info=HMComposeClient.classifyFxHooks([{type:id,t_rel:0.2}],fx);
+    assert.equal(info.mode,'live',id);
+    assert.equal(info.hasComposeOnly,false,id);
+  }
+  const infoStop=HMComposeClient.classifyFxHooks([{type:'hitstop_2f',t_rel:0.2}],fx);
+  assert.equal(infoStop.mode,'compose_only');
+  const plain=await compose(demo());
+  assert.equal(plain.duration_s,5);
+  assert.equal(plain.timeline.fx.exposure.length,0);
+  assert.equal(plain.timeline.fx.fist.length,0);
+  assert.equal(plain.timeline.overlays.length,0);
+  const s=demo();
+  s.atoms[0].fx_hooks=[
+    {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.16}},
+    {type:'fist_pressure',t_rel:0.2,params:{path:[[10,20],[30,40]]}},
+    {type:'leg_arc',t_rel:0.2,params:{}},
+    {type:'tornado_spiral',t_rel:0,t_rel_end:0.8,params:{path:[{x:100,y:200},{x:140,y:80}]}},
+  ];
+  const hooked=await compose(s);
+  assert.equal(hooked.ok,true,JSON.stringify(hooked.errors));
+  assert.equal(hooked.duration_s,5);
+  assert.deepEqual(hooked.timeline.fx.exposure,[[0.1,0.16]]);
+  assert.equal(hooked.timeline.fx.fist[0][0],0.1);
+  assert.equal(hooked.timeline.fx.fist[0][1],0.36);
+  assert.deepEqual(hooked.timeline.fx.fist[0][2],[[10,20],[30,40]]);
+  assert.deepEqual(hooked.timeline.fx.leg[0][2],leg.defaults.path);
+  assert.equal(hooked.timeline.fx.tornado[0][1],0.4);
+  assert.deepEqual(hooked.timeline.fx.tornado[0][2],[[100,200],[140,80]]);
+  const custom=demo();
+  custom.overlays=[{id:'crush-custom',kind:'exposure_warm_crush',t_start:4.25,t_end:4.4}];
+  const customOut=await compose(custom);
+  assert.equal(customOut.ok,true,JSON.stringify(customOut.errors));
+  assert.equal(customOut.timeline.overlays.length,1);
+  assert.equal(customOut.timeline.overlays[0].kind,'exposure_warm_crush');
+  assert.equal(customOut.timeline.overlays[0].t_start,4.25);
+  assert.equal(customOut.timeline.overlays[0].t_end,4.4);
+  const long=demo();
+  long.atoms=[Object.assign({},long.atoms[0],{duration_s:30,plates_needed:1,hero:Object.assign({},long.atoms[0].hero,{plates:['P01']})})];
+  long.overlays=warm.craft_demo_times_s.map(t=>({id:'crush-'+t,kind:'exposure_warm_crush',t_start:t,dur:0.10}));
+  long.overlays.push({id:'fist-follow',kind:'fist_pressure',t_start:2.8,t_end:3.16,path:[[400,400],[700,260]]});
+  long.overlays.push({id:'leg-whip',kind:'leg_arc',t_start:7.3,dur:0.28,path:[[900,500],[1100,180]]});
+  const crafted=await compose(long);
+  assert.equal(crafted.ok,true,JSON.stringify(crafted.errors));
+  assert.equal(crafted.duration_s,30);
+  const crush=crafted.timeline.overlays.filter(o=>o.kind==='exposure_warm_crush');
+  assert.deepEqual(crush.map(o=>o.t_start),warm.craft_demo_times_s);
+  assert.ok(crush.every(o=>Math.abs((o.t_end-o.t_start)-0.1)<1e-6));
+  assert.equal(HMMotionFx.collectProceduralOverlays(crafted.timeline.overlays,2.85).exposure.length,1);
+  assert.equal(HMMotionFx.collectProceduralOverlays(crafted.timeline.overlays,3).exposure.length,0);
+  assert.deepEqual(HMMotionFx.collectProceduralOverlays(crafted.timeline.overlays,2.9).fist[0][2],[[400,400],[700,260]]);
+  assert.equal(HMMotionFx.collectProceduralOverlays(crafted.timeline.overlays,7.4).leg.length,1);
+  assert.deepEqual(HMMotionFx.fxPointOnPath(fist.defaults.path,0),[430,390]);
+  assert.deepEqual(HMMotionFx.fxPointOnPath(fist.defaults.path,1),[760,250]);
+  assert.ok(HMMotionFx.fxPointOnPath(leg.defaults.path,0.5)[0]>leg.defaults.path[0][0]);
+  const px=new Uint8ClampedArray([220,220,220,255, 36,36,40,255, 225,6,0,255, 244,251,255,255, 185,220,255,255]);
+  const before=px.slice();
+  HMMotionFx.exposureWarmCrushPixels(px,0);
+  assert.deepEqual(px,before);
+  HMMotionFx.exposureWarmCrushPixels(px,1);
+  assert.ok(px[0]>px[2]+8,'highlights go warm-white, got '+px[0]+','+px[1]+','+px[2]);
+  assert.ok(px[4]<before[4]-8,'shadows crush toward black, got '+px[4]);
+  assert.deepEqual([px[8],px[9],px[10]],[225,6,0]);
+  assert.deepEqual([px[12],px[13],px[14]],[244,251,255]);
+  assert.deepEqual([px[16],px[17],px[18]],[185,220,255]);
+  assert.equal(px[3],255);
+  assert.equal(tornado.components[0],'tornado_spiral');
+});

@@ -628,6 +628,99 @@ async function ensureServer(urlStr){
     await p.getByRole('button',{name:'Close export',exact:true}).click();
     check('HM-COMPOSE-FG: foreground camera stays independent of background crop-pan and the clip camera, including offline HTML');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    for(const fxType of ['exposure_warm_crush','fist_pressure','leg_arc','tornado_spiral']){
+      await p.click(`[data-effect="${fxType}"]`);
+      assert.equal((await p.locator('#fxPreviewBadge').getAttribute('data-fx-mode')),'live-standin');
+      assert.match(await p.locator('#fxPreviewBadge').textContent(),new RegExp(fxType));
+      await settle();
+      assert.equal((await state()).project.show.atoms[0].fx_hooks[0].type,fxType);
+    }
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].params.dur,0.5);
+    await p.click('[data-effect="exposure_warm_crush"]');await settle();
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].params.dur,0.1);
+    assert.match(await p.locator('#fxHonestyNote').textContent(),/0\.10s/);
+    assert.match(await p.locator('#fxHonestyNote').textContent(),/does not gray/);
+    const punchPath=[[430,390],[610,300],[760,250]];
+    const kickPath=[[800,560],[1020,340],[1160,150]];
+    await p.evaluate(({punchPath,kickPath})=>{
+      HMStudio.editProject(project=>{
+        project.show.atoms[0].fx_hooks=[
+          {type:'fist_pressure',t_rel:0.2,params:{dur:0.36,path:punchPath}},
+          {type:'leg_arc',t_rel:0.2,params:{dur:0.28,path:kickPath}},
+          {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.10}},
+        ];
+        project.show.overlays=(project.show.overlays||[]).filter(o=>!o.editor_caption);
+      });
+    },{punchPath,kickPath});
+    await settle();
+    const composedFx=(await state()).composed.timeline.fx;
+    assert.deepEqual(composedFx.exposure,[[0.1,0.1]]);
+    assert.deepEqual(composedFx.fist[0][2],punchPath);
+    assert.deepEqual(composedFx.leg[0][2],kickPath);
+    const sampleFx=opts=>p.evaluate(opts=>{
+      const r=HMStudio.renderer;
+      r.render(opts.t,{onion:false,fxStandIn:false});
+      const g=document.getElementById('stage').getContext('2d');
+      function scan(x,y,w,h){
+        const data=g.getImageData(x,y,w,h).data;
+        let red=null,redS=-1,cold=null,coldS=-1;
+        for(let i=0;i<data.length;i+=4){
+          const R=data[i],G=data[i+1],B=data[i+2];
+          const rs=R-Math.max(G,B);
+          if(R>140&&G<90&&B<90&&rs>redS){redS=rs;red=[R,G,B];}
+          const cs=B-R;
+          if(B>R+4&&B>220&&G>190&&cs>coldS){coldS=cs;cold=[R,G,B];}
+        }
+        return {red,redS,cold,coldS};
+      }
+      const one=(x,y)=>Array.from(g.getImageData(x,y,1,1).data);
+      return {corner:one(24,24),core:one(462,360),blade:one(800,560),fist:scan(430,320,120,100),leg:scan(760,500,120,110)};
+    },opts);
+    const outside=await sampleFx({t:0.02});
+    const hit=await sampleFx({t:0.14});
+    assert.ok(hit.fist.redS>outside.fist.redS+80,'fist pressure should be redder than the plate: '+JSON.stringify({hit:hit.fist,outside:outside.fist,core:hit.core}));
+    assert.ok(hit.core[0]>180&&hit.core[1]<50&&hit.core[0]>hit.core[2]+80,'fist core: '+hit.core);
+    assert.ok(hit.blade[2]>220&&hit.blade[2]>hit.blade[0]+4,'leg blade: '+hit.blade);
+    assert.ok(hit.leg.cold,'cold-white leg arc missing at impact: '+JSON.stringify(hit.leg));
+    await p.evaluate(()=>HMStudio.editProject(project=>{project.show.atoms[0].fx_hooks=project.show.atoms[0].fx_hooks.filter(h=>h.type!=='exposure_warm_crush');}));
+    await settle();
+    const coloredOnly=await sampleFx({t:0.14});
+    assert.ok(coloredOnly.fist.red&&coloredOnly.leg.cold);
+    await p.evaluate(()=>HMStudio.editProject(project=>{
+      project.show.atoms[0].fx_hooks.push({type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.10}});
+    }));
+    await settle();
+    const crushed=await sampleFx({t:0.14});
+    assert.deepEqual(crushed.core,coloredOnly.core);
+    assert.deepEqual(crushed.blade,coloredOnly.blade);
+    assert.notDeepEqual(crushed.corner.slice(0,3),coloredOnly.corner.slice(0,3),'warm crush should move a neutral highlight: '+coloredOnly.corner+' -> '+crushed.corner);
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='true')await p.click('#onionToggle');
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='true')await p.click('#abToggle');
+    await p.evaluate(()=>HMStudio.renderAt(0.14));
+    await p.screenshot({path:path.join(out,'exposure-keeps-color.png'),fullPage:true});
+    await p.locator('#stage').screenshot({path:path.join(out,'exposure-fist-leg.png')});
+    await p.evaluate(()=>HMStudio.editProject(project=>{
+      project.show.atoms[0].fx_hooks=[
+        {type:'tornado_spiral',t_rel:0.1,params:{dur:0.4,path:[[640,460],[660,280]]}},
+        {type:'fist_pressure',t_rel:0.1,params:{dur:0.36,path:[[480,360],[700,280]]}},
+      ];
+    }));
+    await settle();
+    await p.evaluate(()=>HMStudio.renderAt(0.2));
+    await p.locator('#stage').screenshot({path:path.join(out,'tornado-and-fist.png')});
+    await p.click('#exportOpen');
+    const fxHtml=await downloadFrom('exportHtml','exposure-param-fx.html');
+    const fxHtmlText=fs.readFileSync(fxHtml,'utf8');
+    assert.match(fxHtmlText,/function exposureWarmCrushPixels/);
+    assert.match(fxHtmlText,/function drawFistPressure/);
+    assert.match(fxHtmlText,/function drawLegArc/);
+    assert.match(fxHtmlText,/function drawTornado/);
+    assert.doesNotMatch(fxHtmlText,/grayscale\(1\) contrast\(9\) invert\(1\)/);
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='false')await p.click('#abToggle');
+    check('HM-EXPOSURE-PARAM-FX: warm crush keeps the red fist and cold leg arc, and parametric FX preview in the composer');
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
