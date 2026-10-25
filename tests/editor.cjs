@@ -250,7 +250,7 @@ async function ensureServer(urlStr){
     await p.selectOption('#backgroundMotion','pan_right');await settle();
     const exportBeat=await motionPx(.95);
     await p.click('#exportOpen');const motionHtml=await downloadFrom('exportHtml','bg-motion.html');
-    assert.match(fs.readFileSync(motionHtml,'utf8'),/function backgroundMotionFrame/);
+    assert.match(fs.readFileSync(motionHtml,'utf8'),/function backgroundMotionFrame/);assert.match(fs.readFileSync(motionHtml,'utf8'),/function backgroundMotionProgress/);
     const motionOffline=await browser.newPage();const motionNet=[];await motionOffline.route(/^https?:/,r=>{motionNet.push(r.request().url());return r.abort();});
     await motionOffline.goto('file://'+motionHtml);await motionOffline.evaluate(()=>window.ready);await motionOffline.evaluate(()=>renderAt(.95));
     assert.deepEqual(await motionOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(40,40,1,1).data)),exportBeat.bg);assert.deepEqual(motionNet,[]);await motionOffline.close();
@@ -268,6 +268,63 @@ async function ensureServer(urlStr){
     assert.ok(flushEnd.bg[0]-flushStart.bg[0]>25,'pan right still slides when the left edge is flush: '+flushStart.bg+' -> '+flushEnd.bg);
     await p.check('#backgroundCropLock');
     check('HM-BG-MOTION: window pan moves inside the crop in preview and exported HTML; a flush edge is disabled and explained');
+    // HM-BG-PAN-CONT: one show clock keeps pan_right sliding across clip cuts. The sprite stays planted.
+    await p.evaluate(async()=>{
+      const make=draw=>{const c=document.createElement('canvas');c.width=1280;c.height=720;draw(c.getContext('2d'));return c.toDataURL('image/png');};
+      const sprite=make(g=>{g.fillStyle='#1eb446';g.fillRect(0,0,1280,720);});
+      const gradient=make(g=>{const img=g.getImageData(0,0,1280,720),d=img.data;for(let y=0;y<720;y++)for(let x=0;x<1280;x++){const i=(y*1280+x)*4;d[i]=Math.round(255*x/1279);d[i+1]=40;d[i+2]=255-d[i];d[i+3]=255;}g.putImageData(img,0,0);});
+      const current=HMStudio.project,key='embedded/bg-pan-cont/layout.json';
+      const atoms=[0,1,2,3].map(i=>({id:'pan-'+i,label:'Pan '+(i+1),kind:'duo',duration_s:1,plates_needed:1,pose_mode:'hero',hero:{layout_source:key,plates:['P0'+(i+1)]},camera:{preset:'static_hold',params:{s:{type:'const',v:1},x:{type:'const',v:0},y:{type:'const',v:0}}},fx_hooks:[]}));
+      const plates={};for(let i=1;i<=4;i++)plates['P0'+i]={parts:[{src:sprite,x:560,y:280,w:160,h:160}]};
+      await HMStudio.load({version:1,show:{...current.show,show_id:'bg-pan-cont',title:'Continuous background pan',atoms,bg:{base:gradient,crops:{base:{x:.05,y:.2,w:.5,h:.5}}},overlays:[]},layouts:{[key]:plates},media:[],assets:{}});
+    });
+    await settle();if((await state()).onion)await p.click('#onionToggle');
+    await p.click('.timeline-clip[data-index="0"]');await p.selectOption('#backgroundScope','project');await settle();
+    if(!(await p.locator('#backgroundMotionDetails').evaluate(el=>el.open)))await p.locator('#backgroundMotionDetails > summary').click();
+    await p.selectOption('#backgroundMotion','pan_right');await p.fill('#backgroundMotionAmount','1');await p.locator('#backgroundMotionAmount').dispatchEvent('change');await settle();
+    assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'show');
+    assert.equal(await p.locator('#backgroundMotionClock').evaluate(el=>el.selectedOptions[0].textContent),'Continuous (show)');
+    assert.match(await p.locator('#backgroundMotionNote').textContent(),/Slides the crop window/);
+    assert.match(await p.locator('#backgroundMotionNote').textContent(),/Continuous \(show\)/);
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal(await p.locator('#backgroundMotionClock').isDisabled(),false);
+    const scrub=async t=>p.evaluate(t=>{
+      HMStudio.renderAt(t);
+      const g=document.getElementById('stage').getContext('2d');
+      const tl=HMStudio.composed.timeline,motion=tl.bg.motion;
+      const atom=tl.atoms.find(a=>t>=a.t0&&t<a.t1)||tl.atoms.at(-1);
+      const u=backgroundMotionProgress(motion,t,{duration:tl.duration_s,atomT0:atom.t0,atomT1:atom.t1});
+      const crop=backgroundMotionFrame(tl.bg.crops.base,'pan_right',motion.amount,u).crop;
+      return {bg:Array.from(g.getImageData(24,80,1,1).data),fg:Array.from(g.getImageData(640,360,1,1).data),x:crop.x,u};
+    },t);
+    const times=[.5,1.5,2.5,3.5],samples=[];
+    for(const t of times)samples.push(await scrub(t));
+    for(let i=1;i<samples.length;i++){
+      assert.ok(samples[i].x>samples[i-1].x+.02,'crop.x across atoms: '+samples.map(s=>s.x).join(','));
+      assert.ok(samples[i].bg[0]>samples[i-1].bg[0]+8,'red channel across atoms: '+samples.map(s=>s.bg[0]).join(','));
+    }
+    for(const s of samples)assert.deepEqual(s.fg,[30,180,70,255],'sprite rides pan: '+s.fg);
+    for(const b of [1,2,3]){
+      const before=await scrub(b-.02),after=await scrub(b+.02);
+      assert.ok(after.x+1e-4>=before.x,'restart at '+b+': '+before.x+' -> '+after.x);
+    }
+    await p.selectOption('#backgroundMotionClock','per_atom');await settle();
+    assert.equal(await p.locator('#backgroundMotionClock').evaluate(el=>el.selectedOptions[0].textContent),'Per clip');
+    assert.match(await p.locator('#backgroundMotionNote').textContent(),/Per clip/);
+    assert.equal((await state()).project.show.bg.motion.clock,'per_atom');
+    const late=await scrub(.95),restarted=await scrub(1.05);
+    assert.ok(restarted.x<late.x-.05,'per clip should restart crop.x: '+late.x+' -> '+restarted.x);
+    assert.ok(restarted.bg[0]+8<late.bg[0],'per clip should restart the pixels: '+late.bg+' -> '+restarted.bg);
+    assert.deepEqual(restarted.fg,[30,180,70,255]);
+    await p.selectOption('#backgroundMotionClock','show');await settle();
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
+    await p.locator('#backgroundMotionDetails').screenshot({path:path.join(out,'pan-cont-travel.png')});
+    for(const t of times){
+      await scrub(t);
+      await p.locator('#stage').screenshot({path:path.join(out,`pan-cont-${t.toFixed(1)}s.png`)});
+    }
+    check('HM-BG-PAN-CONT: continuous show pan keeps crop.x moving across three clip cuts; per clip restarts; sprite stays planted');
     // Restore the clip-background project the following checks build on.
     await p.setInputFiles('#projectInput',clipProjectPath);await p.waitForFunction(()=>HMStudio.project.show.show_id==='background-feature-test');await settle();if((await state()).onion)await p.click('#onionToggle');await p.click('.timeline-clip[data-index="0"]');await settle();
     const beforeBuiltIn=(await state()).project;

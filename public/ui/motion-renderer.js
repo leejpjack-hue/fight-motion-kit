@@ -4,7 +4,8 @@
 // Pan/zoom slide that window when the source has room outside it.
 // A crop that already fills the source (no 2% margin) uses the older zoom-and-slide,
 // so a full-frame background still moves. A pan into an edge with no source holds still.
-// `u` is beat progress 0..1 (the renderer passes the smoothed value).
+// `u` is eased clock progress 0..1. Pan/zoom default to show time so the window
+// keeps sliding across clips; per_atom/legacy restarts inside the current clip.
 function backgroundMotionFrame(crop, preset, amount, u) {
   const MIN = 0.02, SLACK = 0.02, round4 = v => Math.round(v * 10000) / 10000;
   function clamp(rect) {
@@ -45,6 +46,36 @@ function backgroundMotionFrame(crop, preset, amount, u) {
   }
   if (p === 'pull_out') return { mode: 'window', crop: clamp({ x: home.x - slack.left * a * t, y: home.y - slack.up * a * t, w: home.w + (slack.left + slack.right) * a * t, h: home.h + (slack.up + slack.down) * a * t }), reason: '' };
   return { mode: 'still', crop: home, reason: 'This background motion is not available.' };
+}
+// Show-time progress for pan/zoom. `clock` is {duration, atomT0, atomT1}.
+// Default is one move from t=0 through the show. motion.span ({t0,t1} or [t0,t1])
+// or motion.t0/t1 is an authored window. clock "per_atom" or "legacy" restarts each clip.
+function backgroundMotionProgress(motion, t, clock) {
+  const m = motion && typeof motion === 'object' ? motion : {};
+  const c = clock && typeof clock === 'object' ? clock : {};
+  const smooth = u => u * u * (3 - 2 * u);
+  const clamp01 = v => Math.min(1, Math.max(0, v));
+  const atomT0 = Number.isFinite(+c.atomT0) ? +c.atomT0 : 0;
+  const atomT1 = Number.isFinite(+c.atomT1) ? +c.atomT1 : atomT0;
+  const perAtom = () => {
+    const d = atomT1 - atomT0;
+    return smooth(clamp01(d > 1e-9 ? (+t - atomT0) / d : 0));
+  };
+  const preset = m.preset || 'follow_camera';
+  if (preset === 'follow_camera' || preset === 'static') return perAtom();
+  const mode = m.clock === 'per_atom' || m.clock === 'legacy' ? 'per_atom'
+    : m.clock === 'show' ? 'show'
+    : m.clock === 'span' || m.span != null || m.t0 != null || m.t1 != null ? 'span'
+    : 'show';
+  if (mode === 'per_atom') return perAtom();
+  let t0 = 0, t1 = Number.isFinite(+c.duration) ? +c.duration : NaN;
+  if (mode === 'span') {
+    if (Array.isArray(m.span)) { t0 = +m.span[0]; t1 = +m.span[1]; }
+    else if (m.span && typeof m.span === 'object') { t0 = +m.span.t0; t1 = +m.span.t1; }
+    else { t0 = +m.t0; t1 = +m.t1; }
+  }
+  if (!Number.isFinite(t0) || !Number.isFinite(t1) || !(t1 > t0)) return perAtom();
+  return smooth(clamp01((+t - t0) / (t1 - t0)));
 }
 function backgroundMotionSupport(crop) {
   const out = {};
@@ -124,8 +155,8 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function drawBackground(l, t) {
     const b=backgroundFor(l);if(!b.src)return;
-    const a=timeline.atoms.find(a=>a.id===l.atom),u=a?ease(clamp((t-a.t0)/(a.t1-a.t0),0,1),'smooth'):0;
-    const m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
+    const a=timeline.atoms.find(a=>a.id===l.atom),m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
+    const u=backgroundMotionProgress(m,t,a?{duration:timeline.duration_s,atomT0:a.t0,atomT1:a.t1}:{duration:timeline.duration_s,atomT0:t,atomT1:t});
     const frame=backgroundMotionFrame(b.crop,preset,amount,u);
     if(frame.mode==='inset'){
       const extra=amount*.25;let s=1,x=0,y=0;
@@ -404,9 +435,11 @@ function createMotionRenderer(canvas, assets = {}) {
 }
 const hmRoot = typeof globalThis !== 'undefined' ? globalThis : window;
 hmRoot.backgroundMotionFrame = backgroundMotionFrame;
+hmRoot.backgroundMotionProgress = backgroundMotionProgress;
 hmRoot.backgroundMotionSupport = backgroundMotionSupport;
 if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;
+  hmRoot.HMComposeClient.backgroundMotionProgress = backgroundMotionProgress;
   hmRoot.HMComposeClient.backgroundMotionSupport = backgroundMotionSupport;
 }
 hmRoot.HMMotion = createMotionRenderer;

@@ -51,6 +51,11 @@
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
     const blocked=!!(support[preset]&&!support[preset].ok);
     $('backgroundMotionAmount').disabled=['follow_camera','static'].includes(preset)||blocked;
+    const clockSel=$('backgroundMotionClock'),hasSpan=!!(m&&(m.span!=null||(m.t0!=null&&m.t1!=null)));
+    const legacy=m?.clock==='per_atom'||m?.clock==='legacy';
+    const clock=legacy?'per_atom':(m?.clock==='span'||(hasSpan&&m?.clock!=='show'))?'span':'show';
+    clockSel.querySelector('option[value="span"]').hidden=clock!=='span';
+    clockSel.value=clock;clockSel.disabled=['follow_camera','static'].includes(preset);
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
     const note=motionCopy(cropNow,preset);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
@@ -91,20 +96,43 @@
   on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{clearCrop(s,c,key);if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
   on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;delete s.crop;}));
   $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked;edit(context(),s=>s.key_white=enabled);});
+  function travelNote(){
+    const clock=$('backgroundMotionClock').value;
+    if(clock==='per_atom')return ' Per clip: the move restarts at each cut.';
+    if(clock==='span')return ' Continuous (span): one move over the authored times.';
+    return ' Continuous (show): one move across the whole show.';
+  }
   function motionCopy(crop,preset){
     const info=(backgroundMotionSupport(crop)||{})[preset]||{ok:false,reason:'This background motion is not available.'};
     if(!info.ok)return {blocked:true,text:info.reason};
     if(preset==='follow_camera')return {blocked:false,text:'Follows the clip camera, including shake, inside this crop.'};
     if(preset==='static')return {blocked:false,text:'Holds the crop still while the clip camera and shake move the plates.'};
-    const mode=backgroundMotionFrame(crop,preset,1,1).mode;
-    if(mode==='inset')return {blocked:false,text:'This crop fills the source, so the move zooms in slightly and slides that view.'};
-    if(String(preset).startsWith('pan_'))return {blocked:false,text:'Slides the crop window across the source. Plates stay put.'};
-    if(preset==='push_in')return {blocked:false,text:'Zooms into the crop by tightening the window.'};
-    if(preset==='pull_out')return {blocked:false,text:'Zooms out by widening the window across the rest of the source.'};
+    const mode=backgroundMotionFrame(crop,preset,1,1).mode,travel=travelNote();
+    if(mode==='inset')return {blocked:false,text:'This crop fills the source, so the move zooms in slightly and slides that view.'+travel};
+    if(String(preset).startsWith('pan_'))return {blocked:false,text:'Slides the crop window across the source. Plates stay put.'+travel};
+    if(preset==='push_in')return {blocked:false,text:'Zooms into the crop by tightening the window.'+travel};
+    if(preset==='pull_out')return {blocked:false,text:'Zooms out by widening the window across the rest of the source.'+travel};
     return {blocked:false,text:''};
   }
-  function changeMotion(){const motion={preset:$('backgroundMotion').value,amount:Number($('backgroundMotionAmount').value)};edit(context(),s=>s.motion=motion);}
-  $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);
+  function currentMotion(){
+    const p=S.project;if(!p)return null;
+    const c=context(),a=p.show.atoms.find(x=>x.id===c.atomId);
+    return c.scope==='clip'?a?.background?.motion||null:p.show.bg?.motion||null;
+  }
+  function changeMotion(){
+    const preset=$('backgroundMotion').value,amount=Number($('backgroundMotionAmount').value),clock=$('backgroundMotionClock').value,prev=currentMotion()||{};
+    const motion={preset,amount};
+    if(!['follow_camera','static'].includes(preset)){
+      if(clock==='per_atom')motion.clock='per_atom';
+      else if(clock==='span'){
+        motion.clock='span';
+        if(prev.span!=null)motion.span=JSON.parse(JSON.stringify(prev.span));
+        else if(Number.isFinite(+prev.t0)&&Number.isFinite(+prev.t1)){motion.t0=+prev.t0;motion.t1=+prev.t1;}
+      }else motion.clock='show';
+    }
+    edit(context(),s=>s.motion=motion);
+  }
+  $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);$('backgroundMotionClock').onchange=safe(changeMotion);
   on('resetBackgroundMotion',()=>edit(context(),s=>delete s.motion));
   // ---- HM-BG-CROP: editable crop region (drag-rect, corner handles, numeric fields) ----
   const C=window.HMComposeClient,pct=v=>Math.round(v*1000)/10;

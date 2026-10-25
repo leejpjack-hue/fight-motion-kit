@@ -388,13 +388,28 @@
     const floor = show.floor_y != null ? show.floor_y : 684;
     const bg = show.bg || {};
     const backgroundMoves = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out'];
+    function validBackgroundMotion(m) {
+      if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
+      if (!backgroundMoves.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1) return false;
+      if (m.clock !== undefined && !['show','per_atom','legacy','span'].includes(m.clock)) return false;
+      const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
+      if (m.span !== undefined) {
+        const span = m.span;
+        const t0 = Array.isArray(span) ? span[0] : span && span.t0;
+        const t1 = Array.isArray(span) ? span[1] : span && span.t1;
+        if (!pairOk(t0, t1)) return false;
+      }
+      if ((m.t0 !== undefined || m.t1 !== undefined) && !pairOk(m.t0, m.t1)) return false;
+      if (m.clock === 'span' && m.span === undefined && m.t0 === undefined) return false;
+      return true;
+    }
     function validateBackground(value, label) {
       if (value == null) return;
       if (typeof value !== 'object' || Array.isArray(value)) { errors.push(label + ': invalid background settings'); return; }
       if (value.src !== undefined && value.src !== null && (typeof value.src !== 'string' || !value.src)) errors.push(label + ': background image must be a path or null');
       if (value.key_white !== undefined && typeof value.key_white !== 'boolean') errors.push(label + ': white-backdrop setting must be true or false');
       const m = value.motion;
-      if (m !== undefined && (!m || !backgroundMoves.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1)) errors.push(label + ': invalid background motion');
+      if (m !== undefined && !validBackgroundMotion(m)) errors.push(label + ': invalid background motion');
       if (value.crop !== undefined && !validBackgroundCrop(value.crop)) errors.push(label + ': invalid background crop');
       if (value.crops !== undefined) {
         if (!value.crops || typeof value.crops !== 'object' || Array.isArray(value.crops)) errors.push(label + ': invalid background crops');
