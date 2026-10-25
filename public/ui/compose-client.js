@@ -343,6 +343,135 @@
     return out;
   }
 
+  // HM-COMPOSE-FG: show.fg is a prop layer with its own camera. Presets include
+  // parallax/nudge, which are not background crop-window moves.
+  const FG_CAM_PRESETS = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
+  function validFgSpan(cam) {
+    const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
+    if (cam.clock !== undefined && !['show', 'per_atom', 'legacy', 'span'].includes(cam.clock)) return false;
+    if (cam.span !== undefined) {
+      const span = cam.span;
+      const t0 = Array.isArray(span) ? span[0] : span && span.t0;
+      const t1 = Array.isArray(span) ? span[1] : span && span.t1;
+      if (!pairOk(t0, t1)) return false;
+    }
+    if ((cam.t0 !== undefined || cam.t1 !== undefined) && !pairOk(cam.t0, cam.t1)) return false;
+    if (cam.clock === 'span' && cam.span === undefined && cam.t0 === undefined) return false;
+    return true;
+  }
+  function validFgCam(cam) {
+    if (!cam || typeof cam !== 'object' || Array.isArray(cam)) return false;
+    if (cam.preset !== undefined && !FG_CAM_PRESETS.includes(cam.preset)) return false;
+    if (cam.amount !== undefined && (!Number.isFinite(cam.amount) || cam.amount < 0 || cam.amount > 1)) return false;
+    if (cam.nudge !== undefined) {
+      if (!cam.nudge || typeof cam.nudge !== 'object' || Array.isArray(cam.nudge)) return false;
+      for (const k of ['x', 'y', 's']) if (cam.nudge[k] !== undefined && !Number.isFinite(cam.nudge[k])) return false;
+    }
+    return validFgSpan(cam);
+  }
+  function normalizeFgCam(cam) {
+    const c = cam || {};
+    const n = c.nudge || {};
+    const out = {
+      preset: c.preset || 'static',
+      amount: round4(c.amount == null ? 0 : +c.amount),
+      nudge: {
+        x: round4(n.x == null ? 0 : +n.x),
+        y: round4(n.y == null ? 0 : +n.y),
+        s: round4(n.s == null ? 0 : +n.s),
+      },
+    };
+    if (c.clock) out.clock = c.clock;
+    if (c.span !== undefined) out.span = deepClone(c.span);
+    if (c.t0 !== undefined) out.t0 = +c.t0;
+    if (c.t1 !== undefined) out.t1 = +c.t1;
+    return out;
+  }
+  function normalizeForeground(show, dur, errors, warns) {
+    if (show.fg == null) return null;
+    const fg = show.fg;
+    if (typeof fg !== 'object' || Array.isArray(fg)) {
+      errors.push('foreground: invalid layer');
+      return null;
+    }
+    const hasCam = fg.cam != null;
+    const hasProps = fg.props != null;
+    if (!hasCam && !hasProps) return null;
+    if (hasProps && !Array.isArray(fg.props)) {
+      errors.push('foreground: props must be a list');
+      return null;
+    }
+    if (hasCam && !validFgCam(fg.cam)) {
+      errors.push('foreground: invalid camera');
+      return null;
+    }
+    const seen = new Set();
+    const props = [];
+    let failed = false;
+    (fg.props || []).forEach((raw, i) => {
+      const label = 'foreground prop ' + ((raw && raw.id) || (i + 1));
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { errors.push(label + ': invalid'); failed = true; return; }
+      const id = raw.id != null ? String(raw.id) : '';
+      if (!id) { errors.push(label + ': missing id'); failed = true; return; }
+      if (seen.has(id)) { errors.push(label + ': duplicate id'); failed = true; return; }
+      seen.add(id);
+      if (typeof raw.src !== 'string' || !raw.src) { errors.push(label + ': missing src'); failed = true; return; }
+      const num = (v, d) => (v == null ? d : +v);
+      const x = num(raw.x, 640), y = num(raw.y, 560), scale = num(raw.scale, 1), z = num(raw.z, 0);
+      if (![x, y, scale, z].every(Number.isFinite) || scale < 0.05 || scale > 8) { errors.push(label + ': invalid placement'); failed = true; return; }
+      const t0 = num(raw.t_start, 0);
+      const t1 = raw.t_end == null ? dur : +raw.t_end;
+      if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0 || t0 < 0) { errors.push(label + ': invalid time window'); failed = true; return; }
+      if (t0 >= dur) { warns.push(label + ': starts after show end, skipped'); return; }
+      const prop = {
+        id, src: raw.src,
+        x: round4(x), y: round4(y), scale: round4(scale), z: round4(z),
+        t_start: round4(t0), t_end: round4(Math.min(t1, dur)),
+      };
+      if (raw.kf != null) {
+        if (!Array.isArray(raw.kf)) { errors.push(label + ': keyframes must be a list'); failed = true; return; }
+        const kf = [];
+        for (const k of raw.kf) {
+          if (!k || typeof k !== 'object' || Array.isArray(k) || !Number.isFinite(+k.t)) { errors.push(label + ': invalid keyframe'); failed = true; return; }
+          const row = {
+            t: round4(+k.t),
+            x: round4(k.x == null ? x : +k.x),
+            y: round4(k.y == null ? y : +k.y),
+            scale: round4(k.scale == null ? scale : +k.scale),
+          };
+          if (![row.x, row.y, row.scale].every(Number.isFinite) || row.scale < 0.05 || row.scale > 8) { errors.push(label + ': invalid keyframe'); failed = true; return; }
+          kf.push(row);
+        }
+        kf.sort((a, b) => a.t - b.t);
+        const uniq = [];
+        for (const row of kf) {
+          if (uniq.length && Math.abs(uniq[uniq.length - 1].t - row.t) < 1e-4) uniq[uniq.length - 1] = row;
+          else uniq.push(row);
+        }
+        if (uniq.length) prop.kf = uniq;
+      }
+      if (raw.effect != null && raw.effect !== 'none') {
+        const eff = typeof raw.effect === 'string' ? { type: raw.effect, t: 0 } : raw.effect;
+        if (!eff || typeof eff !== 'object' || Array.isArray(eff)) { errors.push(label + ': invalid effect'); failed = true; return; }
+        if (eff.type !== 'none' && eff.type != null) {
+          if (eff.type !== 'break') { errors.push(label + ': unknown effect'); failed = true; return; }
+          const et = eff.t == null ? 0 : +eff.t;
+          if (!Number.isFinite(et) || et < 0) { errors.push(label + ': invalid break time'); failed = true; return; }
+          prop.effect = { type: 'break', t: round4(et) };
+          if (eff.broken_src != null) {
+            if (typeof eff.broken_src !== 'string' || !eff.broken_src) { errors.push(label + ': broken image must be a path'); failed = true; return; }
+            prop.effect.broken_src = eff.broken_src;
+          }
+        }
+      }
+      props.push(prop);
+    });
+    if (failed || errors.some(e => e.startsWith('foreground'))) return null;
+    if (!props.length && !hasCam) return null;
+    props.sort((a, b) => a.z - b.z || String(a.id).localeCompare(String(b.id)));
+    return { cam: normalizeFgCam(hasCam ? fg.cam : { preset: 'static', amount: 0 }), props };
+  }
+
   async function fetchJson(url) {
     const r = await fetch(url);
     if (!r.ok) throw new Error('fetch ' + url + ' → ' + r.status);
@@ -630,6 +759,8 @@
     }
 
     const overlays = normalizeOverlays(show, dur, warns);
+    const fg = normalizeForeground(show, dur, errors, warns);
+    if (errors.length) return { ok: false, errors, warnings: warns };
 
     const timeline = {
       show_id: show.show_id,
@@ -651,6 +782,7 @@
       plates,
       fx,
       overlays,
+      ...(fg ? { fg } : {}),
       cam_keys_cols: ['t', 'x', 'y', 's', 'r'],
       cam_keys: keys,
       stats: {

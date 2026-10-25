@@ -18,6 +18,7 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 .bg-crop-handle{position:absolute;width:12px;height:12px;background:var(--accent);border:1px solid #101315;border-radius:2px}
 .bg-crop-handle[data-handle=nw]{left:-2px;top:-2px;cursor:nwse-resize}.bg-crop-handle[data-handle=ne]{right:-2px;top:-2px;cursor:nesw-resize}
 .bg-crop-handle[data-handle=sw]{left:-2px;bottom:-2px;cursor:nesw-resize}.bg-crop-handle[data-handle=se]{right:-2px;bottom:-2px;cursor:nwse-resize}
+.foreground-panel{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}.foreground-panel select,.foreground-panel input{font-size:10px}.foreground-panel .background-actions{margin-top:6px}.foreground-panel .text-button{font-size:10px;padding:4px 0}.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.fg-grid-3{grid-template-columns:1fr 1fr 1fr}.fg-grid label{font-size:9px;color:var(--muted)}.fg-grid input{display:block;margin-top:3px;padding:5px}.fg-cam{margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}.fg-kf-list{display:flex;flex-direction:column;gap:3px;margin-top:4px}.fg-kf-list button{font-size:9px;text-align:left;padding:3px 6px}#fgFields[hidden]{display:none!important}
 .bg-crop-controls{margin-top:10px}.bg-crop-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .bg-crop-head output{font:10px ui-monospace,SFMono-Regular,monospace;color:var(--mint)}
 .bg-crop-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px}
