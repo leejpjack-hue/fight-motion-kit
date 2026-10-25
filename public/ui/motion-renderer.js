@@ -85,6 +85,66 @@ function backgroundMotionSupport(crop) {
   }
   return out;
 }
+// HM-COMPOSE-FG: foreground props are placed sprites with their own camera.
+// This transform does not read show.bg.motion or the character-stage camera.
+// `parallax` / pan_* slide the layer; `nudge` is a constant offset; `static` holds.
+const FG_CAM_PRESETS = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
+function fgCameraFrame(cam, t, clock) {
+  const c = cam && typeof cam === 'object' ? cam : {};
+  // Inlined so the exported HTML player does not depend on an outer binding.
+  const presets = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
+  const preset = presets.includes(c.preset) ? c.preset : 'static';
+  const amount = c.amount == null || !Number.isFinite(+c.amount) ? 0 : Math.min(1, Math.max(0, +c.amount));
+  const nudge = c.nudge && typeof c.nudge === 'object' ? c.nudge : {};
+  const nx = Number.isFinite(+nudge.x) ? +nudge.x : 0;
+  const ny = Number.isFinite(+nudge.y) ? +nudge.y : 0;
+  const ns = Number.isFinite(+nudge.s) ? +nudge.s : 0;
+  const round4 = v => Math.round(v * 10000) / 10000;
+  const motionPreset = preset === 'static' || preset === 'nudge' ? 'static' : preset;
+  const u = backgroundMotionProgress({ preset: motionPreset, amount, clock: c.clock, span: c.span, t0: c.t0, t1: c.t1 }, t, clock || {});
+  const drift = u * 2 - 1;
+  const span = 240 * amount;
+  let x = nx, y = ny, s = 1 + ns;
+  if (preset === 'parallax' || preset === 'pan_left') x += -span * drift;
+  else if (preset === 'pan_right') x += span * drift;
+  else if (preset === 'pan_up') y += -span * drift;
+  else if (preset === 'pan_down') y += span * drift;
+  else if (preset === 'push_in') s *= 1 + 0.35 * amount * u;
+  else if (preset === 'pull_out') s *= 1 + 0.35 * amount * (1 - u);
+  return { x: round4(x), y: round4(y), s: round4(Math.max(0.05, s)), preset, amount: round4(amount), u: round4(u) };
+}
+function fgPropPose(prop, t) {
+  const base = {
+    x: Number.isFinite(+prop?.x) ? +prop.x : 640,
+    y: Number.isFinite(+prop?.y) ? +prop.y : 560,
+    scale: Number.isFinite(+prop?.scale) ? +prop.scale : 1,
+  };
+  const kfs = (Array.isArray(prop?.kf) ? prop.kf : [])
+    .filter(k => k && Number.isFinite(+k.t))
+    .map(k => ({
+      t: +k.t,
+      x: Number.isFinite(+k.x) ? +k.x : base.x,
+      y: Number.isFinite(+k.y) ? +k.y : base.y,
+      scale: Number.isFinite(+k.scale) ? +k.scale : base.scale,
+    }))
+    .sort((a, b) => a.t - b.t);
+  if (!kfs.length) return base;
+  const time = +t || 0;
+  if (kfs.length === 1 || time <= kfs[0].t) return { x: kfs[0].x, y: kfs[0].y, scale: kfs[0].scale };
+  const last = kfs[kfs.length - 1];
+  if (time >= last.t) return { x: last.x, y: last.y, scale: last.scale };
+  let i = 1;
+  while (i < kfs.length && time > kfs[i].t) i++;
+  const a = kfs[i - 1], b = kfs[i], u = (time - a.t) / (b.t - a.t);
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, scale: a.scale + (b.scale - a.scale) * u };
+}
+function fgBreakState(prop, t) {
+  const src = prop && prop.src;
+  const effect = prop && prop.effect;
+  if (!effect || effect.type !== 'break' || !(+t >= +effect.t)) return { broken: false, src, age: 0, procedural: false };
+  const age = +t - +effect.t;
+  return { broken: true, src: effect.broken_src || src, age, procedural: !effect.broken_src };
+}
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
@@ -114,6 +174,7 @@ function createMotionRenderer(canvas, assets = {}) {
     Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
     Object.values(timeline.bg || {}).filter(p => typeof p === 'string').forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
+    (timeline.fg?.props || []).forEach(p => { if (p.src) paths.add(p.src); if (p.effect?.broken_src) paths.add(p.effect.broken_src); });
     const imgCache = (typeof window !== 'undefined' && (window.__hmImageCache ||= new Map())) || null;
     const keyCache = (typeof window !== 'undefined' && (window.__hmKeyedCache ||= new WeakMap())) || null;
     await Promise.all([...paths].map(async path => {
@@ -165,6 +226,39 @@ function createMotionRenderer(canvas, assets = {}) {
       if(preset.startsWith('pan_')){s=1+extra;const v=1-2*u;if(preset==='pan_left')x=640*extra*v;if(preset==='pan_right')x=-640*extra*v;if(preset==='pan_up')y=360*extra*v;if(preset==='pan_down')y=-360*extra*v;}
       paintBackground(b.src,frame.crop,x,y,s*zoom);
     }else paintBackground(b.src,frame.crop,0,0,zoom);
+  }
+  function drawFgBreak(im, age) {
+    const w = im.width, h = im.height, mid = Math.max(1, Math.floor(w / 2));
+    const gap = 10 + Math.min(16, Math.max(0, age) * 70);
+    const drop = Math.min(10, Math.max(0, age) * 28);
+    ctx.drawImage(im, 0, 0, mid, h, -w / 2 - gap, -h / 2, mid, h);
+    ctx.drawImage(im, mid, 0, w - mid, h, -w / 2 + mid + gap, -h / 2 + drop, w - mid, h);
+    ctx.fillStyle = '#140c08';
+    ctx.fillRect(-5, -h / 2, 10, h);
+  }
+  function drawForeground(t) {
+    const fg = timeline.fg;
+    if (!fg || !fg.props || !fg.props.length) return;
+    const cam = fgCameraFrame(fg.cam, t, { duration: timeline.duration_s, atomT0: 0, atomT1: timeline.duration_s });
+    const list = fg.props.filter(p => t >= p.t_start && t < p.t_end).sort((a, b) => (a.z || 0) - (b.z || 0) || String(a.id).localeCompare(String(b.id)));
+    if (!list.length) return;
+    ctx.save();
+    ctx.translate(640 + cam.x, 360 + cam.y);
+    ctx.scale(cam.s, cam.s);
+    ctx.translate(-640, -360);
+    for (const p of list) {
+      const pose = fgPropPose(p, t);
+      const br = fgBreakState(p, t);
+      const im = images.get(br.src);
+      if (!im) continue;
+      ctx.save();
+      ctx.translate(pose.x, pose.y);
+      ctx.scale(pose.scale || 1, pose.scale || 1);
+      if (br.procedural) drawFgBreak(im, br.age);
+      else ctx.drawImage(im, -im.width / 2, -im.height / 2);
+      ctx.restore();
+    }
+    ctx.restore();
   }
   function drawScene(l) {
     const b=backgroundFor(l);
@@ -252,6 +346,7 @@ function createMotionRenderer(canvas, assets = {}) {
       ctx.restore();
     }
     ctx.restore();
+    drawForeground(t);
     // Deterministic particles & live stand-ins avoid a different random result on every frame/export.
     (fxSource.dust || []).forEach(([h, k = 1]) => {
       const d = fxDelta(h, 0.55);
@@ -437,9 +532,17 @@ const hmRoot = typeof globalThis !== 'undefined' ? globalThis : window;
 hmRoot.backgroundMotionFrame = backgroundMotionFrame;
 hmRoot.backgroundMotionProgress = backgroundMotionProgress;
 hmRoot.backgroundMotionSupport = backgroundMotionSupport;
+hmRoot.FG_CAM_PRESETS = FG_CAM_PRESETS;
+hmRoot.fgCameraFrame = fgCameraFrame;
+hmRoot.fgPropPose = fgPropPose;
+hmRoot.fgBreakState = fgBreakState;
 if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;
   hmRoot.HMComposeClient.backgroundMotionProgress = backgroundMotionProgress;
   hmRoot.HMComposeClient.backgroundMotionSupport = backgroundMotionSupport;
+  hmRoot.HMComposeClient.fgCameraFrame = fgCameraFrame;
+  hmRoot.HMComposeClient.fgPropPose = fgPropPose;
+  hmRoot.HMComposeClient.fgBreakState = fgBreakState;
+  hmRoot.HMComposeClient.FG_CAM_PRESETS = FG_CAM_PRESETS;
 }
 hmRoot.HMMotion = createMotionRenderer;

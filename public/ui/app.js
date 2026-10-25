@@ -59,7 +59,7 @@
     }
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
     if(p.assets)for(const value of Object.values(p.assets))if(typeof value!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,/.test(value))throw new Error('Embedded assets must be image data, not external URLs.');
-    Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); Object.values(p.show.bg||{}).filter(v=>typeof v==='string').forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);});
+    Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); Object.values(p.show.bg||{}).filter(v=>typeof v==='string').forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);}); if(p.show.fg)pathsSafe(p.show.fg);
   }
   async function builtIn(id) {
     const show = await json('/shows/' + id + '.json'); const layouts = {};

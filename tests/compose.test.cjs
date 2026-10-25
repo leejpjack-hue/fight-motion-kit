@@ -280,3 +280,76 @@ test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
   for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}
   for(const crops of [{base:{x:0,y:0,w:0,h:0}},{other:{x:0,y:0,w:1,h:1}},[]]){const s=demo();s.bg={...(s.bg||{}),crops};assert.equal((await compose(s)).ok,false,JSON.stringify(crops));}
 });
+test('HM-COMPOSE-FG: foreground props keep their own camera, keyframes and break, and shows without fg stay unchanged',async()=>{
+  const fx=read('presets/fx_presets.json');
+  assert.equal(fx.hooks.some(h=>/fire/i.test(h.id)),false);
+  const plain=await compose(demo());
+  assert.equal(plain.ok,true);
+  assert.equal(plain.duration_s,5);
+  assert.equal(Object.hasOwn(plain.timeline,'fg'),false);
+  const show=demo();
+  show.bg={...(show.bg||{}),motion:{preset:'pan_right',amount:1,clock:'show'}};
+  show.atoms[0].camera={preset:'eye_orbit',nudge:{x:40,y:10,s:0.05}};
+  const sameCam=await compose(JSON.parse(JSON.stringify(show)));
+  show.fg={
+    cam:{preset:'parallax',amount:1,nudge:{x:12,y:-4,s:0.1}},
+    props:[{
+      id:'chair',src:'props/chair.png',x:200,y:160,scale:1,z:20,
+      t_start:0,t_end:4,
+      kf:[{t:0,x:100,y:80,scale:1},{t:2,x:300,y:180,scale:2}],
+      effect:{type:'break',t:2,broken_src:'props/chair-broken.png'},
+    },{
+      id:'desk',src:'props/desk.png',x:400,y:500,scale:0.5,z:5,t_start:1,t_end:9,
+    }],
+  };
+  const withFg=await compose(show);
+  assert.equal(withFg.ok,true,JSON.stringify(withFg.errors));
+  assert.equal(withFg.duration_s,5);
+  assert.deepEqual(withFg.timeline.bg.motion,sameCam.timeline.bg.motion);
+  assert.deepEqual(withFg.timeline.atoms.map(a=>a.cam),sameCam.timeline.atoms.map(a=>a.cam));
+  const moved=demo();
+  moved.bg={...(moved.bg||{}),motion:{preset:'pan_left',amount:.2}};
+  moved.atoms[0].camera={preset:'static_hold'};
+  moved.fg=JSON.parse(JSON.stringify(show.fg));
+  moved.fg.cam.amount=.25;
+  const retuned=await compose(moved);
+  assert.equal(retuned.ok,true);
+  assert.notDeepEqual(retuned.timeline.bg.motion,withFg.timeline.bg.motion);
+  assert.notDeepEqual(retuned.timeline.atoms[0].cam,withFg.timeline.atoms[0].cam);
+  assert.equal(retuned.timeline.fg.cam.amount,.25);
+  assert.deepEqual(retuned.timeline.fg.props,withFg.timeline.fg.props);
+  assert.deepEqual(withFg.timeline.fg.props.map(p=>p.id),['desk','chair']);
+  assert.equal(withFg.timeline.fg.props[1].effect.broken_src,'props/chair-broken.png');
+  assert.equal(withFg.timeline.fg.props[0].t_end,5);
+  const pose=HMComposeClient.fgPropPose(withFg.timeline.fg.props[1],1);
+  assert.equal(pose.x,200);assert.equal(pose.y,130);assert.equal(pose.scale,1.5);
+  const clock={duration:5,atomT0:0,atomT1:5};
+  const start=HMComposeClient.fgCameraFrame(withFg.timeline.fg.cam,0,clock);
+  const end=HMComposeClient.fgCameraFrame(withFg.timeline.fg.cam,5,clock);
+  assert.ok(start.x>end.x+100,'parallax travels on its own: '+start.x+' -> '+end.x);
+  assert.equal(start.preset,'parallax');
+  const bgStart=HMComposeClient.backgroundMotionFrame({x:.1,y:.1,w:.5,h:.5},'pan_right',1,0);
+  const bgEnd=HMComposeClient.backgroundMotionFrame({x:.1,y:.1,w:.5,h:.5},'pan_right',1,1);
+  assert.notEqual(bgStart.crop.x,bgEnd.crop.x);
+  assert.equal(HMComposeClient.fgCameraFrame(withFg.timeline.fg.cam,1,clock).x,HMComposeClient.fgCameraFrame(withFg.timeline.fg.cam,1,clock).x);
+  const held=HMComposeClient.fgCameraFrame({preset:'static',amount:1,nudge:{x:8,y:-3,s:0.2}},0,clock);
+  const heldEnd=HMComposeClient.fgCameraFrame({preset:'static',amount:1,nudge:{x:8,y:-3,s:0.2}},5,clock);
+  assert.equal(held.x,heldEnd.x);assert.equal(held.y,heldEnd.y);assert.equal(held.s,heldEnd.s);
+  assert.equal(held.x,8);assert.equal(held.s,1.2);
+  const intact=HMComposeClient.fgBreakState(withFg.timeline.fg.props[1],1.99);
+  const broken=HMComposeClient.fgBreakState(withFg.timeline.fg.props[1],2);
+  assert.equal(intact.broken,false);assert.equal(intact.src,'props/chair.png');
+  assert.equal(broken.broken,true);assert.equal(broken.src,'props/chair-broken.png');assert.equal(broken.procedural,false);
+  const crack=HMComposeClient.fgBreakState({src:'props/chair.png',effect:{type:'break',t:2}},2.2);
+  assert.equal(crack.procedural,true);assert.ok(crack.age>HMComposeClient.fgBreakState({src:'props/chair.png',effect:{type:'break',t:2}},2).age);
+  for(const fg of [
+    {cam:{preset:'orbit',amount:.2}},
+    {cam:{preset:'parallax',amount:2}},
+    {props:[{id:'a'}]},
+    {props:[{id:'a',src:'p.png',t_start:2,t_end:1}]},
+    {props:[{id:'a',src:'p.png',kf:[{t:'no'}]}]},
+    {props:[{id:'a',src:'p.png',effect:{type:'fire',t:1}}]},
+  ]){
+    const bad=demo();bad.fg=fg;assert.equal((await compose(bad)).ok,false,JSON.stringify(fg));
+  }
+});
