@@ -62,7 +62,7 @@ test('clip backgrounds override only their own plates and keep camera curves int
   assert.deepEqual(result.timeline.bg.motion,show.bg.motion);assert.deepEqual(result.timeline.atoms.map(a=>a.cam),before.timeline.atoms.map(a=>a.cam));
 });
 test('invalid background motion and image settings fail explicitly',async()=>{
-  for(const background of [{src:42},{key_white:'true'},{motion:{preset:'missing',amount:.5}},{motion:{preset:'pan_left',amount:Infinity}},{motion:{preset:'push_in',amount:-1}}]){
+  for(const background of [{src:42},{key_white:'true'},{motion:{preset:'missing',amount:.5}},{motion:{preset:'pan_left',amount:Infinity}},{motion:{preset:'push_in',amount:-1}},{motion:{preset:'pan_left',amount:.5,clock:'rewind'}},{motion:{preset:'pan_right',amount:.4,span:{t0:2,t1:1}}},{motion:{preset:'pan_right',amount:.4,clock:'span'}}]){
     const show=demo();show.atoms[0].background=background;assert.equal((await compose(show)).ok,false);
   }
   const show=demo();show.bg.motion={preset:'push_in',amount:2};assert.equal((await compose(show)).ok,false);
@@ -232,6 +232,49 @@ test('HM-BG-MOTION: crop and motion compile together without changing plate timi
   const r=await compose(s);assert.equal(r.ok,true);assert.equal(r.duration_s,before.duration_s);assert.deepEqual(r.timeline.plates.map(p=>[p.t0,p.t1]),before.timeline.plates.map(p=>[p.t0,p.t1]));
   assert.deepEqual(r.timeline.bg.crops.base,{x:.2,y:.1,w:.5,h:.5});assert.deepEqual(r.timeline.bg.motion,{preset:'pan_right',amount:.8});
   const first=Object.values(r.layout).find(l=>l.atom===s.atoms[0].id);assert.deepEqual(first.background.crop,{x:.1,y:.2,w:.4,h:.4});assert.deepEqual(first.background.motion,{preset:'pan_left',amount:1});
+});
+test('HM-BG-PAN-CONT: show, per-clip, and span clocks compile unchanged',async()=>{
+  for(const motion of [
+    {preset:'pan_right',amount:.4,clock:'show'},
+    {preset:'pan_left',amount:1,clock:'per_atom'},
+    {preset:'push_in',amount:.2,clock:'legacy'},
+    {preset:'pull_out',amount:.5,span:[1,3]},
+    {preset:'pan_down',amount:.3,t0:.5,t1:2.5},
+    {preset:'pan_up',amount:.6,clock:'span',span:{t0:.2,t1:1.2}}
+  ]){
+    const s=demo();s.bg={...(s.bg||{}),motion};const r=await compose(s);
+    assert.equal(r.ok,true,JSON.stringify(motion)+' '+(r.errors||[]).join(';'));
+    assert.deepEqual(r.timeline.bg.motion,motion);assert.equal(r.duration_s,5);
+  }
+});
+test('HM-BG-PAN-CONT: pan_right crop.x stays monotonic across atom boundaries',async()=>{
+  const progress=HMComposeClient.backgroundMotionProgress,frame=HMComposeClient.backgroundMotionFrame;
+  const s=demo();s.bg={...(s.bg||{}),crops:{base:{x:.1,y:.15,w:.4,h:.4}},motion:{preset:'pan_right',amount:1}};
+  const r=await compose(s);assert.equal(r.ok,true);assert.ok(r.timeline.atoms.length>=4);
+  const crop=r.timeline.bg.crops.base,motion=r.timeline.bg.motion,dur=r.duration_s,atoms=r.timeline.atoms;
+  const xAt=(m,t,a)=>frame(crop,'pan_right',1,progress(m,t,{duration:dur,atomT0:a.t0,atomT1:a.t1})).crop.x;
+  const xs=[];
+  for(const a of atoms)for(const t of [a.t0+.02,(a.t0+a.t1)/2,a.t1-.02])xs.push(xAt(motion,t,a));
+  for(let i=1;i<xs.length;i++)assert.ok(xs[i]>=xs[i-1]-1e-6,'crop.x rewound: '+xs.join(','));
+  assert.ok(xs.at(-1)>xs[0]+.05,'show travel collapsed: '+xs[0]+' -> '+xs.at(-1));
+  for(let i=1;i<atoms.length;i++){
+    const prev=atoms[i-1],next=atoms[i];
+    const before=xAt(motion,prev.t1-1e-4,prev),after=xAt(motion,next.t0+1e-4,next);
+    assert.ok(after+1e-4>=before,'boundary '+i+' rewound '+before+' -> '+after);
+  }
+  const legacy={...motion,clock:'per_atom'};
+  const end=xAt(legacy,atoms[0].t1-.02,atoms[0]),restart=xAt(legacy,atoms[1].t0+.02,atoms[1]);
+  assert.ok(restart<end-.05,'per clip should restart: '+end+' -> '+restart);
+  assert.equal(progress({...motion,clock:'legacy'},atoms[0].t0+.01,{duration:dur,atomT0:atoms[0].t0,atomT1:atoms[0].t1}),progress(legacy,atoms[0].t0+.01,{duration:dur,atomT0:atoms[0].t0,atomT1:atoms[0].t1}));
+  const spanned={preset:'pan_right',amount:1,span:{t0:atoms[1].t0,t1:atoms[2].t1}};
+  assert.equal(progress(spanned,atoms[0].t0+.1,{duration:dur,atomT0:atoms[0].t0,atomT1:atoms[0].t1}),0);
+  const mid=(atoms[1].t0+atoms[2].t1)/2;
+  assert.equal(progress(spanned,mid,{duration:dur,atomT0:atoms[1].t0,atomT1:atoms[1].t1}),.5);
+  assert.equal(progress(spanned,atoms[3].t0+.05,{duration:dur,atomT0:atoms[3].t0,atomT1:atoms[3].t1}),1);
+  const explicit={preset:'pan_right',amount:1,clock:'show',span:{t0:0,t1:1}};
+  const shown=progress(explicit,dur,{duration:dur,atomT0:0,atomT1:1});
+  assert.equal(shown,1);
+  assert.ok(progress(explicit,.5,{duration:dur,atomT0:0,atomT1:.5})>0);
 });
 test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
   for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}
