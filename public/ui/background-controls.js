@@ -50,12 +50,18 @@
     for(const opt of motionSel.options){const info=support[opt.value];opt.disabled=!!(info&&!info.ok);opt.title=info&&!info.ok?info.reason:'';}
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
     const blocked=!!(support[preset]&&!support[preset].ok);
-    $('backgroundMotionAmount').disabled=['follow_camera','static'].includes(preset)||blocked;
-    const clockSel=$('backgroundMotionClock'),hasSpan=!!(m&&(m.span!=null||(m.t0!=null&&m.t1!=null)));
+    const travel=traveling(preset);
+    $('backgroundMotionAmount').disabled=!travel||blocked;
+    const clockSel=$('backgroundMotionClock'),pair=readSpan(m);
     const legacy=m?.clock==='per_atom'||m?.clock==='legacy';
-    const clock=legacy?'per_atom':(m?.clock==='span'||(hasSpan&&m?.clock!=='show'))?'span':'show';
-    clockSel.querySelector('option[value="span"]').hidden=clock!=='span';
-    clockSel.value=clock;clockSel.disabled=['follow_camera','static'].includes(preset);
+    const clock=legacy?'per_atom':(m?.clock==='span'||(pair&&m?.clock!=='show'))?'span':'show';
+    clockSel.querySelector('option[value="span"]').hidden=!travel;
+    clockSel.value=clock;clockSel.disabled=!travel;
+    const continuous=travel&&clock!=='per_atom';
+    $('backgroundSpanControls').hidden=!continuous;
+    const authored=clock==='span'&&!!pair,t0=authored?pair[0]:0,t1=authored?pair[1]:showSeconds(p);
+    ['backgroundSpanT0','backgroundSpanT1'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i?t1:t0);});
+    $('backgroundSpanValue').textContent=authored?`${Number(t0).toFixed(2)}–${Number(t1).toFixed(2)}s`:'Whole show';
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
     const note=motionCopy(cropNow,preset);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
@@ -96,10 +102,22 @@
   on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{clearCrop(s,c,key);if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
   on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;delete s.crop;}));
   $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked;edit(context(),s=>s.key_white=enabled);});
+  const traveling=preset=>!['follow_camera','static'].includes(preset);
+  function showSeconds(p){return Math.round((p.show.atoms||[]).reduce((s,a)=>s+(+a.duration_s||0),0)*10000)/10000;}
+  function readSpan(m){
+    if(!m)return null;
+    const span=m.span,t0=Array.isArray(span)?span[0]:span&&typeof span==='object'?span.t0:m.t0,t1=Array.isArray(span)?span[1]:span&&typeof span==='object'?span.t1:m.t1;
+    return Number.isFinite(+t0)&&Number.isFinite(+t1)&&+t1>+t0?[+t0,+t1]:null;
+  }
+  function spanFromFields(){
+    const t0=Math.round(Number($('backgroundSpanT0').value)*10000)/10000,t1=Math.round(Number($('backgroundSpanT1').value)*10000)/10000;
+    if(!Number.isFinite(t0)||!Number.isFinite(t1)||t0<0||!(t1>t0))throw Error('Span end must be after its start.');
+    return {t0,t1};
+  }
   function travelNote(){
     const clock=$('backgroundMotionClock').value;
     if(clock==='per_atom')return ' Per clip: the move restarts at each cut.';
-    if(clock==='span')return ' Continuous (span): one move over the authored times.';
+    if(clock==='span'){const t0=Number($('backgroundSpanT0').value),t1=Number($('backgroundSpanT1').value);return Number.isFinite(t0)&&t1>t0?` Continuous (span): one move from ${t0.toFixed(2)}s to ${t1.toFixed(2)}s.`:' Continuous (span): one move over the authored times.';}
     return ' Continuous (show): one move across the whole show.';
   }
   function motionCopy(crop,preset){
@@ -114,25 +132,21 @@
     if(preset==='pull_out')return {blocked:false,text:'Zooms out by widening the window across the rest of the source.'+travel};
     return {blocked:false,text:''};
   }
-  function currentMotion(){
-    const p=S.project;if(!p)return null;
-    const c=context(),a=p.show.atoms.find(x=>x.id===c.atomId);
-    return c.scope==='clip'?a?.background?.motion||null:p.show.bg?.motion||null;
-  }
   function changeMotion(){
-    const preset=$('backgroundMotion').value,amount=Number($('backgroundMotionAmount').value),clock=$('backgroundMotionClock').value,prev=currentMotion()||{};
-    const motion={preset,amount};
-    if(!['follow_camera','static'].includes(preset)){
-      if(clock==='per_atom')motion.clock='per_atom';
-      else if(clock==='span'){
-        motion.clock='span';
-        if(prev.span!=null)motion.span=JSON.parse(JSON.stringify(prev.span));
-        else if(Number.isFinite(+prev.t0)&&Number.isFinite(+prev.t1)){motion.t0=+prev.t0;motion.t1=+prev.t1;}
-      }else motion.clock='show';
-    }
-    edit(context(),s=>s.motion=motion);
+    try{
+      const preset=$('backgroundMotion').value,amount=Number($('backgroundMotionAmount').value),clock=$('backgroundMotionClock').value;
+      const motion={preset,amount};
+      if(traveling(preset)){
+        if(clock==='per_atom')motion.clock='per_atom';
+        else if(clock==='span'){motion.clock='span';motion.span=spanFromFields();}
+        else motion.clock='show';
+      }
+      edit(context(),s=>s.motion=motion);
+    }catch(e){refresh();throw e;}
   }
+  function changeSpan(){$('backgroundMotionClock').value='span';changeMotion();}
   $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);$('backgroundMotionClock').onchange=safe(changeMotion);
+  $('backgroundSpanT0').onchange=safe(changeSpan);$('backgroundSpanT1').onchange=safe(changeSpan);
   on('resetBackgroundMotion',()=>edit(context(),s=>delete s.motion));
   // ---- HM-BG-CROP: editable crop region (drag-rect, corner handles, numeric fields) ----
   const C=window.HMComposeClient,pct=v=>Math.round(v*1000)/10;

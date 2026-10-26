@@ -43,6 +43,34 @@ test('HM-CAM-10: roll nudge (r), cam intensity scaling, dual segments, and expan
   assert.equal(r.timeline.fx.trails.length,1);
 });
 
+test('HM-CAM-10R: composed timeline places each fx hook at t0 + t_rel * duration',async()=>{
+  const s=demo();
+  s.atoms.forEach(a=>{a.fx_hooks=[];});
+  s.atoms[0].fx_hooks=[
+    {type:'hit_orange',t_rel:0.2},
+    {type:'shake',t_rel:0.55,params:{amp:4,dur:0.1}},
+    {type:'flash_orange',t_rel:0.9}
+  ];
+  s.atoms[1].fx_hooks=[{type:'hit_pink'}];
+  s.atoms[2].fx_hooks=['shake'];
+  const r=await compose(s);
+  assert.equal(r.ok,true);
+  const at=(rel,i)=>{
+    const start=s.atoms.slice(0,i).reduce((sum,a)=>sum+a.duration_s,0);
+    return Math.round((start+rel*s.atoms[i].duration_s)*10000)/10000;
+  };
+  assert.deepEqual(r.timeline.atoms[0].fx_hooks.map(h=>h.t_rel),[0.2,0.55,0.9]);
+  assert.equal(r.timeline.atoms[1].fx_hooks[0].t_rel,0.08);
+  assert.equal(r.timeline.atoms[2].fx_hooks[0].t_rel,0.08);
+  assert.deepEqual(r.timeline.atoms[3].fx_hooks,[]);
+  assert.ok(r.timeline.fx.hits.some(h=>h[0]===at(0.2,0)&&h[1]==='#ff8a1e'));
+  assert.ok(r.timeline.fx.shake.some(h=>h[0]===at(0.55,0)));
+  assert.ok(r.timeline.fx.flash.some(h=>h[0]===at(0.9,0)&&h[1]==='#ff8a1e'));
+  assert.ok(r.timeline.fx.hits.some(h=>h[0]===at(0.08,1)&&h[1]==='#ff3fa4'));
+  assert.ok(r.timeline.fx.shake.some(h=>h[0]===at(0.08,2)));
+  assert.deepEqual(r.timeline.fx.hits.map(h=>h[0]).sort((a,b)=>a-b),[at(0.2,0),at(0.08,1)].sort((a,b)=>a-b));
+});
+
 test('ten-second continuation preserves the original five-second prefix and adds layered background plates',async()=>{const original=demo(),extended=read('shows/daiyu-wang-ten-seconds.json');assert.deepEqual(extended.atoms.slice(0,8),original.atoms);const [a,b]=await Promise.all([compose(original),compose(extended)]);assert.equal(b.ok,true);assert.equal(b.duration_s,10);assert.equal(b.timeline.plates.length,16);assert.deepEqual(b.timeline.plates.slice(0,8),a.timeline.plates);assert.ok(Object.values(b.layout).slice(8).every(l=>!l.full&&l.parts?.length));assert.equal(b.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');});
 
 test('replacing backgrounds preserves named base/swap layout choices and white-key preference',async()=>{
@@ -275,6 +303,26 @@ test('HM-BG-PAN-CONT: pan_right crop.x stays monotonic across atom boundaries',a
   const shown=progress(explicit,dur,{duration:dur,atomT0:0,atomT1:1});
   assert.equal(shown,1);
   assert.ok(progress(explicit,.5,{duration:dur,atomT0:0,atomT1:.5})>0);
+});
+test('HM-BG-SPAN-UI: authored t0–t1 holds outside the window; show clock stays the default',async()=>{
+  const progress=HMComposeClient.backgroundMotionProgress,frame=HMComposeClient.backgroundMotionFrame;
+  const s=demo();s.bg={...(s.bg||{}),crops:{base:{x:.1,y:.1,w:.4,h:.4}},motion:{preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}}};
+  const r=await compose(s);assert.equal(r.ok,true,JSON.stringify(r.errors));assert.equal(r.duration_s,5);
+  assert.deepEqual(r.timeline.bg.motion,s.bg.motion);
+  const crop=r.timeline.bg.crops.base,dur=r.duration_s,motion=r.timeline.bg.motion;
+  const clock={duration:dur,atomT0:0,atomT1:1};
+  const xAt=t=>frame(crop,'pan_right',1,progress(motion,t,clock)).crop.x;
+  const start=xAt(0);
+  assert.equal(progress(motion,.5,clock),0);assert.equal(xAt(.5),start);
+  assert.equal(progress(motion,2,clock),.5);assert.ok(xAt(2)>start+.05);
+  assert.equal(progress(motion,3.5,clock),1);assert.ok(xAt(3.5)>xAt(2));
+  const showDefault={preset:'pan_right',amount:1};
+  assert.equal(progress(showDefault,0,clock),0);
+  assert.ok(progress(showDefault,.5,clock)>0,'missing clock still travels on the show');
+  assert.equal(progress(showDefault,dur,clock),1);
+  const explicitShow={preset:'pan_right',amount:1,clock:'show',span:{t0:1,t1:3}};
+  assert.ok(progress(explicitShow,.5,clock)>0,'clock show ignores an attached span');
+  assert.ok(progress(explicitShow,3.5,clock)<1);
 });
 test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
   for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}
