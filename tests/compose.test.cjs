@@ -602,3 +602,53 @@ test('HM-FX-LOC-SIZE: parametric FX location (x/y) and size (scale) default clea
   assert.deepEqual(Array.from(strip.slice(0,4)),[220,220,220,255],'pixel outside bounds untouched');
   assert.ok(strip[4]>strip[6]+8,'pixel inside bounds warm-crushed');
 });
+
+test('HM-FX-PATH-EDIT: authored fx path persists, omitted path uses stock, and preview resolution matches compose',async()=>{
+  const stock={
+    fist_pressure:[[430,390],[610,300],[760,250]],
+    leg_arc:[[800,560],[1020,340],[1160,150]],
+    tornado_spiral:[[640,480],[660,300]],
+  };
+  for(const [type,path] of Object.entries(stock)){
+    assert.deepEqual(HMComposeClient.stockFxPath(type),path,type);
+    assert.deepEqual(HMComposeClient.resolveFxPath(type,undefined),path,type);
+    assert.deepEqual(HMComposeClient.resolveFxPath(type,[]),path,type);
+    assert.equal(HMComposeClient.normalizeFxPath([]),null,type);
+    assert.equal(HMComposeClient.normalizeFxPath([[10,20]]),null,type+' one point');
+    assert.deepEqual(HMMotionFx.fxPathOrStock(type,null),path,type);
+    assert.deepEqual(HMMotionFx.fxPathOrStock(type,[]),path,type);
+  }
+  const custom=[[160,560],[160,560],[240,520]];
+  assert.deepEqual(HMComposeClient.normalizeFxPath(custom),custom);
+  assert.deepEqual(HMComposeClient.resolveFxPath('fist_pressure',[{x:160,y:560},{x:240,y:520}]),[[160,560],[240,520]]);
+  assert.deepEqual(HMMotionFx.fxPathOrStock('tornado_spiral',[{x:12,y:34},{x:56,y:78}]),[[12,34],[56,78]]);
+  const plain=await compose(demo());
+  assert.equal(plain.duration_s,5);
+  const show=demo();
+  show.atoms[0].fx_hooks=[
+    {type:'fist_pressure',t_rel:0.2,params:{dur:0.36,path:custom,x:0,y:0,scale:1}},
+    {type:'leg_arc',t_rel:0.2,params:{dur:0.28}},
+    {type:'tornado_spiral',t_rel:0.2,params:{path:[{x:100,y:200},{x:140,y:80}]}},
+  ];
+  const out=await compose(show);
+  assert.equal(out.ok,true,JSON.stringify(out.errors));
+  assert.equal(out.duration_s,5);
+  assert.deepEqual(out.timeline.plates.map(p=>[p.t0,p.t1]),plain.timeline.plates.map(p=>[p.t0,p.t1]));
+  assert.equal(show.atoms[0].fx_hooks[1].params.path,undefined,'omitted leg path stays omitted on the show');
+  assert.deepEqual(out.timeline.fx.fist[0][2],custom);
+  assert.deepEqual(out.timeline.fx.leg[0][2],stock.leg_arc);
+  assert.deepEqual(out.timeline.fx.tornado[0][2],[[100,200],[140,80]]);
+  assert.deepEqual(out.timeline.atoms[0].fx_hooks[0].params.path,custom);
+  assert.equal(out.timeline.atoms[0].fx_hooks[0].type,'fist_pressure');
+  assert.equal(out.timeline.atoms[0].fx_hooks[0].params.dur,0.36);
+  assert.equal(out.timeline.atoms[0].fx_hooks[0].params.x,0);
+  assert.equal(out.timeline.atoms[0].fx_hooks[0].params.scale,1);
+  assert.equal(out.timeline.fx.fist[0][0],0.1);
+  assert.equal(out.timeline.fx.fist[0][1],0.36);
+  assert.equal(out.timeline.fx.leg[0][1],0.28);
+  const moved=demo();
+  moved.atoms[0].fx_hooks=[{type:'fist_pressure',t_rel:0.2,params:{path:custom,x:40,y:-10,scale:1.25}}];
+  const movedOut=await compose(moved);
+  assert.deepEqual(movedOut.timeline.fx.fist[0][2],custom,'placement does not rewrite the authored path');
+  assert.deepEqual(movedOut.timeline.fx.fist[0][3],{x:40,y:-10,scale:1.25});
+});
