@@ -141,6 +141,7 @@ function fgPropPose(prop, t) {
 function fgBreakState(prop, t) {
   const src = prop && prop.src;
   const effect = prop && prop.effect;
+  if (prop && prop.slot === 'overlay') return { broken: false, src, age: 0, procedural: false };
   if (!effect || effect.type !== 'break' || !(+t >= +effect.t)) return { broken: false, src, age: 0, procedural: false };
   const age = +t - +effect.t;
   return { broken: true, src: effect.broken_src || src, age, procedural: !effect.broken_src };
