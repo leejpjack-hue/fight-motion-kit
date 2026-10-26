@@ -2201,6 +2201,393 @@
     },
     "overlays": []
    }
+  },
+  {
+   "path": "shows/street-old-city.json",
+   "show": {
+    "show_id": "street-old-city",
+    "title": "Daiyu × Xifeng · Old-city street",
+    "duration_target_s": 5,
+    "floor_y": 684,
+    "grounded": true,
+    "parity_mode": true,
+    "compose_mode": "parity",
+    "chars": {
+     "L": {
+      "name": "Lin Daiyu"
+     },
+     "R": {
+      "name": "Wang Xifeng"
+     }
+    },
+    "bg": {
+     "base": "assets/daiyu-wang-continuation/rooftop-dusk.png"
+    },
+    "overlays": [],
+    "atoms": [
+     {
+      "id": "street-01",
+      "label": "Kick retract",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "straight"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P09"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": -4,
+         "b": 4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": [
+       {
+        "type": "dust",
+        "t_rel": 0.05,
+        "params": {
+         "k": 0.45
+        }
+       }
+      ]
+     },
+     {
+      "id": "street-02",
+      "label": "Slip inside",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "straight"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P10"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": 4,
+         "b": -4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": []
+     },
+     {
+      "id": "street-03",
+      "label": "Body counter",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "clash"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P11"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": -4,
+         "b": 4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": [
+       {
+        "type": "shake",
+        "t_rel": 0.1,
+        "params": {
+         "amp": 4,
+         "dur": 0.16
+        }
+       }
+      ]
+     },
+     {
+      "id": "street-04",
+      "label": "Parry and turn",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "straight"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P12"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": 4,
+         "b": -4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": []
+     },
+     {
+      "id": "street-05",
+      "label": "Hook meets guard",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "clash"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P13"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": -4,
+         "b": 4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": [
+       {
+        "type": "shake",
+        "t_rel": 0.1,
+        "params": {
+         "amp": 4,
+         "dur": 0.16
+        }
+       }
+      ]
+     },
+     {
+      "id": "street-06",
+      "label": "Low sweep evasion",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "straight"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P14"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": 4,
+         "b": -4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": [
+       {
+        "type": "dust",
+        "t_rel": 0.05,
+        "params": {
+         "k": 0.45
+        }
+       }
+      ]
+     },
+     {
+      "id": "street-07",
+      "label": "Final fist clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "clash"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P15"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1.035,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": -4,
+         "b": 4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": [
+       {
+        "type": "shake",
+        "t_rel": 0.1,
+        "params": {
+         "amp": 7,
+         "dur": 0.16
+        }
+       }
+      ]
+     },
+     {
+      "id": "street-08",
+      "label": "Guarded standoff",
+      "kind": "duo",
+      "duration_s": 1,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+       "family": "fight",
+       "beat_class": "guard_recover"
+      },
+      "hero": {
+       "layout_source": "assets/daiyu-wang-continuation/layout.json",
+       "plates": [
+        "P16"
+       ]
+      },
+      "camera": {
+       "preset": "static_hold",
+       "params": {
+        "s": {
+         "type": "lerp",
+         "a": 1.02,
+         "b": 1,
+         "ease": "smooth"
+        },
+        "x": {
+         "type": "lerp",
+         "a": 4,
+         "b": -4
+        },
+        "y": {
+         "type": "const",
+         "v": 0
+        }
+       }
+      },
+      "fx_hooks": []
+     }
+    ],
+    "meta": {
+     "description": "Lean street sample. Reuses continuation plates P09-P16 and the shipped night-city background. No new plates.",
+     "source_show_id": "daiyu-wang-ten-seconds",
+     "source_plates": "P09-P16",
+     "source_bg": "assets/daiyu-wang-continuation/rooftop-dusk.png"
+    }
+   }
   }
  ],
  "uploads": [],

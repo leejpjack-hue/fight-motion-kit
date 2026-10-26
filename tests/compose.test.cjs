@@ -73,6 +73,25 @@ test('HM-CAM-10R: composed timeline places each fx hook at t0 + t_rel * duration
 
 test('ten-second continuation preserves the original five-second prefix and adds layered background plates',async()=>{const original=demo(),extended=read('shows/daiyu-wang-ten-seconds.json');assert.deepEqual(extended.atoms.slice(0,8),original.atoms);const [a,b]=await Promise.all([compose(original),compose(extended)]);assert.equal(b.ok,true);assert.equal(b.duration_s,10);assert.equal(b.timeline.plates.length,16);assert.deepEqual(b.timeline.plates.slice(0,8),a.timeline.plates);assert.ok(Object.values(b.layout).slice(8).every(l=>!l.full&&l.parts?.length));assert.equal(b.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');});
 
+test('street sample opens eight existing continuation plates for five seconds without new art',async()=>{
+  const street=read('shows/street-old-city.json');
+  const catalog=read('catalog.json');
+  const five=demo();
+  assert.equal(street.show_id,'street-old-city');
+  assert.equal(five.show_id,'daiyu-wang-five-seconds');
+  assert.deepEqual(five.atoms.map(a=>a.hero.plates[0]),['P01','P02','P03','P04','P05','P06','P07','P08']);
+  assert.ok(catalog.shows.some(s=>s.path==='shows/street-old-city.json'&&s.show?.show_id==='street-old-city'));
+  const result=await compose(street);
+  assert.equal(result.ok,true,JSON.stringify(result.errors));
+  assert.equal(result.duration_s,5);
+  assert.deepEqual(Object.values(result.layout).map(l=>l.source_plate),['P09','P10','P11','P12','P13','P14','P15','P16']);
+  assert.ok(Object.values(result.layout).every(l=>!l.full&&l.parts.length&&l.parts.every(p=>p.src.startsWith('assets/daiyu-wang-continuation/P'))));
+  assert.equal(result.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');
+  const paths=new Set([street.bg.base, ...street.atoms.map(a=>a.hero.layout_source), ...Object.values(result.layout).flatMap(l=>l.parts.map(p=>p.src))]);
+  for(const p of paths)assert.equal(fs.existsSync('public/'+p),true,p);
+  assert.equal(fs.existsSync('public/assets/street-old-city'),false);
+});
+
 test('replacing backgrounds preserves named base/swap layout choices and white-key preference',async()=>{
   const show=demo();show.atoms=show.atoms.slice(0,2);show.bg={base:'backgrounds/new-base.png',swap:'backgrounds/new-swap.png',swap_t:0,key_white:true,aliases:{base:['old-roof'],swap:['old-sunset']}};
   const layout=read(show.atoms[0].hero.layout_source);layout.P01.bg='old-roof.png';layout.P02.bg='old-sunset';
