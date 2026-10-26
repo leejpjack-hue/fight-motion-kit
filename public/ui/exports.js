@@ -26,8 +26,8 @@
   }
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;
-    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
+    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';}));
   on('openProject',()=>$('projectInput').click());
