@@ -53,3 +53,16 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 .cam-chain-box .slider-label{margin-top:10px}
 .cam-chain-box select{font-size:11px}
 .cam-chain-box .text-button{margin-top:6px}
+.fx-path-box{margin-top:10px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#14181b}
+.fx-path-actions{display:flex;gap:8px;flex-shrink:0}
+.fx-path-actions .text-button{font-size:10px;padding:0}
+.fx-path-points{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.fx-path-points li{display:grid;grid-template-columns:14px minmax(0,1fr) minmax(0,1fr) auto;gap:4px;align-items:end}
+.fx-path-points .fx-path-idx{font:600 9px ui-monospace,SFMono-Regular,monospace;color:var(--accent);padding-bottom:6px}
+.fx-path-points label{font-size:9px;color:var(--muted);min-width:0}
+.fx-path-points input{display:block;width:100%;font-size:11px;padding:4px;margin-top:2px}
+.fx-path-points .text-button{font-size:12px;padding:4px;line-height:1}
+.fx-path-overlay{position:absolute;z-index:4;pointer-events:none}
+.fx-path-overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.fx-path-handle{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid var(--accent);background:#101315;color:var(--accent);font:700 9px/14px ui-monospace,SFMono-Regular,monospace;padding:0;text-align:center;pointer-events:auto;cursor:grab;touch-action:none}
+.fx-path-handle:active{cursor:grabbing}
