@@ -24,10 +24,11 @@
     project.assets=assets;
     return {project,result,assets};
   }
+  const exportIds = ['exportHtml','exportVideo','exportFrames','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'];
   async function task(fn) {
-    if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;
-    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
+    if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;
+    exportIds.forEach(id=>$(id).disabled=true);
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();exportIds.forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';}));
   on('openProject',()=>$('projectInput').click());
@@ -47,7 +48,20 @@
       })());if(opened)report('Project opened.');
     }finally{e.target.value='';}
   });
-  on('exportOpen',()=>{S.pause();report('');$('exportDialog').showModal();});
+  function selectedPreset() {return HMXExport.presetById($('exportPreset').value)||HMXExport.presets[0];}
+  function paintExportHints() {
+    const preset=selectedPreset();
+    $('exportBitrateHint').textContent=HMXExport.bitrateHint(preset);
+    $('exportHonesty').textContent=HMXExport.HONESTY;
+    let seq='Optional zip at '+preset.label+'. The local skill runs ffmpeg.';
+    if(S.duration>0){try{seq='Optional zip at '+preset.label+' · '+HMXExport.framePlan(S.duration,preset.fps).length+' frames. The local skill runs ffmpeg.';}catch(e){seq='Optional zip at '+preset.label+'. '+e.message;}}
+    $('frameSeqHint').textContent=seq;
+    const mime=videoType();
+    if(!mime||!HTMLCanvasElement.prototype.captureStream)$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML or the frame-sequence zip.';
+    else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
+  }
+  $('exportPreset').addEventListener('change',paintExportHints);
+  on('exportOpen',()=>{S.pause();report('');paintExportHints();$('exportDialog').showModal();});
   on('exportFrame',()=>task(async()=>{await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportHtml',()=>task(async()=>{
     report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
@@ -66,13 +80,34 @@
     window.ready.catch(e=>{get('title').textContent='Unable to load: '+e.message;});
   }
   function videoType() {return ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));}
-  const mime=videoType();if(!mime||!HTMLCanvasElement.prototype.captureStream){$('exportVideo').disabled=true;$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML.';}else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · 1280 × 720 · records in real time';
+  paintExportHints();if(!videoType()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
+  on('exportFrames',()=>task(async()=>{
+    S.pause();await S.compile();if(!S.composed)throw new Error('Add a clip before exporting a frame sequence.');
+    const preset=selectedPreset();const duration=S.duration;const plan=HMXExport.framePlan(duration,preset.fps);
+    const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
+    const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);
+    const files=[];
+    for(let i=0;i<plan.length;i++){
+      r.render(plan[i].t);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      if(!blob)throw new Error('Could not export frame '+(i+1)+'.');
+      files.push({name:plan[i].file,data:new Uint8Array(await blob.arrayBuffer())});
+      report('Frame '+(i+1)+' / '+plan.length+' · '+preset.label);
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
+    files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
+    const zip=HMXExport.zipStore(files);
+    download(S.project.show.show_id+'-'+preset.id+'-frames.zip',new Blob([zip],{type:'application/zip'}));
+    report('Frame sequence downloaded. Run ffmpeg on the local skill — this tab does not encode it.');
+  }));
   on('exportVideo',()=>task(async()=>{
-    if(!mime)throw new Error('This browser cannot record canvas video. Export playable HTML instead.');
-    S.pause();await S.compile();S.recording=true;
-    const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
+    const mime=videoType();
+    if(!mime)throw new Error('This browser cannot record canvas video. Export playable HTML or a frame sequence instead.');
+    S.pause();await S.compile();S.recording=true;const preset=selectedPreset();
+    const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);r.render(0);
-    const stream=canvas.captureStream(30);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6000000});
+    const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:preset.videoBitsPerSecond});
     const done=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;recorder.onerror=e=>reject(e.error||new Error('Video recorder failed'));});
     let visibilityChanged=false;const interrupted=()=>{if(document.hidden)visibilityChanged=true;};document.addEventListener('visibilitychange',interrupted);
     try{

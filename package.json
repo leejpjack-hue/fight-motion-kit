@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "python3 -m http.server 8765 --bind 127.0.0.1 --directory public",
     "build:demos": "node scripts/build-demos.cjs",
-    "test": "node --test tests/compose.test.cjs",
+    "test": "node --test tests/compose.test.cjs tests/x-export.test.cjs",
     "test:browser": "node tests/editor.cjs"
   },
   "devDependencies": {"playwright": "1.62.1"}
