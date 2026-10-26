@@ -24,19 +24,23 @@
       r.readAsDataURL(file);
     });
   }
-  function addProp(p, src, data) {
+  function chosenSlot() {
+    return $('fgSlot').value === 'overlay' ? 'overlay' : 'prop';
+  }
+  function addProp(p, src, data, slot) {
     const fg = ensure(p);
     if (data) { p.assets || (p.assets = {}); p.assets[src] = data; }
     const prop = {
       id: 'fg-' + crypto.randomUUID(),
       src,
-      x: 980,
-      y: 180,
+      x: slot === 'overlay' ? 640 : 980,
+      y: slot === 'overlay' ? 360 : 180,
       scale: 1,
       z: (fg.props.length + 1) * 10,
       t_start: 0,
       t_end: Math.max(0.1, round(S.duration || 5)),
     };
+    if (slot === 'overlay') prop.slot = 'overlay';
     fg.props.push(prop);
     selectedId = prop.id;
   }
@@ -54,7 +58,8 @@
     const sel = $('fgProp');
     sel.replaceChildren();
     if (!list.length) sel.add(new Option('No prop yet', ''));
-    list.forEach((item, i) => sel.add(new Option((i + 1) + ' · ' + item.id.slice(0, 14) + (item.kf ? ' · ' + item.kf.length + ' kf' : ''), item.id)));
+    if (!list.length) $('fgSlot').value = 'prop';
+    list.forEach((item, i) => sel.add(new Option((i + 1) + ' · ' + (item.slot === 'overlay' ? 'overlay · ' : '') + item.id.slice(0, 14) + (item.kf ? ' · ' + item.kf.length + ' kf' : ''), item.id)));
     sel.value = prop ? prop.id : '';
     $('fgCount').textContent = list.length + (list.length === 1 ? ' prop' : ' props');
     $('fgRemove').disabled = !prop;
@@ -74,6 +79,8 @@
     setField('fgNudgeS', cam.nudge?.s || 0);
     if (!prop) {
       $('fgKfList').replaceChildren();
+      $('fgBreakBox').hidden = false;
+      $('fgOverlayLabel').hidden = true;
       $('fgBrokenLabel').textContent = 'No broken image — the prop splits on a crack at the break time.';
       return;
     }
@@ -83,6 +90,12 @@
     setField('fgZ', prop.z);
     setField('fgT0', prop.t_start);
     setField('fgT1', prop.t_end);
+    const overlay = prop.slot === 'overlay';
+    $('fgBreakBox').hidden = overlay;
+    $('fgOverlayLabel').hidden = !overlay;
+    if (overlay) {
+      $('fgOverlayLabel').textContent = 'Shows from ' + prop.t_start + 's to ' + prop.t_end + 's. Overlay art does not crack.';
+    }
     $('fgEffect').value = prop.effect?.type === 'break' ? 'break' : 'none';
     setField('fgEffectT', prop.effect?.t || 0);
     $('fgEffectT').disabled = prop.effect?.type !== 'break';
@@ -91,7 +104,7 @@
     $('fgBrokenLabel').textContent = prop.effect?.type !== 'break'
       ? 'Intact until you attach a break.'
       : prop.effect.broken_src
-        ? 'Broken image replaces the prop at ' + prop.effect.t + 's.'
+        ? 'Broken PNG or WebP replaces the prop at ' + prop.effect.t + 's.'
         : 'At ' + prop.effect.t + 's the prop splits on a crack.';
     const kfList = $('fgKfList');
     kfList.replaceChildren();
@@ -128,6 +141,7 @@
   }
   function writeEffect() {
     writeProp(prop => {
+      if (prop.slot === 'overlay') { delete prop.effect; return; }
       if ($('fgEffect').value !== 'break') { delete prop.effect; return; }
       const t = Number($('fgEffectT').value);
       if (!Number.isFinite(t) || t < 0) throw Error('Break time must be 0 or later.');
@@ -158,7 +172,8 @@
     try {
       const data = await readImage(file);
       const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[file.type];
-      S.editProject(p => addProp(p, 'foreground/' + crypto.randomUUID() + '.' + ext, data));
+      const slot = chosenSlot();
+      S.editProject(p => addProp(p, 'foreground/' + crypto.randomUUID() + '.' + ext, data, slot));
     } finally { e.target.value = ''; }
   });
   $('fgLibrary').onchange = safe(() => {
@@ -166,7 +181,8 @@
     $('fgLibrary').value = '';
     const media = S.project.media.find(m => m.id === id);
     if (!media) return;
-    S.editProject(p => addProp(p, media.src));
+    const slot = chosenSlot();
+    S.editProject(p => addProp(p, media.src, null, slot));
   });
   on('fgRemove', () => {
     const id = selectedId;

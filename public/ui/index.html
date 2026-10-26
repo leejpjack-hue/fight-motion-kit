@@ -17,26 +17,32 @@
 <p class="field-hint" id="backgroundNotice" role="status"></p>
 <details class="background-motion" id="backgroundMotionDetails"><summary>Background motion · window pan</summary><label class="background-label" for="backgroundMotion">Background motion only</label>
 <select id="backgroundMotion" title="Window pan: the crop is the view that slides across the source"><option value="follow_camera">Follow scene camera</option><option value="static">Still background</option><option value="pan_left">Pan left</option><option value="pan_right">Pan right</option><option value="pan_up">Pan up</option><option value="pan_down">Pan down</option><option value="push_in">Zoom in</option><option value="pull_out">Zoom out</option></select>
-<label class="background-label" for="backgroundMotionClock">Travel</label><select id="backgroundMotionClock" title="Continuous (show) keeps the crop sliding across clips. Per clip restarts the move at each cut."><option value="show">Continuous (show)</option><option value="per_atom">Per clip</option><option value="span" hidden>Continuous (span)</option></select>
+<label class="background-label" for="backgroundMotionClock">Travel</label><select id="backgroundMotionClock" title="Continuous (show) keeps the crop sliding across the whole show. Continuous (span) limits that move to t0–t1. Per clip restarts at each cut."><option value="show">Continuous (show)</option><option value="per_atom">Per clip</option><option value="span" hidden>Continuous (span)</option></select>
+<div class="bg-span-controls" id="backgroundSpanControls" hidden><div class="bg-crop-head"><span class="background-label">Show-time span</span><output id="backgroundSpanValue">Whole show</output></div><div class="bg-span-fields"><label>t0 s<input id="backgroundSpanT0" type="number" min="0" max="120" step="0.01" inputmode="decimal" aria-label="Pan span start"></label><label>t1 s<input id="backgroundSpanT1" type="number" min="0" max="120" step="0.01" inputmode="decimal" aria-label="Pan span end"></label></div><p class="field-hint">Continuous (span) runs the move from t0 to t1 on the show clock. It holds the start before t0 and the end after t1. Continuous (show) still uses the whole show until you set these.</p></div>
 <label class="slider-label" for="backgroundMotionAmount">Motion strength <output id="backgroundMotionValue">40%</output></label><input id="backgroundMotionAmount" type="range" min="0" max="1" step="0.05" value="0.4">
 <button id="resetBackgroundMotion" class="text-button">Use project motion</button><p class="field-hint" id="backgroundMotionModel">Window pan: the crop is the view. Pan and zoom slide that window across the source image, behind the plates. A crop that fills the source zooms in slightly and slides that view. Follow scene carries camera moves and shake inside the crop.</p><p class="field-hint" id="backgroundMotionNote" role="status"></p></details>
 </section><section class="foreground-panel" id="foregroundPanel" aria-label="Foreground props">
 <div class="background-heading"><span class="eyebrow">FOREGROUND</span><span id="fgCount" class="small-muted">0 props</span></div>
 <p class="field-hint" id="fgCamNote">Props sit in front of the plates. This camera does not follow background crop-pan or the clip camera.</p>
+<label class="background-label" for="fgSlot">Slot</label><select id="fgSlot" aria-label="Foreground slot"><option value="prop">Breakable prop</option><option value="overlay">Overlay art</option></select>
+<p class="field-hint" id="fgSlotNote">Overlay art is an existing speed-line or depth image. It shows and hides on From and To. A breakable prop cracks, or swaps to a broken PNG or WebP.</p>
 <label class="background-label" for="fgProp">Prop</label><select id="fgProp" aria-label="Foreground prop"><option value="">No prop yet</option></select>
 <div class="background-actions"><button id="fgAdd" type="button">Add prop</button><button id="fgRemove" type="button">Remove</button></div>
 <input id="fgInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-<select id="fgLibrary" aria-label="Use library image as foreground prop"><option value="">Use library image…</option></select>
+<select id="fgLibrary" aria-label="Use library image in the selected foreground slot"><option value="">Use library image…</option></select>
 <div id="fgFields" hidden>
 <div class="fg-grid"><label>X <input id="fgX" type="number" step="1" value="240"></label><label>Y <input id="fgY" type="number" step="1" value="520"></label><label>Scale <input id="fgScale" type="number" min="0.05" max="8" step="0.05" value="1"></label><label>Z <input id="fgZ" type="number" step="1" value="10"></label></div>
 <div class="fg-grid"><label>From <input id="fgT0" type="number" min="0" step="0.05" value="0" aria-label="Foreground prop start"></label><label>To <input id="fgT1" type="number" min="0" step="0.05" value="5" aria-label="Foreground prop end"></label></div>
 <div class="background-actions"><button id="fgAddKf" class="text-button" type="button">Keyframe at playhead</button><button id="fgClearKf" class="text-button" type="button">Clear keyframes</button></div>
 <div id="fgKfList" class="fg-kf-list"></div>
+<div id="fgBreakBox">
 <label class="background-label" for="fgEffect">Break / effect</label><select id="fgEffect" aria-label="Foreground effect"><option value="none">Intact</option><option value="break">Break</option></select>
 <label class="background-label" for="fgEffectT">Break at (seconds)</label><input id="fgEffectT" type="number" min="0" step="0.05" value="0" aria-label="Break time">
 <div class="background-actions"><button id="fgBrokenAdd" type="button">Broken image…</button><button id="fgBrokenClear" type="button">Clear break image</button></div>
 <input id="fgBrokenInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
 <p class="field-hint" id="fgBrokenLabel">No broken image — the prop splits on a crack at the break time.</p>
+</div>
+<p class="field-hint" id="fgOverlayLabel" hidden>Overlay art shows between From and To. It does not crack.</p>
 </div>
 <div class="fg-cam" id="fgCamBox">
 <label class="background-label" for="fgCamPreset">Foreground camera</label>
