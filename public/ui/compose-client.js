@@ -113,10 +113,21 @@
     return i < 0 ? b : b.slice(0, i);
   }
 
+  const CAM_EASES = ['linear', 'smooth', 'sine', 'ease_in', 'ease_out', 'snap'];
+  const SNAP_ZOOM = 0.18;
+
   function ease(kind, u) {
     u = u < 0 ? 0 : u > 1 ? 1 : u;
     if (kind === 'linear') return u;
     if (kind === 'sine') return 0.5 - 0.5 * Math.cos(Math.PI * u);
+    if (kind === 'ease_in') return u * u * u;
+    if (kind === 'ease_out') return 1 - Math.pow(1 - u, 3);
+    if (kind === 'snap') {
+      const hold = 0.7;
+      if (u <= hold) return 0;
+      const t = (u - hold) / (1 - hold);
+      return t * t * (3 - 2 * t);
+    }
     return u * u * (3 - 2 * u);
   }
 
@@ -208,6 +219,224 @@
       }
     }
     return out;
+  }
+
+  // Local ease rides a chord between the segment's own endpoints.
+  // Snap-zoom's extra scale uses the chain parameter (u0..u1 across clips) so both sides of a cut share one scale.
+  function poseOnSegment(seg, t) {
+    if (!seg || !seg.curves) return { x: 0, y: 0, s: 1, r: 0 };
+    const span = Math.max(1e-7, seg.t1 - seg.t0);
+    const local = Math.min(1, Math.max(0, (t - seg.t0) / span));
+    const tl = t - seg.t0;
+    const u0 = seg.u0 == null ? 0 : +seg.u0;
+    const u1 = seg.u1 == null ? 1 : +seg.u1;
+    if (!seg.ease && !seg.snap_zoom) {
+      return evalCam(seg.curves, u0 + (u1 - u0) * local, tl);
+    }
+    const camera = { x: 0, y: 0, s: 1, r: 0 };
+    const shaped = seg.ease ? ease(seg.ease, local) : local;
+    for (const ch of 'xysr') {
+      const c = seg.curves[ch];
+      if (!c) continue;
+      if (!seg.ease) camera[ch] = evalCurve(c, u0 + (u1 - u0) * local, tl);
+      else camera[ch] = evalCurve(c, u0, 0) + (evalCurve(c, u1, span) - evalCurve(c, u0, 0)) * shaped;
+    }
+    const smin = 1 + Math.abs(Math.sin((camera.r * Math.PI) / 180)) * 0.9;
+    camera.s = Math.max(camera.s, smin);
+    if (seg.snap_zoom) camera.s += SNAP_ZOOM * ease('snap', u0 + (u1 - u0) * local);
+    return camera;
+  }
+
+  function scaleSegmentDurs(segs, dur) {
+    const sum = segs.reduce((s, x) => s + (+x.dur_s || 0), 0);
+    if (!(dur > 0) || !segs.length) return;
+    if (sum <= 0) {
+      const each = +(dur / segs.length).toFixed(4);
+      let rem = dur;
+      segs.forEach((s, i) => {
+        s.dur_s = i === segs.length - 1 ? +rem.toFixed(4) : each;
+        rem -= s.dur_s;
+      });
+      return;
+    }
+    let acc = 0;
+    segs.forEach((s, i) => {
+      if (i === segs.length - 1) s.dur_s = +(dur - acc).toFixed(4);
+      else {
+        s.dur_s = +((+s.dur_s / sum) * dur).toFixed(4);
+        acc += s.dur_s;
+      }
+    });
+  }
+
+  function assignChainRanges(flat, id) {
+    const total = flat.reduce((s, x) => s + +x.dur_s, 0);
+    let acc = 0;
+    flat.forEach((s, i) => {
+      const u0 = i === 0 ? 0 : flat[i - 1].u_range[1];
+      acc += +s.dur_s;
+      const u1 = i === flat.length - 1 ? 1 : round4(acc / total);
+      s.u_range = [u0, u1];
+      s.chain = { id, index: i };
+    });
+  }
+
+  function clipSegmentsForChain(atom, preset) {
+    const cam = atom.camera || {};
+    const raw = Array.isArray(cam.segments) ? cam.segments.filter((s) => s && s.preset) : [];
+    const uniform = raw.length > 0 && raw.every((s) => s.preset === preset);
+    if (uniform) {
+      const segs = raw.map((s) => {
+        const out = { preset: s.preset, dur_s: +s.dur_s };
+        if (s.params) out.params = s.params;
+        if (s.nudge) out.nudge = s.nudge;
+        if (s.intensity != null) out.intensity = s.intensity;
+        const easeName = s.ease || cam.ease;
+        if (easeName) out.ease = easeName;
+        if (s.snap_zoom === true || cam.snap_zoom === true || easeName === 'snap') out.snap_zoom = true;
+        return out;
+      });
+      scaleSegmentDurs(segs, +atom.duration_s);
+      return segs;
+    }
+    const out = { preset, dur_s: round4(+atom.duration_s) };
+    if (cam.params && (!raw.length || cam.preset === preset)) out.params = cam.params;
+    if (cam.ease) out.ease = cam.ease;
+    if (cam.snap_zoom === true || cam.ease === 'snap') out.snap_zoom = true;
+    return [out];
+  }
+
+  function writeChainedCamera(atom, segs, chain) {
+    const prev = atom.camera || {};
+    const cam = {
+      preset: segs[0].preset,
+      u_range: [segs[0].u_range[0], segs[segs.length - 1].u_range[1]],
+      chain,
+      segments: segs,
+    };
+    if (prev.nudge && typeof prev.nudge === 'object' && Object.keys(prev.nudge).length) cam.nudge = prev.nudge;
+    if (prev.intensity != null) cam.intensity = prev.intensity;
+    const names = [...new Set(segs.map((s) => s.ease).filter(Boolean))];
+    if (names.length === 1) cam.ease = names[0];
+    if (segs.some((s) => s.snap_zoom)) cam.snap_zoom = true;
+    atom.camera = cam;
+  }
+
+  function clearChainMembership(atom, resetRange) {
+    const cam = atom && atom.camera;
+    if (!cam) return;
+    delete cam.chain;
+    if (resetRange) {
+      delete cam.u_range;
+      if (Array.isArray(cam.segments)) cam.segments.forEach((s) => { delete s.chain; s.u_range = [0, 1]; });
+    } else if (Array.isArray(cam.segments)) cam.segments.forEach((s) => delete s.chain);
+  }
+
+  function reflowCamChain(atoms, chainId) {
+    if (!chainId || !Array.isArray(atoms)) return { id: chainId || null, count: 0 };
+    const indices = [];
+    atoms.forEach((a, i) => { if (a.camera?.chain?.id === chainId) indices.push(i); });
+    const contiguous = indices.length >= 2 && indices.every((v, i) => i === 0 || v === indices[i - 1] + 1);
+    if (!contiguous) {
+      indices.forEach((i) => clearChainMembership(atoms[i], true));
+      return { id: chainId, count: 0 };
+    }
+    const head = atoms[indices[0]].camera || {};
+    const preset = head.preset || head.segments?.[0]?.preset || 'static_hold';
+    const groups = indices.map((i) => {
+      const cam = atoms[i].camera || {};
+      const segs = (cam.segments || []).map((s) => Object.assign({}, s));
+      if (!segs.length) {
+        const seeded = { preset: cam.preset || preset, dur_s: +atoms[i].duration_s };
+        if (cam.ease) seeded.ease = cam.ease;
+        if (cam.snap_zoom === true || cam.ease === 'snap') seeded.snap_zoom = true;
+        segs.push(seeded);
+      }
+      scaleSegmentDurs(segs, +atoms[i].duration_s);
+      return segs;
+    });
+    const flat = groups.flat();
+    assignChainRanges(flat, chainId);
+    indices.forEach((atomIndex, chainIndex) => {
+      writeChainedCamera(atoms[atomIndex], groups[chainIndex], { id: chainId, index: chainIndex, count: indices.length });
+    });
+    return { id: chainId, count: indices.length, preset };
+  }
+
+  function reflowAllCamChains(atoms) {
+    const ids = [];
+    (atoms || []).forEach((a) => {
+      const id = a.camera?.chain?.id;
+      if (id && !ids.includes(id)) ids.push(id);
+    });
+    ids.forEach((id) => reflowCamChain(atoms, id));
+  }
+
+  function unchainClip(atoms, index) {
+    const id = atoms[index]?.camera?.chain?.id;
+    if (!id) return { id: null, count: 0 };
+    clearChainMembership(atoms[index], true);
+    return reflowCamChain(atoms, id);
+  }
+
+  function chainClipCameras(atoms, indexList) {
+    if (!Array.isArray(atoms)) throw new Error('Chain needs a clip list.');
+    const indices = [...new Set((indexList || []).map((n) => +n))]
+      .filter((i) => Number.isInteger(i) && atoms[i])
+      .sort((a, b) => a - b);
+    if (indices.length < 2) throw new Error('Chain at least two adjacent clips.');
+    for (let k = 1; k < indices.length; k++) {
+      if (indices[k] !== indices[k - 1] + 1) throw new Error('Chain adjacent clips. Shift-click a continuous run.');
+    }
+    const oldIds = new Set();
+    indices.forEach((i) => { const id = atoms[i].camera?.chain?.id; if (id) oldIds.add(id); });
+    const firstId = atoms[indices[0]].camera?.chain?.id;
+    const shared = !!firstId && indices.every((i) => atoms[i].camera?.chain?.id === firstId);
+    const id = shared ? atoms[indices[0]].camera.chain.id : ('cam-' + Math.random().toString(36).slice(2, 10));
+    const anchor = atoms[indices[0]].camera || {};
+    const preset = anchor.preset || anchor.segments?.[0]?.preset || 'static_hold';
+    const groups = indices.map((i) => clipSegmentsForChain(atoms[i], preset));
+    const flat = groups.flat();
+    assignChainRanges(flat, id);
+    indices.forEach((atomIndex, chainIndex) => {
+      writeChainedCamera(atoms[atomIndex], groups[chainIndex], { id, index: chainIndex, count: indices.length });
+    });
+    oldIds.forEach((old) => { if (old !== id) reflowCamChain(atoms, old); });
+    return { id, count: indices.length, preset };
+  }
+
+  function setCamEase(cam, easeName) {
+    if (!cam || typeof cam !== 'object') throw new Error('Choose a clip before setting camera easing.');
+    const name = easeName || '';
+    if (name && CAM_EASES.indexOf(name) < 0) throw new Error('Use linear, smooth, sine, ease in, ease out, or snap zoom.');
+    const snap = name === 'snap';
+    if (!name) {
+      delete cam.ease;
+      delete cam.snap_zoom;
+    } else {
+      cam.ease = name;
+      if (snap) cam.snap_zoom = true;
+      else delete cam.snap_zoom;
+    }
+    (cam.segments || []).forEach((s) => {
+      if (!name) {
+        delete s.ease;
+        delete s.snap_zoom;
+      } else {
+        s.ease = name;
+        if (snap) s.snap_zoom = true;
+        else delete s.snap_zoom;
+      }
+    });
+    return cam;
+  }
+
+  function detachCamChain(cam) {
+    if (!cam) return cam;
+    delete cam.chain;
+    delete cam.u_range;
+    if (Array.isArray(cam.segments)) cam.segments.forEach((s) => { delete s.chain; s.u_range = [0, 1]; });
+    return cam;
   }
 
   function mergeTransform(show, atom, side) {
@@ -638,6 +867,9 @@
       let st = t0;
       const atomNudge = cam.nudge && typeof cam.nudge === 'object' ? cam.nudge : {};
       const atomIntensity = cam.intensity != null ? +cam.intensity : 1;
+      if (cam.snap_zoom != null && typeof cam.snap_zoom !== 'boolean') errors.push(a.id + ': snap_zoom must be true or false');
+      const camEase = typeof cam.ease === 'string' ? cam.ease : '';
+      if (camEase && CAM_EASES.indexOf(camEase) < 0) errors.push(a.id + ': unknown camera ease ' + camEase);
       for (const s of segs) {
         if (!cams[s.preset]) {
           errors.push(a.id + ': unknown camera preset ' + s.preset);
@@ -649,10 +881,16 @@
         const segIntensity = s.intensity != null ? +s.intensity : atomIntensity;
         const scaled = applyCamIntensity(mergeCurves(cams[s.preset], s.params), segIntensity);
         const curves = applyCamNudge(scaled, segNudge);
+        const segEase = typeof s.ease === 'string' && s.ease ? s.ease : camEase;
+        if (s.ease && CAM_EASES.indexOf(s.ease) < 0) errors.push(a.id + ': unknown camera ease ' + s.ease);
+        if (s.snap_zoom != null && typeof s.snap_zoom !== 'boolean') errors.push(a.id + ': snap_zoom must be true or false');
+        const snapZoom = s.snap_zoom === true || cam.snap_zoom === true || segEase === 'snap';
         cs.push({
           t0: Math.round(st * 10000) / 10000,
           t1: Math.round((st + s.dur_s) * 10000) / 10000,
           u0, u1, preset: s.preset, curves,
+          ...(segEase ? { ease: segEase } : {}),
+          ...(snapZoom ? { snap_zoom: true } : {}),
         });
         st += +s.dur_s;
       }
@@ -813,8 +1051,7 @@
       for (const s of a.cam) {
         let tt = s.t0;
         while (tt < s.t1 - 1e-9) {
-          const u = s.u0 + ((s.u1 - s.u0) * (tt - s.t0)) / (s.t1 - s.t0);
-          const c = evalCam(s.curves, u, tt - s.t0);
+          const c = poseOnSegment(s, tt);
           keys.push([
             Math.round(tt * 1000) / 1000,
             Math.round(c.x * 1000) / 1000,
@@ -1000,12 +1237,7 @@
     const atom = atoms[atomIndex] || null;
     const segs = atoms.flatMap((a) => a.cam || []);
     const seg = segs.find((s) => tc >= s.t0 && tc < s.t1) || segs[segs.length - 1] || null;
-    let camPose = { x: 0, y: 0, s: 1, r: 0 };
-    if (seg && seg.curves) {
-      const span = Math.max(1e-7, seg.t1 - seg.t0);
-      const u = seg.u0 + (seg.u1 - seg.u0) * Math.min(1, Math.max(0, (tc - seg.t0) / span));
-      camPose = evalCam(seg.curves, u, tc - seg.t0);
-    }
+    const camPose = seg && seg.curves ? poseOnSegment(seg, tc) : { x: 0, y: 0, s: 1, r: 0 };
     const atomFx = (atom && Array.isArray(atom.fx_hooks)) ? atom.fx_hooks : [];
     return {
       show_id: tl.show_id || '',
@@ -1157,5 +1389,13 @@
     resolveBackgroundCrop,
     normalizeFxPlacement,
     hasFxPlacement,
+    chainClipCameras,
+    reflowCamChain,
+    reflowAllCamChains,
+    unchainClip,
+    setCamEase,
+    detachCamChain,
+    poseOnSegment,
+    CAM_EASES,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

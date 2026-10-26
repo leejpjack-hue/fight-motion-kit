@@ -319,20 +319,59 @@ function collectProceduralOverlays(overlays, t) {
   }
   return out;
 }
+function cameraEase(kind, u) {
+  u = u < 0 ? 0 : u > 1 ? 1 : u;
+  if (kind === 'linear') return u;
+  if (kind === 'sine') return 0.5 - 0.5 * Math.cos(Math.PI * u);
+  if (kind === 'ease_in') return u * u * u;
+  if (kind === 'ease_out') return 1 - Math.pow(1 - u, 3);
+  if (kind === 'snap') {
+    const hold = 0.7;
+    if (u <= hold) return 0;
+    const t = (u - hold) / (1 - hold);
+    return t * t * (3 - 2 * t);
+  }
+  return u * u * (3 - 2 * u);
+}
+function cameraChannel(c, u, tl) {
+  if (!c) return 0;
+  if (c.type === 'const') return c.v;
+  if (c.type === 'lerp') return c.a + (c.b - c.a) * cameraEase(c.ease, u);
+  if (c.type === 'saw') return c.a + (c.b - c.a) * ((tl % c.period_s) / c.period_s);
+  if (c.type === 'sin') return (c.offset || 0) + c.amp * Math.sin(('omega' in c ? c.omega * tl : 2 * Math.PI * (c.cycles ?? 1) * u) + (c.phase || 0));
+  if (c.type === 'alt_bump') { const k = c.n * u; return (c.offset || 0) + (Math.floor(k) % 2 ? 1 : -1) * c.amp * Math.sin((k % 1) * Math.PI); }
+  return 0;
+}
+function cameraPoseOnSegment(seg, t) {
+  const camera = { x: 0, y: 0, s: 1, r: 0 };
+  if (!seg || !seg.curves) return camera;
+  const span = Math.max(1e-7, (seg.t1 || 0) - (seg.t0 || 0));
+  const local = Math.min(1, Math.max(0, ((+t || 0) - (seg.t0 || 0)) / span));
+  const tl = (+t || 0) - (seg.t0 || 0);
+  const u0 = seg.u0 == null ? 0 : +seg.u0;
+  const u1 = seg.u1 == null ? 1 : +seg.u1;
+  if (seg.ease) {
+    const shaped = cameraEase(seg.ease, local);
+    for (const k of 'xysr') {
+      if (!seg.curves[k]) continue;
+      const a = cameraChannel(seg.curves[k], u0, 0);
+      const b = cameraChannel(seg.curves[k], u1, span);
+      camera[k] = a + (b - a) * shaped;
+    }
+  } else {
+    const u = u0 + (u1 - u0) * local;
+    for (const k of 'xysr') if (seg.curves[k]) camera[k] = cameraChannel(seg.curves[k], u, tl);
+  }
+  camera.s = Math.max(camera.s, 1 + Math.abs(Math.sin(camera.r * Math.PI / 180)) * 0.9);
+  // Extra scale follows the chain parameter so both sides of a cut share one zoom.
+  if (seg.snap_zoom) camera.s += 0.18 * cameraEase('snap', u0 + (u1 - u0) * local);
+  return camera;
+}
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
   let timeline, layout, lastTime = 0;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const ease = (u, kind) => kind === 'linear' ? u : kind === 'sine' ? .5 - .5 * Math.cos(Math.PI * u) : u * u * (3 - 2 * u);
-  function curve(c, u, t) {
-    if (c.type === 'const') return c.v;
-    if (c.type === 'lerp') return c.a + (c.b - c.a) * ease(u, c.ease);
-    if (c.type === 'saw') return c.a + (c.b - c.a) * ((t % c.period_s) / c.period_s);
-    if (c.type === 'sin') return (c.offset || 0) + c.amp * Math.sin(('omega' in c ? c.omega * t : 2 * Math.PI * (c.cycles ?? 1) * u) + (c.phase || 0));
-    if (c.type === 'alt_bump') { const k = c.n * u; return (c.offset || 0) + (Math.floor(k) % 2 ? 1 : -1) * c.amp * Math.sin((k % 1) * Math.PI); }
-    return 0;
-  }
   function url(path) {
     if (assets[path]) return assets[path];
     if (/^(data:image\/|blob:)/.test(path)) return path;
@@ -545,9 +584,7 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     const segments = atoms.flatMap(a => a.cam);
     const seg = segments.find(s => t >= s.t0 && t < s.t1) || segments.at(-1);
-    const camera = {x:0,y:0,s:1,r:0};
-    if (seg) { const u = seg.u0 + (seg.u1 - seg.u0) * clamp((t - seg.t0) / (seg.t1 - seg.t0), 0, 1); for (const k of 'xysr') if (seg.curves[k]) camera[k] = curve(seg.curves[k], u, t - seg.t0); }
-    camera.s = Math.max(camera.s, 1 + Math.abs(Math.sin(camera.r * Math.PI / 180)) * .9);
+    const camera = cameraPoseOnSegment(seg, t);
     const fx = timeline.fx || {};
     let amp = 0;
     (fx.shake || []).forEach(([h, a, d]) => { if (t >= h && t < h + d) amp = Math.max(amp, a * (1 - (t - h) / d)); });
@@ -813,4 +850,6 @@ if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.fgBreakState = fgBreakState;
   hmRoot.HMComposeClient.FG_CAM_PRESETS = FG_CAM_PRESETS;
 }
+hmRoot.cameraEase = cameraEase;
+hmRoot.cameraPoseOnSegment = cameraPoseOnSegment;
 hmRoot.HMMotion = createMotionRenderer;

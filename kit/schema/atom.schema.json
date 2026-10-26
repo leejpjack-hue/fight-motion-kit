@@ -76,6 +76,25 @@
      "maxItems": 2,
      "description": "slice of a longer preset (e.g. 3 s pass_between split across two atoms)"
     },
+    "ease": {
+     "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap"],
+     "description": "segment timing. snap holds, then rushes. linear is a straight drift."
+    },
+    "snap_zoom": {
+     "type": "boolean",
+     "description": "late scale punch along the chain parameter so the cut stays continuous"
+    },
+    "chain": {
+     "type": "object",
+     "description": "clips linked so each camera segment starts at the previous segment's end",
+     "required": ["id", "index", "count"],
+     "additionalProperties": false,
+     "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "index": { "type": "integer", "minimum": 0 },
+      "count": { "type": "integer", "minimum": 2 }
+     }
+    },
     "segments": {
      "type": "array",
      "minItems": 1,
@@ -104,6 +123,21 @@
         },
         "minItems": 2,
         "maxItems": 2
+       },
+       "ease": {
+        "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap"]
+       },
+       "snap_zoom": {
+        "type": "boolean"
+       },
+       "chain": {
+        "type": "object",
+        "required": ["id", "index"],
+        "additionalProperties": false,
+        "properties": {
+         "id": { "type": "string", "minLength": 1 },
+         "index": { "type": "integer", "minimum": 0 }
+        }
        }
       }
      }
