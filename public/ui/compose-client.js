@@ -503,7 +503,11 @@
         }
         if (uniq.length) prop.kf = uniq;
       }
+      const slot = raw.slot == null || raw.slot === 'prop' ? 'prop' : raw.slot;
+      if (slot !== 'prop' && slot !== 'overlay') { errors.push(label + ': unknown slot'); failed = true; return; }
+      if (slot === 'overlay') prop.slot = 'overlay';
       if (raw.effect != null && raw.effect !== 'none') {
+        if (slot === 'overlay') { errors.push(label + ': overlay art does not break'); failed = true; return; }
         const eff = typeof raw.effect === 'string' ? { type: raw.effect, t: 0 } : raw.effect;
         if (!eff || typeof eff !== 'object' || Array.isArray(eff)) { errors.push(label + ': invalid effect'); failed = true; return; }
         if (eff.type !== 'none' && eff.type != null) {
