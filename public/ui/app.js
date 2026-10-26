@@ -8,6 +8,9 @@
   const DEMO = 'daiyu-wang-five-seconds';
   const ORIGINAL = 'daiyu-wang-codex-import';
   const CONTINUATION = 'daiyu-wang-ten-seconds';
+  const STREET = 'street-old-city';
+  const GOLD = [DEMO, ORIGINAL, CONTINUATION];
+  const BUILTIN = [...GOLD, STREET];
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_TIMING_PACKS = {version:'p0',id:'street_timing',label:'Street timing',packs:[
     {id:'dialogue_film_slow',label:'Dialogue / film-slow hold',kind:'hold',duration_floor_s:1.5,soft_cam:{preset:'slow_push',intensity:0.45}},
@@ -215,7 +218,7 @@
     if ($('paneAMeta')) $('paneAMeta').textContent = `${countA} clips · ${dA.toFixed(2)}s`;
     const dB = durationB(), countB = projectB?.show?.atoms?.length || 0;
     if ($('paneBLabel')) {
-      $('paneBLabel').textContent = sourceKindB === 'import' ? 'B · Import reference' : sourceKindB === 'snapshot' ? 'B · Snapshot reference' : 'B · Gold reference';
+      $('paneBLabel').textContent = sourceKindB === 'import' ? 'B · Import reference' : sourceKindB === 'snapshot' ? 'B · Snapshot reference' : sourceKindB === 'sample' ? 'B · Street sample' : 'B · Gold reference';
     }
     if ($('paneBShowId')) $('paneBShowId').textContent = projectB?.show?.show_id || '—';
     if ($('paneBMeta')) $('paneBMeta').textContent = projectB ? `${countB} clips · ${dB.toFixed(2)}s` : 'No reference';
@@ -296,9 +299,11 @@
     if (!val) return false;
     abEnabled = true;
     const cleanGold = val.replace(/^gold:/, '');
-    if ([DEMO, CONTINUATION, ORIGINAL].includes(cleanGold)) {
-      const ok = await openReferenceB(builtIn(cleanGold), 'gold', cleanGold);
-      if (ok) status(`Reference B set to Gold · ${projectB.show.title || cleanGold} (${cleanGold}) · Draft A unchanged`);
+    if (BUILTIN.includes(cleanGold)) {
+      const kind = cleanGold === STREET ? 'sample' : 'gold';
+      const ok = await openReferenceB(builtIn(cleanGold), kind, cleanGold);
+      const label = kind === 'sample' ? 'Street sample' : 'Gold';
+      if (ok) status(`Reference B set to ${label} · ${projectB.show.title || cleanGold} (${cleanGold}) · Draft A unchanged`);
       return ok;
     }
     if (val === 'snapshot:current') return await snapshotAToB();
@@ -810,15 +815,16 @@
     populateTimingPacks();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
-    const goldDefault=[DEMO,ORIGINAL,CONTINUATION].includes(sid)?sid:DEMO;
+    const goldDefault=GOLD.includes(sid)?sid:DEMO;
     const defaultGold=await builtIn(goldDefault);
     await loadB(defaultGold,'gold',goldDefault);
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
-    else if(sid&&![DEMO,ORIGINAL,CONTINUATION].includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else if(sid===STREET){await load(await builtIn(STREET));}
+    else if(sid&&!GOLD.includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
     else await load(copy(defaultGold));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
-  on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));
+  on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));on('loadStreet',()=>openProject(builtIn(STREET)));
   on('abToggle',()=>toggleAb());
   $('abSource')?.addEventListener('change',safe(e=>selectBSource(e.target.value)));
   on('abSnapshot',()=>snapshotAToB());
