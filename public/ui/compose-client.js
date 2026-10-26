@@ -21,6 +21,88 @@
     tornado_spiral: 0.50,
   };
 
+  // Photographic fire / light / dust chips. Comic/ink hides them.
+  // Full chips shows them. They stay in presets either way.
+  const PHOTO_FX_CHIPS = Object.freeze([
+    'dust',
+    'sparks',
+    'flash_orange',
+    'flash_pink',
+    'bg_flash_blue',
+    'bg_flash_teal',
+    'exposure_warm_crush',
+  ]);
+  const PHOTO_FX_CHIP_SET = new Set(PHOTO_FX_CHIPS);
+  // Rejected photo packs. Compose may keep an authored one. It must not insert one.
+  const REJECTED_PHOTO_OVERLAY_KINDS = Object.freeze([
+    'fire',
+    'photo_fire',
+    'light',
+    'photo_light',
+    'photo_dust',
+    'pink_slash',
+  ]);
+  const REJECTED_PHOTO_OVERLAY_SET = new Set(REJECTED_PHOTO_OVERLAY_KINDS);
+  const COMIC_INK_STYLE = Object.freeze({
+    fill: '#f4efe4',
+    stroke: '#14110e',
+    strokeWidth: 11,
+    fontWeight: 900,
+  });
+  const FX_PROFILE_HONESTY = Object.freeze({
+    comic: 'Comic/ink is the default for new street and classroom projects. Photographic fire, light, and dust chips stay hidden. This profile never adds those overlays. Switch to Full chips to opt in. A show that already has those chips still opens.',
+    full: 'Full chips keeps every FX chip, including photographic dust and warm light. Rejected photo fire and light overlays are never added on their own. A show that already has those chips still opens.',
+  });
+
+  function showVenue(show) {
+    if (!show || typeof show !== 'object') return '';
+    const meta = show.meta && typeof show.meta === 'object' ? show.meta : {};
+    return String(show.venue || meta.venue || meta.seat || meta.context || '').trim().toLowerCase();
+  }
+
+  function defaultFxProfileFor(venue) {
+    const v = String(venue || '').trim().toLowerCase();
+    return v === 'street' || v === 'classroom' ? 'comic' : 'full';
+  }
+
+  function resolveFxProfile(show) {
+    const raw = show && show.fx_profile;
+    if (raw === 'comic' || raw === 'full') return raw;
+    return defaultFxProfileFor(showVenue(show));
+  }
+
+  function fxProfileHonesty(profile) {
+    return FX_PROFILE_HONESTY[profile === 'comic' ? 'comic' : 'full'];
+  }
+
+  function isPhotoFxChip(type) {
+    return PHOTO_FX_CHIP_SET.has(String(type || ''));
+  }
+
+  function isRejectedPhotoOverlay(overlay) {
+    if (!overlay || typeof overlay !== 'object') return false;
+    return REJECTED_PHOTO_OVERLAY_SET.has(String(overlay.kind || '').toLowerCase());
+  }
+
+  function isPhotoFxOverlay(overlay) {
+    if (!overlay || typeof overlay !== 'object') return false;
+    return isRejectedPhotoOverlay(overlay) || isPhotoFxChip(overlay.kind);
+  }
+
+  function styleOverlayForProfile(overlay, profile) {
+    if (profile !== 'comic' || !overlay || overlay.kind !== 'text') return overlay;
+    if (overlay.style && typeof overlay.style === 'object' && Object.keys(overlay.style).length) return overlay;
+    return Object.assign({}, overlay, { style: Object.assign({}, COMIC_INK_STYLE) });
+  }
+
+  function rejectedPhotoOverlaysAdded(show, overlays) {
+    const authored = new Set();
+    (show && show.overlays || []).forEach((overlay, i) => {
+      if (isRejectedPhotoOverlay(overlay)) authored.add(overlay.id || ('ov_' + (i + 1)));
+    });
+    return (overlays || []).filter((overlay) => isRejectedPhotoOverlay(overlay) && !authored.has(overlay.id));
+  }
+
   function cloneFxPath(raw) {
     if (!Array.isArray(raw)) return null;
     const pts = [];
@@ -612,6 +694,7 @@
       sparks: [], speed: [], fence: [], trails: [], pink_cut: null,
       exposure: [], fist: [], leg: [], tornado: [],
     };
+    const fxProfile = resolveFxProfile(show);
     const heroLayouts = {};
     let t = 0;
     let nPlate = 0;
@@ -751,6 +834,8 @@
           prm.y = xf.y;
           prm.scale = xf.scale;
         }
+        const paintPhoto = fxProfile !== 'comic' || !isPhotoFxChip(hk.type);
+        if (paintPhoto) {
         for (const comp of p.components || []) {
           if (comp === 'impact_burst') fx.hits.push([ht, col]);
           else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push([ht, col]);
@@ -768,6 +853,7 @@
           else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH)]);
           else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH)]);
           else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH)]);
+        }
         }
         const cls = classifyFxHook(hk, fxp);
         atomFx.push({
@@ -829,7 +915,11 @@
       }
     }
 
-    const overlays = normalizeOverlays(show, dur, warns);
+    const overlays = normalizeOverlays(show, dur, warns).map((overlay) => {
+      const styled = styleOverlayForProfile(overlay, fxProfile);
+      if (fxProfile === 'comic' && isPhotoFxOverlay(styled)) return Object.assign({}, styled, { fx_paint: false });
+      return styled;
+    });
     const fg = normalizeForeground(show, dur, errors, warns);
     if (errors.length) return { ok: false, errors, warnings: warns };
 
@@ -852,6 +942,7 @@
       atoms: tlAtoms,
       plates,
       fx,
+      fx_profile: fxProfile,
       overlays,
       ...(fg ? { fg } : {}),
       cam_keys_cols: ['t', 'x', 'y', 's', 'r'],
@@ -1453,5 +1544,16 @@
     resolveBackgroundCrop,
     normalizeFxPlacement,
     hasFxPlacement,
+    PHOTO_FX_CHIPS,
+    REJECTED_PHOTO_OVERLAY_KINDS,
+    COMIC_INK_STYLE,
+    resolveFxProfile,
+    defaultFxProfileFor,
+    fxProfileHonesty,
+    isPhotoFxChip,
+    isRejectedPhotoOverlay,
+    isPhotoFxOverlay,
+    styleOverlayForProfile,
+    rejectedPhotoOverlaysAdded,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

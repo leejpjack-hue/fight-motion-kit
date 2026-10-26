@@ -30,6 +30,7 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 #backgroundMotionNote.is-blocked{color:#ffb1a8}
 #backgroundMotion option:disabled{color:#6d7874}
 #applyTimingPack{display:inline-block;margin-top:10px}.inspector .background-label{margin-top:12px}
+.fx-profile-toggle{display:flex;gap:6px;margin:0 0 8px}.fx-profile-toggle button{flex:1;font-size:11px;padding:6px 8px}.fx-profile-toggle button[aria-pressed=true]{color:var(--accent);border-color:var(--accent);background:#25301c;font-weight:600}#fxProfileNote{margin:0 0 8px;color:#d7e0d8;background:#14181b;border:1px solid var(--border);padding:6px 8px;border-radius:5px}#fxProfileNote[data-fx-profile=comic]{color:#f4efe4;background:#1a1714;border-color:#3a342c}.effect-options button.fx-chip-demoted{opacity:.72;border-style:dashed}
 .fx-loc-size-box{margin-top:10px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#14181b}
 .fx-loc-size-box .paired-fields{margin-top:6px}
 .parity-picker-note{margin:18px 0 8px;padding:10px;border:1px dashed #586547;border-radius:7px;background:#1c241c}

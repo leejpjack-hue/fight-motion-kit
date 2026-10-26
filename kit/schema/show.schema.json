@@ -7,6 +7,8 @@
  "properties": {
   "show_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
   "title": {"type": "string"},
+  "venue": {"type": "string", "description": "street or classroom projects default to the comic/ink FX profile when fx_profile is omitted"},
+  "fx_profile": {"type": "string", "enum": ["comic", "full"], "description": "Comic/ink hides photographic fire, light, and dust chips. Full chips shows them. Rejected photo fire/light overlays are never inserted."},
   "duration_target_s": {"type": "number", "minimum": 30, "maximum": 60},
   "draft": {"type": "boolean", "description": "QA/smoke only: downgrade 30-60 s duration error to a warning"},
   "grounded": {"const": true},
