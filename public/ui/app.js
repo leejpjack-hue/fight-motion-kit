@@ -16,7 +16,7 @@
   let project, presets, effects, fightPacks, timingPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
-  let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false;
+  let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false;
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
@@ -562,6 +562,7 @@
         if(document.activeElement!==$('fxScale'))$('fxScale').value=Number.isFinite(+prm.scale)&&+prm.scale>0?+prm.scale:1;
       }
     }
+    renderPathEditor();
     updateFxHonestyUI();
   }
   function updateFxHonestyUI() {
@@ -649,6 +650,7 @@
       $('stageB')?.getContext('2d').clearRect(0,0,1280,720);
     }
     updateTransport();
+    syncFxPathOverlay();
   }
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
   function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
@@ -944,6 +946,210 @@
     drawStageA();
   }
   ['fxLocX','fxLocY','fxScale'].forEach(id=>{if($(id))$(id).onchange=safe(updateParamFxLocSize);});
+  const PATH_FX_TYPES=['fist_pressure','leg_arc','tornado_spiral'];
+  const PATH_FX_MAX=12;
+  function pathHookIndex(a){return (a?.fx_hooks||[]).findIndex(h=>PATH_FX_TYPES.includes(h?.type||h));}
+  function pathHook(){
+    const a=atom();if(!a)return null;
+    const idx=pathHookIndex(a);if(idx<0)return null;
+    const hk=a.fx_hooks[idx];
+    return {idx,hk,type:hk?.type||hk,prm:(hk&&typeof hk==='object'&&hk.params)||{}};
+  }
+  function clampStage(n,max){const v=Math.round(+n);return Math.max(0,Math.min(max,Number.isFinite(v)?v:0));}
+  function authoredPath(hit){
+    if(pathDrag)return pathDrag.path.map(p=>[p[0],p[1]]);
+    return HMComposeClient.resolveFxPath(hit.type,hit.prm.path)||[];
+  }
+  function screenPath(path,prm){return HMMotionFx.transformFxPath(path,{x:prm?.x,y:prm?.y,scale:prm?.scale});}
+  function pathFromScreen(path,index,sx,sy,prm){
+    const pts=path.map(p=>[p[0],p[1]]);
+    const xf=HMMotionFx.fxPlacementOf(prm);
+    const identity=Math.abs(xf.x)<1e-6&&Math.abs(xf.y)<1e-6&&Math.abs(xf.scale-1)<1e-6;
+    if(identity){pts[index]=[sx,sy];return pts;}
+    if(index===0){pts[0]=[clampStage(sx-xf.x,1280),clampStage(sy-xf.y,720)];return pts;}
+    const ax=pts[0][0],ay=pts[0][1];
+    pts[index]=[clampStage(ax+(sx-ax-xf.x)/xf.scale,1280),clampStage(ay+(sy-ay-xf.y)/xf.scale,720)];
+    return pts;
+  }
+  function stagePoint(e){
+    const r=$('stage').getBoundingClientRect();
+    return [clampStage((e.clientX-r.left)/(r.width||1)*1280,1280),clampStage((e.clientY-r.top)/(r.height||1)*720,720)];
+  }
+  function writePath(nextPath){
+    const hit=pathHook();if(!hit)return;
+    const path=HMComposeClient.normalizeFxPath(nextPath);
+    if(!path)throw new Error('A path needs at least two points.');
+    edit(()=>{
+      const cur=atom();
+      const raw=cur.fx_hooks[hit.idx];
+      const hk=typeof raw==='string'?{type:raw,t_rel:0.08,params:fxParamsFor(raw)}:raw;
+      hk.params={...(hk.params||{}),path};
+      cur.fx_hooks[hit.idx]=hk;
+    });
+    drawStageA();
+  }
+  function applyLivePath(path){
+    const hit=pathHook();if(!hit||typeof hit.hk!=='object')return;
+    hit.hk.params={...(hit.hk.params||{}),path:path.map(p=>[p[0],p[1]])};
+    drawStageA();
+  }
+  function placeFxPathOverlay(){
+    const stage=$('stage'),ov=$('fxPathOverlay');if(!stage||!ov)return;
+    const box=stage.parentElement,sr=stage.getBoundingClientRect(),br=box.getBoundingClientRect();
+    ov.style.left=(sr.left-br.left)+'px';ov.style.top=(sr.top-br.top)+'px';ov.style.width=sr.width+'px';ov.style.height=sr.height+'px';
+  }
+  function paintFxPathOverlay(info){
+    const ov=$('fxPathOverlay');if(!ov)return;
+    if(!info||playing||recording){ov.hidden=true;if(!pathDrag)ov.replaceChildren();return;}
+    ov.hidden=false;placeFxPathOverlay();
+    const screen=screenPath(info.path,info.prm);
+    const color=info.type==='leg_arc'?'#d7ecff':info.type==='tornado_spiral'?'#e7f6ff':'#ff3b3b';
+    let svg=ov.querySelector('svg');
+    if(!svg){
+      svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 1280 720');svg.setAttribute('preserveAspectRatio','none');
+      ov.prepend(svg);
+    }
+    svg.replaceChildren();
+    const poly=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    poly.setAttribute('points',screen.map(p=>p[0]+','+p[1]).join(' '));
+    poly.setAttribute('fill','none');poly.setAttribute('stroke',color);poly.setAttribute('stroke-width','4');
+    poly.setAttribute('stroke-linejoin','round');poly.setAttribute('stroke-linecap','round');poly.setAttribute('vector-effect','non-scaling-stroke');
+    svg.append(poly);
+    let handles=[...ov.querySelectorAll('.fx-path-handle')];
+    if(handles.length!==screen.length){
+      handles.forEach(n=>n.remove());
+      screen.forEach((pt,i)=>{
+        const b=document.createElement('button');
+        b.type='button';b.className='fx-path-handle';b.dataset.index=String(i);b.textContent=String(i+1);
+        b.setAttribute('aria-label',`Move path point ${i+1}`);
+        b.style.left=(pt[0]/1280*100)+'%';b.style.top=(pt[1]/720*100)+'%';
+        ov.append(b);
+      });
+    }else{
+      handles.forEach((b,i)=>{b.style.left=(screen[i][0]/1280*100)+'%';b.style.top=(screen[i][1]/720*100)+'%';});
+    }
+  }
+  function syncFxPathOverlay(){
+    const hit=pathHook();
+    paintFxPathOverlay(hit?{type:hit.type,prm:pathDrag?pathDrag.prm:hit.prm,path:authoredPath(hit)}:null);
+  }
+  function renderPathEditor(){
+    const box=$('fxPathBox');if(!box)return;
+    const hit=pathHook();
+    box.hidden=!hit;
+    const list=$('fxPathPoints');
+    if($('fxPathAdd'))$('fxPathAdd').disabled=!hit||(hit&&authoredPath(hit).length>=PATH_FX_MAX);
+    if(!hit||!list){if(list)list.replaceChildren();syncFxPathOverlay();return;}
+    const path=authoredPath(hit);
+    const rows=[...list.querySelectorAll('li')];
+    const sameShape=!pathDrag&&rows.length===path.length&&rows.every(li=>!!li.querySelector('[data-remove]')===(path.length>2));
+    if(sameShape){
+      rows.forEach((li,i)=>{
+        for(const axis of ['x','y']){
+          const input=li.querySelector(`[data-axis="${axis}"]`);
+          if(input&&document.activeElement!==input)input.value=path[i][axis==='x'?0:1];
+        }
+      });
+    }else if(!pathDrag){
+      list.replaceChildren();
+      path.forEach((pt,i)=>{
+        const li=document.createElement('li');
+        const n=document.createElement('span');n.className='fx-path-idx';n.textContent=String(i+1);
+        const xLab=document.createElement('label');xLab.append('X');
+        const xIn=document.createElement('input');
+        xIn.type='number';xIn.step='1';xIn.min='0';xIn.max='1280';xIn.value=pt[0];
+        xIn.dataset.point=String(i);xIn.dataset.axis='x';xIn.setAttribute('aria-label',`Path point ${i+1} X`);
+        xLab.append(xIn);
+        const yLab=document.createElement('label');yLab.append('Y');
+        const yIn=document.createElement('input');
+        yIn.type='number';yIn.step='1';yIn.min='0';yIn.max='720';yIn.value=pt[1];
+        yIn.dataset.point=String(i);yIn.dataset.axis='y';yIn.setAttribute('aria-label',`Path point ${i+1} Y`);
+        yLab.append(yIn);
+        li.append(n,xLab,yLab);
+        if(path.length>2){
+          const rm=document.createElement('button');
+          rm.type='button';rm.className='text-button';rm.textContent='−';rm.dataset.remove=String(i);
+          rm.setAttribute('aria-label',`Remove path point ${i+1}`);
+          li.append(rm);
+        }
+        list.append(li);
+      });
+    }
+    syncFxPathOverlay();
+  }
+  function nudgePathPoint(index,axis,raw){
+    const hit=pathHook();if(!hit)return;
+    const path=HMComposeClient.resolveFxPath(hit.type,hit.prm.path).map(p=>[p[0],p[1]]);
+    if(!path[index])return;
+    const next=axis==='x'?clampStage(raw,1280):clampStage(raw,720);
+    if(axis==='x')path[index][0]=next;else path[index][1]=next;
+    writePath(path);
+  }
+  if($('fxPathPoints')){
+    $('fxPathPoints').addEventListener('change',safe(e=>{
+      const input=e.target.closest('input');if(!input||input.dataset.point==null)return;
+      const axis=input.dataset.axis;
+      const next=axis==='x'?clampStage(+input.value,1280):clampStage(+input.value,720);
+      input.value=String(next);
+      nudgePathPoint(+input.dataset.point,axis,next);
+    }));
+    $('fxPathPoints').addEventListener('click',safe(e=>{
+      const btn=e.target.closest('[data-remove]');if(!btn)return;
+      const hit=pathHook();if(!hit)return;
+      const path=HMComposeClient.resolveFxPath(hit.type,hit.prm.path).map(p=>[p[0],p[1]]);
+      if(path.length<=2)throw new Error('A path needs at least two points.');
+      path.splice(+btn.dataset.remove,1);
+      writePath(path);
+    }));
+  }
+  on('fxPathAdd',()=>{
+    const hit=pathHook();if(!hit)return;
+    const path=HMComposeClient.resolveFxPath(hit.type,hit.prm.path).map(p=>[p[0],p[1]]);
+    if(path.length>=PATH_FX_MAX)throw new Error('A path can have at most 12 points.');
+    const last=path[path.length-1],prev=path[path.length-2]||last;
+    const sx=Math.sign((last[0]-prev[0])||1),sy=Math.sign((last[1]-prev[1])||-1);
+    let nx=clampStage(last[0]+sx*48,1280),ny=clampStage(last[1]+sy*36,720);
+    if(nx===last[0]&&ny===last[1]){nx=clampStage(last[0]-48,1280);ny=clampStage(last[1]+36,720);}
+    path.push([nx,ny]);
+    writePath(path);
+  });
+  on('fxPathReset',()=>{
+    const hit=pathHook();if(!hit)return;
+    writePath(HMComposeClient.stockFxPath(hit.type));
+  });
+  const pathOv=$('fxPathOverlay');
+  if(pathOv){
+    pathOv.addEventListener('pointerdown',e=>{
+      const handle=e.target.closest('.fx-path-handle');
+      if(!handle||e.button!==0)return;
+      const hit=pathHook();if(!hit)return;
+      e.preventDefault();
+      const origin=HMComposeClient.resolveFxPath(hit.type,hit.prm.path).map(p=>[p[0],p[1]]);
+      pathDrag={index:+handle.dataset.index,origin,path:origin.map(p=>[p[0],p[1]]),prm:{...hit.prm},pointer:e.pointerId};
+      pathOv.setPointerCapture?.(e.pointerId);
+    });
+    pathOv.addEventListener('pointermove',e=>{
+      if(!pathDrag||e.pointerId!==pathDrag.pointer)return;
+      const [sx,sy]=stagePoint(e);
+      pathDrag.path=pathFromScreen(pathDrag.origin,pathDrag.index,sx,sy,pathDrag.prm);
+      applyLivePath(pathDrag.path);
+      paintFxPathOverlay({type:pathHook()?.type,prm:pathDrag.prm,path:pathDrag.path});
+    });
+    const endPathDrag=e=>{
+      if(!pathDrag||(e&&pathDrag.pointer!==e.pointerId&&e.type!=='pointercancel'))return;
+      const d=pathDrag;pathDrag=null;
+      try{pathOv.releasePointerCapture?.(d.pointer);}catch(_){}
+      const changed=JSON.stringify(d.path)!==JSON.stringify(d.origin);
+      applyLivePath(d.origin);
+      if(!changed){syncFxPathOverlay();return;}
+      writePath(d.path);
+    };
+    pathOv.addEventListener('pointerup',safe(endPathDrag));
+    pathOv.addEventListener('pointercancel',()=>{if(pathDrag)endPathDrag({pointerId:pathDrag.pointer,type:'pointercancel'});});
+  }
+  window.addEventListener('resize',()=>{if(!pathDrag)syncFxPathOverlay();});
+  document.addEventListener('fullscreenchange',()=>syncFxPathOverlay());
   on('fxResetLocSize',()=>{
     const a=atom();if(!a)return;
     const idx=(a.fx_hooks||[]).findIndex(h=>PARAM_FX_TYPES.includes(h?.type||h));

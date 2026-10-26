@@ -31,6 +31,23 @@
     return pts.length ? pts : null;
   }
 
+  function stockFxPath(type) {
+    const src = type === 'fist_pressure' ? FX_FIST_PATH : type === 'leg_arc' ? FX_LEG_PATH : type === 'tornado_spiral' ? FX_TORNADO_PATH : null;
+    return src ? src.map((p) => [p[0], p[1]]) : null;
+  }
+
+  // At least two finite points. Shorter or empty input is not an authored path.
+  function normalizeFxPath(raw) {
+    const pts = cloneFxPath(raw);
+    if (!pts || pts.length < 2) return null;
+    return pts;
+  }
+
+  // Stock polyline when show fx_hooks omit params.path, or the value cannot be read.
+  function resolveFxPath(type, raw) {
+    return cloneFxPath(raw) || stockFxPath(type);
+  }
+
   function fxSpanSeconds(hk, prm, atomDur) {
     const explicit = hk && hk.params && hk.params.dur;
     if (Number.isFinite(+explicit) && +explicit > 0) return round4(+explicit);
@@ -366,8 +383,7 @@
       if (src) row.src = src;
       if (text != null) row.text = String(text);
       if (proceduralDur != null) {
-        const fallback = kind === 'fist_pressure' ? FX_FIST_PATH : kind === 'leg_arc' ? FX_LEG_PATH : kind === 'tornado_spiral' ? FX_TORNADO_PATH : null;
-        const path = cloneFxPath(o.path) || cloneFxPath(fallback);
+        const path = resolveFxPath(kind, o.path);
         if (path) row.path = path;
       }
       if (o.style && typeof o.style === 'object') {
@@ -765,9 +781,9 @@
           else if (comp === 'fence') fx.fence.push([ht, he, prm.k]);
           else if (comp === 'pink_cut') fx.pink_cut = ht;
           else if (comp === 'exposure_warm_crush') fx.exposure.push(hasFxPlacement(xf) ? [ht, span, xf] : [ht, span]);
-          else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH)]);
-          else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH)]);
-          else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH)]);
+          else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('fist_pressure', prm.path), xf] : [ht, span, resolveFxPath('fist_pressure', prm.path)]);
+          else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('leg_arc', prm.path), xf] : [ht, span, resolveFxPath('leg_arc', prm.path)]);
+          else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('tornado_spiral', prm.path), xf] : [ht, span, resolveFxPath('tornado_spiral', prm.path)]);
         }
         const cls = classifyFxHook(hk, fxp);
         atomFx.push({
@@ -1453,5 +1469,8 @@
     resolveBackgroundCrop,
     normalizeFxPlacement,
     hasFxPlacement,
+    stockFxPath,
+    normalizeFxPath,
+    resolveFxPath,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
