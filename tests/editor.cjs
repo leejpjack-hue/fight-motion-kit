@@ -720,6 +720,109 @@ async function ensureServer(urlStr){
     await p.getByRole('button',{name:'Close export',exact:true}).click();
     if(await p.locator('#abToggle').getAttribute('aria-pressed')==='false')await p.click('#abToggle');
     check('HM-EXPOSURE-PARAM-FX: warm crush keeps the red fist and cold leg arc, and parametric FX preview in the composer');
+    // HM-FX-LOC-SIZE: select parametric FX -> set x/y (preview moves) -> set scale (timing/colour/type unchanged) -> persist/reload/export match + capscreens A/B/C
+    const proofDir=path.resolve('docs/proof/hm-fx-loc-size');
+    fs.mkdirSync(proofDir,{recursive:true});
+    const delivDir='/workspace/deliverables/hm-fx-loc-size/capscreens';
+    try{fs.mkdirSync(delivDir,{recursive:true});}catch(_){}
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='true')await p.click('#onionToggle');
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='true')await p.click('#abToggle');
+    await p.click('[data-effect="none"]');await settle();
+    assert.equal(await p.locator('#fxLocSizeBox').isVisible(),false);
+    for(const fxType of ['fist_pressure','leg_arc','tornado_spiral','exposure_warm_crush']){
+      await p.click(`[data-effect="${fxType}"]`);await settle();
+      assert.equal(await p.locator('#fxLocSizeBox').isVisible(),true,fxType);
+      assert.equal(await p.locator('#fxLocX').inputValue(),'0',fxType);
+      assert.equal(await p.locator('#fxLocY').inputValue(),'0',fxType);
+      assert.equal(await p.locator('#fxScale').inputValue(),'1',fxType);
+    }
+    // Select fist_pressure for Capscreen A (default), B (moved x/y), C (scaled)
+    await p.click('[data-effect="fist_pressure"]');await settle();
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const fistSample=()=>p.evaluate(()=>{
+      const g=document.getElementById('stage').getContext('2d');
+      const one=(x,y)=>Array.from(g.getImageData(x,y,1,1).data);
+      // Scan opaque bright red core (#e10600 -> R === 225 && G === 6 && B === 0)
+      const data=g.getImageData(0,0,1280,720).data;
+      let minX=1280,maxX=0,minY=720,maxY=0,sumX=0,sumY=0,count=0;
+      for(let y=0;y<720;y++){
+        for(let x=0;x<1280;x++){
+          const i=(y*1280+x)*4;
+          if(data[i]===225&&data[i+1]===6&&data[i+2]===0){
+            if(x<minX)minX=x;if(x>maxX)maxX=x;
+            if(y<minY)minY=y;if(y>maxY)maxY=y;
+            sumX+=x;sumY+=y;count++;
+          }
+        }
+      }
+      return {cx:count?sumX/count:0,cy:count?sumY/count:0,w:maxX-minX,h:maxY-minY,count,atDefault:one(430,390),atMoved:one(710,270)};
+    });
+    const sampleA=await fistSample();
+    assert.ok(sampleA.count>500,'default fist renders red pressure');
+    assert.ok(sampleA.atDefault[0]<50&&sampleA.atDefault[1]<20,'default fist dark center at (430,390): '+sampleA.atDefault);
+    await p.screenshot({path:path.join(proofDir,'A-default.png'),fullPage:true});
+    try{fs.copyFileSync(path.join(proofDir,'A-default.png'),path.join(delivDir,'A-default.png'));}catch(_){}
+
+    // (B) Move x/y (+280, -120) -> preview moves immediately, timing/colour/type unchanged
+    const hkBeforeMove=structuredClone((await state()).project.show.atoms[0].fx_hooks[0]);
+    await change('fxLocX',280);
+    await change('fxLocY',-120);
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const sampleB=await fistSample();
+    assert.ok(Math.abs((sampleB.cx-sampleA.cx)-280)<35,'fist center X moved by ~+280: '+sampleA.cx+' -> '+sampleB.cx);
+    assert.ok(Math.abs((sampleB.cy-sampleA.cy)-(-120))<35,'fist center Y moved by ~-120: '+sampleA.cy+' -> '+sampleB.cy);
+    assert.ok(sampleB.atMoved[0]<50&&sampleB.atMoved[1]<20,'moved fist dark center at (710,270): '+sampleB.atMoved);
+    await p.screenshot({path:path.join(proofDir,'B-moved-xy.png'),fullPage:true});
+    try{fs.copyFileSync(path.join(proofDir,'B-moved-xy.png'),path.join(delivDir,'B-moved-xy.png'));}catch(_){}
+
+    // (C) Scale same FX (scale = 1.65) -> preview scales, timing/colour/type unchanged
+    await change('fxScale',1.65);
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const sampleC=await fistSample();
+    assert.ok(sampleC.w>sampleB.w*1.35&&sampleC.h>sampleB.h*1.35,'scaled fist bbox grew: '+sampleB.w+'x'+sampleB.h+' -> '+sampleC.w+'x'+sampleC.h);
+    assert.ok(sampleC.count>sampleB.count*1.8,'scaled fist red pixel count grew: '+sampleB.count+' -> '+sampleC.count);
+    const hkAfterScale=(await state()).project.show.atoms[0].fx_hooks[0];
+    assert.equal(hkAfterScale.type,hkBeforeMove.type);
+    assert.equal(hkAfterScale.t_rel,hkBeforeMove.t_rel);
+    assert.equal(hkAfterScale.params.dur,hkBeforeMove.params.dur);
+    assert.deepEqual(hkAfterScale.params.path,hkBeforeMove.params.path);
+    assert.equal(hkAfterScale.params.x,280);
+    assert.equal(hkAfterScale.params.y,-120);
+    assert.equal(hkAfterScale.params.scale,1.65);
+    await p.screenshot({path:path.join(proofDir,'C-scaled.png'),fullPage:true});
+    try{fs.copyFileSync(path.join(proofDir,'C-scaled.png'),path.join(delivDir,'C-scaled.png'));}catch(_){}
+
+    // Persist show JSON, reload, and export HTML match
+    const locSizePortablePath=await downloadFrom('saveProject','hm-fx-loc-size.motion.json');
+    const locSizePortable=JSON.parse(fs.readFileSync(locSizePortablePath,'utf8'));
+    assert.deepEqual(locSizePortable.show.atoms[0].fx_hooks[0].params,{dur:0.36,path:[[430,390],[610,300],[760,250]],x:280,y:-120,scale:1.65});
+    await p.reload();await p.evaluate(()=>window.ready);await settle();
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='true')await p.click('#onionToggle');
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='true')await p.click('#abToggle');
+    assert.equal(await p.locator('#fxLocX').inputValue(),'280');
+    assert.equal(await p.locator('#fxLocY').inputValue(),'-120');
+    assert.equal(await p.locator('#fxScale').inputValue(),'1.65');
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const sampleReload=await fistSample();
+    assert.equal(sampleReload.w,sampleC.w);
+    assert.equal(sampleReload.h,sampleC.h);
+    assert.deepEqual(sampleReload.atMoved,sampleC.atMoved);
+    await p.click('#exportOpen');
+    const locSizeHtml=await downloadFrom('exportHtml','hm-fx-loc-size.html');
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    const locSizeOffline=await browser.newPage();
+    await locSizeOffline.route(/^https?:/,r=>r.abort());
+    await locSizeOffline.goto('file://'+locSizeHtml);
+    await locSizeOffline.evaluate(()=>window.ready);
+    await locSizeOffline.evaluate(()=>renderAt(0.08));
+    const exportMovedPx=await locSizeOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(710,270,1,1).data));
+    assert.deepEqual(exportMovedPx,sampleC.atMoved);
+    await locSizeOffline.close();
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='false')await p.click('#abToggle');
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='false')await p.click('#onionToggle');
+    check('HM-FX-LOC-SIZE: parametric FX x/y and scale move and resize preview, preserve timing/colour/type, persist across reload, and match offline HTML export');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');

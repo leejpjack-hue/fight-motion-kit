@@ -459,6 +459,16 @@
     $('caption').value=a.caption||'';
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
+    const paramHk=(a.fx_hooks||[]).find(h=>['fist_pressure','leg_arc','tornado_spiral','exposure_warm_crush'].includes(h?.type||h));
+    if($('fxLocSizeBox')){
+      $('fxLocSizeBox').hidden=!paramHk;
+      if(paramHk){
+        const prm=(typeof paramHk==='object'&&paramHk.params)||{};
+        if(document.activeElement!==$('fxLocX'))$('fxLocX').value=Number.isFinite(+prm.x)?+prm.x:0;
+        if(document.activeElement!==$('fxLocY'))$('fxLocY').value=Number.isFinite(+prm.y)?+prm.y:0;
+        if(document.activeElement!==$('fxScale'))$('fxScale').value=Number.isFinite(+prm.scale)&&+prm.scale>0?+prm.scale:1;
+      }
+    }
     updateFxHonestyUI();
   }
   function updateFxHonestyUI() {
@@ -759,12 +769,41 @@
     if(type==='speed_lines')return {mode:'up',k0:0,k1:1};
     if(type==='sparks')return {n:40};
     if(type==='fence_shake')return {k:1};
-    if(type==='exposure_warm_crush')return {dur:0.10};
-    if(type==='fist_pressure')return {dur:0.36,path:[[430,390],[610,300],[760,250]]};
-    if(type==='leg_arc')return {dur:0.28,path:[[800,560],[1020,340],[1160,150]]};
-    if(type==='tornado_spiral')return {dur:0.50,path:[[640,480],[660,300]]};
+    if(type==='exposure_warm_crush')return {dur:0.10,x:0,y:0,scale:1};
+    if(type==='fist_pressure')return {dur:0.36,path:[[430,390],[610,300],[760,250]],x:0,y:0,scale:1};
+    if(type==='leg_arc')return {dur:0.28,path:[[800,560],[1020,340],[1160,150]],x:0,y:0,scale:1};
+    if(type==='tornado_spiral')return {dur:0.50,path:[[640,480],[660,300]],x:0,y:0,scale:1};
     return {};
   }
+  const PARAM_FX_TYPES=['fist_pressure','leg_arc','tornado_spiral','exposure_warm_crush'];
+  function updateParamFxLocSize() {
+    const a=atom();if(!a)return;
+    const idx=(a.fx_hooks||[]).findIndex(h=>PARAM_FX_TYPES.includes(h?.type||h));
+    if(idx<0)return;
+    const x=+$('fxLocX').value, y=+$('fxLocY').value, scale=+$('fxScale').value;
+    if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error('Use numbers for FX location X and Y.');
+    if(!Number.isFinite(scale)||scale<0.05||scale>8)throw new Error('Use FX scale between 0.05 and 8.');
+    edit(()=>{
+      const cur=atom();
+      const hk=typeof cur.fx_hooks[idx]==='string'?{type:cur.fx_hooks[idx],t_rel:0.08,params:fxParamsFor(cur.fx_hooks[idx])}:cur.fx_hooks[idx];
+      hk.params={...(hk.params||{}),x,y,scale};
+      cur.fx_hooks[idx]=hk;
+    });
+    drawStageA();
+  }
+  ['fxLocX','fxLocY','fxScale'].forEach(id=>{if($(id))$(id).onchange=safe(updateParamFxLocSize);});
+  on('fxResetLocSize',()=>{
+    const a=atom();if(!a)return;
+    const idx=(a.fx_hooks||[]).findIndex(h=>PARAM_FX_TYPES.includes(h?.type||h));
+    if(idx<0)return;
+    edit(()=>{
+      const cur=atom();
+      const hk=typeof cur.fx_hooks[idx]==='string'?{type:cur.fx_hooks[idx],t_rel:0.08,params:fxParamsFor(cur.fx_hooks[idx])}:cur.fx_hooks[idx];
+      hk.params={...(hk.params||{}),x:0,y:0,scale:1};
+      cur.fx_hooks[idx]=hk;
+    });
+    drawStageA();
+  });
   document.querySelectorAll('[data-effect]').forEach(b=>b.onclick=safe(()=>{edit(()=>{
     const type=b.dataset.effect;
     const a=atom();

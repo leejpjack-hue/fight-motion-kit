@@ -159,12 +159,39 @@ function fxPointOnPath(path, u) {
   const a = pts[i], b = pts[i + 1];
   return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 }
+function fxPlacementOf(xf) {
+  const p = xf && typeof xf === 'object' ? xf : {};
+  const x = Number.isFinite(+p.x) ? +p.x : 0;
+  const y = Number.isFinite(+p.y) ? +p.y : 0;
+  const scale = Number.isFinite(+p.scale) && +p.scale > 0 ? Math.max(0.05, Math.min(8, +p.scale)) : 1;
+  return { x, y, scale };
+}
+function transformFxPath(path, xf) {
+  const pts = Array.isArray(path) && path.length ? path : [[640, 360]];
+  const { x: dx, y: dy, scale } = fxPlacementOf(xf);
+  const norm = pts.map(p => Array.isArray(p) ? [+p[0] || 0, +p[1] || 0] : [+(p && p.x) || 0, +(p && p.y) || 0]);
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6 && Math.abs(scale - 1) < 1e-6) return norm;
+  const [ax, ay] = norm[0];
+  return norm.map(([px, py]) => [ax + dx + (px - ax) * scale, ay + dy + (py - ay) * scale]);
+}
 // Luma crush only. Strong chroma (red-black fist) and cold-white strokes are left
 // unchanged — this is not hitstop's grayscale / invert.
-function exposureWarmCrushPixels(data, amount) {
+function exposureWarmCrushPixels(data, amount, bounds) {
   const a = amount < 0 ? 0 : amount > 1 ? 1 : amount;
   if (!(a > 0) || !data) return;
+  const useBounds = bounds && Number.isFinite(+bounds.w) && Number.isFinite(+bounds.h) && +bounds.w > 0 && +bounds.h > 0;
+  const bw = useBounds ? +bounds.w | 0 : 0;
+  const x0 = useBounds ? Math.max(0, Math.floor(+bounds.x0 || 0)) : 0;
+  const y0 = useBounds ? Math.max(0, Math.floor(+bounds.y0 || 0)) : 0;
+  const x1 = useBounds ? Math.min(bw, Math.ceil(+bounds.x1 || bw)) : 0;
+  const y1 = useBounds ? Math.min(+bounds.h | 0, Math.ceil(+bounds.y1 || (+bounds.h | 0))) : 0;
   for (let i = 0; i < data.length; i += 4) {
+    if (useBounds) {
+      const pIdx = i >> 2;
+      const px = pIdx % bw;
+      const py = (pIdx / bw) | 0;
+      if (px < x0 || px >= x1 || py < y0 || py >= y1) continue;
+    }
     const r0 = data[i], g0 = data[i + 1], b0 = data[i + 2];
     const y = 0.2126 * r0 + 0.7152 * g0 + 0.0722 * b0;
     const max = r0 > g0 ? (r0 > b0 ? r0 : b0) : (g0 > b0 ? g0 : b0);
@@ -195,9 +222,10 @@ function exposureWarmCrushPixels(data, amount) {
     data[i + 2] = b0 + (nb - b0) * a;
   }
 }
-function drawFistPressure(ctx, x, y, u) {
+function drawFistPressure(ctx, x, y, u, scale = 1) {
+  const s = Number.isFinite(+scale) && +scale > 0 ? +scale : 1;
   const grow = 0.84 + 0.22 * Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
-  const R = 268 * grow;
+  const R = 268 * grow * s;
   ctx.save();
   const g = ctx.createRadialGradient(x, y, R * 0.05, x, y, R);
   g.addColorStop(0, 'rgba(70, 0, 0, 0.2)');
@@ -210,34 +238,36 @@ function drawFistPressure(ctx, x, y, u) {
   ctx.fill();
   ctx.globalAlpha = 0.95;
   ctx.strokeStyle = '#ff1a1a';
-  ctx.lineWidth = 24;
+  ctx.lineWidth = 24 * s;
   ctx.beginPath();
   ctx.arc(x, y, R * 0.56, 0, Math.PI * 2);
   ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#120000';
   ctx.beginPath();
-  ctx.arc(x, y, 58, 0, Math.PI * 2);
+  ctx.arc(x, y, 58 * s, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#e10600';
   ctx.beginPath();
-  ctx.arc(x - 8, y - 10, 36, 0, Math.PI * 2);
+  ctx.arc(x - 8 * s, y - 10 * s, 36 * s, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
-function drawLegArc(ctx, path, u) {
+function drawLegArc(ctx, path, u, xf) {
+  const { scale: s } = fxPlacementOf(xf);
+  const pts = transformFxPath(path, xf);
   const uu = Math.max(0.08, Math.min(1, Number(u) || 0));
   const steps = 32;
   function stroke(width, color, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
-    ctx.lineWidth = width;
+    ctx.lineWidth = width * s;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
     for (let i = 0; i <= steps; i++) {
-      const p = fxPointOnPath(path, (i / steps) * uu);
+      const p = fxPointOnPath(pts, (i / steps) * uu);
       if (i === 0) ctx.moveTo(p[0], p[1]);
       else ctx.lineTo(p[0], p[1]);
     }
@@ -247,9 +277,11 @@ function drawLegArc(ctx, path, u) {
   stroke(30, '#b9dcff', 0.96);
   stroke(10, '#f4fbff', 1);
 }
-function drawTornado(ctx, x, y, u) {
+function drawTornado(ctx, x, y, u, scale = 1) {
+  const s = Number.isFinite(+scale) && +scale > 0 ? +scale : 1;
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(s, s);
   const spin = (Number(u) || 0) * Math.PI * 5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -277,10 +309,12 @@ function collectProceduralOverlays(overlays, t) {
   for (const o of overlays || []) {
     if (!(t >= o.t_start && t < o.t_end)) continue;
     const dur = Math.max(0.01, o.t_end - o.t_start);
-    if (o.kind === 'exposure_warm_crush') out.exposure.push([o.t_start, dur]);
-    else if (o.kind === 'fist_pressure') out.fist.push([o.t_start, dur, o.path || FX_FIST_PATH]);
-    else if (o.kind === 'leg_arc') out.leg.push([o.t_start, dur, o.path || FX_LEG_PATH]);
-    else if (o.kind === 'tornado_spiral') out.tornado.push([o.t_start, dur, o.path || FX_TORNADO_PATH]);
+    const xf = fxPlacementOf({ x: o.x, y: o.y, scale: o.scale });
+    const hasXf = Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6;
+    if (o.kind === 'exposure_warm_crush') out.exposure.push(hasXf ? [o.t_start, dur, xf] : [o.t_start, dur]);
+    else if (o.kind === 'fist_pressure') out.fist.push(hasXf ? [o.t_start, dur, o.path || FX_FIST_PATH, xf] : [o.t_start, dur, o.path || FX_FIST_PATH]);
+    else if (o.kind === 'leg_arc') out.leg.push(hasXf ? [o.t_start, dur, o.path || FX_LEG_PATH, xf] : [o.t_start, dur, o.path || FX_LEG_PATH]);
+    else if (o.kind === 'tornado_spiral') out.tornado.push(hasXf ? [o.t_start, dur, o.path || FX_TORNADO_PATH, xf] : [o.t_start, dur, o.path || FX_TORNADO_PATH]);
   }
   return out;
 }
@@ -433,36 +467,52 @@ function createMotionRenderer(canvas, assets = {}) {
       else if (type === 'speed_lines') out.speed.push([ht, he, prm.mode || 'up', prm.k0 ?? 0, prm.k1 ?? 1]);
       else if (type === 'sparks') out.sparks.push([ht, prm.n ?? 40, prm.at]);
       else if (type === 'pink_cut') out.pink_cut = ht;
-      else if (type === 'exposure_warm_crush') out.exposure.push([ht, span]);
-      else if (type === 'fist_pressure') out.fist.push([ht, span, prm.path || FX_FIST_PATH]);
-      else if (type === 'leg_arc') out.leg.push([ht, span, prm.path || FX_LEG_PATH]);
-      else if (type === 'tornado_spiral') out.tornado.push([ht, span, prm.path || FX_TORNADO_PATH]);
+      else if (type === 'exposure_warm_crush') {
+        const xf = fxPlacementOf(prm);
+        out.exposure.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, xf] : [ht, span]);
+      } else if (type === 'fist_pressure') {
+        const xf = fxPlacementOf(prm);
+        out.fist.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_FIST_PATH, xf] : [ht, span, prm.path || FX_FIST_PATH]);
+      } else if (type === 'leg_arc') {
+        const xf = fxPlacementOf(prm);
+        out.leg.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_LEG_PATH, xf] : [ht, span, prm.path || FX_LEG_PATH]);
+      } else if (type === 'tornado_spiral') {
+        const xf = fxPlacementOf(prm);
+        out.tornado.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_TORNADO_PATH, xf] : [ht, span, prm.path || FX_TORNADO_PATH]);
+      }
     }
     return out;
   }
   function drawParametric(fxSource, delta) {
-    (fxSource.tornado || []).forEach(([h, dur = 0.5, path]) => {
+    (fxSource.tornado || []).forEach(([h, dur = 0.5, path, xf]) => {
       const d = delta(h, dur);
       if (d < 0) return;
       const u = dur > 0 ? d / dur : 0;
-      const at = fxPointOnPath(path, u);
-      drawTornado(ctx, at[0], at[1], u);
+      const p = fxPlacementOf(xf);
+      const pts = transformFxPath(path, p);
+      const at = fxPointOnPath(pts, u);
+      drawTornado(ctx, at[0], at[1], u, p.scale);
     });
-    (fxSource.leg || []).forEach(([h, dur = 0.28, path]) => {
+    (fxSource.leg || []).forEach(([h, dur = 0.28, path, xf]) => {
       const d = delta(h, dur);
       if (d < 0) return;
-      drawLegArc(ctx, path, dur > 0 ? d / dur : 0);
+      drawLegArc(ctx, path, dur > 0 ? d / dur : 0, xf);
     });
-    (fxSource.fist || []).forEach(([h, dur = 0.36, path]) => {
+    (fxSource.fist || []).forEach(([h, dur = 0.36, path, xf]) => {
       const d = delta(h, dur);
       if (d < 0) return;
       const u = dur > 0 ? d / dur : 0;
-      const at = fxPointOnPath(path, u);
-      drawFistPressure(ctx, at[0], at[1], u);
+      const p = fxPlacementOf(xf);
+      const pts = transformFxPath(path, p);
+      const at = fxPointOnPath(pts, u);
+      drawFistPressure(ctx, at[0], at[1], u, p.scale);
     });
   }
+  function activeExposures(list, delta) {
+    return (list || []).filter(([h, dur]) => delta(h, dur > 0 ? dur : 0.10) >= 0);
+  }
   function exposureLive(list, delta) {
-    return (list || []).some(([h, dur]) => delta(h, dur > 0 ? dur : 0.10) >= 0);
+    return activeExposures(list, delta).length > 0;
   }
   function render(time, opts = {}) {
     lastTime = Math.round((Number(time) || 0) * 10000) / 10000;
@@ -695,9 +745,27 @@ function createMotionRenderer(canvas, assets = {}) {
     drawParametric(fxSource, phase);
     drawParametric(overlayFx, phase);
     const pinkOn = fxSource.pink_cut != null && (t >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)));
-    if (!pinkOn && (exposureLive(fxSource.exposure, fxDelta) || exposureLive(overlayFx.exposure, fxDelta))) {
+    const liveExposures = activeExposures(fxSource.exposure, fxDelta).concat(activeExposures(overlayFx.exposure, fxDelta));
+    if (!pinkOn && liveExposures.length) {
       const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      exposureWarmCrushPixels(frame.data, 1);
+      const entry = liveExposures[0];
+      const xf = fxPlacementOf(entry && entry[2]);
+      const hasXf = Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6;
+      if (hasXf) {
+        const sx = canvas.width / 1280, sy = canvas.height / 720;
+        const cx = (640 + xf.x) * sx, cy = (360 + xf.y) * sy;
+        const rw = 1280 * xf.scale * sx, rh = 720 * xf.scale * sy;
+        exposureWarmCrushPixels(frame.data, 1, {
+          w: canvas.width,
+          h: canvas.height,
+          x0: cx - rw / 2,
+          y0: cy - rh / 2,
+          x1: cx + rw / 2,
+          y1: cy + rh / 2,
+        });
+      } else {
+        exposureWarmCrushPixels(frame.data, 1);
+      }
       ctx.putImageData(frame, 0, 0);
     }
     if (pinkOn) {
@@ -723,9 +791,13 @@ hmRoot.fgBreakState = fgBreakState;
 hmRoot.FX_FIST_PATH = FX_FIST_PATH;
 hmRoot.FX_LEG_PATH = FX_LEG_PATH;
 hmRoot.FX_TORNADO_PATH = FX_TORNADO_PATH;
+hmRoot.fxPlacementOf = fxPlacementOf;
+hmRoot.transformFxPath = transformFxPath;
 hmRoot.HMMotionFx = {
   exposureWarmCrushPixels,
   fxPointOnPath,
+  fxPlacementOf,
+  transformFxPath,
   drawFistPressure,
   drawLegArc,
   drawTornado,

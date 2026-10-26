@@ -226,7 +226,52 @@
       "description": "id in presets/fx_presets.json"
      },
      "params": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+       "dur": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "x": {
+        "type": "number",
+        "default": 0,
+        "description": "optional x offset in 1280x720 stage pixels (0 = default placement)"
+       },
+       "y": {
+        "type": "number",
+        "default": 0,
+        "description": "optional y offset in 1280x720 stage pixels (0 = default placement)"
+       },
+       "scale": {
+        "type": "number",
+        "minimum": 0.05,
+        "maximum": 8,
+        "default": 1,
+        "description": "optional size multiplier (1 = default size)"
+       },
+       "path": {
+        "type": "array",
+        "items": {
+         "oneOf": [
+          {
+           "type": "array",
+           "items": { "type": "number" },
+           "minItems": 2,
+           "maxItems": 2
+          },
+          {
+           "type": "object",
+           "required": ["x", "y"],
+           "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+           }
+          }
+         ]
+        }
+       }
+      },
+      "additionalProperties": true
      }
     }
    }
