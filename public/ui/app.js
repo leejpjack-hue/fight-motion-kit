@@ -13,7 +13,7 @@
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false;
-  let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false;
+  let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false;
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
   const durationB = () => projectB ? durationOf(projectB) : Math.round((resultB?.timeline?.duration_s || 0) * 10000) / 10000;
@@ -79,7 +79,7 @@
   async function load(p) {
     const request=++loadRequest;loading=true;
     try {
-    validate(p); pause(); project=copy(p); selected=project.show.atoms.length?0:-1;time=0;
+    validate(p); pause(); project=copy(p); pickerOpen=false; selected=project.show.atoms.length?0:-1;time=0;
     history=[copy(project)];historyIndex=0;result=null;
     update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
     status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
@@ -117,12 +117,23 @@
     const v=++compileVersion;
     if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();return null;}
     const snapshot=copy(project);captionOverlays(snapshot.show);
+    const dirt=HMComposeClient.parityDirtyChecklist(snapshot);
+    if(dirt.active&&dirt.blocks.length){
+      result=null;renderer=null;renderedVersion=v;renderPlateJump();
+      const message='Compose blocked · '+dirt.blocks.map(row=>row.text).join(' · ');
+      status(message,true);
+      throw new Error(message);
+    }
     try {
       const r=await HMComposeClient.composeShow(snapshot.show,{cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);return r;
+      result=r;renderer=next;renderedVersion=v;draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+      const warns=HMComposeClient.parityDirtyChecklist(snapshot);
+      if(warns.active&&warns.warns.length)status('Checklist · '+warns.warns.map(row=>row.text).join(' · '),true);
+      else status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);
+      return r;
     }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();status('Preview unavailable: '+e.message,true);}throw e;}
   }
   function activeAtFor(p, t) {
@@ -335,7 +346,79 @@
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    renderMedia();renderTimeline();renderInspector();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+  }
+  function showHasSidedCutouts(p) {
+    for (const clip of p?.show?.atoms || []) {
+      const layout = p.layouts?.[clip.hero?.layout_source] || {};
+      for (const pid of clip.hero?.plates || []) {
+        if ((layout[pid]?.parts || []).some(part => part && (part.side === 'L' || part.side === 'R'))) return true;
+      }
+    }
+    return false;
+  }
+  function applyPickerChrome() {
+    const parity = !!(project && HMComposeClient.isPlatePackShow(project.show));
+    const open = !parity || pickerOpen;
+    const lib = document.querySelector('.library');
+    if (lib) {
+      lib.dataset.parity = parity ? 'true' : 'false';
+      lib.dataset.picker = open ? 'open' : 'hidden';
+    }
+    const intro = document.querySelector('.library .intro');
+    if (intro) {
+      if (!intro.dataset.defaultHtml) intro.dataset.defaultHtml = intro.innerHTML;
+      intro.innerHTML = parity ? 'Timeline plates are the edit.<br>Open the picker only to swap.' : intro.dataset.defaultHtml;
+    }
+    if ($('parityPickerNote')) $('parityPickerNote').hidden = !parity;
+    if ($('libraryToolbar')) $('libraryToolbar').hidden = !open;
+    if ($('mediaGrid')) $('mediaGrid').hidden = !open;
+    const toggle = $('togglePlatePicker');
+    if (toggle) {
+      toggle.textContent = open ? 'Hide picker' : 'Show picker';
+      toggle.setAttribute('aria-pressed', String(open));
+    }
+  }
+  function renderCharHonesty() {
+    const box = $('charHonesty');
+    if (!box) return;
+    const show = project?.show;
+    const parity = !!(show && HMComposeClient.isPlatePackShow(show));
+    box.hidden = !parity;
+    if (!parity) return;
+    const honesty = HMComposeClient.charHonesty(show);
+    if ($('charNameL')) $('charNameL').textContent = honesty.L.name;
+    if ($('charNameR')) $('charNameR').textContent = honesty.R.name;
+    if ($('charHonestyNote')) {
+      $('charHonestyNote').textContent = showHasSidedCutouts(project)
+        ? 'Labels match show.chars. L is screen left and R is screen right on the cutouts.'
+        : 'Labels match show.chars. This plate is unsided, so the names identify who is on screen left and screen right.';
+    }
+  }
+  function renderDirtyChecklist() {
+    const box = $('dirtyChecklist');
+    if (!box) return;
+    const list = project ? HMComposeClient.parityDirtyChecklist(project) : { active: false, blocks: [], warns: [], clean: true };
+    const rows = [...(list.blocks || []), ...(list.warns || [])];
+    box.hidden = !list.active || !rows.length;
+    box.dataset.state = list.blocks?.length ? 'block' : (list.warns?.length ? 'warn' : 'clean');
+    if ($('dirtyChecklistCount')) $('dirtyChecklistCount').textContent = rows.length ? String(rows.length) : '';
+    const ul = $('dirtyChecklistItems');
+    if (ul) {
+      ul.replaceChildren();
+      for (const row of rows) {
+        const li = document.createElement('li');
+        li.dataset.kind = row.kind;
+        li.dataset.level = row.level || 'warn';
+        li.textContent = row.text;
+        ul.append(li);
+      }
+    }
+    if ($('dirtyChecklistHint')) {
+      $('dirtyChecklistHint').textContent = list.blocks?.length
+        ? 'Export stays blocked until every missing plate, broken background, and unresolved asset is fixed.'
+        : (list.warns?.length ? 'Export can continue. These warnings stay on the checklist.' : '');
+    }
   }
   function renderPlateJump() {
     const box=$('plateJumpChips'), list=$('plateJumpList');
@@ -432,6 +515,7 @@
     $('scrub').max=maxScrubDuration()||1;
   }
   function renderInspector() {
+    renderCharHonesty();
     const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a)return;
     $('clipThumbnail').src=thumbnail(a);$('clipName').value=a.label||a.id;$('duration').value=+a.duration_s.toFixed(4);$('timingHint').textContent=`${startOf(selected).toFixed(2)}s → ${(startOf(selected)+a.duration_s).toFixed(2)}s`;
     const cam=a.camera||{};
@@ -822,7 +906,12 @@
       a.fx_hooks=[hk];
     }
   });drawStageA();}));
-  on('replaceImage',()=>{replacing=!replacing;document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
+  on('togglePlatePicker',()=>{
+    if(!project||!HMComposeClient.isPlatePackShow(project.show))return;
+    pickerOpen=!pickerOpen;applyPickerChrome();
+    status(pickerOpen?'Plate picker shown.':'Plate picker hidden for this plate-pack.');
+  });
+  on('replaceImage',()=>{replacing=!replacing;if(replacing&&project&&HMComposeClient.isPlatePackShow(project.show)){pickerOpen=true;applyPickerChrome();}document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
   on('helpOpen',()=>$('helpDialog').showModal());
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
@@ -830,6 +919,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

@@ -1128,6 +1128,142 @@
     return null;
   }
 
+  function platePackStats(show) {
+    const atoms = (show && show.atoms) || [];
+    let nHero = 0, nPlate = 0, dur = 0;
+    for (const atom of atoms) {
+      dur += +atom.duration_s || 0;
+      const listed = (atom.hero && atom.hero.plates) || [];
+      const npl = Number.isInteger(atom.plates_needed) && atom.plates_needed > 0 ? atom.plates_needed : listed.length;
+      nPlate += npl;
+      if (atom.pose_mode === 'hero') nHero += 1;
+    }
+    return { atoms, nHero, nPlate, dur };
+  }
+
+  function isPlatePackShow(show) {
+    if (!show) return false;
+    const stats = platePackStats(show);
+    return isParityMode(show, stats.atoms, stats.nHero, stats.nPlate, stats.dur);
+  }
+
+  function charHonesty(show) {
+    const chars = (show && show.chars) || {};
+    const side = (key) => {
+      const raw = chars[key] && chars[key].name;
+      const name = typeof raw === 'string' ? raw.trim() : '';
+      return { side: key, name };
+    };
+    return { L: side('L'), R: side('R'), parity: isPlatePackShow(show) };
+  }
+
+  function assetResolved(project, src) {
+    if (typeof src !== 'string' || !src.trim()) return false;
+    const value = src.trim();
+    if (/^data:image\/(png|jpeg|webp|gif);base64,/i.test(value)) return true;
+    if (/^blob:/i.test(value)) return true;
+    const embedded = project && project.assets && project.assets[value];
+    if (typeof embedded === 'string') return /^data:image\/(png|jpeg|webp|gif);base64,/i.test(embedded);
+    if (/^(javascript:|https?:|\/\/|data:)/i.test(value)) return false;
+    if (value.includes('..') || value.includes('\\')) return false;
+    return /^[A-Za-z0-9_./-]+$/.test(value);
+  }
+
+  function pushChecklist(list, item) {
+    if (list.some((row) => row.kind === item.kind && row.text === item.text)) return;
+    list.push(item);
+  }
+
+  function parityDirtyChecklist(project) {
+    const show = project && project.show;
+    if (!isPlatePackShow(show)) return { active: false, parity: false, blocks: [], warns: [], clean: true };
+    const blocks = [];
+    const warns = [];
+    const layouts = (project && project.layouts) || {};
+    const honesty = charHonesty(show);
+    if (!honesty.L.name) pushChecklist(warns, { kind: 'char', level: 'warn', text: 'L name missing from show.chars' });
+    if (!honesty.R.name) pushChecklist(warns, { kind: 'char', level: 'warn', text: 'R name missing from show.chars' });
+    (show.atoms || []).forEach((atom, index) => {
+      const where = atom.label || atom.id || ('clip ' + (index + 1));
+      const hero = atom.hero || {};
+      const plates = Array.isArray(hero.plates) ? hero.plates : [];
+      const need = Number.isInteger(atom.plates_needed) && atom.plates_needed > 0 ? atom.plates_needed : plates.length;
+      if (!plates.length || plates.length < need) {
+        pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + plates.length + '/' + (need || 0) });
+      }
+      const layout = hero.layout_source ? layouts[hero.layout_source] : null;
+      if (!hero.layout_source || !layout) {
+        pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · no layout' });
+        return;
+      }
+      const dir = dirname(hero.layout_source);
+      plates.forEach((pid) => {
+        const entry = layout[pid];
+        if (!entry) {
+          pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid });
+          return;
+        }
+        if (entry.full) {
+          const src = joinRel(dir, entry.full);
+          if (!assetResolved(project, src) && !assetResolved(project, entry.full)) {
+            pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · ' + where + ' · plate ' + pid });
+          }
+        } else if (Array.isArray(entry.parts) && entry.parts.length) {
+          entry.parts.forEach((part, pi) => {
+            if (!part || !part.src) {
+              pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid + ' part ' + (pi + 1) });
+              return;
+            }
+            const src = joinRel(dir, part.src);
+            if (!assetResolved(project, src) && !assetResolved(project, part.src)) {
+              pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · ' + where + ' · ' + pid });
+            }
+          });
+        } else {
+          pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid + ' has no image' });
+        }
+        if (entry.bg) {
+          const mapped = mapLayoutBgToKey(entry.bg, show.bg || {});
+          if (!mapped) pushChecklist(warns, { kind: 'bg', level: 'warn', text: 'Broken BG · ' + where + ' · layout bg ' + entry.bg + ' does not match show.bg' });
+        }
+        if (entry.background && Object.prototype.hasOwnProperty.call(entry.background, 'src') && entry.background.src && !assetResolved(project, entry.background.src)) {
+          pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + where + ' · ' + pid });
+        }
+      });
+      if (atom.background && Object.prototype.hasOwnProperty.call(atom.background, 'src') && atom.background.src && !assetResolved(project, atom.background.src)) {
+        pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + where });
+      }
+    });
+    const bg = show.bg || {};
+    ['base', 'swap'].forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(bg, key)) return;
+      const src = bg[key];
+      if (src == null) return;
+      if (typeof src !== 'string' || !src.trim() || !assetResolved(project, src)) {
+        pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + key });
+      }
+    });
+    if (bg.swap_t != null && bg.swap_t !== '' && !bg.swap) {
+      pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · swap time without a swap image' });
+    }
+    (show.overlays || []).forEach((overlay, i) => {
+      if (!overlay || overlay.src == null || overlay.src === '') return;
+      if (!assetResolved(project, overlay.src)) {
+        pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · overlay ' + (overlay.id || (i + 1)) });
+      }
+    });
+    ((show.fg && show.fg.props) || []).forEach((prop, i) => {
+      if (prop && prop.src && !assetResolved(project, prop.src)) {
+        pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · foreground ' + (prop.id || (i + 1)) });
+      }
+      const broken = prop && prop.effect && prop.effect.broken_src;
+      if (broken && !assetResolved(project, broken)) {
+        pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · foreground break image ' + (prop.id || (i + 1)) });
+      }
+    });
+    return { active: true, parity: true, blocks, warns, clean: blocks.length === 0 && warns.length === 0 };
+  }
+
   global.HMComposeClient = {
     composeShow,
     inspectAt,
@@ -1144,6 +1280,9 @@
     applyCamNudge,
     applyCamIntensity,
     isParityMode,
+    isPlatePackShow,
+    charHonesty,
+    parityDirtyChecklist,
     BG_CROP_MIN,
     BG_CROP_FULL,
     validBackgroundCrop,
