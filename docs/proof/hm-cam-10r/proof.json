@@ -1,0 +1,85 @@
+{
+  "story": "HM-CAM-10R",
+  "hooks": [
+    {
+      "type": "hit_orange",
+      "t_rel": 0.15
+    },
+    {
+      "type": "shake",
+      "t_rel": 0.5,
+      "params": {
+        "amp": 5,
+        "dur": 0.1
+      }
+    },
+    {
+      "type": "flash_orange",
+      "t_rel": 0.85
+    }
+  ],
+  "measured": [
+    {
+      "tag": "SPAN",
+      "type": "hit_orange",
+      "tRel": 0.15,
+      "leftPct": 15,
+      "ratio": 0.1518987341772152,
+      "inFit": false
+    },
+    {
+      "tag": "SPAN",
+      "type": "shake",
+      "tRel": 0.5,
+      "leftPct": 50,
+      "ratio": 0.5063291139240507,
+      "inFit": false
+    },
+    {
+      "tag": "SPAN",
+      "type": "flash_orange",
+      "tRel": 0.85,
+      "leftPct": 85,
+      "ratio": 0.8481012658227848,
+      "inFit": false
+    }
+  ],
+  "fit": [
+    {
+      "id": "fitThree",
+      "fit": "3",
+      "tag": "BUTTON",
+      "text": "Fit 3s",
+      "hasTick": false
+    },
+    {
+      "id": "fitFive",
+      "fit": "5",
+      "tag": "BUTTON",
+      "text": "Fit to 5 seconds",
+      "hasTick": false
+    },
+    {
+      "id": "fitEight",
+      "fit": "8",
+      "tag": "BUTTON",
+      "text": "Fit 8s",
+      "hasTick": false
+    },
+    {
+      "id": "fitTen",
+      "fit": "10",
+      "tag": "BUTTON",
+      "text": "Fit 10s",
+      "hasTick": false
+    }
+  ],
+  "composedTimes": {
+    "hit": 0.075,
+    "shake": 0.25,
+    "flash": 0.425
+  },
+  "tickSha256": "acc510591f3eb9d32f7442b205a816ed440453c406119975938ff0486be2de2e",
+  "fitSha256": "c798993856faf929929a2c7ed5708f6f9306caa9fd0cd029e7a4edadc7dbcf1f",
+  "distinct": true
+}

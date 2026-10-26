@@ -824,6 +824,75 @@ async function ensureServer(urlStr){
     if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='false')await p.click('#onionToggle');
     check('HM-FX-LOC-SIZE: parametric FX x/y and scale move and resize preview, preserve timing/colour/type, persist across reload, and match offline HTML export');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    // HM-CAM-10R: beat-tick marks follow fx_hooks[].t_rel and are a different UI from Fit 3/5/8/10 chips.
+    {
+      const crypto=require('node:crypto');
+      const proofDir=path.resolve('docs/proof/hm-cam-10r');
+      fs.mkdirSync(proofDir,{recursive:true});
+      await p.evaluate(()=>HMStudio.editProject(project=>{project.show.atoms.forEach(a=>{a.fx_hooks=[];});}));
+      await settle();
+      assert.equal(await p.locator('.beat-tick').count(),0,'a clip with no hooks shows no beat ticks');
+      const hooks=[
+        {type:'hit_orange',t_rel:0.15},
+        {type:'shake',t_rel:0.5,params:{amp:5,dur:0.1}},
+        {type:'flash_orange',t_rel:0.85}
+      ];
+      await p.evaluate(next=>HMStudio.editProject(project=>{project.show.atoms[0].fx_hooks=next;}),hooks);
+      await settle();
+      const measured=await p.locator('.timeline-clip[data-index="0"]').evaluate(clip=>{
+        const w=clip.clientWidth;
+        return [...clip.querySelectorAll('.beat-tick')].map(el=>({
+          tag:el.tagName,
+          type:el.dataset.type,
+          tRel:+el.dataset.tRel,
+          leftPct:parseFloat(el.style.left),
+          ratio:el.offsetLeft/w,
+          inFit:!!el.closest('.fit-chips')
+        }));
+      });
+      assert.equal(measured.length,hooks.length);
+      hooks.forEach((hk,i)=>{
+        assert.equal(measured[i].tag,'SPAN');
+        assert.equal(measured[i].type,hk.type);
+        assert.equal(measured[i].inFit,false);
+        assert.ok(Math.abs(measured[i].tRel-hk.t_rel)<1e-9,JSON.stringify(measured[i]));
+        assert.ok(Math.abs(measured[i].leftPct-hk.t_rel*100)<0.05,JSON.stringify(measured[i]));
+        assert.ok(Math.abs(measured[i].ratio-hk.t_rel)<0.04,JSON.stringify(measured[i]));
+      });
+      const fit=await p.locator('.fit-chips button').evaluateAll(els=>els.map(el=>({id:el.id,fit:el.dataset.fit,tag:el.tagName,text:el.textContent.trim(),hasTick:!!el.querySelector('.beat-tick')})));
+      assert.deepEqual(fit.map(b=>[b.id,b.fit,b.text]),[['fitThree','3','Fit 3s'],['fitFive','5','Fit to 5 seconds'],['fitEight','8','Fit 8s'],['fitTen','10','Fit 10s']]);
+      assert.ok(fit.every(b=>b.tag==='BUTTON'&&b.hasTick===false));
+      assert.equal(await p.locator('.fit-chips .beat-tick').count(),0);
+      assert.equal(await p.locator('.beat-tick').evaluateAll(els=>els.every(el=>!!el.closest('.timeline-clip')&&!el.closest('.fit-chips'))),true);
+      const tickBox=await p.locator('.timeline-clip[data-index="0"] .beat-tick').first().boundingBox();
+      const fitBox=await p.locator('.fit-chips').boundingBox();
+      assert.ok(tickBox&&fitBox&&tickBox.y+tickBox.height<=fitBox.y+1,'beat ticks sit on the clip, above the Fit chips');
+      const composed=await p.evaluate(()=>{
+        const atom=HMStudio.composed.timeline.atoms[0];
+        return {t0:atom.t0,d:HMStudio.project.show.atoms[0].duration_s,rel:atom.fx_hooks.map(h=>h.t_rel),hits:HMStudio.composed.timeline.fx.hits.map(h=>h[0]),flash:HMStudio.composed.timeline.fx.flash.map(h=>h[0]),shake:HMStudio.composed.timeline.fx.shake.map(h=>h[0])};
+      });
+      assert.deepEqual(composed.rel,[0.15,0.5,0.85]);
+      const expectT=rel=>Math.round((composed.t0+rel*composed.d)*10000)/10000;
+      assert.ok(composed.hits.includes(expectT(0.15)),JSON.stringify(composed));
+      assert.ok(composed.shake.includes(expectT(0.5)),JSON.stringify(composed));
+      assert.ok(composed.flash.includes(expectT(0.85)),JSON.stringify(composed));
+      const ticksPath=path.join(proofDir,'ticks-at-hooks.png');
+      const fitPath=path.join(proofDir,'fit-chips.png');
+      await p.locator('#timelineTrack').screenshot({path:ticksPath});
+      await p.locator('.fit-chips').screenshot({path:fitPath});
+      const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+      const tickSha=sha(ticksPath),fitSha=sha(fitPath);
+      assert.notEqual(tickSha,fitSha,'tick capscreen must differ from the Fit chips capscreen');
+      for(const [id,target] of [['fitThree',3],['fitEight',8],['fitTen',10],['fitFive',5]]){
+        await click(id);
+        assert.equal((await state()).duration,target);
+        const marks=await p.locator('.timeline-clip[data-index="0"] .beat-tick').evaluateAll(els=>els.map(el=>({tRel:+el.dataset.tRel,leftPct:parseFloat(el.style.left)})));
+        assert.deepEqual(marks,[{tRel:0.15,leftPct:15},{tRel:0.5,leftPct:50},{tRel:0.85,leftPct:85}]);
+      }
+      fs.writeFileSync(path.join(proofDir,'proof.json'),JSON.stringify({story:'HM-CAM-10R',hooks,measured,fit,composedTimes:{hit:expectT(0.15),shake:expectT(0.5),flash:expectT(0.85)},tickSha256:tickSha,fitSha256:fitSha,distinct:tickSha!==fitSha},null,2));
+      await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+      check('HM-CAM-10R: beat ticks follow fx_hooks t_rel and stay distinct from Fit 3/5/8/10 chips');
+    }
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
