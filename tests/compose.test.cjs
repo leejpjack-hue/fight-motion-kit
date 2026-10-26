@@ -510,3 +510,97 @@ test('HM-FX-LOC-SIZE: parametric FX location (x/y) and size (scale) default clea
   assert.deepEqual(Array.from(strip.slice(0,4)),[220,220,220,255],'pixel outside bounds untouched');
   assert.ok(strip[4]>strip[6]+8,'pixel inside bounds warm-crushed');
 });
+
+test('HM-FX-COMIC-PROFILE: comic/ink is the street and classroom default, photo chips stay on existing shows, and rejected fire/light overlays are never added',async()=>{
+  const fx=read('presets/fx_presets.json');
+  assert.equal(fx.hooks.some(h=>/fire/i.test(h.id)),false);
+  assert.deepEqual(HMMotionFx.PHOTO_FX_CHIPS,Array.from(HMComposeClient.PHOTO_FX_CHIPS));
+  assert.equal(HMComposeClient.resolveFxProfile(demo()),'full');
+  assert.equal(HMComposeClient.defaultFxProfileFor('street'),'comic');
+  assert.equal(HMComposeClient.defaultFxProfileFor('classroom'),'comic');
+  assert.equal(HMComposeClient.defaultFxProfileFor(''),'full');
+  const classroom=demo();
+  classroom.meta={venue:'classroom'};
+  assert.equal(HMComposeClient.resolveFxProfile(classroom),'comic');
+  classroom.fx_profile='full';
+  assert.equal(HMComposeClient.resolveFxProfile(classroom),'full');
+  assert.match(HMComposeClient.fxProfileHonesty('comic'),/Comic\/ink is the default/);
+  assert.match(HMComposeClient.fxProfileHonesty('comic'),/never adds those overlays/);
+  assert.match(HMComposeClient.fxProfileHonesty('comic'),/still opens/);
+  assert.match(HMComposeClient.fxProfileHonesty('full'),/never added on their own/);
+  assert.match(HMComposeClient.fxProfileHonesty('full'),/still opens/);
+
+  const plain=await compose(demo());
+  assert.equal(plain.ok,true);
+  assert.equal(plain.duration_s,5);
+  assert.equal(plain.timeline.plates.length,8);
+  assert.equal(plain.timeline.fx_profile,'full');
+  assert.equal(plain.timeline.overlays.length,0);
+  assert.deepEqual(HMComposeClient.rejectedPhotoOverlaysAdded(demo(),plain.timeline.overlays),[]);
+
+  const show=demo();
+  show.venue='street';
+  show.atoms[0].fx_hooks=[
+    {type:'dust',t_rel:0.1,params:{k:1}},
+    {type:'speed_lines',t_rel:0.1,t_rel_end:0.9,params:{mode:'up',k0:0,k1:1}},
+    {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.16,x:40,y:-20,scale:1.25}},
+    {type:'fist_pressure',t_rel:0.2,params:{path:[[10,20],[30,40]],x:0,y:0,scale:1}},
+    {type:'flash_orange',t_rel:0.2,params:{}},
+  ];
+  show.overlays=[
+    {id:'fire-kept',kind:'fire',src:'assets/wording/bang_zh.png',t_start:0.2,t_end:0.8},
+    {id:'light-kept',kind:'photo_light',src:'assets/wording/clash_en.png',t_start:0.2,t_end:0.9},
+    {id:'word',kind:'text',text:'POW',t_start:0.2,t_end:0.8},
+    {id:'styled',kind:'text',text:'BANG',t_start:0.2,t_end:0.8,style:{fill:'#ff00aa',stroke:'#000000',strokeWidth:4,fontSize:40}},
+    {id:'crush-kept',kind:'exposure_warm_crush',t_start:1.2,t_end:1.3},
+  ];
+  const comic=await compose(show);
+  assert.equal(comic.ok,true,JSON.stringify(comic.errors));
+  assert.equal(comic.duration_s,5);
+  assert.equal(comic.timeline.fx_profile,'comic');
+  assert.equal(comic.timeline.fx.dust.length,0);
+  assert.equal(comic.timeline.fx.flash.length,0);
+  assert.equal(comic.timeline.fx.exposure.length,0);
+  assert.equal(comic.timeline.fx.speed.length,1);
+  assert.equal(comic.timeline.fx.fist.length,1);
+  assert.deepEqual(comic.timeline.atoms[0].fx_hooks.map(h=>h.type),['dust','speed_lines','exposure_warm_crush','fist_pressure','flash_orange']);
+  const crushHook=comic.timeline.atoms[0].fx_hooks.find(h=>h.type==='exposure_warm_crush');
+  assert.equal(crushHook.params.dur,0.16);
+  assert.equal(crushHook.params.x,40);
+  assert.equal(crushHook.params.y,-20);
+  assert.equal(crushHook.params.scale,1.25);
+  for(const id of ['fire-kept','light-kept','crush-kept','word','styled'])assert.ok(comic.timeline.overlays.some(o=>o.id===id),id);
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='fire-kept').kind,'fire');
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='fire-kept').src,'assets/wording/bang_zh.png');
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='fire-kept').fx_paint,false);
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='light-kept').fx_paint,false);
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='crush-kept').fx_paint,false);
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='crush-kept').kind,'exposure_warm_crush');
+  assert.equal(HMComposeClient.rejectedPhotoOverlaysAdded(show,comic.timeline.overlays).length,0);
+  assert.deepEqual(comic.timeline.overlays.find(o=>o.id==='word').style,{fill:'#f4efe4',stroke:'#14110e',strokeWidth:11,fontWeight:900});
+  assert.equal(comic.timeline.overlays.find(o=>o.id==='styled').style.fill,'#ff00aa');
+  assert.equal(Object.hasOwn(comic.timeline.overlays.find(o=>o.id==='styled'),'fx_paint'),false);
+
+  show.fx_profile='full';
+  const full=await compose(show);
+  assert.equal(full.ok,true,JSON.stringify(full.errors));
+  assert.equal(full.duration_s,5);
+  assert.equal(full.timeline.fx_profile,'full');
+  assert.equal(full.timeline.fx.dust.length,1);
+  assert.equal(full.timeline.fx.flash.length,1);
+  assert.equal(full.timeline.fx.exposure.length,1);
+  assert.deepEqual(full.timeline.fx.exposure[0][2],{x:40,y:-20,scale:1.25});
+  assert.equal(full.timeline.fx.fist[0][2][0][0],10);
+  assert.equal(Object.hasOwn(full.timeline.overlays.find(o=>o.id==='fire-kept'),'fx_paint'),false);
+  assert.equal(full.timeline.overlays.find(o=>o.id==='fire-kept').kind,'fire');
+  assert.equal(full.timeline.overlays.find(o=>o.id==='word').style,undefined);
+  assert.equal(HMComposeClient.rejectedPhotoOverlaysAdded(show,full.timeline.overlays).length,0);
+
+  const bare=demo();
+  bare.fx_profile='comic';
+  const bareOut=await compose(bare);
+  assert.equal(bareOut.ok,true);
+  assert.equal(bareOut.duration_s,5);
+  assert.equal(bareOut.timeline.overlays.filter(o=>HMComposeClient.isRejectedPhotoOverlay(o)).length,0);
+  assert.equal(HMComposeClient.rejectedPhotoOverlaysAdded(bare,bareOut.timeline.overlays).length,0);
+});

@@ -149,6 +149,8 @@ function fgBreakState(prop, t) {
 const FX_FIST_PATH = [[430, 390], [610, 300], [760, 250]];
 const FX_LEG_PATH = [[800, 560], [1020, 340], [1160, 150]];
 const FX_TORNADO_PATH = [[640, 480], [660, 300]];
+const PHOTO_FX_CHIPS = ['dust', 'sparks', 'flash_orange', 'flash_pink', 'bg_flash_blue', 'bg_flash_teal', 'exposure_warm_crush'];
+const PHOTO_FX_CHIP_SET = new Set(PHOTO_FX_CHIPS);
 function fxPointOnPath(path, u) {
   const pts = Array.isArray(path) && path.length ? path : [[640, 360]];
   const t = Math.min(1, Math.max(0, Number(u) || 0));
@@ -448,6 +450,7 @@ function createMotionRenderer(canvas, assets = {}) {
     for (const raw of hooks || []) {
       const type = typeof raw === 'string' ? raw : raw?.type;
       if (!type || type === 'none') continue;
+      if (timeline && timeline.fx_profile === 'comic' && PHOTO_FX_CHIP_SET.has(type)) continue;
       const prm = (raw && raw.params) || {};
       const tRel = raw?.t_rel != null ? +raw.t_rel : 0.08;
       const tRelEnd = raw?.t_rel_end != null ? +raw.t_rel_end : 0.92;
@@ -734,7 +737,8 @@ function createMotionRenderer(canvas, assets = {}) {
         ctx.restore();
       });
     }
-    const overlayFx = collectProceduralOverlays(timeline.overlays, t);
+    const paintOverlays = (timeline.overlays || []).filter(o => o.fx_paint !== false);
+    const overlayFx = collectProceduralOverlays(paintOverlays, t);
     // Inside the authored window, follow the path with real time (scrub and play).
     // Outside it, the editor stand-in still shows one representative frame.
     const phase = (h, dur) => {
@@ -772,7 +776,7 @@ function createMotionRenderer(canvas, assets = {}) {
       ctx.fillStyle = '#ff2f9a';
       ctx.fillRect(0, 0, 1280, 720);
     }
-    (timeline.overlays || []).filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
+    paintOverlays.filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
       ctx.save();ctx.globalAlpha=clamp(o.opacity??1,0,1);ctx.translate(o.x??640,o.y??640);ctx.scale(o.scale||1,o.scale||1);
       if(o.kind==='text'||o.text){const style=o.style||{};ctx.font=`${style.italic?'italic ':''}${style.fontWeight||700} ${style.fontSize||38}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';ctx.strokeStyle=style.stroke||'#15201c';ctx.lineWidth=style.strokeWidth??6;ctx.strokeText(o.text,0,0,1150);ctx.fillStyle=style.fill||'#ffffff';ctx.fillText(o.text,0,0,1150);}else if(o.src){const im=images.get(o.src);if(im)image(o.src,-im.width/2,-im.height/2,im.width,im.height);}ctx.restore();
     });
@@ -802,6 +806,7 @@ hmRoot.HMMotionFx = {
   drawLegArc,
   drawTornado,
   collectProceduralOverlays,
+  PHOTO_FX_CHIPS,
 };
 if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;

@@ -824,6 +824,91 @@ async function ensureServer(urlStr){
     if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='false')await p.click('#onionToggle');
     check('HM-FX-LOC-SIZE: parametric FX x/y and scale move and resize preview, preserve timing/colour/type, persist across reload, and match offline HTML export');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    const profileNote=()=>p.evaluate(()=>{
+      const note=document.getElementById('fxProfileNote');
+      return {text:note.textContent,profile:note.dataset.fxProfile,pressed:[...document.querySelectorAll('#fxProfileToggle button')].map(b=>b.dataset.fxProfile+':'+b.getAttribute('aria-pressed')),show:HMComposeClient.resolveFxProfile(HMStudio.project.show)};
+    });
+    let prof=await profileNote();
+    assert.equal(prof.show,'full');
+    assert.equal(prof.profile,'full');
+    assert.equal(prof.text,await p.evaluate(()=>HMComposeClient.fxProfileHonesty('full')));
+    assert.deepEqual(prof.pressed,['comic:false','full:true']);
+    for(const id of ['dust','sparks','flash_orange','exposure_warm_crush'])assert.equal(await p.locator(`[data-effect="${id}"]`).isVisible(),true,id);
+    const proofProfile=path.resolve('docs/proof/hm-fx-comic-profile');
+    fs.mkdirSync(proofProfile,{recursive:true});
+    await p.click('#fxProfileComic');await settle();
+    prof=await profileNote();
+    assert.equal(prof.show,'comic');
+    assert.equal((await state()).project.show.fx_profile,'comic');
+    assert.equal(prof.text,await p.evaluate(()=>HMComposeClient.fxProfileHonesty('comic')));
+    assert.match(prof.text,/never adds those overlays/);
+    assert.match(prof.text,/still opens/);
+    for(const id of ['dust','sparks','flash_orange','exposure_warm_crush'])assert.equal(await p.locator(`[data-effect="${id}"]`).isVisible(),false,id);
+    for(const id of ['none','shake','hit_orange','hit_pink','speed_lines','smear_trail','hitstop_2f','fist_pressure','leg_arc','tornado_spiral'])assert.equal(await p.locator(`[data-effect="${id}"]`).isVisible(),true,id);
+    await p.click('[data-effect="none"]');await settle();
+    const cleanComic=await p.evaluate(()=>{const g=document.getElementById('stage').getContext('2d');const d=g.getImageData(0,0,1280,720).data;let h=0;for(let i=0;i<d.length;i+=32)h=(h*33+d[i])>>>0;return h;});
+    await p.click('[data-effect="speed_lines"]');await settle();
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].type,'speed_lines');
+    const inkComic=await p.evaluate(()=>{const g=document.getElementById('stage').getContext('2d');const d=g.getImageData(0,0,1280,720).data;let h=0;for(let i=0;i<d.length;i+=32)h=(h*33+d[i])>>>0;return h;});
+    assert.notEqual(inkComic,cleanComic);
+    await p.screenshot({path:path.join(proofProfile,'A-comic-ink.png'),fullPage:true});
+    await p.click('#fxProfileFull');await settle();
+    prof=await profileNote();
+    assert.equal(prof.show,'full');
+    assert.equal(prof.text,await p.evaluate(()=>HMComposeClient.fxProfileHonesty('full')));
+    for(const id of ['dust','sparks','flash_orange','exposure_warm_crush'])assert.equal(await p.locator(`[data-effect="${id}"]`).isVisible(),true,id);
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].type,'speed_lines');
+    await p.screenshot({path:path.join(proofProfile,'B-full-chips.png'),fullPage:true});
+    await p.evaluate(()=>HMStudio.editProject(project=>{
+      project.show.fx_profile='comic';
+      project.show.venue='street';
+      project.show.atoms[0].fx_hooks=[
+        {type:'dust',t_rel:0.1,params:{k:1}},
+        {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.1,x:30,y:-10,scale:1.2}},
+        {type:'fist_pressure',t_rel:0.2,params:{dur:0.36,path:[[430,390],[610,300],[760,250]],x:0,y:0,scale:1}},
+      ];
+      project.show.overlays=[
+        {id:'fire-kept',kind:'fire',src:'assets/wording/bang_zh.png',t_start:0.2,t_end:0.8,x:640,y:180},
+        {id:'light-kept',kind:'photo_light',src:'assets/wording/clash_en.png',t_start:0.2,t_end:0.8,x:420,y:180},
+      ];
+    }));
+    await settle();
+    await p.evaluate(()=>HMStudio.renderAt(0.12));
+    const loaded=(await state());
+    assert.equal(loaded.project.show.fx_profile,'comic');
+    assert.deepEqual(loaded.project.show.atoms[0].fx_hooks.map(h=>h.type),['dust','exposure_warm_crush','fist_pressure']);
+    assert.equal(loaded.project.show.atoms[0].fx_hooks[1].params.x,30);
+    assert.equal(loaded.project.show.atoms[0].fx_hooks[1].params.scale,1.2);
+    assert.equal(loaded.composed.timeline.fx_profile,'comic');
+    assert.equal(loaded.composed.timeline.fx.dust.length,0);
+    assert.equal(loaded.composed.timeline.fx.exposure.length,0);
+    assert.equal(loaded.composed.timeline.fx.fist.length,1);
+    assert.equal(loaded.composed.timeline.overlays.some(o=>o.id==='fire-kept'&&o.kind==='fire'&&o.fx_paint===false),true);
+    assert.equal(loaded.composed.timeline.overlays.some(o=>o.id==='light-kept'&&o.kind==='photo_light'),true);
+    assert.equal(loaded.composed.duration_s,5);
+    assert.equal(await p.locator('[data-effect="dust"]').isVisible(),true);
+    assert.equal(await p.locator('[data-effect="dust"].fx-chip-demoted').count(),1);
+    assert.equal(await p.locator('[data-effect="sparks"]').isVisible(),false);
+    assert.match(await p.locator('#fxProfileNote').textContent(),/still opens/);
+    const comicDust=await p.evaluate(()=>{const g=document.getElementById('stage').getContext('2d');const d=g.getImageData(0,620,1280,100).data;let h=0;for(let i=0;i<d.length;i+=24)h=(h*33+d[i]+d[i+1])>>>0;return h;});
+    await p.click('#fxProfileFull');await settle();
+    await p.evaluate(()=>HMStudio.renderAt(0.12));
+    const fullDust=await p.evaluate(()=>{const g=document.getElementById('stage').getContext('2d');const d=g.getImageData(0,620,1280,100).data;let h=0;for(let i=0;i<d.length;i+=24)h=(h*33+d[i]+d[i+1])>>>0;return h;});
+    assert.notEqual(fullDust,comicDust);
+    assert.equal((await state()).composed.timeline.fx.dust.length,1);
+    assert.equal((await state()).composed.timeline.overlays.some(o=>o.kind==='fire'),true);
+    await p.click('#fxProfileComic');await settle();
+    assert.match(await p.locator('#fxHonestyNote').textContent(),/do not paint until Full chips/);
+    assert.match(await p.locator('#fxHonestyNote').textContent(),/fist_pressure/);
+    assert.doesNotMatch(await p.locator('#fxPreviewBadge').textContent(),/dust/);
+    await p.screenshot({path:path.join(proofProfile,'C-existing-chips-still-load.png'),fullPage:true});
+    check('HM-FX-COMIC-PROFILE: Comic/ink hides photographic chips, Full chips shows them, rejected fire/light overlays are not added, and an existing show with those chips still opens');
+    await click('newProject');
+    assert.equal((await state()).project.show.venue,'street');
+    assert.equal((await state()).project.show.fx_profile,'comic');
+    assert.equal((await state()).duration,0);
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
