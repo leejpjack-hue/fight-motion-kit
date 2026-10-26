@@ -95,9 +95,69 @@ async function ensureServer(urlStr){
     await p.click('#helpOpen');assert.equal(await p.locator('#helpDialog').evaluate(d=>d.open),true);await p.getByRole('button',{name:'Close shortcuts'}).click();check('keyboard shortcut dialog');
     const portablePath=await downloadFrom('saveProject','portable.motion.json');const portable=JSON.parse(fs.readFileSync(portablePath));assert.ok(Object.values(portable.assets).every(x=>x.startsWith('data:image/')));assert.equal(portable.media.length,8);
     await change('projectTitle','Changed title');await p.setInputFiles('#projectInput',portablePath);await p.waitForFunction(()=>HMStudio.project.show.title.includes('First exchange'));await settle();assert.equal((await state()).duration,5);check('portable project download and reopen with embedded images');
-    await p.click('#exportOpen');const htmlPath=await downloadFrom('exportHtml','daiyu-wang-five-seconds.html');const framePath=await downloadFrom('exportFrame','frame.png');assert.ok(fs.statSync(framePath).size>10000);
+    await p.click('#exportOpen');
+    assert.deepEqual(await p.locator('#exportPreset option').allTextContents(),['720p30','1080p30']);
+    assert.equal(await p.locator('#exportPreset').inputValue(),'720p30');
+    assert.equal(await p.locator('#exportBitrateHint').textContent(),'720p30 · 1280×720 · 30 fps · 5.0 Mbps · ≈ 18.8 MB for a 30s WebM');
+    assert.equal(await p.locator('#exportHonesty').textContent(),'Real-time Record still needs this tab visible. Deterministic ffmpeg stays on the local skill.');
+    assert.match(await p.locator('#videoHint').textContent(),/720p30 · 1280×720 · 30 fps · 5\.0 Mbps/);
+    assert.match(await p.locator('#videoHint').textContent(),/keep this tab visible/);
+    assert.match(await p.locator('#frameSeqHint').textContent(),/Optional zip/);
+    assert.match(await p.locator('#exportFrames').innerText(),/Frame sequence \+ timing JSON/);
+    await p.selectOption('#exportPreset','1080p30');
+    assert.equal(await p.locator('#exportBitrateHint').textContent(),'1080p30 · 1920×1080 · 30 fps · 8.0 Mbps · ≈ 30.0 MB for a 30s WebM');
+    assert.match(await p.locator('#videoHint').textContent(),/1080p30 · 1920×1080/);
+    fs.mkdirSync('/opt/cursor/artifacts',{recursive:true});
+    await p.locator('#exportDialog').screenshot({path:'/opt/cursor/artifacts/hm-export-x-preset-dialog.png'});
+    await p.selectOption('#exportPreset','720p30');
+    const htmlPath=await downloadFrom('exportHtml','daiyu-wang-five-seconds.html');const framePath=await downloadFrom('exportFrame','frame.png');assert.ok(fs.statSync(framePath).size>10000);
     const offline=await browser.newPage();const external=[];await offline.route('http://**',r=>{external.push(r.request().url());r.abort();});await offline.route('https://**',r=>{external.push(r.request().url());r.abort();});await offline.goto('file://'+htmlPath);await offline.evaluate(()=>window.ready);await offline.evaluate(()=>renderAt(4.5));assert.match(await offline.locator('#time').textContent(),/4.50 \/ 5.00/);assert.deepEqual(external,[]);await offline.close();check('self-contained HTML plays offline and PNG export works');
     const video=await downloadFrom('exportVideo','daiyu-wang-five-seconds.webm');assert.ok(fs.statSync(video).size>10000);await p.getByRole('button',{name:'Close export',exact:true}).click();check('five-second video recording downloads a nonempty video');
+    await change('duration',.625);assert.equal((await state()).duration,5.125);
+    await p.click('#exportOpen');await p.click('#exportFrames');
+    await p.waitForFunction(()=>/whole number of frames/.test(document.getElementById('exportStatus').textContent));
+    await p.getByRole('button',{name:'Close export',exact:true}).click();await click('undo');assert.equal((await state()).duration,5);check('frame sequence refuses a timeline that is not a whole number of frames');
+    await p.evaluate(async()=>{
+      const make=draw=>{const c=document.createElement('canvas');c.width=64;c.height=64;draw(c.getContext('2d'));return c.toDataURL('image/png');};
+      const plate=make(g=>{g.fillStyle='#1eb446';g.fillRect(0,0,64,64);});
+      const current=HMStudio.project,key='embedded/x-export-probe/layout.json';
+      const atoms=[{id:'x-export-clip',label:'X export',kind:'duo',duration_s:0.1,plates_needed:1,pose_mode:'hero',hero:{layout_source:key,plates:['P01']},camera:{preset:'static_hold',params:{s:{type:'const',v:1},x:{type:'const',v:0},y:{type:'const',v:0}}},fx_hooks:[]}];
+      await HMStudio.load({version:1,show:{...current.show,show_id:'x-export-probe',title:'X export probe',atoms,bg:{},overlays:[]},layouts:{[key]:{P01:{full:plate}}},media:[{id:'x-marker',name:'Marker',src:plate,layoutSource:key,plateId:'P01'}],assets:{}});
+    });
+    await settle();assert.equal((await state()).duration,0.1);
+    await p.evaluate(()=>{
+      const orig=HTMLCanvasElement.prototype.captureStream;
+      HTMLCanvasElement.prototype.captureStream=function(fps){window.__hmCapture={width:this.width,height:this.height,fps};return orig.call(this,fps);};
+      const Orig=window.MediaRecorder;
+      function Wrapped(stream,opts){window.__hmRec={mimeType:opts.mimeType,videoBitsPerSecond:opts.videoBitsPerSecond};return new Orig(stream,opts);}
+      Wrapped.isTypeSupported=Orig.isTypeSupported.bind(Orig);
+      window.MediaRecorder=Wrapped;
+    });
+    await p.click('#exportOpen');await p.selectOption('#exportPreset','1080p30');
+    const beforeFailed=failed.length;
+    const zipPath=await downloadFrom('exportFrames','x-export-probe-1080p30-frames.zip');
+    const zipListing=require('node:child_process').execFileSync('python3',['-c',`
+import json,sys,zipfile
+z=zipfile.ZipFile(sys.argv[1]);assert z.testzip() is None
+doc=json.loads(z.read('timing.json'))
+assert doc['preset_id']=='1080p30' and doc['width']==1920 and doc['height']==1080 and doc['fps']==30
+assert doc['frame_count']==3 and doc['video_bits_per_second']==8000000
+assert doc['encode']=='local-skill' and doc['ffmpeg']['where']=='local-skill'
+assert 'visible' in doc['honesty'] and 'local skill' in doc['honesty']
+assert doc['frames'][0]['t']==0 and doc['frames'][2]['file']=='frames/000002.png'
+png=z.read('frames/000000.png')
+open(sys.argv[2],'wb').write(png)
+print(doc['show_id'])
+`,zipPath,path.join(out,'x-export-frame.png')],{encoding:'utf8'});
+    assert.match(zipListing,/x-export-probe/);
+    const png=fs.readFileSync(path.join(out,'x-export-frame.png'));
+    assert.equal(png.readUInt32BE(16),1920);assert.equal(png.readUInt32BE(20),1080);
+    const shortVideo=await downloadFrom('exportVideo','x-export-probe.webm');assert.ok(fs.statSync(shortVideo).size>50);
+    const rec=await p.evaluate(()=>({capture:window.__hmCapture,rec:window.__hmRec}));
+    assert.deepEqual(rec.capture,{width:1920,height:1080,fps:30});
+    assert.equal(rec.rec.videoBitsPerSecond,8000000);
+    assert.equal(failed.slice(beforeFailed).some(x=>/\/api\/compose/.test(x)),false);
+    await p.getByRole('button',{name:'Close export',exact:true}).click();check('1080p30 frame sequence zip and record use the preset without a compose API');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();await click('newProject');assert.equal((await state()).duration,0);assert.equal(await p.locator('#emptyStage').isVisible(),true);
     await p.setInputFiles('#imageInput',path.resolve('public/assets/daiyu-wang-eight/P01.png'));await p.waitForFunction(()=>HMStudio.project.media.length===9);await settle();assert.equal((await state()).duration,.5);
     await p.reload();await p.evaluate(()=>window.ready);assert.equal((await state()).duration,.5);assert.ok((await state()).project.show.atoms[0].hero.layout_source.startsWith('embedded/'));assert.equal((await state()).composed.timeline.plates.length,1);check('blank project, image import, and image/draft persistence across reload');
