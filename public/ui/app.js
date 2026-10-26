@@ -9,7 +9,11 @@
   const ORIGINAL = 'daiyu-wang-codex-import';
   const CONTINUATION = 'daiyu-wang-ten-seconds';
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
-  let project, presets, effects, fightPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
+  const DEFAULT_TIMING_PACKS = {version:'p0',id:'street_timing',label:'Street timing',packs:[
+    {id:'dialogue_film_slow',label:'Dialogue / film-slow hold',kind:'hold',duration_floor_s:1.5,soft_cam:{preset:'slow_push',intensity:0.45}},
+    {id:'micro_cut_flurry',label:'Micro-cut flurry',kind:'micro_cut',short_hold_s:0.12,impact_hold_s:1.2,flurry_presets:['ecu_jitter','dutch_snap','whip_A_to_B'],impact_preset:'static_hold',impact_beat_classes:['clash','impact','hit'],impact_fx:['hit_orange','hit_pink','flash_orange','hitstop_2f']}
+  ]};
+  let project, presets, effects, fightPacks, timingPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false;
@@ -457,6 +461,7 @@
     }
     $('pasteCam').disabled=!copiedCam;$('pasteCamAll').disabled=!copiedCam;
     $('caption').value=a.caption||'';
+    refreshTimingPackHint();
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
     const paramHk=(a.fx_hooks||[]).find(h=>['fist_pressure','leg_arc','tornado_spiral','exposure_warm_crush'].includes(h?.type||h));
@@ -560,7 +565,7 @@
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
   function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
   async function play() {if(!duration()||recording)return;if(playing||preparing){pause();return;}const token=++playToken;preparing=true;updateTransport();try{if(!renderer||renderedVersion!==compileVersion)await compile();if(token!==playToken||!renderer)return;if(time>=duration()-.001)time=0;timeStart=time;clockStart=performance.now();playing=true;playbackFrame=requestAnimationFrame(tick);}finally{if(token===playToken){preparing=false;updateTransport();}}}
-  function setDuration(next) {if(!Number.isFinite(next)||next<.1)throw new Error('Use a clip duration of at least 0.1 seconds.');edit(()=>{const a=atom();a.duration_s=+next.toFixed(4);if(a.camera?.segments)syncSegmentsToDuration(a.camera,a.duration_s);time=startOf(selected);});}
+  function setDuration(next) {if(!Number.isFinite(next)||next<.1)throw new Error('Use a clip duration of at least 0.1 seconds.');edit(()=>{const a=atom();a.duration_s=+next.toFixed(4);delete a.timing_hold;if(a.camera?.segments)syncSegmentsToDuration(a.camera,a.duration_s);time=startOf(selected);});}
   function rippleTrim(delta) {if(!atom())return;const next=Math.max(0.1,+(atom().duration_s+delta).toFixed(4));setDuration(next);status(`Ripple trimmed clip to ${next.toFixed(2)}s · Total ${duration().toFixed(2)}s`);}
   function fitToSeconds(targetS) {
     const d=duration();if(!d)return;
@@ -572,6 +577,7 @@
       project.show.atoms.forEach((a,i)=>{
         const next=i===project.show.atoms.length-1?target-total:+(a.duration_s*factor).toFixed(4);
         a.duration_s=next;
+        delete a.timing_hold;
         if(a.camera?.segments)syncSegmentsToDuration(a.camera,next);
         total+=next;
       });
@@ -588,11 +594,60 @@
         const prevNudge = a.camera?.nudge ? copy(a.camera.nudge) : undefined;
         const prevIntensity = a.camera?.intensity;
         a.camera = { preset: presetId };
+        delete a.timing_hold;
         if (prevNudge && Object.keys(prevNudge).length) a.camera.nudge = prevNudge;
         if (prevIntensity != null && prevIntensity !== 1) a.camera.intensity = prevIntensity;
       });
     });
     status('Applied Fight-cam 8-pack across timeline');
+  }
+  function timingPackById(id) {
+    const packs = timingPacks?.packs?.length ? timingPacks.packs : DEFAULT_TIMING_PACKS.packs;
+    return packs.find(p => p.id === id) || null;
+  }
+  function populateTimingPacks() {
+    const sel = $('timingPack');
+    if (!sel) return;
+    const packs = timingPacks?.packs?.length ? timingPacks.packs : DEFAULT_TIMING_PACKS.packs;
+    sel.replaceChildren();
+    for (const p of packs) {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.label || p.id;
+      sel.append(o);
+    }
+    refreshTimingPackHint();
+  }
+  function refreshTimingPackHint() {
+    const sel = $('timingPack');
+    const hint = $('timingPackHint');
+    const soft = $('timingSoftCam');
+    if (!sel || !hint || !soft) return;
+    const pack = timingPackById(sel.value);
+    if (!pack) { hint.textContent = 'Timing packs are not loaded.'; return; }
+    const hold = pack.kind === 'hold';
+    soft.disabled = !hold;
+    const a = project?.show?.atoms?.[selected];
+    const applied = a?.timing_hold?.pack === pack.id ? ` On this clip: ${a.timing_hold.kind.replaceAll('_', ' ')}.` : '';
+    hint.textContent = hold
+      ? `Raises this clip to at least ${(+pack.duration_floor_s).toFixed(2)}s. Soft camera is optional. Other clips stay put.${applied}`
+      : `Short ${(+pack.short_hold_s).toFixed(2)}s cuts, then a ${(+pack.impact_hold_s).toFixed(2)}s hold if this clip is an impact. Unselected impacts stay put.${applied}`;
+  }
+  function applySelectedTimingPack() {
+    const pack = timingPackById($('timingPack')?.value);
+    if (!pack) throw new Error('Choose a timing pack.');
+    if (selected < 0 || !atom()) throw new Error('Select a clip before applying a timing pack.');
+    const softCam = pack.kind === 'hold' && !!$('timingSoftCam')?.checked;
+    edit(() => {
+      const next = HMComposeClient.applyTimingPack(project.show, [selected], pack, { softCam });
+      project.show.atoms = next.atoms;
+      time = startOf(selected);
+    });
+    const a = atom();
+    const hold = a.timing_hold || {};
+    if (hold.kind === 'impact_hold') status(`Impact hold · ${a.duration_s.toFixed(2)}s on ${a.label || a.id}`);
+    else if (hold.kind === 'micro_cut') status(`Micro-cut · ${a.duration_s.toFixed(2)}s ${hold.preset} on ${a.label || a.id}`);
+    else status(`Film-slow hold · ${a.duration_s.toFixed(2)}s on ${a.label || a.id}${softCam ? ' · soft camera' : ''}`);
   }
   function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';project.show.atoms.splice(selected+1,0,a);selected++;time=startOf(selected);});}
   function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);time=selected<0?0:startOf(selected);});}
@@ -623,12 +678,14 @@
     }
   }
   async function boot() {
-    [presets,effects,fightPacks]=await Promise.all([
+    [presets,effects,fightPacks,timingPacks]=await Promise.all([
       json('/presets/camera_presets.json'),
       json('/presets/fx_presets.json'),
-      json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]}))
+      json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
+      json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS))
     ]);
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
+    populateTimingPacks();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
     const goldDefault=[DEMO,ORIGINAL,CONTINUATION].includes(sid)?sid:DEMO;
@@ -655,6 +712,8 @@
     }finally{e.target.value='';}
   });
   on('fightCamPack',applyFightCamPack);
+  on('applyTimingPack',applySelectedTimingPack);
+  $('timingPack')?.addEventListener('change',()=>refreshTimingPackHint());
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;
@@ -689,6 +748,7 @@
       cur.segments[0].preset=$('camera').value;
       atom().camera.segments=copy(cur.segments);
     }
+    delete atom().timing_hold;
   }));
   $('camIntensity').oninput=()=>$('camIntensityValue').textContent=Math.round(+$('camIntensity').value*100)+'%';
   $('camIntensity').onchange=safe(()=>{
@@ -715,6 +775,7 @@
     } else {
       delete a.camera.segments;
     }
+    delete a.timing_hold;
   }));
   function updateDualSegment() {
     const a=atom();if(!a?.camera?.segments?.length)return;
@@ -737,6 +798,7 @@
       const next=copy(copiedCam);
       if(next.segments?.length)syncSegmentsToDuration(next,atom().duration_s);
       atom().camera=next;
+      delete atom().timing_hold;
     });
     status('Pasted camera settings to clip');
   });
@@ -747,13 +809,15 @@
         const next=copy(copiedCam);
         if(next.segments?.length)syncSegmentsToDuration(next,a.duration_s);
         a.camera=next;
+        delete a.timing_hold;
       });
     });
     status('Pasted camera settings to all clips');
   });
-  on('resetCamera',()=>edit(()=>{atom().camera={preset:'static_hold'};}));
+  on('resetCamera',()=>edit(()=>{const a=atom();a.camera={preset:'static_hold'};delete a.timing_hold;}));
   on('impactPunch',()=>{edit(()=>{
     const a=atom();if(!a)return;
+    delete a.timing_hold;
     a.camera={...(a.camera||{}),preset:'slow_push',impact_macro:true};
     delete a.camera.segments;
     a.fx_hooks=[
@@ -830,6 +894,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

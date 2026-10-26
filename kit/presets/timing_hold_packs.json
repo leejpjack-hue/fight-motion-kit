@@ -1,0 +1,28 @@
+{
+  "version": "p0",
+  "id": "street_timing",
+  "label": "Street timing",
+  "packs": [
+    {
+      "id": "dialogue_film_slow",
+      "label": "Dialogue / film-slow hold",
+      "kind": "hold",
+      "duration_floor_s": 1.5,
+      "soft_cam": {
+        "preset": "slow_push",
+        "intensity": 0.45
+      }
+    },
+    {
+      "id": "micro_cut_flurry",
+      "label": "Micro-cut flurry",
+      "kind": "micro_cut",
+      "short_hold_s": 0.12,
+      "impact_hold_s": 1.2,
+      "flurry_presets": ["ecu_jitter", "dutch_snap", "whip_A_to_B"],
+      "impact_preset": "static_hold",
+      "impact_beat_classes": ["clash", "impact", "hit"],
+      "impact_fx": ["hit_orange", "hit_pink", "flash_orange", "hitstop_2f"]
+    }
+  ]
+}

@@ -26,8 +26,8 @@
   }
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;
-    ['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
+    ['exportHtml','exportVideo','exportFrame','exportTiming','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=true);
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;S.recording=false;S.update();['exportHtml','exportVideo','exportFrame','exportTiming','saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';}));
   on('openProject',()=>$('projectInput').click());
@@ -49,6 +49,15 @@
   });
   on('exportOpen',()=>{S.pause();report('');$('exportDialog').showModal();});
   on('exportFrame',()=>task(async()=>{await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
+  on('exportTiming',()=>task(async()=>{
+    S.pause();await S.compile();
+    if(!S.composed||S.composed.ok===false)throw new Error('Compose this edit before exporting a timing pack.');
+    const presets=S.timingPacks;
+    if(!presets?.packs?.length)throw new Error('Timing packs are not loaded.');
+    const dump=HMComposeClient.timingExport(presets,S.composed,24);
+    download(S.project.show.show_id+'-timing.json',new Blob([JSON.stringify(dump)],{type:'application/json'}));
+    report('Timing presets and frame sequence downloaded.');
+  }));
   on('exportHtml',()=>task(async()=>{
     report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
     const data=JSON.stringify({...result,assets}).replace(/</g,'\\u003c');
