@@ -149,6 +149,17 @@ function fgBreakState(prop, t) {
 const FX_FIST_PATH = [[430, 390], [610, 300], [760, 250]];
 const FX_LEG_PATH = [[800, 560], [1020, 340], [1160, 150]];
 const FX_TORNADO_PATH = [[640, 480], [660, 300]];
+function fxPathOrStock(type, raw) {
+  const stock = type === 'leg_arc' ? FX_LEG_PATH : type === 'tornado_spiral' ? FX_TORNADO_PATH : type === 'fist_pressure' ? FX_FIST_PATH : null;
+  const pts = [];
+  if (Array.isArray(raw)) {
+    for (const p of raw) {
+      if (Array.isArray(p) && Number.isFinite(+p[0]) && Number.isFinite(+p[1])) pts.push([+p[0], +p[1]]);
+      else if (p && typeof p === 'object' && Number.isFinite(+p.x) && Number.isFinite(+p.y)) pts.push([+p.x, +p.y]);
+    }
+  }
+  return pts.length ? pts : stock;
+}
 function fxPointOnPath(path, u) {
   const pts = Array.isArray(path) && path.length ? path : [[640, 360]];
   const t = Math.min(1, Math.max(0, Number(u) || 0));
@@ -312,9 +323,9 @@ function collectProceduralOverlays(overlays, t) {
     const xf = fxPlacementOf({ x: o.x, y: o.y, scale: o.scale });
     const hasXf = Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6;
     if (o.kind === 'exposure_warm_crush') out.exposure.push(hasXf ? [o.t_start, dur, xf] : [o.t_start, dur]);
-    else if (o.kind === 'fist_pressure') out.fist.push(hasXf ? [o.t_start, dur, o.path || FX_FIST_PATH, xf] : [o.t_start, dur, o.path || FX_FIST_PATH]);
-    else if (o.kind === 'leg_arc') out.leg.push(hasXf ? [o.t_start, dur, o.path || FX_LEG_PATH, xf] : [o.t_start, dur, o.path || FX_LEG_PATH]);
-    else if (o.kind === 'tornado_spiral') out.tornado.push(hasXf ? [o.t_start, dur, o.path || FX_TORNADO_PATH, xf] : [o.t_start, dur, o.path || FX_TORNADO_PATH]);
+    else if (o.kind === 'fist_pressure') out.fist.push(hasXf ? [o.t_start, dur, fxPathOrStock('fist_pressure', o.path), xf] : [o.t_start, dur, fxPathOrStock('fist_pressure', o.path)]);
+    else if (o.kind === 'leg_arc') out.leg.push(hasXf ? [o.t_start, dur, fxPathOrStock('leg_arc', o.path), xf] : [o.t_start, dur, fxPathOrStock('leg_arc', o.path)]);
+    else if (o.kind === 'tornado_spiral') out.tornado.push(hasXf ? [o.t_start, dur, fxPathOrStock('tornado_spiral', o.path), xf] : [o.t_start, dur, fxPathOrStock('tornado_spiral', o.path)]);
   }
   return out;
 }
@@ -472,13 +483,13 @@ function createMotionRenderer(canvas, assets = {}) {
         out.exposure.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, xf] : [ht, span]);
       } else if (type === 'fist_pressure') {
         const xf = fxPlacementOf(prm);
-        out.fist.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_FIST_PATH, xf] : [ht, span, prm.path || FX_FIST_PATH]);
+        out.fist.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('fist_pressure', prm.path), xf] : [ht, span, fxPathOrStock('fist_pressure', prm.path)]);
       } else if (type === 'leg_arc') {
         const xf = fxPlacementOf(prm);
-        out.leg.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_LEG_PATH, xf] : [ht, span, prm.path || FX_LEG_PATH]);
+        out.leg.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('leg_arc', prm.path), xf] : [ht, span, fxPathOrStock('leg_arc', prm.path)]);
       } else if (type === 'tornado_spiral') {
         const xf = fxPlacementOf(prm);
-        out.tornado.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, prm.path || FX_TORNADO_PATH, xf] : [ht, span, prm.path || FX_TORNADO_PATH]);
+        out.tornado.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('tornado_spiral', prm.path), xf] : [ht, span, fxPathOrStock('tornado_spiral', prm.path)]);
       }
     }
     return out;
@@ -795,6 +806,7 @@ hmRoot.fxPlacementOf = fxPlacementOf;
 hmRoot.transformFxPath = transformFxPath;
 hmRoot.HMMotionFx = {
   exposureWarmCrushPixels,
+  fxPathOrStock,
   fxPointOnPath,
   fxPlacementOf,
   transformFxPath,

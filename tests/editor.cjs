@@ -823,6 +823,183 @@ async function ensureServer(urlStr){
     if(await p.locator('#abToggle').getAttribute('aria-pressed')==='false')await p.click('#abToggle');
     if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='false')await p.click('#onionToggle');
     check('HM-FX-LOC-SIZE: parametric FX x/y and scale move and resize preview, preserve timing/colour/type, persist across reload, and match offline HTML export');
+    // HM-FX-PATH-EDIT: add/move/reset path points; preview, playback render, record render, and playable HTML share that path.
+    const pathProof=path.resolve('work/qa/hm-fx-path-edit');
+    fs.mkdirSync(pathProof,{recursive:true});
+    const pathArtifact='/opt/cursor/artifacts/hm-fx-path-edit';
+    try{fs.mkdirSync(pathArtifact,{recursive:true});}catch(_){}
+    const snap=async name=>{
+      const dest=path.join(pathProof,name);
+      await p.screenshot({path:dest,fullPage:true});
+      try{fs.copyFileSync(dest,path.join(pathArtifact,name));}catch(_){}
+    };
+    const copyShot=async(locator,name)=>{
+      const dest=path.join(pathProof,name);
+      await locator.screenshot({path:dest});
+      try{fs.copyFileSync(dest,path.join(pathArtifact,name));}catch(_){}
+    };
+    await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='true')await p.click('#onionToggle');
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='true')await p.click('#abToggle');
+    await p.click('[data-effect="none"]');await settle();
+    assert.equal(await p.locator('#fxPathBox').isVisible(),false);
+    assert.equal(await p.locator('#fxPathOverlay').isVisible(),false);
+    const stocks={
+      fist_pressure:[[430,390],[610,300],[760,250]],
+      leg_arc:[[800,560],[1020,340],[1160,150]],
+      tornado_spiral:[[640,480],[660,300]],
+    };
+    for(const fxType of ['fist_pressure','leg_arc','tornado_spiral']){
+      await p.click(`[data-effect="${fxType}"]`);await settle();
+      assert.equal(await p.locator('#fxPathBox').isVisible(),true,fxType);
+      assert.equal(await p.locator('#fxPathOverlay').isVisible(),true,fxType);
+      assert.equal(await p.locator('.fx-path-handle').count(),stocks[fxType].length,fxType);
+      for(let i=0;i<stocks[fxType].length;i++){
+        assert.equal(await p.locator(`[aria-label="Path point ${i+1} X"]`).inputValue(),String(stocks[fxType][i][0]),fxType+' x'+(i+1));
+        assert.equal(await p.locator(`[aria-label="Path point ${i+1} Y"]`).inputValue(),String(stocks[fxType][i][1]),fxType+' y'+(i+1));
+      }
+      assert.deepEqual((await state()).project.show.atoms[0].fx_hooks[0].params.path,stocks[fxType],fxType);
+    }
+    await p.click('[data-effect="exposure_warm_crush"]');await settle();
+    assert.equal(await p.locator('#fxPathBox').isVisible(),false,'warm crush has no path');
+    assert.equal(await p.locator('#fxLocSizeBox').isVisible(),true);
+    await p.click('[data-effect="fist_pressure"]');await settle();
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    await snap('A-stock-path.png');
+    await copyShot(p.locator('#paneA'),'A-stock-stage.png');
+    const fistCore=()=>p.evaluate(()=>{
+      const g=document.getElementById('stage').getContext('2d');
+      const data=g.getImageData(0,0,1280,720).data;
+      let sumX=0,sumY=0,count=0;
+      for(let y=0;y<720;y++)for(let x=0;x<1280;x++){
+        const i=(y*1280+x)*4;
+        if(data[i]===225&&data[i+1]===6&&data[i+2]===0){sumX+=x;sumY+=y;count++;}
+      }
+      const one=(x,y)=>Array.from(g.getImageData(x,y,1,1).data);
+      return {cx:count?sumX/count:0,cy:count?sumY/count:0,count,atPath:one(160,560),atStock:one(430,390)};
+    });
+    const stockSample=await fistCore();
+    assert.ok(stockSample.count>200,'stock fist paints the red core');
+    async function setPoint(i,x,y){
+      const xInput=p.locator(`[aria-label="Path point ${i} X"]`);
+      await xInput.fill(String(x));await xInput.dispatchEvent('change');await settle();
+      const yInput=p.locator(`[aria-label="Path point ${i} Y"]`);
+      await yInput.fill(String(y));await yInput.dispatchEvent('change');await settle();
+    }
+    const authored=[[160,560],[160,560],[160,560]];
+    for(let i=0;i<authored.length;i++)await setPoint(i+1,authored[i][0],authored[i][1]);
+    const hookAfterMove=(await state()).project.show.atoms[0].fx_hooks[0];
+    assert.equal(hookAfterMove.type,'fist_pressure');
+    assert.equal(hookAfterMove.t_rel,0.08);
+    assert.equal(hookAfterMove.params.dur,0.36);
+    assert.equal(hookAfterMove.params.x,0);
+    assert.equal(hookAfterMove.params.y,0);
+    assert.equal(hookAfterMove.params.scale,1);
+    assert.deepEqual(hookAfterMove.params.path,authored);
+    assert.equal((await state()).duration,5);
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const movedSample=await fistCore();
+    assert.ok(Math.hypot(movedSample.cx-stockSample.cx,movedSample.cy-stockSample.cy)>180,'fist follows the authored path: '+JSON.stringify({stock:stockSample,moved:movedSample}));
+    const onFist=px=>(px[0]===225&&px[1]===6&&px[2]===0)||(px[0]<40&&px[1]<15&&px[2]<15);
+    assert.ok(onFist(movedSample.atPath),'fist sits on the authored point: '+movedSample.atPath);
+    assert.notDeepEqual(movedSample.atPath,stockSample.atPath);
+    await snap('B-moved-path.png');
+    await copyShot(p.locator('#paneA'),'B-moved-stage.png');
+    const recordPx=await p.evaluate(async()=>{
+      const composed=await HMStudio.compile();
+      const canvas=document.createElement('canvas');
+      canvas.width=1280;canvas.height=720;
+      const r=HMMotion(canvas,HMStudio.project.assets||{});
+      await r.load(composed);
+      r.render(0.08);
+      return {px:Array.from(canvas.getContext('2d').getImageData(160,560,1,1).data),fx:composed.timeline.fx.fist[0][2]};
+    });
+    assert.deepEqual(recordPx.fx,authored);
+    assert.deepEqual(recordPx.px,movedSample.atPath,'record render matches the preview path');
+    const playPx=await p.evaluate(()=>{
+      HMStudio.renderer.render(0.08,{onion:false,fxStandIn:false});
+      return Array.from(document.getElementById('stage').getContext('2d').getImageData(160,560,1,1).data);
+    });
+    assert.deepEqual(playPx,movedSample.atPath,'playback render matches the preview path');
+    await p.click('#fxPathAdd');await settle();
+    assert.equal(await p.locator('.fx-path-handle').count(),4);
+    const added=(await state()).project.show.atoms[0].fx_hooks[0].params.path;
+    assert.equal(added.length,4);
+    assert.deepEqual(added.slice(0,3),authored);
+    assert.deepEqual((await state()).composed.timeline.fx.fist[0][2],added);
+    await snap('C-added-point.png');
+    await p.locator('[aria-label="Remove path point 4"]').click();await settle();
+    assert.deepEqual((await state()).project.show.atoms[0].fx_hooks[0].params.path,authored);
+    const pathPortablePath=await downloadFrom('saveProject','hm-fx-path-edit.motion.json');
+    const pathPortable=JSON.parse(fs.readFileSync(pathPortablePath,'utf8'));
+    assert.deepEqual(pathPortable.show.atoms[0].fx_hooks[0].params.path,authored);
+    assert.equal(pathPortable.show.atoms[0].fx_hooks[0].params.dur,0.36);
+    await p.reload();await p.evaluate(()=>window.ready);await settle();
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='true')await p.click('#onionToggle');
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='true')await p.click('#abToggle');
+    assert.equal(await p.locator('[aria-label="Path point 1 X"]').inputValue(),'160');
+    assert.equal(await p.locator('[aria-label="Path point 1 Y"]').inputValue(),'560');
+    assert.equal(await p.locator('[aria-label="Path point 3 Y"]').inputValue(),'560');
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const reloadSample=await fistCore();
+    assert.deepEqual(reloadSample.atPath,movedSample.atPath);
+    await p.click('#exportOpen');
+    const pathHtml=await downloadFrom('exportHtml','hm-fx-path-edit.html');
+    const pathHtmlText=fs.readFileSync(pathHtml,'utf8');
+    assert.match(pathHtmlText,/function fxPathOrStock/);
+    assert.match(pathHtmlText,/\[160,560\]/);
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    const pathOffline=await browser.newPage();
+    await pathOffline.route(/^https?:/,r=>r.abort());
+    await pathOffline.goto('file://'+pathHtml);
+    await pathOffline.evaluate(()=>window.ready);
+    await pathOffline.evaluate(()=>renderAt(0.08));
+    const htmlPx=await pathOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(160,560,1,1).data));
+    assert.deepEqual(htmlPx,movedSample.atPath,'playable HTML matches the preview path');
+    await pathOffline.close();
+    await p.click('#fxPathReset');await settle();
+    assert.deepEqual((await state()).project.show.atoms[0].fx_hooks[0].params.path,stocks.fist_pressure);
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].params.x,0);
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].params.scale,1);
+    await p.locator('#stage').scrollIntoViewIfNeeded();
+    await p.evaluate(()=>HMStudio.renderAt(0.08));
+    const pathHandle=p.locator('.fx-path-handle').first();
+    const pathBox=await pathHandle.boundingBox();
+    const stageBox=await p.locator('#stage').boundingBox();
+    const beforeDrag=(await state()).project.show.atoms[0].fx_hooks[0].params.path.map(pt=>[pt[0],pt[1]]);
+    await p.mouse.move(pathBox.x+pathBox.width/2,pathBox.y+pathBox.height/2);
+    await p.mouse.down();
+    await p.mouse.move(pathBox.x+pathBox.width/2+70,pathBox.y+pathBox.height/2+40,{steps:8});
+    await p.mouse.up();
+    await settle();
+    const afterDrag=(await state()).project.show.atoms[0].fx_hooks[0].params.path;
+    const expectDx=Math.round(70/stageBox.width*1280);
+    const expectDy=Math.round(40/stageBox.height*720);
+    assert.ok(Math.abs((afterDrag[0][0]-beforeDrag[0][0])-expectDx)<=8,'drag X '+beforeDrag[0]+' -> '+afterDrag[0]+' expected dx '+expectDx);
+    assert.ok(Math.abs((afterDrag[0][1]-beforeDrag[0][1])-expectDy)<=8,'drag Y '+beforeDrag[0]+' -> '+afterDrag[0]+' expected dy '+expectDy);
+    assert.deepEqual(afterDrag.slice(1),beforeDrag.slice(1));
+    await p.click('[data-effect="leg_arc"]');await settle();
+    await p.click('#fxPathAdd');await settle();
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].type,'leg_arc');
+    assert.equal((await state()).project.show.atoms[0].fx_hooks[0].params.path.length,4);
+    assert.deepEqual((await state()).composed.timeline.fx.leg[0][2],(await state()).project.show.atoms[0].fx_hooks[0].params.path);
+    await p.click('#fxPathReset');await settle();
+    assert.deepEqual((await state()).project.show.atoms[0].fx_hooks[0].params.path,stocks.leg_arc);
+    await p.click('[data-effect="tornado_spiral"]');await settle();
+    await setPoint(2,700,220);
+    assert.deepEqual((await state()).project.show.atoms[0].fx_hooks[0].params.path,[[640,480],[700,220]]);
+    assert.deepEqual((await state()).composed.timeline.fx.tornado[0][2],[[640,480],[700,220]]);
+    await p.click('[data-effect="exposure_warm_crush"]');await settle();
+    assert.equal(await p.locator('#fxPathBox').isVisible(),false);
+    await p.setViewportSize({width:390,height:844});
+    await p.click('[data-effect="leg_arc"]');await settle();
+    assert.equal(await p.locator('#fxPathBox').isVisible(),true);
+    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'path editor fits a phone width');
+    await p.setViewportSize({width:1440,height:1000});
+    if(await p.locator('#abToggle').getAttribute('aria-pressed')==='false')await p.click('#abToggle');
+    if(await p.locator('#onionToggle').getAttribute('aria-pressed')==='false')await p.click('#onionToggle');
+    check('HM-FX-PATH-EDIT: path add/move/reset persists on the show, and preview, playback, record, and playable HTML follow that path');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
