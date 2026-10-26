@@ -28,3 +28,9 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 #backgroundMotion option:disabled{color:#6d7874}
 .fx-loc-size-box{margin-top:10px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#14181b}
 .fx-loc-size-box .paired-fields{margin-top:6px}
+.timeline-clip.in-range{outline:2px solid #d4f07a;outline-offset:-2px}
+.timeline-clip.chained{border-bottom-color:#ccf17b}
+.cam-chain-box{margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
+.cam-chain-box .slider-label{margin-top:10px}
+.cam-chain-box select{font-size:11px}
+.cam-chain-box .text-button{margin-top:6px}

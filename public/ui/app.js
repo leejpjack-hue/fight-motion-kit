@@ -13,7 +13,7 @@
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false;
-  let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false;
+  let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, rangeAnchor = 0, rangeEnd = 0;
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
   const durationB = () => projectB ? durationOf(projectB) : Math.round((resultB?.timeline?.duration_s || 0) * 10000) / 10000;
@@ -79,7 +79,7 @@
   async function load(p) {
     const request=++loadRequest;loading=true;
     try {
-    validate(p); pause(); project=copy(p); selected=project.show.atoms.length?0:-1;time=0;
+    validate(p); pause(); project=copy(p); selected=project.show.atoms.length?0:-1;rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=0;
     history=[copy(project)];historyIndex=0;result=null;
     update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
     status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
@@ -108,7 +108,7 @@
     const before=copy(project);
     try {fn();validate(project);commit();} catch(e){project=before;update();throw e;}
   }
-  function restore(delta) {const i=historyIndex+delta;if(i<0||i>=history.length)return;pause();historyIndex=i;project=copy(history[i]);selected=Math.min(selected,project.show.atoms.length-1);time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();status(delta<0?'Undid last edit':'Redid last edit');}
+  function restore(delta) {const i=historyIndex+delta;if(i<0||i>=history.length)return;pause();historyIndex=i;project=copy(history[i]);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();status(delta<0?'Undid last edit':'Redid last edit');}
   function captionOverlays(show) {
     show.overlays=(show.overlays||[]).filter(o=>!o.editor_caption);let t=0;
     show.atoms.forEach(a=>{if(a.caption)show.overlays.push({id:'caption-'+a.id,editor_caption:true,kind:'text',text:a.caption,t_start:t,t_end:t+a.duration_s,x:640,y:644,z:20,style:{fontSize:38,fill:'#ffffff',stroke:'#17201d',strokeWidth:7}});t+=a.duration_s;});
@@ -417,15 +417,17 @@
   function renderTimeline() {
     const d=duration();$('timelineClips').replaceChildren();
     project.show.atoms.forEach((a,i)=>{
-      const b=document.createElement('button');b.className='timeline-clip'+(selected===i?' active':'');b.style.flex=a.duration_s+' 0 0';b.draggable=true;b.dataset.index=i;
+      const run=selectedRun();
+      const b=document.createElement('button');b.className='timeline-clip'+(selected===i?' active':'')+(run.length>1&&run.includes(i)?' in-range':'')+(a.camera?.chain?' chained':'');b.style.flex=a.duration_s+' 0 0';b.draggable=true;b.dataset.index=i;
+      if(a.camera?.chain)b.title=`Camera chain ${a.camera.chain.index+1} of ${a.camera.chain.count}`;
       b.setAttribute('aria-label',`${i+1}. ${a.label||a.id}, ${a.duration_s.toFixed(2)} seconds`);b.setAttribute('aria-pressed',String(i===selected));
       const ticks=(a.fx_hooks||[]).map(hk=>{
         const pct=Math.max(0,Math.min(100,(Number(hk.t_rel??0))*100));
         return `<span class="beat-tick" data-type="${esc(hk.type)}" data-t-rel="${esc(hk.t_rel)}" style="left:${pct}%" title="FX: ${esc(hk.type)} @ ${pct.toFixed(0)}%"></span>`;
       }).join('');
       b.innerHTML=`${ticks}<img src="${esc(thumbnail(a))}" alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
-      b.onclick=()=>select(i);b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
-      b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [a]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,a);selected=i;time=startOf(i);});dragIndex=-1;});
+      b.onclick=e=>{if(e.shiftKey)selectRange(i);else select(i);};b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
+      b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [moved]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,moved);selected=i;rangeAnchor=i;rangeEnd=i;time=startOf(i);HMComposeClient.reflowAllCamChains(project.show.atoms);});dragIndex=-1;});
       b.ondragend=()=>{dragIndex=-1;};$('timelineClips').append(b);
     });
     $('ruler').replaceChildren();for(let i=0;i<=5;i++){const s=document.createElement('span');s.textContent=(d*i/5).toFixed(d<10?1:0)+'s';s.style.left=i*20+'%';$('ruler').append(s);}
@@ -456,6 +458,19 @@
       $('dualCamDurs').textContent='';
     }
     $('pasteCam').disabled=!copiedCam;$('pasteCamAll').disabled=!copiedCam;
+    const run=selectedRun();
+    const multi=run.length>=2;
+    if($('chainCams')){
+      $('chainCams').textContent=multi?`Chain ${run.length} clips`:'Chain with next';
+      $('chainCams').disabled=!multi&&selected>=project.show.atoms.length-1;
+    }
+    const chain=cam.chain;
+    if($('camChainLabel'))$('camChainLabel').textContent=chain?`${chain.index+1} / ${chain.count}`:'';
+    if($('unchainCams'))$('unchainCams').disabled=!chain;
+    if($('camEaseChain'))$('camEaseChain').disabled=!chain;
+    const ease=cam.ease||cam.segments?.find(s=>s.ease)?.ease||'';
+    if($('camEase')&&document.activeElement!==$('camEase'))$('camEase').value=HMComposeClient.CAM_EASES.includes(ease)?ease:'';
+    if($('camChainHint'))$('camChainHint').textContent=chain?'Chained move. The next clip starts at this clip\'s end. Snap zoom punches late along the chain instead of drifting on every cut.':'Shift-click a run of clips, then chain them. The next clip starts where this one ends. Snap zoom punches in late instead of a slow linear drift.';
     $('caption').value=a.caption||'';
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
@@ -508,7 +523,17 @@
       }
     }
   }
-  function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
+  function selectedRun() {
+    const n=project?.show?.atoms?.length||0;
+    if(!n)return [];
+    const a=Math.max(0,Math.min(rangeAnchor,rangeEnd));
+    const b=Math.min(n-1,Math.max(rangeAnchor,rangeEnd));
+    const out=[];
+    for(let i=a;i<=b;i++)out.push(i);
+    return out;
+  }
+  function select(i) {if(recording)return;pause();selected=Math.max(0,Math.min(i,project.show.atoms.length-1));rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
+  function selectRange(i) {if(recording)return;pause();rangeEnd=Math.max(0,Math.min(i,project.show.atoms.length-1));selected=rangeEnd;time=startOf(selected);renderTimeline();renderInspector();renderMedia();draw();window.dispatchEvent(new Event('hm:projectchange'));}
   function updateTransport() {
     const d=duration(),maxD=maxScrubDuration();
     $('scrub').max=maxD||1;$('scrub').value=time;
@@ -560,7 +585,7 @@
   function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
   function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
   async function play() {if(!duration()||recording)return;if(playing||preparing){pause();return;}const token=++playToken;preparing=true;updateTransport();try{if(!renderer||renderedVersion!==compileVersion)await compile();if(token!==playToken||!renderer)return;if(time>=duration()-.001)time=0;timeStart=time;clockStart=performance.now();playing=true;playbackFrame=requestAnimationFrame(tick);}finally{if(token===playToken){preparing=false;updateTransport();}}}
-  function setDuration(next) {if(!Number.isFinite(next)||next<.1)throw new Error('Use a clip duration of at least 0.1 seconds.');edit(()=>{const a=atom();a.duration_s=+next.toFixed(4);if(a.camera?.segments)syncSegmentsToDuration(a.camera,a.duration_s);time=startOf(selected);});}
+  function setDuration(next) {if(!Number.isFinite(next)||next<.1)throw new Error('Use a clip duration of at least 0.1 seconds.');edit(()=>{const a=atom();a.duration_s=+next.toFixed(4);if(a.camera?.segments)syncSegmentsToDuration(a.camera,a.duration_s);if(a.camera?.chain?.id)HMComposeClient.reflowCamChain(project.show.atoms,a.camera.chain.id);time=startOf(selected);});}
   function rippleTrim(delta) {if(!atom())return;const next=Math.max(0.1,+(atom().duration_s+delta).toFixed(4));setDuration(next);status(`Ripple trimmed clip to ${next.toFixed(2)}s · Total ${duration().toFixed(2)}s`);}
   function fitToSeconds(targetS) {
     const d=duration();if(!d)return;
@@ -575,6 +600,7 @@
         if(a.camera?.segments)syncSegmentsToDuration(a.camera,next);
         total+=next;
       });
+      HMComposeClient.reflowAllCamChains(project.show.atoms);
       time=0;
     });
     status(`Timeline fitted to exactly ${target.toFixed(2)} seconds`);
@@ -594,8 +620,8 @@
     });
     status('Applied Fight-cam 8-pack across timeline');
   }
-  function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';project.show.atoms.splice(selected+1,0,a);selected++;time=startOf(selected);});}
-  function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);time=selected<0?0:startOf(selected);});}
+  function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
+  function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=selected<0?0:startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   async function importImages(files) {
     if(!files.length)return;const before=copy(project);
     try {
@@ -684,11 +710,18 @@
   $('duration').onchange=safe(()=>setDuration(+$('duration').value));on('shorter',()=>rippleTrim(-0.1));on('longer',()=>rippleTrim(0.1));
   $('camera').onchange=safe(()=>edit(()=>{
     const cur=atom().camera||{};
-    atom().camera={preset:$('camera').value,nudge:cur.nudge||{},...(cur.intensity!=null?{intensity:cur.intensity}:{})};
+    const next={preset:$('camera').value,nudge:cur.nudge||{},...(cur.intensity!=null?{intensity:cur.intensity}:{})};
+    if(cur.ease)next.ease=cur.ease;
+    if(cur.snap_zoom===true)next.snap_zoom=true;
+    if(cur.chain)next.chain=copy(cur.chain);
+    if(cur.u_range)next.u_range=copy(cur.u_range);
     if(cur.segments?.length){
-      cur.segments[0].preset=$('camera').value;
-      atom().camera.segments=copy(cur.segments);
+      const segs=copy(cur.segments);
+      segs[0].preset=$('camera').value;
+      next.segments=segs;
+      next.preset=segs[0].preset;
     }
+    atom().camera=next;
   }));
   $('camIntensity').oninput=()=>$('camIntensityValue').textContent=Math.round(+$('camIntensity').value*100)+'%';
   $('camIntensity').onchange=safe(()=>{
@@ -704,6 +737,9 @@
   $('zoom').oninput=()=>$('zoomValue').textContent=Math.round(+$('zoom').value*100)+'%';
   $('dualCamToggle').onchange=safe(()=>edit(()=>{
     const a=atom();a.camera||={preset:'static_hold'};
+    const chainId=a.camera.chain?.id;
+    delete a.camera.chain;
+    delete a.camera.u_range;
     if($('dualCamToggle').checked){
       const d=a.duration_s, d1=+(d*0.5).toFixed(4), d2=+(d-d1).toFixed(4);
       const p1=a.camera.preset||'static_hold';
@@ -715,16 +751,21 @@
     } else {
       delete a.camera.segments;
     }
+    if(chainId)HMComposeClient.reflowCamChain(project.show.atoms,chainId);
   }));
   function updateDualSegment() {
     const a=atom();if(!a?.camera?.segments?.length)return;
+    const chainId=a.camera.chain?.id;
     const ratio=Math.max(0.1,Math.min(0.9,+$('segSplit').value||0.5));
     const d=a.duration_s, d1=+(d*ratio).toFixed(4), d2=+(d-d1).toFixed(4);
+    delete a.camera.chain;
+    delete a.camera.u_range;
     a.camera.preset=$('segAPreset').value;
     a.camera.segments=[
       {preset:$('segAPreset').value,dur_s:d1,u_range:[0,1]},
       {preset:$('segBPreset').value,dur_s:d2,u_range:[0,1]}
     ];
+    if(chainId)HMComposeClient.reflowCamChain(project.show.atoms,chainId);
   }
   $('segAPreset').onchange=safe(()=>edit(updateDualSegment));
   $('segBPreset').onchange=safe(()=>edit(updateDualSegment));
@@ -735,6 +776,7 @@
     if(!atom()||!copiedCam)return;
     edit(()=>{
       const next=copy(copiedCam);
+      HMComposeClient.detachCamChain(next);
       if(next.segments?.length)syncSegmentsToDuration(next,atom().duration_s);
       atom().camera=next;
     });
@@ -745,17 +787,53 @@
     edit(()=>{
       project.show.atoms.forEach(a=>{
         const next=copy(copiedCam);
+        HMComposeClient.detachCamChain(next);
         if(next.segments?.length)syncSegmentsToDuration(next,a.duration_s);
         a.camera=next;
       });
     });
     status('Pasted camera settings to all clips');
   });
-  on('resetCamera',()=>edit(()=>{atom().camera={preset:'static_hold'};}));
+  on('resetCamera',()=>edit(()=>{
+    const chainId=atom().camera?.chain?.id;
+    atom().camera={preset:'static_hold'};
+    if(chainId)HMComposeClient.reflowCamChain(project.show.atoms,chainId);
+  }));
+  on('chainCams',()=>{
+    const run=selectedRun();
+    const indices=run.length>=2?run:[selected,selected+1];
+    edit(()=>{
+      const info=HMComposeClient.chainClipCameras(project.show.atoms,indices);
+      status(`Chained ${info.count} clips on ${info.preset}. The next clip starts where the previous one ends.`);
+    });
+  });
+  on('unchainCams',()=>{
+    if(!atom()?.camera?.chain)return;
+    edit(()=>{HMComposeClient.unchainClip(project.show.atoms,selected);});
+    status('Removed this clip from the camera chain');
+  });
+  if($('camEase'))$('camEase').onchange=safe(()=>edit(()=>{
+    const a=atom();if(!a)return;
+    a.camera||={preset:'static_hold'};
+    HMComposeClient.setCamEase(a.camera,$('camEase').value);
+  }));
+  on('camEaseChain',()=>{
+    const id=atom()?.camera?.chain?.id;
+    if(!id)return;
+    const ease=$('camEase').value;
+    edit(()=>{
+      project.show.atoms.forEach(a=>{if(a.camera?.chain?.id===id)HMComposeClient.setCamEase(a.camera,ease);});
+    });
+    status(ease==='snap'?'Snap zoom on the whole chain':ease?'Easing applied to the chain':'Chain uses each preset curve');
+  });
   on('impactPunch',()=>{edit(()=>{
     const a=atom();if(!a)return;
+    const chainId=a.camera?.chain?.id;
     a.camera={...(a.camera||{}),preset:'slow_push',impact_macro:true};
     delete a.camera.segments;
+    delete a.camera.chain;
+    delete a.camera.u_range;
+    if(chainId)HMComposeClient.reflowCamChain(project.show.atoms,chainId);
     a.fx_hooks=[
       {type:'hit_orange',t_rel:0.08,params:{}},
       {type:'shake',t_rel:0.08,params:{amp:8,dur:0.2}}
