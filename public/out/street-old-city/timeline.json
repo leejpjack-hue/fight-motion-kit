@@ -1,0 +1,645 @@
+{
+  "show_id": "street-old-city",
+  "title": "Daiyu × Xifeng · Old-city street",
+  "duration_s": 5,
+  "fps_plates": null,
+  "plate_timing": "explicit",
+  "floor_y": 684,
+  "bg": {
+    "base": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+    "swap": null,
+    "swap_t": null,
+    "key_white": false
+  },
+  "chars": {
+    "L": {
+      "name": "Lin Daiyu"
+    },
+    "R": {
+      "name": "Wang Xifeng"
+    }
+  },
+  "atoms": [
+    {
+      "id": "street-01",
+      "t0": 0,
+      "t1": 0.5,
+      "pose_mode": "hero",
+      "beat": "straight",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 0,
+          "t1": 0.5,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [
+        {
+          "type": "dust",
+          "t_rel": 0.05,
+          "params": {
+            "k": 0.45
+          },
+          "mode": "live",
+          "compose_only": false
+        }
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "street-02",
+      "t0": 0.5,
+      "t1": 1,
+      "pose_mode": "hero",
+      "beat": "straight",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 0.5,
+          "t1": 1,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [],
+      "source_refs": []
+    },
+    {
+      "id": "street-03",
+      "t0": 1,
+      "t1": 1.75,
+      "pose_mode": "hero",
+      "beat": "clash",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 1,
+          "t1": 1.75,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 4,
+            "dur": 0.16
+          },
+          "mode": "live",
+          "compose_only": false
+        }
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "street-04",
+      "t0": 1.75,
+      "t1": 2.5,
+      "pose_mode": "hero",
+      "beat": "straight",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 1.75,
+          "t1": 2.5,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [],
+      "source_refs": []
+    },
+    {
+      "id": "street-05",
+      "t0": 2.5,
+      "t1": 3,
+      "pose_mode": "hero",
+      "beat": "clash",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 2.5,
+          "t1": 3,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 4,
+            "dur": 0.16
+          },
+          "mode": "live",
+          "compose_only": false
+        }
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "street-06",
+      "t0": 3,
+      "t1": 3.5,
+      "pose_mode": "hero",
+      "beat": "straight",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 3,
+          "t1": 3.5,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [
+        {
+          "type": "dust",
+          "t_rel": 0.05,
+          "params": {
+            "k": 0.45
+          },
+          "mode": "live",
+          "compose_only": false
+        }
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "street-07",
+      "t0": 3.5,
+      "t1": 4,
+      "pose_mode": "hero",
+      "beat": "clash",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 3.5,
+          "t1": 4,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1.035,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [
+        {
+          "type": "shake",
+          "t_rel": 0.1,
+          "params": {
+            "amp": 7,
+            "dur": 0.16
+          },
+          "mode": "live",
+          "compose_only": false
+        }
+      ],
+      "source_refs": []
+    },
+    {
+      "id": "street-08",
+      "t0": 4,
+      "t1": 5,
+      "pose_mode": "hero",
+      "beat": "guard_recover",
+      "family": "fight",
+      "cam": [
+        {
+          "t0": 4,
+          "t1": 5,
+          "u0": 0,
+          "u1": 1,
+          "preset": "static_hold",
+          "curves": {
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            },
+            "s": {
+              "type": "lerp",
+              "a": 1.02,
+              "b": 1,
+              "ease": "smooth"
+            },
+            "r": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        }
+      ],
+      "fx_hooks": [],
+      "source_refs": []
+    }
+  ],
+  "plates": [
+    {
+      "id": "S001",
+      "t0": 0,
+      "t1": 0.5
+    },
+    {
+      "id": "S002",
+      "t0": 0.5,
+      "t1": 1
+    },
+    {
+      "id": "S003",
+      "t0": 1,
+      "t1": 1.75
+    },
+    {
+      "id": "S004",
+      "t0": 1.75,
+      "t1": 2.5
+    },
+    {
+      "id": "S005",
+      "t0": 2.5,
+      "t1": 3
+    },
+    {
+      "id": "S006",
+      "t0": 3,
+      "t1": 3.5
+    },
+    {
+      "id": "S007",
+      "t0": 3.5,
+      "t1": 4
+    },
+    {
+      "id": "S008",
+      "t0": 4,
+      "t1": 5
+    }
+  ],
+  "fx": {
+    "hits": [],
+    "flash": [],
+    "hitstop": [],
+    "shake": [
+      [
+        1.075,
+        4,
+        0.16
+      ],
+      [
+        2.55,
+        4,
+        0.16
+      ],
+      [
+        3.55,
+        7,
+        0.16
+      ]
+    ],
+    "bgflash": [],
+    "dust": [
+      [
+        0.025,
+        0.45
+      ],
+      [
+        3.025,
+        0.45
+      ]
+    ],
+    "sparks": [],
+    "speed": [],
+    "fence": [],
+    "trails": [],
+    "pink_cut": null,
+    "exposure": [],
+    "fist": [],
+    "leg": [],
+    "tornado": []
+  },
+  "overlays": [],
+  "cam_keys_cols": [
+    "t",
+    "x",
+    "y",
+    "s",
+    "r"
+  ],
+  "cam_keys": [
+    [
+      0,
+      -4,
+      0,
+      1,
+      0
+    ],
+    [
+      0.25,
+      0,
+      0,
+      1.018,
+      0
+    ],
+    [
+      0.5,
+      4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      0.75,
+      0,
+      0,
+      1.027,
+      0
+    ],
+    [
+      1,
+      -4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      1.25,
+      -1.926,
+      0,
+      1.024,
+      0
+    ],
+    [
+      1.5,
+      1.926,
+      0,
+      1.031,
+      0
+    ],
+    [
+      1.75,
+      4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      2,
+      1.926,
+      0,
+      1.024,
+      0
+    ],
+    [
+      2.25,
+      -1.926,
+      0,
+      1.031,
+      0
+    ],
+    [
+      2.5,
+      -4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      2.75,
+      0,
+      0,
+      1.027,
+      0
+    ],
+    [
+      3,
+      4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      3.25,
+      0,
+      0,
+      1.027,
+      0
+    ],
+    [
+      3.5,
+      -4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      3.75,
+      0,
+      0,
+      1.027,
+      0
+    ],
+    [
+      4,
+      4,
+      0,
+      1.02,
+      0
+    ],
+    [
+      4.25,
+      2.75,
+      0,
+      1.017,
+      0
+    ],
+    [
+      4.5,
+      0,
+      0,
+      1.01,
+      0
+    ],
+    [
+      4.75,
+      -2.75,
+      0,
+      1.003,
+      0
+    ]
+  ],
+  "stats": {
+    "atoms": 8,
+    "hero_atoms": 8,
+    "library_atoms": 0,
+    "plates": 8,
+    "hero_budget": [
+      1,
+      1.33
+    ],
+    "parity_mode": true,
+    "overlays": 0,
+    "compose_engine": "js-fe"
+  },
+  "warnings": []
+}
