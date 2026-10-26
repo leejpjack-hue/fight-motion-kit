@@ -418,15 +418,19 @@
     });
   }
   function addMedia(m) {edit(()=>{project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=project.show.atoms.length-1;time=startOf(selected);});}
+  function beatTickMarkup(raw) {
+    const hk=typeof raw==='string'?{type:raw}:(raw&&typeof raw==='object'?raw:null);
+    if(!hk||!hk.type)return '';
+    const tRel=hk.t_rel!=null&&Number.isFinite(+hk.t_rel)?+hk.t_rel:0.08;
+    const pct=Math.round(Math.max(0,Math.min(1,tRel))*10000)/100;
+    return `<span class="beat-tick" data-type="${esc(hk.type)}" data-t-rel="${tRel}" style="left:${pct}%" title="FX: ${esc(hk.type)} @ ${pct.toFixed(0)}%"></span>`;
+  }
   function renderTimeline() {
     const d=duration();$('timelineClips').replaceChildren();
     project.show.atoms.forEach((a,i)=>{
       const b=document.createElement('button');b.className='timeline-clip'+(selected===i?' active':'');b.style.flex=a.duration_s+' 0 0';b.draggable=true;b.dataset.index=i;
       b.setAttribute('aria-label',`${i+1}. ${a.label||a.id}, ${a.duration_s.toFixed(2)} seconds`);b.setAttribute('aria-pressed',String(i===selected));
-      const ticks=(a.fx_hooks||[]).map(hk=>{
-        const pct=Math.max(0,Math.min(100,(Number(hk.t_rel??0))*100));
-        return `<span class="beat-tick" data-type="${esc(hk.type)}" data-t-rel="${esc(hk.t_rel)}" style="left:${pct}%" title="FX: ${esc(hk.type)} @ ${pct.toFixed(0)}%"></span>`;
-      }).join('');
+      const ticks=(a.fx_hooks||[]).map(beatTickMarkup).join('');
       b.innerHTML=`${ticks}<img src="${esc(thumbnail(a))}" alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
       b.onclick=()=>select(i);b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
       b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [a]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,a);selected=i;time=startOf(i);});dragIndex=-1;});

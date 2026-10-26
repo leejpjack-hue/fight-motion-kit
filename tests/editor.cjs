@@ -325,6 +325,63 @@ async function ensureServer(urlStr){
       await p.locator('#stage').screenshot({path:path.join(out,`pan-cont-${t.toFixed(1)}s.png`)});
     }
     check('HM-BG-PAN-CONT: continuous show pan keeps crop.x moving across three clip cuts; per clip restarts; sprite stays planted');
+    // HM-BG-SPAN-UI: span / t0–t1 are visible on continuous pan. Default stays show-clock. Preview and export follow the authored window.
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanT0').inputValue(),'0');
+    assert.equal(await p.locator('#backgroundSpanT1').inputValue(),'4');
+    assert.equal(await p.locator('#backgroundSpanValue').textContent(),'Whole show');
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await p.selectOption('#backgroundMotion','static');await settle();
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),true);
+    await p.selectOption('#backgroundMotion','pan_right');await p.fill('#backgroundMotionAmount','1');await p.locator('#backgroundMotionAmount').dispatchEvent('change');await settle();
+    assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'show');
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    await p.selectOption('#backgroundMotionClock','per_atom');await settle();
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
+    await p.selectOption('#backgroundMotionClock','show');await settle();
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await p.selectOption('#backgroundMotionClock','span');await settle();
+    assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:0,t1:4}});
+    await change('backgroundSpanT0',1);await change('backgroundSpanT1',3);
+    assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'span');
+    assert.equal(await p.locator('#backgroundMotionClock').evaluate(el=>el.selectedOptions[0].textContent),'Continuous (span)');
+    assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}});
+    assert.equal(await p.locator('#backgroundSpanValue').textContent(),'1.00–3.00s');
+    assert.match(await p.locator('#backgroundMotionNote').textContent(),/Continuous \(span\): one move from 1\.00s to 3\.00s/);
+    const spanAt=async t=>scrub(t);
+    const beforeSpan=await spanAt(.5),midSpan=await spanAt(2),afterSpan=await spanAt(3.5);
+    assert.ok(Math.abs(beforeSpan.x-.05)<1e-3,'held before t0: '+beforeSpan.x);
+    assert.equal(beforeSpan.u,0);
+    assert.ok(Math.abs(midSpan.u-.5)<1e-6,'mid span progress: '+midSpan.u);
+    assert.ok(Math.abs(midSpan.x-.275)<1e-3,'mid span crop.x: '+midSpan.x);
+    assert.equal(afterSpan.u,1);
+    assert.ok(Math.abs(afterSpan.x-.5)<1e-3,'held after t1: '+afterSpan.x);
+    assert.ok(afterSpan.bg[0]>midSpan.bg[0]+8&&midSpan.bg[0]>beforeSpan.bg[0]+8,'red channel follows the span: '+[beforeSpan.bg[0],midSpan.bg[0],afterSpan.bg[0]]);
+    for(const sample of [beforeSpan,midSpan,afterSpan])assert.deepEqual(sample.fg,[30,180,70,255]);
+    await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
+    await p.locator('#backgroundMotionDetails').screenshot({path:path.join(out,'pan-span-controls.png')});
+    await spanAt(.5);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-0.5s.png')});
+    await spanAt(2);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-2.0s.png')});
+    await spanAt(3.5);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-3.5s.png')});
+    await p.click('#exportOpen');const spanHtml=await downloadFrom('exportHtml','bg-span.html');
+    const spanFile=fs.readFileSync(spanHtml,'utf8');
+    assert.match(spanFile,/function backgroundMotionProgress/);
+    assert.match(spanFile,/"motion":\{"preset":"pan_right","amount":1,"clock":"span","span":\{"t0":1,"t1":3\}\}/);
+    const spanOffline=await browser.newPage();const spanNet=[];await spanOffline.route(/^https?:/,r=>{spanNet.push(r.request().url());return r.abort();});
+    await spanOffline.goto('file://'+spanHtml);await spanOffline.evaluate(()=>window.ready);
+    for(const [t,sample] of [[.5,beforeSpan],[2,midSpan],[3.5,afterSpan]]){
+      await spanOffline.evaluate(t=>renderAt(t),t);
+      assert.deepEqual(await spanOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(24,80,1,1).data)),sample.bg,'export mismatch at '+t);
+    }
+    assert.deepEqual(spanNet,[]);await spanOffline.close();
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    check('HM-BG-SPAN-UI: continuous pan shows span t0–t1; default stays show-clock; preview and export match the authored window');
     // Restore the clip-background project the following checks build on.
     await p.setInputFiles('#projectInput',clipProjectPath);await p.waitForFunction(()=>HMStudio.project.show.show_id==='background-feature-test');await settle();if((await state()).onion)await p.click('#onionToggle');await p.click('.timeline-clip[data-index="0"]');await settle();
     const beforeBuiltIn=(await state()).project;
@@ -571,6 +628,68 @@ async function ensureServer(urlStr){
     const stillIntact=await fgPixel();
     assert.ok(stillIntact.px[0]>180&&stillIntact.px[1]>100,'before the break the prop stays intact: '+stillIntact.px);
     check('HM-COMPOSE-FG: Compose authors a foreground prop, its camera, keyframes and a timed break on the fight');
+    const webp=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=140;c.height=140;const g=c.getContext('2d');g.fillStyle='#20c060';g.fillRect(0,0,140,140);return c.toDataURL('image/webp');});
+    assert.match(webp,/^data:image\/webp/);
+    await p.setInputFiles('#fgBrokenInput',{name:'chair-broken.webp',mimeType:'image/webp',buffer:Buffer.from(webp.split(',')[1],'base64')});
+    await p.waitForFunction(()=>/\.webp$/.test(HMStudio.project.show.fg.props[0].effect.broken_src||''));await settle();
+    assert.equal((await state()).project.show.fg.props[0].effect.broken_src.endsWith('.webp'),true);
+    await p.evaluate(()=>HMStudio.renderAt(2.35));
+    const webpSwap=await fgPixel();
+    assert.equal(webpSwap.broken,true);
+    assert.ok(webpSwap.px[1]>160&&webpSwap.px[0]<80,'webp cutout replaces the prop after the break: '+webpSwap.px);
+    await p.evaluate(()=>HMStudio.renderAt(1.6));
+    const webpIntact=await fgPixel();
+    assert.ok(webpIntact.px[0]>180&&webpIntact.px[1]>100,'before the break the prop stays intact under a webp cutout: '+webpIntact.px);
+    const speedPng=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;const g=c.getContext('2d');g.clearRect(0,0,64,64);g.fillStyle='#00e5ff';g.fillRect(0,0,64,64);g.fillStyle='#06343a';g.fillRect(6,0,3,64);g.fillRect(50,0,3,64);return c.toDataURL('image/png').split(',')[1];});
+    await p.selectOption('#fgSlot','overlay');
+    await p.setInputFiles('#fgInput',{name:'speed-lines.png',mimeType:'image/png',buffer:Buffer.from(speedPng,'base64')});
+    await p.waitForFunction(()=>HMStudio.project.show.fg.props.some(prop=>prop.slot==='overlay'));await settle();
+    const overlayId=(await state()).project.show.fg.props.find(prop=>prop.slot==='overlay').id;
+    await p.selectOption('#fgProp',overlayId);await settle();
+    await change('fgX',180);await change('fgY',560);await change('fgT0',1);await change('fgT1',1.5);await change('fgZ',40);
+    assert.equal(await p.locator('#fgBreakBox').isHidden(),true);
+    assert.match(await p.locator('#fgOverlayLabel').textContent(),/does not crack/);
+    const overlayProp=(await state()).project.show.fg.props.find(prop=>prop.slot==='overlay');
+    assert.equal(overlayProp.effect,undefined);
+    assert.equal(overlayProp.t_start,1);assert.equal(overlayProp.t_end,1.5);
+    assert.equal(overlayProp.src.endsWith('.png'),true);
+    const composedOverlay=(await state()).composed.timeline.fg.props.find(prop=>prop.slot==='overlay');
+    assert.equal(composedOverlay.t_start,1);assert.equal(composedOverlay.t_end,1.5);
+    assert.equal(Object.hasOwn(composedOverlay,'effect'),false);
+    const sampleOverlay=t=>p.evaluate(t=>{
+      HMStudio.renderAt(t);
+      const tl=HMStudio.composed.timeline,prop=tl.fg.props.find(item=>item.slot==='overlay');
+      const cam=fgCameraFrame(tl.fg.cam,t,{duration:tl.duration_s,atomT0:0,atomT1:tl.duration_s});
+      const pose=fgPropPose(prop,t);
+      const x=Math.round((pose.x-640)*cam.s+640+cam.x),y=Math.round((pose.y-360)*cam.s+360+cam.y);
+      const px=Array.from(document.getElementById('stage').getContext('2d').getImageData(x,y,1,1).data);
+      return {x,y,px,shown:t>=prop.t_start&&t<prop.t_end};
+    },t);
+    const hiddenOverlay=await sampleOverlay(0.4),shownOverlay=await sampleOverlay(1.2);
+    assert.equal(hiddenOverlay.shown,false);assert.equal(shownOverlay.shown,true);
+    assert.ok(shownOverlay.px[2]>200&&shownOverlay.px[1]>180&&shownOverlay.px[0]<40,'overlay art is visible inside its window: '+shownOverlay.px);
+    assert.ok(!(hiddenOverlay.px[2]>200&&hiddenOverlay.px[1]>180&&hiddenOverlay.px[0]<40),'overlay art is hidden outside its window: '+hiddenOverlay.px);
+    await p.locator('#foregroundPanel').screenshot({path:path.join(out,'fg-overlay-ui.png')});
+    await p.evaluate(()=>HMStudio.renderAt(1.2));
+    await p.locator('#paneA').screenshot({path:path.join(out,'fg-overlay-shown.png')});
+    await p.click('#exportOpen');
+    const cutoutHtml=await downloadFrom('exportHtml','fg-broken-cutout.html');
+    const cutoutText=fs.readFileSync(cutoutHtml,'utf8');
+    assert.match(cutoutText,/function fgBreakState/);
+    assert.match(cutoutText,/slot === 'overlay'/);
+    const cutoutPage=await browser.newPage();const cutoutNet=[];
+    await cutoutPage.route(/^https?:/,r=>{cutoutNet.push(r.request().url());return r.abort();});
+    await cutoutPage.goto('file://'+cutoutHtml);await cutoutPage.evaluate(()=>window.ready);
+    await cutoutPage.evaluate(()=>renderAt(1.2));
+    assert.deepEqual(await cutoutPage.evaluate(xy=>Array.from(document.getElementById('stage').getContext('2d').getImageData(xy[0],xy[1],1,1).data),[shownOverlay.x,shownOverlay.y]),shownOverlay.px);
+    await cutoutPage.evaluate(()=>renderAt(0.4));
+    assert.deepEqual(await cutoutPage.evaluate(xy=>Array.from(document.getElementById('stage').getContext('2d').getImageData(xy[0],xy[1],1,1).data),[hiddenOverlay.x,hiddenOverlay.y]),hiddenOverlay.px);
+    await cutoutPage.evaluate(()=>renderAt(2.35));
+    assert.deepEqual(await cutoutPage.evaluate(xy=>Array.from(document.getElementById('stage').getContext('2d').getImageData(xy[0],xy[1],1,1).data),[webpSwap.x,webpSwap.y]),webpSwap.px);
+    assert.deepEqual(cutoutNet,[]);await cutoutPage.close();
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    await p.selectOption('#fgSlot','prop');
+    check('HM-FG-BROKEN-CUTOUT: broken WebP replaces the crack in the player and the export, and overlay art shows only inside its window');
     await p.evaluate(async()=>{
       const make=draw=>{const c=document.createElement('canvas');c.width=1280;c.height=720;draw(c.getContext('2d'));return c.toDataURL('image/png');};
       const mark=make(g=>{g.clearRect(0,0,1280,720);g.fillStyle='#1eb446';g.fillRect(580,300,120,120);});
@@ -915,6 +1034,75 @@ async function ensureServer(urlStr){
     assert.equal((await state()).project.show.atoms[0].duration_s,0.5);
     check('HM-DIALOGUE-HOLD: selected clip film-slow hold and micro-cut preview match, undo restores the 5.00s fight, and unselected impacts stay put');
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+    // HM-CAM-10R: beat-tick marks follow fx_hooks[].t_rel and are a different UI from Fit 3/5/8/10 chips.
+    {
+      const crypto=require('node:crypto');
+      const proofDir=path.resolve('docs/proof/hm-cam-10r');
+      fs.mkdirSync(proofDir,{recursive:true});
+      await p.evaluate(()=>HMStudio.editProject(project=>{project.show.atoms.forEach(a=>{a.fx_hooks=[];});}));
+      await settle();
+      assert.equal(await p.locator('.beat-tick').count(),0,'a clip with no hooks shows no beat ticks');
+      const hooks=[
+        {type:'hit_orange',t_rel:0.15},
+        {type:'shake',t_rel:0.5,params:{amp:5,dur:0.1}},
+        {type:'flash_orange',t_rel:0.85}
+      ];
+      await p.evaluate(next=>HMStudio.editProject(project=>{project.show.atoms[0].fx_hooks=next;}),hooks);
+      await settle();
+      const measured=await p.locator('.timeline-clip[data-index="0"]').evaluate(clip=>{
+        const w=clip.clientWidth;
+        return [...clip.querySelectorAll('.beat-tick')].map(el=>({
+          tag:el.tagName,
+          type:el.dataset.type,
+          tRel:+el.dataset.tRel,
+          leftPct:parseFloat(el.style.left),
+          ratio:el.offsetLeft/w,
+          inFit:!!el.closest('.fit-chips')
+        }));
+      });
+      assert.equal(measured.length,hooks.length);
+      hooks.forEach((hk,i)=>{
+        assert.equal(measured[i].tag,'SPAN');
+        assert.equal(measured[i].type,hk.type);
+        assert.equal(measured[i].inFit,false);
+        assert.ok(Math.abs(measured[i].tRel-hk.t_rel)<1e-9,JSON.stringify(measured[i]));
+        assert.ok(Math.abs(measured[i].leftPct-hk.t_rel*100)<0.05,JSON.stringify(measured[i]));
+        assert.ok(Math.abs(measured[i].ratio-hk.t_rel)<0.04,JSON.stringify(measured[i]));
+      });
+      const fit=await p.locator('.fit-chips button').evaluateAll(els=>els.map(el=>({id:el.id,fit:el.dataset.fit,tag:el.tagName,text:el.textContent.trim(),hasTick:!!el.querySelector('.beat-tick')})));
+      assert.deepEqual(fit.map(b=>[b.id,b.fit,b.text]),[['fitThree','3','Fit 3s'],['fitFive','5','Fit to 5 seconds'],['fitEight','8','Fit 8s'],['fitTen','10','Fit 10s']]);
+      assert.ok(fit.every(b=>b.tag==='BUTTON'&&b.hasTick===false));
+      assert.equal(await p.locator('.fit-chips .beat-tick').count(),0);
+      assert.equal(await p.locator('.beat-tick').evaluateAll(els=>els.every(el=>!!el.closest('.timeline-clip')&&!el.closest('.fit-chips'))),true);
+      const tickBox=await p.locator('.timeline-clip[data-index="0"] .beat-tick').first().boundingBox();
+      const fitBox=await p.locator('.fit-chips').boundingBox();
+      assert.ok(tickBox&&fitBox&&tickBox.y+tickBox.height<=fitBox.y+1,'beat ticks sit on the clip, above the Fit chips');
+      const composed=await p.evaluate(()=>{
+        const atom=HMStudio.composed.timeline.atoms[0];
+        return {t0:atom.t0,d:HMStudio.project.show.atoms[0].duration_s,rel:atom.fx_hooks.map(h=>h.t_rel),hits:HMStudio.composed.timeline.fx.hits.map(h=>h[0]),flash:HMStudio.composed.timeline.fx.flash.map(h=>h[0]),shake:HMStudio.composed.timeline.fx.shake.map(h=>h[0])};
+      });
+      assert.deepEqual(composed.rel,[0.15,0.5,0.85]);
+      const expectT=rel=>Math.round((composed.t0+rel*composed.d)*10000)/10000;
+      assert.ok(composed.hits.includes(expectT(0.15)),JSON.stringify(composed));
+      assert.ok(composed.shake.includes(expectT(0.5)),JSON.stringify(composed));
+      assert.ok(composed.flash.includes(expectT(0.85)),JSON.stringify(composed));
+      const ticksPath=path.join(proofDir,'ticks-at-hooks.png');
+      const fitPath=path.join(proofDir,'fit-chips.png');
+      await p.locator('#timelineTrack').screenshot({path:ticksPath});
+      await p.locator('.fit-chips').screenshot({path:fitPath});
+      const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+      const tickSha=sha(ticksPath),fitSha=sha(fitPath);
+      assert.notEqual(tickSha,fitSha,'tick capscreen must differ from the Fit chips capscreen');
+      for(const [id,target] of [['fitThree',3],['fitEight',8],['fitTen',10],['fitFive',5]]){
+        await click(id);
+        assert.equal((await state()).duration,target);
+        const marks=await p.locator('.timeline-clip[data-index="0"] .beat-tick').evaluateAll(els=>els.map(el=>({tRel:+el.dataset.tRel,leftPct:parseFloat(el.style.left)})));
+        assert.deepEqual(marks,[{tRel:0.15,leftPct:15},{tRel:0.5,leftPct:50},{tRel:0.85,leftPct:85}]);
+      }
+      fs.writeFileSync(path.join(proofDir,'proof.json'),JSON.stringify({story:'HM-CAM-10R',hooks,measured,fit,composedTimes:{hit:expectT(0.15),shake:expectT(0.5),flash:expectT(0.85)},tickSha256:tickSha,fitSha256:fitSha,distinct:tickSha!==fitSha},null,2));
+      await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+      check('HM-CAM-10R: beat ticks follow fx_hooks t_rel and stay distinct from Fit 3/5/8/10 chips');
+    }
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
