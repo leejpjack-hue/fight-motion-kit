@@ -161,6 +161,52 @@
    "color": "#ffffff",
    "source": "AIMIKODA craft: white impact-frame punch (hitstop invert + white flash). Additive 2026-10-22.",
    "defaults": {}
+  },
+  {
+   "id": "exposure_warm_crush",
+   "components": ["exposure_warm_crush"],
+   "source": "Warm-white crush on highlights and crush-black on shadows. Duration is authorable; demo is 0.10s (3 frames). Does not grayscale or invert, so red-black punch pressure and cold-white leg arcs stay colored. craft_demo_times_s are the craft schedule, not the only legal times.",
+   "defaults": { "dur": 0.10, "x": 0, "y": 0, "scale": 1 },
+   "craft_demo_times_s": [2.8, 7.3, 12.5, 17.5, 22.8, 29.7]
+  },
+  {
+   "id": "fist_pressure",
+   "components": ["fist_pressure"],
+   "color": "#e10600",
+   "source": "Giant red-black fist pressure. path is screen points the pressure follows across dur.",
+   "defaults": {
+    "dur": 0.36,
+    "path": [[430, 390], [610, 300], [760, 250]],
+    "x": 0,
+    "y": 0,
+    "scale": 1
+   }
+  },
+  {
+   "id": "leg_arc",
+   "components": ["leg_arc"],
+   "color": "#f4fbff",
+   "source": "Cold-white leg arc / whip blade drawn along path across dur.",
+   "defaults": {
+    "dur": 0.28,
+    "path": [[800, 560], [1020, 340], [1160, 150]],
+    "x": 0,
+    "y": 0,
+    "scale": 1
+   }
+  },
+  {
+   "id": "tornado_spiral",
+   "components": ["tornado_spiral"],
+   "color": "#e7f6ff",
+   "source": "Spin-kick tornado spiral around path across dur.",
+   "defaults": {
+    "dur": 0.5,
+    "path": [[640, 480], [660, 300]],
+    "x": 0,
+    "y": 0,
+    "scale": 1
+   }
   }
  ]
 }

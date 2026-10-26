@@ -43,6 +43,18 @@
     return 0.10;
   }
 
+  function normalizeFxPlacement(prm) {
+    const p = prm && typeof prm === 'object' ? prm : {};
+    const x = Number.isFinite(+p.x) ? round4(+p.x) : 0;
+    const y = Number.isFinite(+p.y) ? round4(+p.y) : 0;
+    const scale = Number.isFinite(+p.scale) && +p.scale > 0 ? round4(Math.max(0.05, Math.min(8, +p.scale))) : 1;
+    return { x, y, scale };
+  }
+
+  function hasFxPlacement(xf) {
+    return !!(xf && (Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6));
+  }
+
   // HM-BG-CROP: background crop rects are normalized {x,y,w,h} in 0..1 of the source image.
   const BG_CROP_MIN = 0.02;
   const BG_CROP_FULL = Object.freeze({ x: 0, y: 0, w: 1, h: 1 });
@@ -345,8 +357,8 @@
         kind,
         t_start: Math.round(t0 * 10000) / 10000,
         t_end: Math.round(Math.min(t1, dur) * 10000) / 10000,
-        x: +(o.x != null ? o.x : 640),
-        y: +(o.y != null ? o.y : 200),
+        x: +(o.x != null ? o.x : (proceduralDur != null ? 0 : 640)),
+        y: +(o.y != null ? o.y : (proceduralDur != null ? 0 : 200)),
         scale: +(o.scale || 1) || 1,
         opacity: o.opacity != null ? +o.opacity : 1,
         z: +(o.z != null ? o.z : 10),
@@ -729,6 +741,12 @@
         const he = Math.round((t0 + tRelEnd * d) * 10000) / 10000;
         const col = prm.color != null ? prm.color : p.color;
         const span = fxSpanSeconds(hk, prm, d);
+        const xf = normalizeFxPlacement(prm);
+        if (PROCEDURAL_OVERLAYS[hk.type] != null) {
+          prm.x = xf.x;
+          prm.y = xf.y;
+          prm.scale = xf.scale;
+        }
         for (const comp of p.components || []) {
           if (comp === 'impact_burst') fx.hits.push([ht, col]);
           else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push([ht, col]);
@@ -742,10 +760,10 @@
           else if (comp === 'sparks') fx.sparks.push([ht, prm.n, prm.at]);
           else if (comp === 'fence') fx.fence.push([ht, he, prm.k]);
           else if (comp === 'pink_cut') fx.pink_cut = ht;
-          else if (comp === 'exposure_warm_crush') fx.exposure.push([ht, span]);
-          else if (comp === 'fist_pressure') fx.fist.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH)]);
-          else if (comp === 'leg_arc') fx.leg.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH)]);
-          else if (comp === 'tornado_spiral') fx.tornado.push([ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH)]);
+          else if (comp === 'exposure_warm_crush') fx.exposure.push(hasFxPlacement(xf) ? [ht, span, xf] : [ht, span]);
+          else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_FIST_PATH)]);
+          else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_LEG_PATH)]);
+          else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH), xf] : [ht, span, cloneFxPath(prm.path) || cloneFxPath(FX_TORNADO_PATH)]);
         }
         const cls = classifyFxHook(hk, fxp);
         atomFx.push({
@@ -877,10 +895,10 @@
     fence_shake: { id: 'fence_shake', components: ['fence'], span: true, source: 'DOM background-only rattle pass' },
     pink_cut: { id: 'pink_cut', components: ['pink_cut'], color: '#ff2f9a' },
     impact_white: { id: 'impact_white', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ffffff' },
-    exposure_warm_crush: { id: 'exposure_warm_crush', components: ['exposure_warm_crush'], defaults: { dur: 0.10 }, craft_demo_times_s: [2.8, 7.3, 12.5, 17.5, 22.8, 29.7] },
-    fist_pressure: { id: 'fist_pressure', components: ['fist_pressure'], color: '#e10600', defaults: { dur: 0.36, path: FX_FIST_PATH } },
-    leg_arc: { id: 'leg_arc', components: ['leg_arc'], color: '#f4fbff', defaults: { dur: 0.28, path: FX_LEG_PATH } },
-    tornado_spiral: { id: 'tornado_spiral', components: ['tornado_spiral'], color: '#e7f6ff', defaults: { dur: 0.50, path: FX_TORNADO_PATH } },
+    exposure_warm_crush: { id: 'exposure_warm_crush', components: ['exposure_warm_crush'], defaults: { dur: 0.10, x: 0, y: 0, scale: 1 }, craft_demo_times_s: [2.8, 7.3, 12.5, 17.5, 22.8, 29.7] },
+    fist_pressure: { id: 'fist_pressure', components: ['fist_pressure'], color: '#e10600', defaults: { dur: 0.36, path: FX_FIST_PATH, x: 0, y: 0, scale: 1 } },
+    leg_arc: { id: 'leg_arc', components: ['leg_arc'], color: '#f4fbff', defaults: { dur: 0.28, path: FX_LEG_PATH, x: 0, y: 0, scale: 1 } },
+    tornado_spiral: { id: 'tornado_spiral', components: ['tornado_spiral'], color: '#e7f6ff', defaults: { dur: 0.50, path: FX_TORNADO_PATH, x: 0, y: 0, scale: 1 } },
   };
 
   function resolveFxMap(fxPresets) {
@@ -1133,5 +1151,7 @@
     isFullBackgroundCrop,
     lockBackgroundCropAspect,
     resolveBackgroundCrop,
+    normalizeFxPlacement,
+    hasFxPlacement,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

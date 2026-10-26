@@ -432,3 +432,81 @@ test('HM-EXPOSURE-PARAM-FX: warm crush duration and craft times are authorable, 
   assert.equal(px[3],255);
   assert.equal(tornado.components[0],'tornado_spiral');
 });
+
+test('HM-FX-LOC-SIZE: parametric FX location (x/y) and size (scale) default cleanly, persist on compose, and leave timing/colour/type unchanged',async()=>{
+  const fx=read('presets/fx_presets.json');
+  const kitFx=JSON.parse(fs.readFileSync('kit/presets/fx_presets.json','utf8'));
+  for(const id of ['exposure_warm_crush','fist_pressure','leg_arc','tornado_spiral']){
+    const pubPreset=fx.hooks.find(h=>h.id===id);
+    const kitPreset=kitFx.hooks.find(h=>h.id===id);
+    assert.ok(pubPreset&&kitPreset,id);
+    assert.equal(pubPreset.defaults.x,0,id);
+    assert.equal(pubPreset.defaults.y,0,id);
+    assert.equal(pubPreset.defaults.scale,1,id);
+    assert.equal(kitPreset.defaults.x,0,id);
+    assert.equal(kitPreset.defaults.y,0,id);
+    assert.equal(kitPreset.defaults.scale,1,id);
+  }
+  assert.deepEqual(HMComposeClient.normalizeFxPlacement({}),{x:0,y:0,scale:1});
+  assert.deepEqual(HMComposeClient.normalizeFxPlacement({x:120,y:-45,scale:1.75}),{x:120,y:-45,scale:1.75});
+  assert.equal(HMComposeClient.hasFxPlacement({x:0,y:0,scale:1}),false);
+  assert.equal(HMComposeClient.hasFxPlacement({x:10,y:0,scale:1}),true);
+  assert.equal(HMComposeClient.hasFxPlacement({x:0,y:0,scale:1.5}),true);
+
+  // Missing x/y/scale keeps prior default placement
+  const baseShow=demo();
+  baseShow.atoms[0].fx_hooks=[
+    {type:'fist_pressure',t_rel:0.2,params:{path:[[430,390],[610,300],[760,250]]}},
+    {type:'leg_arc',t_rel:0.2,params:{}},
+    {type:'tornado_spiral',t_rel:0.2,params:{}},
+    {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.10}},
+  ];
+  const baseOut=await compose(baseShow);
+  assert.equal(baseOut.ok,true);
+  assert.equal(baseOut.duration_s,5);
+  assert.equal(baseOut.timeline.fx.fist[0].length,3,'default placement omits extra xf element');
+  assert.equal(baseOut.timeline.fx.leg[0].length,3);
+  assert.equal(baseOut.timeline.fx.tornado[0].length,3);
+  assert.equal(baseOut.timeline.fx.exposure[0].length,2);
+  for(const hk of baseOut.timeline.atoms[0].fx_hooks){
+    assert.equal(hk.params.x,0);
+    assert.equal(hk.params.y,0);
+    assert.equal(hk.params.scale,1);
+  }
+
+  // Editing x/y/scale updates placement without changing timing, colour, or type
+  const movedShow=demo();
+  movedShow.atoms[0].fx_hooks=[
+    {type:'fist_pressure',t_rel:0.2,params:{path:[[430,390],[610,300],[760,250]],x:140,y:-60,scale:1.6}},
+    {type:'leg_arc',t_rel:0.2,params:{x:-120,y:50,scale:1.4}},
+    {type:'tornado_spiral',t_rel:0.2,params:{x:80,y:-40,scale:0.75}},
+    {type:'exposure_warm_crush',t_rel:0.2,params:{dur:0.10,x:100,y:-30,scale:0.5}},
+  ];
+  const movedOut=await compose(movedShow);
+  assert.equal(movedOut.ok,true);
+  assert.equal(movedOut.duration_s,baseOut.duration_s);
+  assert.deepEqual(movedOut.timeline.plates,baseOut.timeline.plates);
+  assert.deepEqual(
+    movedOut.timeline.atoms[0].fx_hooks.map(h=>({type:h.type,t_rel:h.t_rel,dur:h.params.dur,color:h.params.color,mode:h.mode})),
+    baseOut.timeline.atoms[0].fx_hooks.map(h=>({type:h.type,t_rel:h.t_rel,dur:h.params.dur,color:h.params.color,mode:h.mode}))
+  );
+  assert.deepEqual(movedOut.timeline.fx.fist[0][3],{x:140,y:-60,scale:1.6});
+  assert.deepEqual(movedOut.timeline.fx.leg[0][3],{x:-120,y:50,scale:1.4});
+  assert.deepEqual(movedOut.timeline.fx.tornado[0][3],{x:80,y:-40,scale:0.75});
+  assert.deepEqual(movedOut.timeline.fx.exposure[0][2],{x:100,y:-30,scale:0.5});
+
+  // Path transform helper translates start point by (x,y) and scales span around anchor
+  const rawPath=[[430,390],[610,300],[760,250]];
+  assert.deepEqual(HMMotionFx.transformFxPath(rawPath,{x:0,y:0,scale:1}),rawPath);
+  const shifted=HMMotionFx.transformFxPath(rawPath,{x:100,y:-50,scale:1});
+  assert.deepEqual(shifted,[[530,340],[710,250],[860,200]]);
+  const scaled=HMMotionFx.transformFxPath(rawPath,{x:0,y:0,scale:2});
+  assert.deepEqual(scaled[0],[430,390]);
+  assert.deepEqual(scaled[1],[430+(610-430)*2,390+(300-390)*2]);
+
+  // Regional exposureWarmCrushPixels only crushes inside bounds when bounds provided
+  const strip=new Uint8ClampedArray([220,220,220,255, 220,220,220,255]);
+  HMMotionFx.exposureWarmCrushPixels(strip,1,{w:2,h:1,x0:1,y0:0,x1:2,y1:1});
+  assert.deepEqual(Array.from(strip.slice(0,4)),[220,220,220,255],'pixel outside bounds untouched');
+  assert.ok(strip[4]>strip[6]+8,'pixel inside bounds warm-crushed');
+});
