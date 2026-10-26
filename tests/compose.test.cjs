@@ -354,6 +354,50 @@ test('HM-COMPOSE-FG: foreground props keep their own camera, keyframes and break
   }
 });
 
+test('HM-FG-BROKEN-CUTOUT: a broken PNG or WebP replaces the crack, and overlay art shows only inside its window',async()=>{
+  const fx=read('presets/fx_presets.json');
+  assert.equal(fx.hooks.some(h=>/fire|debris/i.test(h.id)),false);
+  const plain=await compose(demo());
+  assert.equal(plain.duration_s,5);
+  assert.equal(Object.hasOwn(plain.timeline,'fg'),false);
+  const show=demo();
+  show.fg={props:[
+    {id:'rail',src:'props/rail.png',x:120,y:200,scale:1,z:1,t_start:0,t_end:5,effect:{type:'break',t:1.5}},
+    {id:'cut-png',src:'props/rail.png',x:120,y:200,scale:1,z:2,t_start:0,t_end:5,effect:{type:'break',t:1.5,broken_src:'props/rail-broken.png'}},
+    {id:'cut-webp',src:'props/rail.png',x:120,y:200,scale:1,z:3,t_start:0,t_end:5,effect:{type:'break',t:1.5,broken_src:'props/rail-broken.webp'}},
+    {id:'speed',slot:'overlay',src:'art/speed-lines.webp',x:640,y:360,scale:1,z:30,t_start:1,t_end:2.25},
+  ]};
+  const out=await compose(show);
+  assert.equal(out.ok,true,JSON.stringify(out.errors));
+  assert.equal(out.duration_s,5);
+  const [rail,png,webp,speed]=out.timeline.fg.props;
+  assert.equal(Object.hasOwn(rail,'slot'),false);
+  assert.equal(rail.effect.broken_src,undefined);
+  const crack=HMComposeClient.fgBreakState(rail,1.5);
+  assert.equal(crack.broken,true);assert.equal(crack.procedural,true);assert.equal(crack.src,'props/rail.png');
+  assert.equal(HMComposeClient.fgBreakState(rail,1.49).broken,false);
+  assert.equal(png.effect.broken_src,'props/rail-broken.png');
+  assert.equal(webp.effect.broken_src,'props/rail-broken.webp');
+  const pngAt=HMComposeClient.fgBreakState(png,1.5);
+  const webpAt=HMComposeClient.fgBreakState(webp,1.5);
+  assert.equal(pngAt.procedural,false);assert.equal(pngAt.src,'props/rail-broken.png');
+  assert.equal(webpAt.procedural,false);assert.equal(webpAt.src,'props/rail-broken.webp');
+  assert.equal(HMComposeClient.fgBreakState(png,1.49).src,'props/rail.png');
+  assert.equal(speed.slot,'overlay');
+  assert.equal(speed.src,'art/speed-lines.webp');
+  assert.equal(speed.t_start,1);assert.equal(speed.t_end,2.25);
+  assert.equal(Object.hasOwn(speed,'effect'),false);
+  const held=HMComposeClient.fgBreakState(speed,1.5);
+  assert.equal(held.broken,false);assert.equal(held.procedural,false);assert.equal(held.src,'art/speed-lines.webp');
+  for(const fg of [
+    {props:[{id:'a',src:'p.png',slot:'fire'}]},
+    {props:[{id:'a',src:'p.png',slot:'overlay',effect:{type:'break',t:1}}]},
+    {props:[{id:'a',src:'p.png',slot:'overlay',effect:'break'}]},
+  ]){
+    const bad=demo();bad.fg=fg;assert.equal((await compose(bad)).ok,false,JSON.stringify(fg));
+  }
+});
+
 test('HM-EXPOSURE-PARAM-FX: warm crush duration and craft times are authorable, and colored FX stay colored',async()=>{
   const fx=read('presets/fx_presets.json');
   const warm=fx.hooks.find(h=>h.id==='exposure_warm_crush');
