@@ -5,7 +5,7 @@ require('../public/ui/compose-client.js');
 const root = path.resolve(__dirname, '../public');
 const read = p => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
 (async () => {
-  for (const id of ['daiyu-wang-five-seconds', 'daiyu-wang-ten-seconds', 'daiyu-wang-codex-import']) {
+  for (const id of ['daiyu-wang-five-seconds', 'daiyu-wang-ten-seconds', 'daiyu-wang-codex-import', 'street-old-city']) {
     const show = read('shows/' + id + '.json');
     const result = await HMComposeClient.composeShow(show, {
       cameraPresets: read('presets/camera_presets.json'), fxPresets: read('presets/fx_presets.json'),

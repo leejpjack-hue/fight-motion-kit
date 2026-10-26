@@ -1,0 +1,266 @@
+{
+  "S001": {
+    "id": "S001",
+    "t": 0,
+    "atom": "street-01",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P09",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P09.png",
+        "x": 67.522,
+        "y": 48.522,
+        "w": 1144.957,
+        "h": 644.38
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S002": {
+    "id": "S002",
+    "t": 0.5,
+    "atom": "street-02",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P10",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P10.png",
+        "x": 65.022,
+        "y": 47.81,
+        "w": 1149.956,
+        "h": 647.194
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S003": {
+    "id": "S003",
+    "t": 1,
+    "atom": "street-03",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P11",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P11.png",
+        "x": 67.522,
+        "y": 49.207,
+        "w": 1144.957,
+        "h": 644.38
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S004": {
+    "id": "S004",
+    "t": 1.75,
+    "atom": "street-04",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P12",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P12.png",
+        "x": 58.675,
+        "y": 50.523,
+        "w": 1162.649,
+        "h": 654.338
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S005": {
+    "id": "S005",
+    "t": 2.5,
+    "atom": "street-05",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P13",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P13.png",
+        "x": 68.143,
+        "y": 49.212,
+        "w": 1143.713,
+        "h": 643.681
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S006": {
+    "id": "S006",
+    "t": 3,
+    "atom": "street-06",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P14",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P14.png",
+        "x": 66.275,
+        "y": 47.824,
+        "w": 1147.451,
+        "h": 645.784
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S007": {
+    "id": "S007",
+    "t": 3.5,
+    "atom": "street-07",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P15",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P15.png",
+        "x": 58.675,
+        "y": 46.351,
+        "w": 1162.649,
+        "h": 654.338
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  },
+  "S008": {
+    "id": "S008",
+    "t": 4,
+    "atom": "street-08",
+    "kind": "duo",
+    "pose_mode": "hero",
+    "bg": "base",
+    "floor": 684,
+    "source_plate": "P16",
+    "parts": [
+      {
+        "src": "assets/daiyu-wang-continuation/P16.png",
+        "x": 59.316,
+        "y": 47.749,
+        "w": 1161.367,
+        "h": 653.616
+      }
+    ],
+    "shadows": [
+      {
+        "cx": 315,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      },
+      {
+        "cx": 950,
+        "cy": 684,
+        "rx": 95,
+        "ry": 7
+      }
+    ]
+  }
+}
