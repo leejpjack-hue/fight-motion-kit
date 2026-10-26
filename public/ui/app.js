@@ -435,8 +435,31 @@
     $('ruler').replaceChildren();for(let i=0;i<=5;i++){const s=document.createElement('span');s.textContent=(d*i/5).toFixed(d<10?1:0)+'s';s.style.left=i*20+'%';$('ruler').append(s);}
     $('scrub').max=maxScrubDuration()||1;
   }
+  function syncFxProfileChips() {
+    const profile=HMComposeClient.resolveFxProfile(project?.show);
+    document.querySelectorAll('#fxProfileToggle button[data-fx-profile]').forEach(b=>{
+      const on=b.dataset.fxProfile===profile;
+      b.setAttribute('aria-pressed',String(on));
+      b.classList.toggle('active',on);
+    });
+    const note=$('fxProfileNote');
+    if(note){
+      note.dataset.fxProfile=profile;
+      note.textContent=HMComposeClient.fxProfileHonesty(profile);
+    }
+    const active=atom()?.fx_hooks?.[0]?.type||'none';
+    document.querySelectorAll('#effectOptions [data-effect]').forEach(b=>{
+      const photo=HMComposeClient.isPhotoFxChip(b.dataset.effect);
+      b.dataset.fxFamily=b.dataset.effect==='none'?'clean':photo?'photo':'ink';
+      if(b.dataset.fxTitle==null)b.dataset.fxTitle=b.title||'';
+      const demoted=profile==='comic'&&photo&&b.dataset.effect===active;
+      b.hidden=profile==='comic'&&photo&&!demoted;
+      b.classList.toggle('fx-chip-demoted',demoted);
+      b.title=demoted?'Demoted in Comic/ink. The chip stays on this show. Switch to Full chips to opt in.':b.dataset.fxTitle;
+    });
+  }
   function renderInspector() {
-    const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a)return;
+    const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a){syncFxProfileChips();return;}
     $('clipThumbnail').src=thumbnail(a);$('clipName').value=a.label||a.id;$('duration').value=+a.duration_s.toFixed(4);$('timingHint').textContent=`${startOf(selected).toFixed(2)}s → ${(startOf(selected)+a.duration_s).toFixed(2)}s`;
     const cam=a.camera||{};
     $('camera').value=cam.preset||cam.segments?.[0]?.preset||'static_hold';
@@ -463,6 +486,7 @@
     $('caption').value=a.caption||'';
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
+    syncFxProfileChips();
     const paramHk=(a.fx_hooks||[]).find(h=>['fist_pressure','leg_arc','tornado_spiral','exposure_warm_crush'].includes(h?.type||h));
     if($('fxLocSizeBox')){
       $('fxLocSizeBox').hidden=!paramHk;
@@ -475,15 +499,22 @@
     }
     updateFxHonestyUI();
   }
+  function paintedFxHooks(hooks) {
+    const list=hooks||[];
+    if(HMComposeClient.resolveFxProfile(project?.show)!=='comic')return list;
+    return list.filter(h=>!HMComposeClient.isPhotoFxChip(typeof h==='string'?h:h?.type));
+  }
   function updateFxHonestyUI() {
     const badge=$('fxPreviewBadge'),banner=$('fxHonestyBanner'),note=$('fxHonestyNote');
     const hasAtoms=!!project?.show?.atoms?.length;
     const d=duration();
     const activeIdx=hasAtoms?activeAt(Math.min(time,Math.max(0,d-1e-5))):-1;
     const activeClip=activeIdx>=0?project.show.atoms[activeIdx]:null;
-    const stageInfo=HMComposeClient.classifyFxHooks(activeClip?.fx_hooks||[],effects);
+    const stageInfo=HMComposeClient.classifyFxHooks(paintedFxHooks(activeClip?.fx_hooks),effects);
     const selClip=atom();
-    const selInfo=HMComposeClient.classifyFxHooks(selClip?.fx_hooks||[],effects);
+    const selInfo=HMComposeClient.classifyFxHooks(paintedFxHooks(selClip?.fx_hooks),effects);
+    const profile=HMComposeClient.resolveFxProfile(project?.show);
+    const demoted=(selClip?.fx_hooks||[]).filter(h=>profile==='comic'&&HMComposeClient.isPhotoFxChip(typeof h==='string'?h:h?.type)).map(h=>typeof h==='string'?h:h.type);
     if(badge){
       if(!hasAtoms||!stageInfo.hasAny){
         badge.hidden=true;badge.dataset.fxMode='none';badge.textContent='';
@@ -502,13 +533,16 @@
       }
     }
     if(note){
-      if(!selClip||!selInfo.hasAny){
+      const held=demoted.length?` Photographic ${demoted.join(', ')} stay on this clip and do not paint until Full chips.`:'';
+      if(!selClip||(!selInfo.hasAny&&!demoted.length)){
         note.dataset.fxState='clean';note.textContent='An accent at the start of this clip.';
+      }else if(!selInfo.hasAny&&demoted.length){
+        note.dataset.fxState='demoted';note.textContent=held.trim();
       }else if(selInfo.hasComposeOnly){
-        note.dataset.fxState='compose-only';note.textContent=`⚠ Compose-only (${selInfo.composeOnly.map(h=>h.type).join(', ')}) — no live canvas stand-in; full pass renders on Compose / export.`;
+        note.dataset.fxState='compose-only';note.textContent=`⚠ Compose-only (${selInfo.composeOnly.map(h=>h.type).join(', ')}) — no live canvas stand-in; full pass renders on Compose / export.${held}`;
       }else{
-        const warm=(selClip.fx_hooks||[]).some(h=>(h.type||h)==='exposure_warm_crush');
-        note.dataset.fxState='live-standin';note.textContent=`⚡ Live FX stand-in (${selInfo.live.map(h=>h.type).join(', ')}) — previewing on canvas before Compose.${warm?' Warm crush duration is authorable (demo 0.10s / 3 frames) and does not gray the colored FX.':''}`;
+        const warm=paintedFxHooks(selClip.fx_hooks).some(h=>(h.type||h)==='exposure_warm_crush');
+        note.dataset.fxState='live-standin';note.textContent=`⚡ Live FX stand-in (${selInfo.live.map(h=>h.type).join(', ')}) — previewing on canvas before Compose.${warm?' Warm crush duration is authorable (demo 0.10s / 3 frames) and does not gray the colored FX.':''}${held}`;
       }
     }
   }
@@ -659,7 +693,7 @@
     }finally{e.target.value='';}
   });
   on('fightCamPack',applyFightCamPack);
-  on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
+  on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;
   on('play',play);on('restart',()=>{pause();time=0;draw();});on('previous',()=>select(Math.max(0,(activeAt(Math.min(time,duration()-.0001))) - 1)));on('next',()=>select(Math.min(project.show.atoms.length-1,activeAt(Math.min(time,duration()-.0001))+1)));
@@ -808,6 +842,10 @@
     });
     drawStageA();
   });
+  document.querySelectorAll('#fxProfileToggle button[data-fx-profile]').forEach(b=>b.onclick=safe(()=>{
+    edit(()=>{project.show.fx_profile=b.dataset.fxProfile;});
+    drawStageA();
+  }));
   document.querySelectorAll('[data-effect]').forEach(b=>b.onclick=safe(()=>{edit(()=>{
     const type=b.dataset.effect;
     const a=atom();
