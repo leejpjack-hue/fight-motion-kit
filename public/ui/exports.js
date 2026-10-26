@@ -2,6 +2,27 @@
   const S = window.HMStudio, { $, on, safe, copy, download } = S;
   let busy = false;
   const report = (text, error = false) => { $('exportStatus').textContent = text; $('exportStatus').classList.toggle('error', error); };
+  const exportChecklist = () => HMComposeClient.parityDirtyChecklist(S.project);
+  function checklistBlockMessage(list) {
+    if (!list?.active || !list.blocks?.length) return '';
+    return 'Checklist blocked export · ' + list.blocks.map(row => row.text).join(' · ');
+  }
+  function applyExportGate() {
+    const list = exportChecklist();
+    const blocked = !!checklistBlockMessage(list);
+    const warn = !blocked && list?.active && list.warns?.length ? 'Checklist warning · ' + list.warns.map(row => row.text).join(' · ') : '';
+    if (blocked) report(checklistBlockMessage(list), true);
+    else if (warn) report(warn, false);
+    if ($('exportHtml')) $('exportHtml').disabled = blocked;
+    if ($('exportFrame')) $('exportFrame').disabled = blocked;
+    if ($('exportFrames')) $('exportFrames').disabled = blocked;
+    if ($('exportVideo')) $('exportVideo').disabled = blocked || !videoType() || !HTMLCanvasElement.prototype.captureStream;
+    return !blocked;
+  }
+  function assertExportAllowed() {
+    const message = checklistBlockMessage(exportChecklist());
+    if (message) throw new Error(message);
+  }
   function dataUrl(blob) {return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});}
   async function embeddedAsset(path, project) {
     if (project.assets?.[path]) return project.assets[path];
@@ -28,7 +49,7 @@
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;
     exportIds.forEach(id=>$(id).disabled=true);
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();exportIds.forEach(id=>$(id).disabled=false);$('exportVideo').disabled=!videoType()||!HTMLCanvasElement.prototype.captureStream;}
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);applyExportGate();}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';}));
   on('openProject',()=>$('projectInput').click());
@@ -61,9 +82,10 @@
     else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
   }
   $('exportPreset').addEventListener('change',paintExportHints);
-  on('exportOpen',()=>{S.pause();report('');paintExportHints();$('exportDialog').showModal();});
-  on('exportFrame',()=>task(async()=>{await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
+  on('exportOpen',()=>{S.pause();report('');paintExportHints();applyExportGate();$('exportDialog').showModal();});
+  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportHtml',()=>task(async()=>{
+    assertExportAllowed();
     report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
     const data=JSON.stringify({...result,assets}).replace(/</g,'\\u003c');
     const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p></main><script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${createMotionRenderer.toString()}\nconst DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
@@ -82,6 +104,7 @@
   function videoType() {return ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));}
   paintExportHints();if(!videoType()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
   on('exportFrames',()=>task(async()=>{
+    assertExportAllowed();
     S.pause();await S.compile();if(!S.composed)throw new Error('Add a clip before exporting a frame sequence.');
     const preset=selectedPreset();const duration=S.duration;const plan=HMXExport.framePlan(duration,preset.fps);
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
@@ -104,6 +127,7 @@
   on('exportVideo',()=>task(async()=>{
     const mime=videoType();
     if(!mime)throw new Error('This browser cannot record canvas video. Export playable HTML or a frame sequence instead.');
+    assertExportAllowed();
     S.pause();await S.compile();S.recording=true;const preset=selectedPreset();
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);r.render(0);
