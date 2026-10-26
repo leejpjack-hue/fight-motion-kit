@@ -47,3 +47,9 @@ main{min-width:0;padding:24px 28px 0}.preview-heading{display:flex;justify-conte
 .dirty-checklist li{font-size:10px;line-height:1.4;margin:4px 0;overflow-wrap:anywhere}
 .dirty-checklist li[data-level="block"]{color:#ffd0c8}
 .dirty-checklist li[data-level="warn"]{color:#ffe4bf}
+.timeline-clip.in-range{outline:2px solid #d4f07a;outline-offset:-2px}
+.timeline-clip.chained{border-bottom-color:#ccf17b}
+.cam-chain-box{margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
+.cam-chain-box .slider-label{margin-top:10px}
+.cam-chain-box select{font-size:11px}
+.cam-chain-box .text-button{margin-top:6px}
