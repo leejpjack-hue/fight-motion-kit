@@ -780,6 +780,7 @@
         });
       }
 
+      const holdMeta = timingHoldMeta(a);
       tlAtoms.push({
         id: a.id,
         t0: Math.round(t0 * 10000) / 10000,
@@ -790,6 +791,7 @@
         cam: cs,
         fx_hooks: atomFx,
         source_refs: a.source_refs || [],
+        ...(holdMeta ? { timing_hold: holdMeta } : {}),
       });
       t = t1;
     }
@@ -1132,8 +1134,163 @@
     return null;
   }
 
+  function requireHoldSeconds(value, label) {
+    const n = +value;
+    if (!Number.isFinite(n) || n < 0.1 || n > 120) {
+      throw new Error(label + ' must be between 0.1 and 120 seconds.');
+    }
+    return round4(n);
+  }
+
+  function syncSegmentDurations(cam, dur) {
+    if (!cam || !cam.segments || !cam.segments.length) return;
+    const sum = cam.segments.reduce((s, x) => s + (+x.dur_s || 0), 0);
+    if (!(sum > 0)) return;
+    let acc = 0;
+    cam.segments.forEach((s, i) => {
+      if (i === cam.segments.length - 1) s.dur_s = round4(dur - acc);
+      else {
+        s.dur_s = round4((s.dur_s / sum) * dur);
+        acc = round4(acc + s.dur_s);
+      }
+    });
+  }
+
+  function isFightImpact(atom, pack) {
+    const beat = (atom && atom.motion && atom.motion.beat_class) || '';
+    const classes = (pack && pack.impact_beat_classes) || [];
+    if (classes.indexOf(beat) >= 0) return true;
+    const fx = (pack && pack.impact_fx) || [];
+    const hooks = (atom && atom.fx_hooks) || [];
+    for (let i = 0; i < hooks.length; i++) {
+      const hook = hooks[i];
+      const type = typeof hook === 'string' ? hook : hook && hook.type;
+      if (fx.indexOf(type) >= 0) return true;
+    }
+    return false;
+  }
+
+  function timingHoldMeta(atom) {
+    const t = atom && atom.timing_hold;
+    if (!t || typeof t !== 'object' || typeof t.pack !== 'string' || !t.pack) return null;
+    const meta = {
+      pack: t.pack,
+      kind: typeof t.kind === 'string' ? t.kind : '',
+      soft_cam: t.soft_cam === true,
+    };
+    if (typeof t.preset === 'string' && t.preset) meta.preset = t.preset;
+    return meta;
+  }
+
+  function applyHoldPack(atom, pack, softCam) {
+    const floor = requireHoldSeconds(pack.duration_floor_s, 'Dialogue hold floor');
+    const next = deepClone(atom);
+    next.duration_s = round4(Math.max(+next.duration_s || 0, floor));
+    const useSoft = softCam === true;
+    if (useSoft) {
+      const soft = pack.soft_cam || {};
+      if (!soft.preset || typeof soft.preset !== 'string') throw new Error('Soft camera needs a preset.');
+      const intensity = soft.intensity == null ? 1 : +soft.intensity;
+      if (!Number.isFinite(intensity) || intensity < 0 || intensity > 2) throw new Error('Soft camera intensity must be between 0 and 2.');
+      next.camera = { preset: soft.preset, intensity: round4(intensity) };
+    } else if (next.camera && next.camera.segments) {
+      syncSegmentDurations(next.camera, next.duration_s);
+    }
+    next.timing_hold = { pack: pack.id, kind: 'hold', soft_cam: useSoft };
+    return next;
+  }
+
+  function applyMicroPack(atom, pack, flurryIndex) {
+    const next = deepClone(atom);
+    if (isFightImpact(atom, pack)) {
+      const hold = requireHoldSeconds(pack.impact_hold_s, 'Impact hold');
+      const preset = pack.impact_preset || 'static_hold';
+      next.duration_s = round4(Math.max(+next.duration_s || 0, hold));
+      next.camera = { preset: preset, intensity: 1 };
+      next.timing_hold = { pack: pack.id, kind: 'impact_hold', soft_cam: false, preset: preset };
+      return next;
+    }
+    const short = requireHoldSeconds(pack.short_hold_s, 'Micro-cut hold');
+    const presets = pack.flurry_presets || [];
+    if (!presets.length) throw new Error('Micro-cut pack needs flurry presets.');
+    const preset = presets[flurryIndex % presets.length];
+    next.duration_s = short;
+    next.camera = { preset: preset, intensity: 1 };
+    next.timing_hold = { pack: pack.id, kind: 'micro_cut', soft_cam: false, preset: preset };
+    return next;
+  }
+
+  function applyTimingPack(show, selectedIndices, pack, opts) {
+    if (!show || !Array.isArray(show.atoms)) throw new Error('Timing pack needs a show.');
+    if (!pack || (pack.kind !== 'hold' && pack.kind !== 'micro_cut')) throw new Error('Unknown timing pack.');
+    if (!pack.id) throw new Error('Timing pack needs an id.');
+    const selected = [];
+    const seen = {};
+    const list = selectedIndices || [];
+    for (let i = 0; i < list.length; i++) {
+      const idx = list[i];
+      if (!Number.isInteger(idx) || idx < 0 || idx >= show.atoms.length || seen[idx]) continue;
+      seen[idx] = true;
+      selected.push(idx);
+    }
+    selected.sort((a, b) => a - b);
+    if (!selected.length) throw new Error('Select a clip before applying a timing pack.');
+    // Unselected clips stay byte-for-byte, so a fight impact holds only when that index was selected.
+    const next = deepClone(show);
+    const softCam = !!(opts && opts.softCam);
+    let flurry = 0;
+    for (let s = 0; s < selected.length; s++) {
+      const i = selected[s];
+      if (pack.kind === 'hold') next.atoms[i] = applyHoldPack(next.atoms[i], pack, softCam);
+      else {
+        const impact = isFightImpact(next.atoms[i], pack);
+        next.atoms[i] = applyMicroPack(next.atoms[i], pack, flurry);
+        if (!impact) flurry += 1;
+      }
+    }
+    return next;
+  }
+
+  function frameSequenceDump(composed, fps) {
+    const rate = fps == null ? 24 : +fps;
+    if (!Number.isFinite(rate) || rate < 1 || rate > 120) throw new Error('Frame sequence fps must be between 1 and 120.');
+    const tl = composed && composed.timeline;
+    if (!tl || !Array.isArray(tl.plates)) throw new Error('Frame sequence needs a composed timeline.');
+    const layout = composed.layout || {};
+    const atoms = tl.atoms || [];
+    const cuts = tl.plates.map((plate, index) => {
+      const entry = layout[plate.id] || {};
+      const atom = atoms.find((a) => a.id === (entry.atom || null)) || null;
+      const frame = Math.round((+plate.t0 || 0) * rate);
+      const frameEnd = Math.round((+plate.t1 || 0) * rate);
+      return {
+        index,
+        plate_id: plate.id,
+        source_plate: entry.source_plate || plate.id,
+        atom_id: entry.atom || (atom && atom.id) || null,
+        t0: plate.t0,
+        t1: plate.t1,
+        dur_s: round4((+plate.t1 || 0) - (+plate.t0 || 0)),
+        frame,
+        frames: Math.max(0, frameEnd - frame),
+        timing_hold: timingHoldMeta(atom),
+      };
+    });
+    const duration = tl.duration_s != null ? tl.duration_s : composed.duration_s;
+    return { fps: rate, duration_s: duration, frames: Math.round((+duration || 0) * rate), cuts };
+  }
+
+  function timingExport(presetDoc, composed, fps) {
+    if (!presetDoc || !Array.isArray(presetDoc.packs)) throw new Error('Timing export needs the preset pack.');
+    return { kind: 'hm-timing-export', presets: presetDoc, frame_seq: frameSequenceDump(composed, fps) };
+  }
+
   global.HMComposeClient = {
     composeShow,
+    applyTimingPack,
+    isFightImpact,
+    frameSequenceDump,
+    timingExport,
     inspectAt,
     compareAt,
     plateCatalog,
