@@ -831,7 +831,7 @@ async function ensureServer(urlStr){
     assert.equal(await p.locator('#charNameR').textContent(),'Wang Xifeng');
     assert.match(await p.locator('#charHonestyNote').textContent(),/unsided/);
     assert.equal(await p.locator('#dirtyChecklist').isHidden(),true);
-    assert.equal((await state()).dirtyChecklist.clean,true);
+    assert.equal(await p.evaluate(()=>HMStudio.dirtyChecklist.clean),true);
     await p.click('#togglePlatePicker');await settle();
     assert.equal(await p.locator('#mediaGrid').isHidden(),false);
     assert.equal(await p.locator('.media-card').count(),8);
@@ -854,7 +854,7 @@ async function ensureServer(urlStr){
     assert.equal(await p.locator('#parityPickerNote').isHidden(),true);
     assert.equal(await p.locator('#charHonesty').isHidden(),true);
     assert.equal(await p.locator('#dirtyChecklist').isHidden(),true);
-    assert.equal((await state()).dirtyChecklist.active,false);
+    assert.equal(await p.evaluate(()=>HMStudio.dirtyChecklist.active),false);
     check('HM-P2-PARITY: non-parity shows keep the picker and skip the parity checklist');
     const dirtyLoad=await p.evaluate(async()=>{
       const current=HMStudio.project;
