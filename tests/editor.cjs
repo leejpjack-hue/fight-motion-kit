@@ -325,6 +325,63 @@ async function ensureServer(urlStr){
       await p.locator('#stage').screenshot({path:path.join(out,`pan-cont-${t.toFixed(1)}s.png`)});
     }
     check('HM-BG-PAN-CONT: continuous show pan keeps crop.x moving across three clip cuts; per clip restarts; sprite stays planted');
+    // HM-BG-SPAN-UI: span / t0–t1 are visible on continuous pan. Default stays show-clock. Preview and export follow the authored window.
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanT0').inputValue(),'0');
+    assert.equal(await p.locator('#backgroundSpanT1').inputValue(),'4');
+    assert.equal(await p.locator('#backgroundSpanValue').textContent(),'Whole show');
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await p.selectOption('#backgroundMotion','static');await settle();
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),true);
+    await p.selectOption('#backgroundMotion','pan_right');await p.fill('#backgroundMotionAmount','1');await p.locator('#backgroundMotionAmount').dispatchEvent('change');await settle();
+    assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'show');
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    await p.selectOption('#backgroundMotionClock','per_atom');await settle();
+    assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
+    assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
+    await p.selectOption('#backgroundMotionClock','show');await settle();
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await p.selectOption('#backgroundMotionClock','span');await settle();
+    assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:0,t1:4}});
+    await change('backgroundSpanT0',1);await change('backgroundSpanT1',3);
+    assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'span');
+    assert.equal(await p.locator('#backgroundMotionClock').evaluate(el=>el.selectedOptions[0].textContent),'Continuous (span)');
+    assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}});
+    assert.equal(await p.locator('#backgroundSpanValue').textContent(),'1.00–3.00s');
+    assert.match(await p.locator('#backgroundMotionNote').textContent(),/Continuous \(span\): one move from 1\.00s to 3\.00s/);
+    const spanAt=async t=>scrub(t);
+    const beforeSpan=await spanAt(.5),midSpan=await spanAt(2),afterSpan=await spanAt(3.5);
+    assert.ok(Math.abs(beforeSpan.x-.05)<1e-3,'held before t0: '+beforeSpan.x);
+    assert.equal(beforeSpan.u,0);
+    assert.ok(Math.abs(midSpan.u-.5)<1e-6,'mid span progress: '+midSpan.u);
+    assert.ok(Math.abs(midSpan.x-.275)<1e-3,'mid span crop.x: '+midSpan.x);
+    assert.equal(afterSpan.u,1);
+    assert.ok(Math.abs(afterSpan.x-.5)<1e-3,'held after t1: '+afterSpan.x);
+    assert.ok(afterSpan.bg[0]>midSpan.bg[0]+8&&midSpan.bg[0]>beforeSpan.bg[0]+8,'red channel follows the span: '+[beforeSpan.bg[0],midSpan.bg[0],afterSpan.bg[0]]);
+    for(const sample of [beforeSpan,midSpan,afterSpan])assert.deepEqual(sample.fg,[30,180,70,255]);
+    await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
+    await p.locator('#backgroundMotionDetails').screenshot({path:path.join(out,'pan-span-controls.png')});
+    await spanAt(.5);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-0.5s.png')});
+    await spanAt(2);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-2.0s.png')});
+    await spanAt(3.5);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-3.5s.png')});
+    await p.click('#exportOpen');const spanHtml=await downloadFrom('exportHtml','bg-span.html');
+    const spanFile=fs.readFileSync(spanHtml,'utf8');
+    assert.match(spanFile,/function backgroundMotionProgress/);
+    assert.match(spanFile,/"motion":\{"preset":"pan_right","amount":1,"clock":"span","span":\{"t0":1,"t1":3\}\}/);
+    const spanOffline=await browser.newPage();const spanNet=[];await spanOffline.route(/^https?:/,r=>{spanNet.push(r.request().url());return r.abort();});
+    await spanOffline.goto('file://'+spanHtml);await spanOffline.evaluate(()=>window.ready);
+    for(const [t,sample] of [[.5,beforeSpan],[2,midSpan],[3.5,afterSpan]]){
+      await spanOffline.evaluate(t=>renderAt(t),t);
+      assert.deepEqual(await spanOffline.evaluate(()=>Array.from(document.getElementById('stage').getContext('2d').getImageData(24,80,1,1).data)),sample.bg,'export mismatch at '+t);
+    }
+    assert.deepEqual(spanNet,[]);await spanOffline.close();
+    await p.getByRole('button',{name:'Close export',exact:true}).click();
+    check('HM-BG-SPAN-UI: continuous pan shows span t0–t1; default stays show-clock; preview and export match the authored window');
     // Restore the clip-background project the following checks build on.
     await p.setInputFiles('#projectInput',clipProjectPath);await p.waitForFunction(()=>HMStudio.project.show.show_id==='background-feature-test');await settle();if((await state()).onion)await p.click('#onionToggle');await p.click('.timeline-clip[data-index="0"]');await settle();
     const beforeBuiltIn=(await state()).project;

@@ -304,6 +304,26 @@ test('HM-BG-PAN-CONT: pan_right crop.x stays monotonic across atom boundaries',a
   assert.equal(shown,1);
   assert.ok(progress(explicit,.5,{duration:dur,atomT0:0,atomT1:.5})>0);
 });
+test('HM-BG-SPAN-UI: authored t0–t1 holds outside the window; show clock stays the default',async()=>{
+  const progress=HMComposeClient.backgroundMotionProgress,frame=HMComposeClient.backgroundMotionFrame;
+  const s=demo();s.bg={...(s.bg||{}),crops:{base:{x:.1,y:.1,w:.4,h:.4}},motion:{preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}}};
+  const r=await compose(s);assert.equal(r.ok,true,JSON.stringify(r.errors));assert.equal(r.duration_s,5);
+  assert.deepEqual(r.timeline.bg.motion,s.bg.motion);
+  const crop=r.timeline.bg.crops.base,dur=r.duration_s,motion=r.timeline.bg.motion;
+  const clock={duration:dur,atomT0:0,atomT1:1};
+  const xAt=t=>frame(crop,'pan_right',1,progress(motion,t,clock)).crop.x;
+  const start=xAt(0);
+  assert.equal(progress(motion,.5,clock),0);assert.equal(xAt(.5),start);
+  assert.equal(progress(motion,2,clock),.5);assert.ok(xAt(2)>start+.05);
+  assert.equal(progress(motion,3.5,clock),1);assert.ok(xAt(3.5)>xAt(2));
+  const showDefault={preset:'pan_right',amount:1};
+  assert.equal(progress(showDefault,0,clock),0);
+  assert.ok(progress(showDefault,.5,clock)>0,'missing clock still travels on the show');
+  assert.equal(progress(showDefault,dur,clock),1);
+  const explicitShow={preset:'pan_right',amount:1,clock:'show',span:{t0:1,t1:3}};
+  assert.ok(progress(explicitShow,.5,clock)>0,'clock show ignores an attached span');
+  assert.ok(progress(explicitShow,3.5,clock)<1);
+});
 test('HM-BG-CROP: invalid crops fail explicitly',async()=>{
   for(const background of [{crop:{x:0,y:0,w:2,h:1}},{crop:'full'},{crop:{x:.9,y:0,w:.5,h:.5}}]){const s=demo();s.atoms[0].background=background;assert.equal((await compose(s)).ok,false,JSON.stringify(background));}
   for(const crops of [{base:{x:0,y:0,w:0,h:0}},{other:{x:0,y:0,w:1,h:1}},[]]){const s=demo();s.bg={...(s.bg||{}),crops};assert.equal((await compose(s)).ok,false,JSON.stringify(crops));}
