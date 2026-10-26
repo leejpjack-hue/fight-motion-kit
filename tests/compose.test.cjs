@@ -603,6 +603,96 @@ test('HM-FX-LOC-SIZE: parametric FX location (x/y) and size (scale) default clea
   assert.ok(strip[4]>strip[6]+8,'pixel inside bounds warm-crushed');
 });
 
+function projectFromShow(show){
+  const layouts={};
+  for(const key of new Set(show.atoms.map(a=>a.hero&&a.hero.layout_source).filter(Boolean))) layouts[key]=read(key);
+  return {version:1,show,layouts,media:[],assets:{}};
+}
+test('HM-P2-PARITY: plate-pack shows report honest L/R names and a clean checklist',()=>{
+  const five=demo();
+  const names=HMComposeClient.charHonesty(five);
+  assert.equal(names.L.name,'Lin Daiyu');
+  assert.equal(names.R.name,'Wang Xifeng');
+  assert.equal(names.parity,true);
+  const fiveList=HMComposeClient.parityDirtyChecklist(projectFromShow(five));
+  assert.equal(fiveList.active,true);
+  assert.equal(fiveList.clean,true);
+  assert.deepEqual(fiveList.blocks,[]);
+  const ten=HMComposeClient.parityDirtyChecklist(projectFromShow(read('shows/daiyu-wang-ten-seconds.json')));
+  assert.equal(ten.clean,true);
+  const codexShow=read('shows/daiyu-wang-codex-import.json');
+  const codexNames=HMComposeClient.charHonesty(codexShow);
+  assert.equal(codexNames.L.name,'林黛玉');
+  assert.equal(codexNames.R.name,'王熙鳳');
+  assert.equal(HMComposeClient.parityDirtyChecklist(projectFromShow(codexShow)).clean,true);
+});
+test('HM-P2-PARITY: parity_mode, compose_mode, plate_pack, and long hero packs count as plate-pack',()=>{
+  const flagged=demo();
+  flagged.parity_mode=false;
+  flagged.compose_mode='library';
+  delete flagged.plate_pack;
+  flagged.atoms=flagged.atoms.slice(0,1);
+  assert.equal(HMComposeClient.isPlatePackShow(flagged),false);
+  flagged.parity_mode=true;
+  assert.equal(HMComposeClient.isPlatePackShow(flagged),true);
+  flagged.parity_mode=false;
+  flagged.compose_mode='parity';
+  assert.equal(HMComposeClient.isPlatePackShow(flagged),true);
+  flagged.compose_mode='library';
+  flagged.plate_pack=true;
+  assert.equal(HMComposeClient.isPlatePackShow(flagged),true);
+  const auto=demo();
+  auto.parity_mode=false;
+  delete auto.compose_mode;
+  delete auto.plate_pack;
+  auto.atoms=[auto.atoms[0]];
+  auto.atoms[0].duration_s=30;
+  auto.atoms[0].plates_needed=50;
+  auto.atoms[0].hero.plates=Array.from({length:50},(_,i)=>'P'+String(i+1).padStart(2,'0'));
+  assert.equal(HMComposeClient.isPlatePackShow(auto),true);
+  auto.atoms[0].plates_needed=8;
+  auto.atoms[0].duration_s=5;
+  auto.atoms[0].hero.plates=auto.atoms[0].hero.plates.slice(0,8);
+  assert.equal(HMComposeClient.isPlatePackShow(auto),false);
+});
+test('HM-P2-PARITY: missing plate, broken BG, and unresolved asset block only parity shows',()=>{
+  const show=demo();
+  show.atoms=show.atoms.slice(0,1);
+  show.atoms[0].plates_needed=1;
+  show.atoms[0].hero.plates=['P01'];
+  show.bg={base:'not a path',swap_t:1};
+  show.overlays=[{id:'badge',kind:'image',src:'../secret.png',t_start:0,t_end:0.2}];
+  const key=show.atoms[0].hero.layout_source;
+  const layout=read(key);
+  layout.P01={full:'../outside.png'};
+  const missing=HMComposeClient.parityDirtyChecklist({version:1,show,layouts:{[key]:layout},assets:{}});
+  assert.equal(missing.active,true);
+  assert.ok(missing.blocks.some(row=>row.kind==='asset'&&row.text.includes('Unresolved asset')));
+  assert.ok(missing.blocks.some(row=>row.kind==='bg'&&row.text.includes('Broken BG')));
+  layout.P01={};
+  const bare=HMComposeClient.parityDirtyChecklist({version:1,show,layouts:{[key]:layout},assets:{}});
+  assert.ok(bare.blocks.some(row=>row.kind==='plate'&&row.text.includes('Missing plate')));
+  const plain=structuredClone(show);
+  plain.parity_mode=false;
+  plain.compose_mode='library';
+  delete plain.plate_pack;
+  const skipped=HMComposeClient.parityDirtyChecklist({version:1,show:plain,layouts:{[key]:layout},assets:{}});
+  assert.equal(skipped.active,false);
+  assert.deepEqual(skipped.blocks,[]);
+  const named=demo();
+  named.chars={L:{name:'  '},R:{}};
+  const warns=HMComposeClient.parityDirtyChecklist(projectFromShow(named));
+  assert.equal(warns.blocks.length,0);
+  assert.ok(warns.warns.some(row=>row.text==='L name missing from show.chars'));
+  assert.ok(warns.warns.some(row=>row.text==='R name missing from show.chars'));
+  const unmapped=projectFromShow(demo());
+  const first=unmapped.show.atoms[0];
+  unmapped.layouts[first.hero.layout_source].P01.bg='not-a-real-roof';
+  const bgWarn=HMComposeClient.parityDirtyChecklist(unmapped);
+  assert.equal(bgWarn.blocks.length,0);
+  assert.ok(bgWarn.warns.some(row=>row.kind==='bg'&&row.text.includes('Broken BG')));
+});
+
 test('HM-DIALOGUE-HOLD: selected clips take a film-slow floor or a micro-cut, and unselected impacts stay put',async()=>{
   const packs=read('presets/timing_hold_packs.json');
   const kit=JSON.parse(fs.readFileSync('kit/presets/timing_hold_packs.json','utf8'));
