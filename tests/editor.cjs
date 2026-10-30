@@ -1006,6 +1006,119 @@ print(doc['show_id'])
       assert.ok(afterAdd.rowRect.top>=afterAdd.listRect.top&&afterAdd.rowRect.bottom<=afterAdd.listRect.bottom+1,'newly added 11th prop row is visible in #fgPropList');
       check('HM-FG-PANEL-SCROLL: FG prop list scrolls on overflow, Add/Break controls stay sticky and reachable, and active prop row never jumps out of view');
     }
+    // HM-PARALLAX-DEFAULT-HONESTY (#36): FG parallax exposes 0, 0.45 (default), and 1; default remains 0.45 unless changed; changing preset updates preview honestly.
+    {
+      const fgCapDir='/workspace/deliverables/hm-fri-pack-2026-10-30/capscreens';
+      try{fs.mkdirSync(fgCapDir,{recursive:true});}catch(_){}
+      const parallaxShot=async(locator,name,fullPage=false)=>{
+        const qaDest=path.join(out,name);
+        await locator.screenshot(fullPage?{path:qaDest,fullPage:true}:{path:qaDest});
+        try{fs.copyFileSync(qaDest,path.join(fgCapDir,name));}catch(_){}
+      };
+      await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+      if((await state()).onion)await p.click('#onionToggle');
+      // Before adding a prop, the UI already exposes 0.45 (default) honestly rather than 0%.
+      assert.equal(await p.locator('#fgCamPreset').inputValue(),'parallax');
+      assert.equal(await p.locator('#fgParallaxPreset').inputValue(),'0.45');
+      assert.equal(await p.locator('#fgCamAmount').inputValue(),'0.45');
+      assert.match(await p.locator('#fgCamAmountValue').textContent(),/0\.45.*default/);
+      assert.deepEqual(
+        await p.locator('#fgParallaxPresets [data-fg-parallax]').evaluateAll(els=>els.map(e=>({v:e.dataset.fgParallax,pressed:e.getAttribute('aria-pressed'),text:e.textContent.trim()}))),
+        [
+          {v:'0',pressed:'false',text:'0'},
+          {v:'0.45',pressed:'true',text:'0.45 (default)'},
+          {v:'1',pressed:'false',text:'1'},
+        ]
+      );
+      // Add a bright cyan foreground prop at center-stage (x=640, y=220) so parallax shifts it visibly at t=0.25s.
+      const cyanProp=await p.evaluate(()=>{
+        const c=document.createElement('canvas');c.width=96;c.height=96;const g=c.getContext('2d');
+        g.fillStyle='#00f0ff';g.fillRect(0,0,96,96);
+        g.strokeStyle='#052b30';g.lineWidth=8;g.strokeRect(4,4,88,88);
+        return c.toDataURL('image/png').split(',')[1];
+      });
+      await p.setInputFiles('#fgInput',{name:'parallax-marker.png',mimeType:'image/png',buffer:Buffer.from(cyanProp,'base64')});
+      await p.waitForFunction(()=>HMStudio.project.show.fg?.props?.length===1);await settle();
+      await change('fgX',640);await change('fgY',220);
+      // Default remains 0.45 unless author changes it.
+      assert.equal((await state()).project.show.fg.cam.preset,'parallax');
+      assert.equal((await state()).project.show.fg.cam.amount,0.45);
+      assert.equal((await state()).composed.timeline.fg.cam.amount,0.45);
+      assert.equal(await p.locator('#fgParallaxPreset').inputValue(),'0.45');
+      assert.equal(await p.locator('#fgCamAmount').inputValue(),'0.45');
+      assert.match(await p.locator('#fgCamAmountValue').textContent(),/0\.45.*default/);
+      const sampleParallaxAt=async(t)=>{
+        return p.evaluate(t=>{
+          HMStudio.renderAt(t);
+          const tl=HMStudio.composed.timeline,prop=tl.fg.props[0];
+          const cam=fgCameraFrame(tl.fg.cam,t,{duration:tl.duration_s,atomT0:0,atomT1:tl.duration_s});
+          const pose=fgPropPose(prop,t);
+          const x=Math.round((pose.x-640)*cam.s+640+cam.x),y=Math.round((pose.y-360)*cam.s+360+cam.y);
+          const g=document.getElementById('stage').getContext('2d');
+          const pxAt=pxX=>Array.from(g.getImageData(Math.round(pxX),y,1,1).data);
+          return {
+            amount:tl.fg.cam.amount,
+            preset:tl.fg.cam.preset,
+            camX:cam.x,
+            x,
+            y,
+            propPx:pxAt(x),
+            centerPx:pxAt(640),
+          };
+        },t);
+      };
+      const isCyan=rgba=>rgba[0]<40&&rgba[1]>210&&rgba[2]>230&&rgba[3]===255;
+      await p.locator('#fgCamBox').scrollIntoViewIfNeeded();
+      const sDefault=await sampleParallaxAt(0.25);
+      assert.equal(sDefault.amount,0.45);
+      assert.ok(sDefault.camX>95&&sDefault.camX<110,'default 0.45 parallax shifts prop right at t=0.25: '+sDefault.camX);
+      assert.equal(isCyan(sDefault.propPx),true,'prop rendered at default 0.45 parallax position: '+sDefault.propPx);
+      assert.equal(isCyan(sDefault.centerPx),false,'center (x=640) does not have the cyan prop when parallax is 0.45: '+sDefault.centerPx);
+      await parallaxShot(p,'36-A-parallax-default-0.45.png',true);
+      await parallaxShot(p.locator('#fgCamBox'),'36-B-fg-cam-default-0.45.png');
+
+      // Switch preset to 0: preview updates honestly so prop sits at x=640 with zero parallax shift.
+      await p.click('#fgParallaxPresets [data-fg-parallax="0"]');await settle();
+      assert.equal((await state()).project.show.fg.cam.amount,0);
+      assert.equal((await state()).composed.timeline.fg.cam.amount,0);
+      assert.equal(await p.locator('#fgParallaxPreset').inputValue(),'0');
+      assert.equal(await p.locator('#fgCamAmount').inputValue(),'0');
+      assert.equal(await p.locator('#fgCamAmountValue').textContent(),'0 (0%)');
+      assert.equal(await p.locator('#fgParallaxPresets [data-fg-parallax="0"]').getAttribute('aria-pressed'),'true');
+      const sZero=await sampleParallaxAt(0.25);
+      assert.equal(sZero.amount,0);
+      assert.equal(sZero.camX,0);
+      assert.equal(sZero.x,640);
+      assert.equal(isCyan(sZero.propPx),true,'prop rendered at x=640 when parallax is 0: '+sZero.propPx);
+      assert.equal(isCyan(sZero.centerPx),true,'center (x=640) now has the cyan prop when parallax is 0');
+      assert.notEqual(sZero.x,sDefault.x);
+      await parallaxShot(p,'36-C-parallax-0.png',true);
+
+      // Switch preset to 1 via #fgParallaxPreset select: preview updates honestly to full parallax shift.
+      await p.selectOption('#fgParallaxPreset','1');await settle();
+      assert.equal((await state()).project.show.fg.cam.amount,1);
+      assert.equal((await state()).composed.timeline.fg.cam.amount,1);
+      assert.equal(await p.locator('#fgParallaxPreset').inputValue(),'1');
+      assert.equal(await p.locator('#fgCamAmount').inputValue(),'1');
+      assert.equal(await p.locator('#fgCamAmountValue').textContent(),'1 (100%)');
+      assert.equal(await p.locator('#fgParallaxPresets [data-fg-parallax="1"]').getAttribute('aria-pressed'),'true');
+      const sOne=await sampleParallaxAt(0.25);
+      assert.equal(sOne.amount,1);
+      assert.ok(sOne.camX>220,'preset 1 shifts prop over 220px at t=0.25: '+sOne.camX);
+      assert.ok(sOne.x>sDefault.x+100,'preset 1 shifts prop further than 0.45 default: '+sDefault.x+' -> '+sOne.x);
+      assert.equal(isCyan(sOne.propPx),true,'prop rendered at full 1.0 parallax position: '+sOne.propPx);
+      assert.equal(isCyan(sOne.centerPx),false,'center (x=640) does not have the cyan prop when parallax is 1');
+      await parallaxShot(p,'36-D-parallax-1.png',true);
+
+      // Restore 0.45 default via preset button and confirm it matches initial default state.
+      await p.click('#fgParallaxPresets [data-fg-parallax="0.45"]');await settle();
+      assert.equal((await state()).project.show.fg.cam.amount,0.45);
+      assert.equal(await p.locator('#fgParallaxPreset').inputValue(),'0.45');
+      assert.match(await p.locator('#fgCamAmountValue').textContent(),/0\.45.*default/);
+      const sRestored=await sampleParallaxAt(0.25);
+      assert.equal(sRestored.x,sDefault.x);
+      check('HM-PARALLAX-DEFAULT-HONESTY: FG parallax exposes 0, 0.45 (default), and 1, keeps 0.45 default unless changed, and updates preview honestly');
+    }
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.click('.timeline-clip[data-index="0"]');await settle();
     for(const fxType of ['exposure_warm_crush','fist_pressure','leg_arc','tornado_spiral']){

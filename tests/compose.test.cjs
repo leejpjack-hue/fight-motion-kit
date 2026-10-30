@@ -1037,3 +1037,49 @@ test('HM-FX-PATH-EDIT: authored fx path persists, omitted path uses stock, and p
   assert.deepEqual(movedOut.timeline.fx.fist[0][3],{x:40,y:-10,scale:1.25});
 });
 
+test('HM-PARALLAX-DEFAULT-HONESTY: FG parallax exposes 0, 0.45 (default), and 1, and defaults to 0.45 unless changed',async()=>{
+  assert.equal(HMComposeClient.FG_DEFAULT_PARALLAX,0.45);
+  assert.deepEqual(HMComposeClient.FG_PARALLAX_PRESETS,[0,0.45,1]);
+  const clock={duration:5,atomT0:0,atomT1:5};
+  // Omitted cam or omitted amount defaults to parallax 0.45.
+  const showDefault=demo();
+  showDefault.fg={props:[{id:'crate',src:'props/crate.png',x:640,y:360,scale:1,z:10,t_start:0,t_end:5}]};
+  const outDefault=await compose(showDefault);
+  assert.equal(outDefault.ok,true,JSON.stringify(outDefault.errors));
+  assert.equal(outDefault.timeline.fg.cam.preset,'parallax');
+  assert.equal(outDefault.timeline.fg.cam.amount,0.45);
+  const frameDef0=HMComposeClient.fgCameraFrame(outDefault.timeline.fg.cam,0,clock);
+  const frameDefEnd=HMComposeClient.fgCameraFrame(outDefault.timeline.fg.cam,5,clock);
+  assert.equal(frameDef0.preset,'parallax');
+  assert.equal(frameDef0.amount,0.45);
+  assert.equal(frameDef0.x,108);
+  assert.equal(frameDefEnd.x,-108);
+  // Explicit 0 holds zero parallax drift.
+  const showZero=demo();
+  showZero.fg={cam:{preset:'parallax',amount:0},props:showDefault.fg.props};
+  const outZero=await compose(showZero);
+  assert.equal(outZero.ok,true);
+  assert.equal(outZero.timeline.fg.cam.preset,'parallax');
+  assert.equal(outZero.timeline.fg.cam.amount,0);
+  const frameZero0=HMComposeClient.fgCameraFrame(outZero.timeline.fg.cam,0,clock);
+  const frameZeroEnd=HMComposeClient.fgCameraFrame(outZero.timeline.fg.cam,5,clock);
+  assert.equal(frameZero0.amount,0);
+  assert.equal(frameZero0.x,0);
+  assert.equal(frameZeroEnd.x,0);
+  // Explicit 1 runs full parallax drift.
+  const showOne=demo();
+  showOne.fg={cam:{preset:'parallax',amount:1},props:showDefault.fg.props};
+  const outOne=await compose(showOne);
+  assert.equal(outOne.ok,true);
+  assert.equal(outOne.timeline.fg.cam.preset,'parallax');
+  assert.equal(outOne.timeline.fg.cam.amount,1);
+  const frameOne0=HMComposeClient.fgCameraFrame(outOne.timeline.fg.cam,0,clock);
+  const frameOneEnd=HMComposeClient.fgCameraFrame(outOne.timeline.fg.cam,5,clock);
+  assert.equal(frameOne0.amount,1);
+  assert.equal(frameOne0.x,240);
+  assert.equal(frameOneEnd.x,-240);
+  assert.notEqual(frameZero0.x,frameDef0.x);
+  assert.notEqual(frameDef0.x,frameOne0.x);
+});
+
+

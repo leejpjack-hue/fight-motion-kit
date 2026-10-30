@@ -3,6 +3,16 @@
   const S = window.HMStudio, { $, on, safe } = S;
   let selectedId = null;
   const round = v => Math.round(v * 10000) / 10000;
+  const DEFAULT_FG_PARALLAX = window.HMComposeClient?.FG_DEFAULT_PARALLAX ?? 0.45;
+  const FG_PARALLAX_PRESETS = window.HMComposeClient?.FG_PARALLAX_PRESETS || [0, DEFAULT_FG_PARALLAX, 1];
+  function formatParallaxLabel(amount) {
+    const a = round(+amount || 0);
+    const pct = Math.round(a * 100) + '%';
+    if (Math.abs(a - DEFAULT_FG_PARALLAX) < 1e-4) return DEFAULT_FG_PARALLAX + ' (default · ' + pct + ')';
+    if (Math.abs(a) < 1e-4) return '0 (' + pct + ')';
+    if (Math.abs(a - 1) < 1e-4) return '1 (' + pct + ')';
+    return a + ' (' + pct + ')';
+  }
   function propsOf(p) { return p?.show?.fg?.props || []; }
   function currentProp(p) {
     const list = propsOf(p);
@@ -11,7 +21,7 @@
   function ensure(p) {
     p.show.fg || (p.show.fg = {});
     p.show.fg.props || (p.show.fg.props = []);
-    if (!p.show.fg.cam) p.show.fg.cam = { preset: 'parallax', amount: 0.45, nudge: { x: 0, y: 0, s: 0 } };
+    if (!p.show.fg.cam) p.show.fg.cam = { preset: 'parallax', amount: DEFAULT_FG_PARALLAX, nudge: { x: 0, y: 0, s: 0 } };
     return p.show.fg;
   }
   function readImage(file) {
@@ -123,11 +133,26 @@
     library.replaceChildren(new Option('Use library image…', ''));
     (p.media || []).forEach(m => library.add(new Option(m.name, m.id)));
     library.value = libraryValue || '';
-    const cam = p.show.fg?.cam || { preset: 'static', amount: 0, nudge: {} };
-    $('fgCamPreset').value = cam.preset || 'static';
-    const amount = cam.amount == null ? 0 : cam.amount;
+    const cam = p.show.fg?.cam || { preset: 'parallax', amount: DEFAULT_FG_PARALLAX, nudge: {} };
+    const camPreset = cam.preset || 'parallax';
+    $('fgCamPreset').value = camPreset;
+    const fallbackAmount = camPreset === 'static' || camPreset === 'nudge' ? 0 : DEFAULT_FG_PARALLAX;
+    const amount = cam.amount == null || !Number.isFinite(+cam.amount) ? fallbackAmount : round(+cam.amount);
     setField('fgCamAmount', amount);
-    $('fgCamAmountValue').textContent = Math.round(amount * 100) + '%';
+    $('fgCamAmountValue').textContent = formatParallaxLabel(amount);
+    const matchedPreset = FG_PARALLAX_PRESETS.find(v => Math.abs(v - amount) < 1e-4);
+    const parallaxSelect = $('fgParallaxPreset');
+    if (parallaxSelect && document.activeElement !== parallaxSelect) {
+      parallaxSelect.value = matchedPreset != null ? String(matchedPreset) : 'custom';
+    }
+    const presetGroup = $('fgParallaxPresets');
+    if (presetGroup) {
+      presetGroup.querySelectorAll('[data-fg-parallax]').forEach(btn => {
+        const active = matchedPreset != null && Math.abs(Number(btn.dataset.fgParallax) - matchedPreset) < 1e-4;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
     setField('fgNudgeX', cam.nudge?.x || 0);
     setField('fgNudgeY', cam.nudge?.y || 0);
     setField('fgNudgeS', cam.nudge?.s || 0);
@@ -279,8 +304,38 @@
     prop.kf = kf;
   }));
   on('fgClearKf', () => writeProp(prop => { delete prop.kf; }));
-  $('fgCamPreset').onchange = safe(writeCam);
+  function applyParallaxPreset(rawValue) {
+    const nextAmount = Number(rawValue);
+    if (!Number.isFinite(nextAmount) || nextAmount < 0 || nextAmount > 1) return;
+    $('fgCamAmount').value = String(nextAmount);
+    if ($('fgCamPreset').value === 'static' || $('fgCamPreset').value === 'nudge') {
+      $('fgCamPreset').value = 'parallax';
+    }
+    writeCam();
+  }
+  $('fgCamPreset').onchange = safe(() => {
+    const prevPreset = S.project?.show?.fg?.cam?.preset;
+    if ($('fgCamPreset').value === 'parallax' && (prevPreset === 'static' || prevPreset === 'nudge') && Number($('fgCamAmount').value) === 0) {
+      $('fgCamAmount').value = String(DEFAULT_FG_PARALLAX);
+    }
+    writeCam();
+  });
+  $('fgCamAmount').oninput = () => {
+    const a = Number($('fgCamAmount').value);
+    if (Number.isFinite(a)) $('fgCamAmountValue').textContent = formatParallaxLabel(a);
+  };
   $('fgCamAmount').onchange = safe(writeCam);
+  if ($('fgParallaxPreset')) {
+    $('fgParallaxPreset').onchange = safe(() => {
+      if ($('fgParallaxPreset').value === 'custom') return;
+      applyParallaxPreset($('fgParallaxPreset').value);
+    });
+  }
+  if ($('fgParallaxPresets')) {
+    $('fgParallaxPresets').querySelectorAll('[data-fg-parallax]').forEach(btn => {
+      btn.onclick = safe(() => applyParallaxPreset(btn.dataset.fgParallax));
+    });
+  }
   ['fgNudgeX', 'fgNudgeY', 'fgNudgeS'].forEach(id => { $(id).onchange = safe(writeCam); });
   $('fgProp').onchange = () => { selectedId = $('fgProp').value || null; refresh(); };
   window.addEventListener('hm:projectchange', refresh);

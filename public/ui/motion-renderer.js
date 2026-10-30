@@ -89,12 +89,16 @@ function backgroundMotionSupport(crop) {
 // This transform does not read show.bg.motion or the character-stage camera.
 // `parallax` / pan_* slide the layer; `nudge` is a constant offset; `static` holds.
 const FG_CAM_PRESETS = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
+const FG_DEFAULT_PARALLAX = 0.45;
+const FG_PARALLAX_PRESETS = Object.freeze([0, FG_DEFAULT_PARALLAX, 1]);
 function fgCameraFrame(cam, t, clock) {
   const c = cam && typeof cam === 'object' ? cam : {};
   // Inlined so the exported HTML player does not depend on an outer binding.
   const presets = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
-  const preset = presets.includes(c.preset) ? c.preset : 'static';
-  const amount = c.amount == null || !Number.isFinite(+c.amount) ? 0 : Math.min(1, Math.max(0, +c.amount));
+  const defaultParallax = 0.45;
+  const preset = presets.includes(c.preset) ? c.preset : 'parallax';
+  const fallbackAmount = preset === 'static' || preset === 'nudge' ? 0 : defaultParallax;
+  const amount = c.amount == null || !Number.isFinite(+c.amount) ? fallbackAmount : Math.min(1, Math.max(0, +c.amount));
   const nudge = c.nudge && typeof c.nudge === 'object' ? c.nudge : {};
   const nx = Number.isFinite(+nudge.x) ? +nudge.x : 0;
   const ny = Number.isFinite(+nudge.y) ? +nudge.y : 0;
@@ -838,6 +842,8 @@ hmRoot.backgroundMotionFrame = backgroundMotionFrame;
 hmRoot.backgroundMotionProgress = backgroundMotionProgress;
 hmRoot.backgroundMotionSupport = backgroundMotionSupport;
 hmRoot.FG_CAM_PRESETS = FG_CAM_PRESETS;
+hmRoot.FG_DEFAULT_PARALLAX = FG_DEFAULT_PARALLAX;
+hmRoot.FG_PARALLAX_PRESETS = FG_PARALLAX_PRESETS;
 hmRoot.fgCameraFrame = fgCameraFrame;
 hmRoot.fgPropPose = fgPropPose;
 hmRoot.fgBreakState = fgBreakState;
@@ -866,6 +872,8 @@ if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.fgPropPose = fgPropPose;
   hmRoot.HMComposeClient.fgBreakState = fgBreakState;
   hmRoot.HMComposeClient.FG_CAM_PRESETS = FG_CAM_PRESETS;
+  hmRoot.HMComposeClient.FG_DEFAULT_PARALLAX = FG_DEFAULT_PARALLAX;
+  hmRoot.HMComposeClient.FG_PARALLAX_PRESETS = FG_PARALLAX_PRESETS;
 }
 hmRoot.cameraEase = cameraEase;
 hmRoot.cameraPoseOnSegment = cameraPoseOnSegment;
