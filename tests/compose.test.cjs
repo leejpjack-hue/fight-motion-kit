@@ -1082,4 +1082,64 @@ test('HM-PARALLAX-DEFAULT-HONESTY: FG parallax exposes 0, 0.45 (default), and 1,
   assert.notEqual(frameDef0.x,frameOne0.x);
 });
 
+test('HM-PAN-SPAN-UI: optional t0–t1 span UI state defaults to hidden on show-clock, opens on demand or when authored, and span edits drive progress',async()=>{
+  const resolveUi=HMComposeClient.resolveBackgroundSpanUi;
+  const progress=HMComposeClient.backgroundMotionProgress;
+  const frame=HMComposeClient.backgroundMotionFrame;
+  // Default continuous pan: show-clock, optional t0–t1 controls hidden by default.
+  const defaultMotion={preset:'pan_right',amount:1,clock:'show'};
+  const defUi=resolveUi(defaultMotion,4,null);
+  assert.equal(defUi.travel,true);
+  assert.equal(defUi.clock,'show');
+  assert.equal(defUi.continuous,true);
+  assert.equal(defUi.authored,false);
+  assert.equal(defUi.open,false);
+  assert.equal(defUi.t0,0);
+  assert.equal(defUi.t1,4);
+  assert.equal(defUi.valueLabel,'Whole show');
+  assert.equal(defUi.toggleLabel,'Show t0–t1 span');
+  assert.equal(defUi.stateLabel,'Optional t0–t1 hidden · Whole show');
+  // Opening optional t0–t1 controls on show-clock reveals them without forcing a span mutation.
+  const openedUi=resolveUi(defaultMotion,4,true);
+  assert.equal(openedUi.clock,'show');
+  assert.equal(openedUi.authored,false);
+  assert.equal(openedUi.open,true);
+  assert.equal(openedUi.valueLabel,'Whole show');
+  assert.equal(openedUi.toggleLabel,'Hide t0–t1 span');
+  assert.equal(openedUi.stateLabel,'t0–t1 controls shown · Whole show');
+  // Authoring t0–t1 span updates clock to span, keeps controls open, and drives preview progress.
+  const spanMotion={preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}};
+  const spanUi=resolveUi(spanMotion,4,null);
+  assert.equal(spanUi.clock,'span');
+  assert.equal(spanUi.authored,true);
+  assert.equal(spanUi.open,true);
+  assert.equal(spanUi.t0,1);
+  assert.equal(spanUi.t1,3);
+  assert.equal(spanUi.valueLabel,'1.00–3.00s');
+  assert.equal(spanUi.toggleLabel,'Hide t0–t1 span');
+  assert.equal(spanUi.stateLabel,'t0–t1 controls shown · Active 1.00–3.00s');
+  // Hiding optional controls while a custom span is active still clearly reports the active span.
+  const collapsedSpanUi=resolveUi(spanMotion,4,false);
+  assert.equal(collapsedSpanUi.open,false);
+  assert.equal(collapsedSpanUi.valueLabel,'1.00–3.00s');
+  assert.equal(collapsedSpanUi.toggleLabel,'Show t0–t1 span');
+  assert.equal(collapsedSpanUi.stateLabel,'t0–t1 controls hidden · Active 1.00–3.00s');
+  // Non-continuous modes keep continuous=false and open=false.
+  assert.equal(resolveUi({preset:'static',amount:1},4,true).continuous,false);
+  assert.equal(resolveUi({preset:'static',amount:1},4,true).open,false);
+  assert.equal(resolveUi({preset:'pan_right',amount:1,clock:'per_atom'},4,true).continuous,false);
+  assert.equal(resolveUi({preset:'pan_right',amount:1,clock:'per_atom'},4,true).open,false);
+  // Span edits vs default show-clock produce distinct crop positions before t0 and after t1.
+  const crop={x:0.05,y:0.2,w:0.5,h:0.5},clock={duration:4,atomT0:0,atomT1:1};
+  const showEarly=frame(crop,'pan_right',1,progress(defaultMotion,0.5,clock)).crop.x;
+  const spanEarly=frame(crop,'pan_right',1,progress(spanMotion,0.5,clock)).crop.x;
+  const showLate=frame(crop,'pan_right',1,progress(defaultMotion,3.5,clock)).crop.x;
+  const spanLate=frame(crop,'pan_right',1,progress(spanMotion,3.5,clock)).crop.x;
+  assert.equal(spanEarly,0.05);
+  assert.ok(showEarly>spanEarly+0.01);
+  assert.equal(spanLate,0.5);
+  assert.ok(spanLate>showLate+0.01);
+});
+
+
 
