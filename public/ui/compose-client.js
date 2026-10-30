@@ -726,6 +726,8 @@
   // HM-COMPOSE-FG: show.fg is a prop layer with its own camera. Presets include
   // parallax/nudge, which are not background crop-window moves.
   const FG_CAM_PRESETS = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
+  const FG_DEFAULT_PARALLAX = 0.45;
+  const FG_PARALLAX_PRESETS = Object.freeze([0, FG_DEFAULT_PARALLAX, 1]);
   function validFgSpan(cam) {
     const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
     if (cam.clock !== undefined && !['show', 'per_atom', 'legacy', 'span'].includes(cam.clock)) return false;
@@ -752,9 +754,11 @@
   function normalizeFgCam(cam) {
     const c = cam || {};
     const n = c.nudge || {};
+    const preset = c.preset || 'parallax';
+    const fallbackAmount = preset === 'static' || preset === 'nudge' ? 0 : FG_DEFAULT_PARALLAX;
     const out = {
-      preset: c.preset || 'static',
-      amount: round4(c.amount == null ? 0 : +c.amount),
+      preset,
+      amount: round4(c.amount == null ? fallbackAmount : +c.amount),
       nudge: {
         x: round4(n.x == null ? 0 : +n.x),
         y: round4(n.y == null ? 0 : +n.y),
@@ -853,7 +857,7 @@
     if (failed || errors.some(e => e.startsWith('foreground'))) return null;
     if (!props.length && !hasCam) return null;
     props.sort((a, b) => a.z - b.z || String(a.id).localeCompare(String(b.id)));
-    return { cam: normalizeFgCam(hasCam ? fg.cam : { preset: 'static', amount: 0 }), props };
+    return { cam: normalizeFgCam(hasCam ? fg.cam : { preset: 'parallax', amount: FG_DEFAULT_PARALLAX }), props };
   }
 
   async function fetchJson(url) {
@@ -1814,5 +1818,9 @@
     stockFxPath,
     normalizeFxPath,
     resolveFxPath,
+    FG_CAM_PRESETS,
+    FG_DEFAULT_PARALLAX,
+    FG_PARALLAX_PRESETS,
+    normalizeFgCam,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
