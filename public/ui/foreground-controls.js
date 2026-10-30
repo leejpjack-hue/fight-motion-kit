@@ -61,6 +61,60 @@
     if (!list.length) $('fgSlot').value = 'prop';
     list.forEach((item, i) => sel.add(new Option((i + 1) + ' · ' + (item.slot === 'overlay' ? 'overlay · ' : '') + item.id.slice(0, 14) + (item.kf ? ' · ' + item.kf.length + ' kf' : ''), item.id)));
     sel.value = prop ? prop.id : '';
+    const propList = $('fgPropList');
+    if (propList) {
+      const prevScroll = propList.scrollTop;
+      propList.hidden = !list.length;
+      if (!list.length) {
+        propList.replaceChildren();
+        propList.dataset.activeId = '';
+      } else {
+        while (propList.children.length > list.length) propList.lastElementChild.remove();
+        list.forEach((item, i) => {
+          let row = propList.children[i];
+          if (!row) {
+            row = document.createElement('button');
+            row.type = 'button';
+            row.setAttribute('role', 'option');
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'fg-prop-name';
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'fg-prop-meta';
+            row.append(nameSpan, metaSpan);
+            propList.append(row);
+          }
+          const active = !!(prop && item.id === prop.id);
+          row.className = 'fg-prop-row' + (active ? ' active' : '');
+          row.dataset.propId = item.id;
+          row.dataset.index = String(i);
+          row.setAttribute('aria-selected', active ? 'true' : 'false');
+          const nameText = (i + 1) + ' · ' + (item.slot === 'overlay' ? 'overlay · ' : '') + item.id.slice(0, 14);
+          const metaParts = [item.t_start + '–' + item.t_end + 's'];
+          if (item.effect?.type === 'break') metaParts.push('break@' + item.effect.t + 's');
+          if (item.kf?.length) metaParts.push(item.kf.length + ' kf');
+          row.children[0].textContent = nameText;
+          row.children[1].textContent = metaParts.join(' · ');
+          row.onclick = () => {
+            if (selectedId === item.id) return;
+            selectedId = item.id;
+            refresh();
+          };
+        });
+        propList.scrollTop = prevScroll;
+        propList.dataset.activeId = prop ? prop.id : '';
+        const activeRow = propList.querySelector('.fg-prop-row.active');
+        if (activeRow && propList.clientHeight > 0) {
+          const pad = 4;
+          const rowTop = activeRow.offsetTop;
+          const rowBottom = rowTop + activeRow.offsetHeight;
+          if (rowTop - pad < propList.scrollTop) {
+            propList.scrollTop = Math.max(0, rowTop - pad);
+          } else if (rowBottom + pad > propList.scrollTop + propList.clientHeight) {
+            propList.scrollTop = rowBottom + pad - propList.clientHeight;
+          }
+        }
+      }
+    }
     $('fgCount').textContent = list.length + (list.length === 1 ? ' prop' : ' props');
     $('fgRemove').disabled = !prop;
     $('fgFields').hidden = !prop;
@@ -107,6 +161,7 @@
         ? 'Broken PNG or WebP replaces the prop at ' + prop.effect.t + 's.'
         : 'At ' + prop.effect.t + 's the prop splits on a crack.';
     const kfList = $('fgKfList');
+    const prevKfScroll = kfList.scrollTop;
     kfList.replaceChildren();
     (prop.kf || []).forEach(kf => {
       const row = document.createElement('button');
@@ -120,6 +175,7 @@
       }));
       kfList.append(row);
     });
+    kfList.scrollTop = prevKfScroll;
   }
   function writeProp(fn) {
     const id = selectedId;
@@ -191,8 +247,8 @@
       const index = props.findIndex(x => x.id === id);
       if (index < 0) throw Error('Select a foreground prop.');
       props.splice(index, 1);
+      selectedId = props[Math.min(index, props.length - 1)]?.id || null;
     });
-    selectedId = null;
   });
   ['fgX', 'fgY', 'fgScale', 'fgZ', 'fgT0', 'fgT1'].forEach(id => { $(id).onchange = safe(writePlacement); });
   $('fgEffect').onchange = safe(writeEffect);
