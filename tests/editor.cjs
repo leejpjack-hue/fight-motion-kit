@@ -846,6 +846,166 @@ print(doc['show_id'])
     assert.deepEqual(offlineProp,fgLate.prop);assert.deepEqual(fgNet,[]);await fgOffline.close();
     await p.getByRole('button',{name:'Close export',exact:true}).click();
     check('HM-COMPOSE-FG: foreground camera stays independent of background crop-pan and the clip camera, including offline HTML');
+    // HM-FG-PANEL-SCROLL (#35): FG prop list scrolls when content overflows, add/break controls sticky/reachable, no layout jump hiding active prop row.
+    {
+      const fgCapDir='/workspace/deliverables/hm-fri-pack-2026-10-30/capscreens';
+      try{fs.mkdirSync(fgCapDir,{recursive:true});}catch(_){}
+      const fgShot=async(locator,name,fullPage=false)=>{
+        const qaDest=path.join(out,name);
+        await locator.screenshot(fullPage?{path:qaDest,fullPage:true}:{path:qaDest});
+        try{fs.copyFileSync(qaDest,path.join(fgCapDir,name));}catch(_){}
+      };
+      await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
+      await p.evaluate(()=>{
+        const make=(fill)=>{const c=document.createElement('canvas');c.width=48;c.height=48;const g=c.getContext('2d');g.fillStyle=fill;g.fillRect(4,4,40,40);return c.toDataURL('image/png');};
+        const colors=['#e0a15a','#4ecdc4','#ff6b6b','#ffe66d','#a8e6cf','#ff8b94','#7bc043','#f37736','#6c5ce7','#00b894'];
+        HMStudio.editProject(project=>{
+          project.assets=project.assets||{};
+          const props=[];
+          for(let i=0;i<10;i++){
+            const src=`foreground/prop-${String(i+1).padStart(2,'0')}.png`;
+            project.assets[src]=make(colors[i%colors.length]);
+            props.push({
+              id:`fg-crate-${String(i+1).padStart(2,'0')}`,
+              src,
+              x:140+i*100,
+              y:520-(i%3)*60,
+              scale:1,
+              z:(i+1)*10,
+              t_start:0,
+              t_end:5,
+              ...(i%3===1?{effect:{type:'break',t:+(1+i*0.3).toFixed(2)}}:{}),
+            });
+          }
+          project.show.fg={cam:{preset:'parallax',amount:0.4,nudge:{x:0,y:0,s:0}},props};
+        });
+      });
+      await settle();
+      await p.locator('#foregroundPanel').scrollIntoViewIfNeeded();
+      assert.equal(await p.locator('#fgCount').textContent(),'10 props');
+      assert.equal(await p.locator('#fgPropList').isVisible(),true);
+      assert.equal(await p.locator('#fgPropList .fg-prop-row').count(),10);
+      const listMetrics=await p.evaluate(()=>{
+        const list=document.getElementById('fgPropList');
+        const top=document.getElementById('fgStickyTop');
+        const brk=document.getElementById('fgBreakBox');
+        const addBtn=document.getElementById('fgAdd');
+        const effSel=document.getElementById('fgEffect');
+        const row1=list.querySelector('[data-prop-id="fg-crate-01"]');
+        return {
+          scrollHeight:list.scrollHeight,
+          clientHeight:list.clientHeight,
+          scrollTop:list.scrollTop,
+          overflowY:getComputedStyle(list).overflowY,
+          stickyTopPos:getComputedStyle(top).position,
+          breakPos:getComputedStyle(brk).position,
+          topRect:top.getBoundingClientRect().toJSON(),
+          row1Rect:row1.getBoundingClientRect().toJSON(),
+          addRect:addBtn.getBoundingClientRect().toJSON(),
+          breakRect:effSel.getBoundingClientRect().toJSON(),
+          vh:window.innerHeight,
+        };
+      });
+      assert.equal(listMetrics.overflowY,'auto');
+      assert.ok(listMetrics.scrollHeight>listMetrics.clientHeight+80,'FG prop list overflows and scrolls: '+JSON.stringify(listMetrics));
+      assert.equal(listMetrics.stickyTopPos,'sticky');
+      assert.equal(listMetrics.breakPos,'sticky');
+      assert.ok(listMetrics.row1Rect.top>=listMetrics.topRect.bottom,'Row 1 is fully visible below sticky top header');
+      assert.ok(listMetrics.addRect.top>=0&&listMetrics.addRect.bottom<=listMetrics.vh,'Add prop control is reachable in viewport');
+      assert.ok(listMetrics.breakRect.top>=0&&listMetrics.breakRect.bottom<=listMetrics.vh,'Break control is reachable in viewport');
+      await fgShot(p,'35-A-many-props-top.png',true);
+      await fgShot(p.locator('#foregroundPanel'),'35-B-fg-panel-top.png');
+      // Scroll #fgPropList to the bottom and select row #9 (fg-crate-09), checking zero layout jump.
+      const beforeClick=await p.evaluate(()=>{
+        const list=document.getElementById('fgPropList');
+        list.scrollTop=list.scrollHeight-list.clientHeight;
+        const row9=list.querySelector('[data-prop-id="fg-crate-09"]');
+        return {
+          scrollTop:list.scrollTop,
+          winY:window.scrollY,
+          listRect:list.getBoundingClientRect().toJSON(),
+          rowRect:row9.getBoundingClientRect().toJSON(),
+        };
+      });
+      assert.ok(beforeClick.scrollTop>80,'FG prop list scrolled down: '+beforeClick.scrollTop);
+      await p.locator('#fgPropList [data-prop-id="fg-crate-09"]').click();
+      await settle();
+      const afterClick=await p.evaluate(()=>{
+        const list=document.getElementById('fgPropList');
+        const row9=list.querySelector('[data-prop-id="fg-crate-09"]');
+        return {
+          scrollTop:list.scrollTop,
+          winY:window.scrollY,
+          active:row9.classList.contains('active'),
+          ariaSelected:row9.getAttribute('aria-selected'),
+          selVal:document.getElementById('fgProp').value,
+          listRect:list.getBoundingClientRect().toJSON(),
+          rowRect:row9.getBoundingClientRect().toJSON(),
+        };
+      });
+      assert.equal(afterClick.active,true);
+      assert.equal(afterClick.ariaSelected,'true');
+      assert.equal(afterClick.selVal,'fg-crate-09');
+      assert.equal(afterClick.scrollTop,beforeClick.scrollTop,'clicking visible row does not reset scrollTop');
+      assert.equal(afterClick.winY,beforeClick.winY,'clicking row does not jump window scroll');
+      assert.ok(Math.abs(afterClick.rowRect.top-beforeClick.rowRect.top)<1,'active prop row does not jump vertically: '+beforeClick.rowRect.top+' -> '+afterClick.rowRect.top);
+      assert.ok(afterClick.rowRect.top>=afterClick.listRect.top&&afterClick.rowRect.bottom<=afterClick.listRect.bottom,'active prop row stays visible inside #fgPropList');
+      // Edit break and keyframes on active row #9 and verify no layout jump and controls remain reachable.
+      await p.selectOption('#fgEffect','break');await settle();
+      await change('fgEffectT',2.4);
+      await change('fgX',620);
+      await click('fgAddKf');
+      const afterEdit=await p.evaluate(()=>{
+        const list=document.getElementById('fgPropList');
+        const row9=list.querySelector('[data-prop-id="fg-crate-09"]');
+        const addBtn=document.getElementById('fgAdd');
+        const brkBtn=document.getElementById('fgBrokenAdd');
+        const brkBox=document.getElementById('fgBreakBox');
+        const kfList=document.getElementById('fgKfList');
+        return {
+          scrollTop:list.scrollTop,
+          rowText:row9.textContent,
+          listRect:list.getBoundingClientRect().toJSON(),
+          rowRect:row9.getBoundingClientRect().toJSON(),
+          addRect:addBtn.getBoundingClientRect().toJSON(),
+          brkRect:brkBtn.getBoundingClientRect().toJSON(),
+          brkBoxRect:brkBox.getBoundingClientRect().toJSON(),
+          kfRect:kfList.getBoundingClientRect().toJSON(),
+          vh:window.innerHeight,
+        };
+      });
+      assert.match(afterEdit.rowText,/break@2\.4s/);
+      assert.match(afterEdit.rowText,/1 kf/);
+      assert.equal(afterEdit.scrollTop,afterClick.scrollTop);
+      assert.ok(Math.abs(afterEdit.rowRect.top-afterClick.rowRect.top)<1,'editing active prop does not shift active prop row');
+      assert.ok(afterEdit.rowRect.top>=afterEdit.listRect.top&&afterEdit.rowRect.bottom<=afterEdit.listRect.bottom);
+      assert.ok(afterEdit.brkBoxRect.top>=afterEdit.kfRect.bottom,'Break box does not overlap keyframe list');
+      assert.ok(afterEdit.addRect.top>=0&&afterEdit.addRect.bottom<=afterEdit.vh);
+      assert.ok(afterEdit.brkRect.top>=0&&afterEdit.brkRect.bottom<=afterEdit.vh);
+      await fgShot(p,'35-C-scrolled-active-row-break.png',true);
+      await fgShot(p.locator('#foregroundPanel'),'35-D-fg-panel-scrolled-active.png');
+      // Scroll #fgPropList back to 0 and add an 11th prop via #fgLibrary: list auto-scrolls to reveal active row #11 without window jump.
+      await p.evaluate(()=>{document.getElementById('fgPropList').scrollTop=0;});
+      const winBeforeAdd=await p.evaluate(()=>window.scrollY);
+      const libVal=await p.locator('#fgLibrary option').nth(1).getAttribute('value');
+      await p.selectOption('#fgLibrary',libVal);await settle();
+      const afterAdd=await p.evaluate(()=>{
+        const list=document.getElementById('fgPropList');
+        const active=list.querySelector('.fg-prop-row.active');
+        return {
+          count:list.querySelectorAll('.fg-prop-row').length,
+          scrollTop:list.scrollTop,
+          winY:window.scrollY,
+          listRect:list.getBoundingClientRect().toJSON(),
+          rowRect:active.getBoundingClientRect().toJSON(),
+        };
+      });
+      assert.equal(afterAdd.count,11);
+      assert.ok(afterAdd.scrollTop>80,'adding 11th prop scrolls #fgPropList to reveal it');
+      assert.equal(afterAdd.winY,winBeforeAdd,'adding 11th prop does not jump window scroll');
+      assert.ok(afterAdd.rowRect.top>=afterAdd.listRect.top&&afterAdd.rowRect.bottom<=afterAdd.listRect.bottom+1,'newly added 11th prop row is visible in #fgPropList');
+      check('HM-FG-PANEL-SCROLL: FG prop list scrolls on overflow, Add/Break controls stay sticky and reachable, and active prop row never jumps out of view');
+    }
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.click('.timeline-clip[data-index="0"]');await settle();
     for(const fxType of ['exposure_warm_crush','fist_pressure','leg_arc','tornado_spiral']){
