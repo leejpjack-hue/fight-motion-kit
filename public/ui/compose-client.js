@@ -189,6 +189,51 @@
     if (Object.prototype.hasOwnProperty.call(own, 'src')) return null;
     return ((timelineBg && timelineBg.crops) || {})[(entry && entry.bg) || 'base'] || null;
   }
+  // HM-PAN-SPAN-UI: optional t0–t1 span helpers for continuous background pan.
+  const BG_TRAVEL_PRESETS = Object.freeze(['pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out']);
+  function isTravelingBackgroundPreset(preset) {
+    return BG_TRAVEL_PRESETS.indexOf(String(preset || 'follow_camera')) >= 0;
+  }
+  function readBackgroundSpan(motion) {
+    if (!motion || typeof motion !== 'object') return null;
+    const span = motion.span;
+    const t0 = Array.isArray(span) ? span[0] : span && typeof span === 'object' ? span.t0 : motion.t0;
+    const t1 = Array.isArray(span) ? span[1] : span && typeof span === 'object' ? span.t1 : motion.t1;
+    return Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0 ? [round4(+t0), round4(+t1)] : null;
+  }
+  function resolveBackgroundSpanUi(motion, showDuration, openOverride) {
+    const m = motion && typeof motion === 'object' ? motion : null;
+    const preset = (m && m.preset) || 'follow_camera';
+    const travel = isTravelingBackgroundPreset(preset);
+    const pair = readBackgroundSpan(m);
+    const legacy = !!(m && (m.clock === 'per_atom' || m.clock === 'legacy'));
+    const clock = legacy ? 'per_atom' : (m && (m.clock === 'span' || (pair && m.clock !== 'show'))) ? 'span' : 'show';
+    const continuous = travel && clock !== 'per_atom';
+    const authored = clock === 'span' && !!pair;
+    const dur = round4(Number.isFinite(+showDuration) && +showDuration > 0 ? +showDuration : 0);
+    const t0 = authored ? pair[0] : 0;
+    const t1 = authored ? pair[1] : dur;
+    const open = continuous && (openOverride === true ? true : openOverride === false ? false : authored);
+    const windowText = Number(t0).toFixed(2) + '–' + Number(t1).toFixed(2) + 's';
+    const valueLabel = authored ? windowText : 'Whole show';
+    const toggleLabel = open ? 'Hide t0–t1 span' : 'Show t0–t1 span';
+    const stateLabel = open
+      ? (authored ? 't0–t1 controls shown · Active ' + windowText : 't0–t1 controls shown · Whole show')
+      : (authored ? 't0–t1 controls hidden · Active ' + windowText : 'Optional t0–t1 hidden · Whole show');
+    return {
+      preset,
+      travel,
+      clock,
+      continuous,
+      authored,
+      open,
+      t0,
+      t1,
+      valueLabel,
+      toggleLabel,
+      stateLabel,
+    };
+  }
   function basename(p) {
     const s = String(p || '');
     const i = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
@@ -1794,6 +1839,10 @@
     isFullBackgroundCrop,
     lockBackgroundCropAspect,
     resolveBackgroundCrop,
+    BG_TRAVEL_PRESETS,
+    isTravelingBackgroundPreset,
+    readBackgroundSpan,
+    resolveBackgroundSpanUi,
     normalizeFxPlacement,
     hasFxPlacement,
     PHOTO_FX_CHIPS,

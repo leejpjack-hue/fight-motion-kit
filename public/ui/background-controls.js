@@ -1,6 +1,7 @@
 /* Background images and motion can inherit project defaults or belong to a clip. */
 (() => {
-  const S=window.HMStudio,{$,on,safe}=S;
+  const S=window.HMStudio,{$,on,safe}=S,C=window.HMComposeClient;
+  let spanOpenOverride=null,lastSpanScopeKey='',lastSpanAuthored=false;
   const resolve=(p,src)=>p.assets?.[src]||(/^(data:|blob:|\/)/.test(src)?src:'/'+src);
   const stem=src=>/^data:/.test(src||'')?'':String(src||'').split('/').pop().replace(/\.[^.]+$/,'');
   const selected=p=>p.show.atoms[S.selectedIndex];
@@ -50,18 +51,33 @@
     for(const opt of motionSel.options){const info=support[opt.value];opt.disabled=!!(info&&!info.ok);opt.title=info&&!info.ok?info.reason:'';}
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
     const blocked=!!(support[preset]&&!support[preset].ok);
-    const travel=traveling(preset);
+    const cNow=context(),scopeKey=`${cNow.projectId}:${cNow.scope}:${cNow.scope==='clip'?cNow.atomId:cNow.key}`;
+    const baseSpanUi=C.resolveBackgroundSpanUi(m,showSeconds(p),null);
+    if(scopeKey!==lastSpanScopeKey||!baseSpanUi.continuous||baseSpanUi.authored!==lastSpanAuthored){
+      spanOpenOverride=null;
+      lastSpanScopeKey=scopeKey;
+      lastSpanAuthored=baseSpanUi.authored;
+    }
+    const spanUi=C.resolveBackgroundSpanUi(m,showSeconds(p),spanOpenOverride);
+    const travel=spanUi.travel;
     $('backgroundMotionAmount').disabled=!travel||blocked;
-    const clockSel=$('backgroundMotionClock'),pair=readSpan(m);
-    const legacy=m?.clock==='per_atom'||m?.clock==='legacy';
-    const clock=legacy?'per_atom':(m?.clock==='span'||(pair&&m?.clock!=='show'))?'span':'show';
+    const clockSel=$('backgroundMotionClock');
     clockSel.querySelector('option[value="span"]').hidden=!travel;
-    clockSel.value=clock;clockSel.disabled=!travel;
-    const continuous=travel&&clock!=='per_atom';
-    $('backgroundSpanControls').hidden=!continuous;
-    const authored=clock==='span'&&!!pair,t0=authored?pair[0]:0,t1=authored?pair[1]:showSeconds(p);
-    ['backgroundSpanT0','backgroundSpanT1'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i?t1:t0);});
-    $('backgroundSpanValue').textContent=authored?`${Number(t0).toFixed(2)}–${Number(t1).toFixed(2)}s`:'Whole show';
+    clockSel.value=spanUi.clock;clockSel.disabled=!travel;
+    const spanBox=$('backgroundSpanControls');
+    spanBox.hidden=!spanUi.continuous;
+    spanBox.dataset.spanOpen=String(spanUi.open);
+    spanBox.dataset.spanMode=spanUi.clock;
+    $('backgroundSpanDrawer').hidden=!spanUi.open;
+    const spanToggle=$('backgroundSpanToggle');
+    spanToggle.textContent=spanUi.toggleLabel;
+    spanToggle.setAttribute('aria-expanded',String(spanUi.open));
+    const spanState=$('backgroundSpanState');
+    spanState.textContent=spanUi.stateLabel;
+    spanState.dataset.spanOpen=String(spanUi.open);
+    ['backgroundSpanT0','backgroundSpanT1'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i?spanUi.t1:spanUi.t0);});
+    $('backgroundSpanValue').textContent=spanUi.valueLabel;
+    $('resetBackgroundSpan').disabled=!spanUi.authored;
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
     const note=motionCopy(cropNow,preset);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
@@ -144,12 +160,24 @@
       edit(context(),s=>s.motion=motion);
     }catch(e){refresh();throw e;}
   }
-  function changeSpan(){$('backgroundMotionClock').value='span';changeMotion();}
-  $('backgroundMotion').onchange=safe(changeMotion);$('backgroundMotionAmount').onchange=safe(changeMotion);$('backgroundMotionClock').onchange=safe(changeMotion);
+  function changeSpan(){spanOpenOverride=true;$('backgroundMotionClock').value='span';changeMotion();}
+  $('backgroundMotion').onchange=safe(()=>{spanOpenOverride=null;changeMotion();});
+  $('backgroundMotionAmount').onchange=safe(changeMotion);
+  $('backgroundMotionClock').onchange=safe(()=>{spanOpenOverride=$('backgroundMotionClock').value==='span'?true:false;changeMotion();});
   $('backgroundSpanT0').onchange=safe(changeSpan);$('backgroundSpanT1').onchange=safe(changeSpan);
-  on('resetBackgroundMotion',()=>edit(context(),s=>delete s.motion));
+  on('backgroundSpanToggle',()=>{
+    const p=S.project;if(!p)return;
+    const c=context(),a=selected(p),clip=c.scope==='clip',global=p.show.bg||{},settings=clip?(a?.background||{}):global;
+    const m=settings.motion??(clip?global.motion:undefined);
+    const cur=C.resolveBackgroundSpanUi(m,showSeconds(p),spanOpenOverride);
+    if(!cur.continuous)return;
+    spanOpenOverride=!cur.open;
+    refresh();
+  });
+  on('resetBackgroundSpan',()=>{spanOpenOverride=false;$('backgroundMotionClock').value='show';changeMotion();});
+  on('resetBackgroundMotion',()=>{spanOpenOverride=null;edit(context(),s=>delete s.motion);});
   // ---- HM-BG-CROP: editable crop region (drag-rect, corner handles, numeric fields) ----
-  const C=window.HMComposeClient,pct=v=>Math.round(v*1000)/10;
+  const pct=v=>Math.round(v*1000)/10;
   let drag=null;
   function clearCrop(s,c,key){if(c.scope==='clip')delete s.crop;else if(s.crops){delete s.crops[key];if(!Object.keys(s.crops).length)delete s.crops;}}
   function imageAspect(){const im=$('backgroundThumb');return im.naturalWidth&&im.naturalHeight?im.naturalWidth/im.naturalHeight:16/9;}

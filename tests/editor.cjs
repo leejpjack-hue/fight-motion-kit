@@ -425,14 +425,34 @@ print(doc['show_id'])
       await p.locator('#stage').screenshot({path:path.join(out,`pan-cont-${t.toFixed(1)}s.png`)});
     }
     check('HM-BG-PAN-CONT: continuous show pan keeps crop.x moving across three clip cuts; per clip restarts; sprite stays planted');
-    // HM-BG-SPAN-UI: span / t0–t1 are visible on continuous pan. Default stays show-clock. Preview and export follow the authored window.
+    // HM-BG-SPAN-UI / HM-PAN-SPAN-UI (#37): optional t0–t1 span controls stay hidden on the default show-clock path,
+    // clearly indicate hidden vs shown state, open on demand, and update the preview when t0–t1 are edited.
+    const panSpanCapDir='/workspace/deliverables/hm-fri-pack-2026-10-30/capscreens';
+    try{fs.mkdirSync(panSpanCapDir,{recursive:true});}catch(_){}
+    const panSpanShot=async(locator,name,fullPage=false)=>{
+      const qaDest=path.join(out,name);
+      await locator.screenshot(fullPage?{path:qaDest,fullPage:true}:{path:qaDest});
+      try{fs.copyFileSync(qaDest,path.join(panSpanCapDir,name));}catch(_){}
+    };
+    const defaultEarlyShow=await scrub(.5),defaultLateShow=await scrub(3.5);
     assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
     assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanControls').getAttribute('data-span-open'),'false');
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),false);
+    assert.equal(await p.locator('#backgroundSpanT0').isVisible(),false);
+    assert.equal(await p.locator('#backgroundSpanT1').isVisible(),false);
     assert.equal(await p.locator('#backgroundSpanT0').inputValue(),'0');
     assert.equal(await p.locator('#backgroundSpanT1').inputValue(),'4');
     assert.equal(await p.locator('#backgroundSpanValue').textContent(),'Whole show');
+    assert.equal(await p.locator('#backgroundSpanToggle').getAttribute('aria-expanded'),'false');
+    assert.equal(await p.locator('#backgroundSpanToggle').textContent(),'Show t0–t1 span');
+    assert.equal(await p.locator('#backgroundSpanState').getAttribute('data-span-open'),'false');
+    assert.equal(await p.locator('#backgroundSpanState').textContent(),'Optional t0–t1 hidden · Whole show');
     assert.equal((await state()).project.show.bg.motion.clock,'show');
     assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
+    await scrub(.5);
+    await panSpanShot(p,'37-A-default-span-hidden.png',true);
     await p.selectOption('#backgroundMotion','static');await settle();
     assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
     assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),true);
@@ -441,29 +461,73 @@ print(doc['show_id'])
     assert.equal((await state()).project.show.bg.motion.clock,'show');
     assert.equal((await state()).project.show.bg.motion.span,undefined);
     assert.equal(await p.locator('#backgroundSpanControls').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),false);
     await p.selectOption('#backgroundMotionClock','per_atom');await settle();
     assert.equal(await p.locator('#backgroundSpanControls').isVisible(),false);
     assert.equal(await p.locator('#backgroundMotionClock option[value="span"]').evaluate(el=>el.hidden),false);
     await p.selectOption('#backgroundMotionClock','show');await settle();
     assert.equal((await state()).project.show.bg.motion.span,undefined);
-    await p.selectOption('#backgroundMotionClock','span');await settle();
-    assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:0,t1:4}});
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),false);
+    // Open the optional t0–t1 controls via the explicit toggle without forcing a span mutation yet.
+    await p.click('#backgroundSpanToggle');await settle();
+    assert.equal(await p.locator('#backgroundSpanControls').getAttribute('data-span-open'),'true');
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanT0').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanT1').isVisible(),true);
+    assert.equal(await p.locator('#backgroundSpanToggle').getAttribute('aria-expanded'),'true');
+    assert.equal(await p.locator('#backgroundSpanToggle').textContent(),'Hide t0–t1 span');
+    assert.equal(await p.locator('#backgroundSpanState').getAttribute('data-span-open'),'true');
+    assert.equal(await p.locator('#backgroundSpanState').textContent(),'t0–t1 controls shown · Whole show');
+    assert.equal(await p.locator('#resetBackgroundSpan').isDisabled(),true);
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    await panSpanShot(p,'37-B-span-open.png',true);
+    // Edit t0–t1 directly while open: switches clock to span and updates the preview immediately.
     await change('backgroundSpanT0',1);await change('backgroundSpanT1',3);
     assert.equal(await p.locator('#backgroundMotionClock').inputValue(),'span');
     assert.equal(await p.locator('#backgroundMotionClock').evaluate(el=>el.selectedOptions[0].textContent),'Continuous (span)');
     assert.deepEqual((await state()).project.show.bg.motion,{preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}});
     assert.equal(await p.locator('#backgroundSpanValue').textContent(),'1.00–3.00s');
+    assert.equal(await p.locator('#backgroundSpanState').textContent(),'t0–t1 controls shown · Active 1.00–3.00s');
+    assert.equal(await p.locator('#resetBackgroundSpan').isDisabled(),false);
     assert.match(await p.locator('#backgroundMotionNote').textContent(),/Continuous \(span\): one move from 1\.00s to 3\.00s/);
     const spanAt=async t=>scrub(t);
     const beforeSpan=await spanAt(.5),midSpan=await spanAt(2),afterSpan=await spanAt(3.5);
     assert.ok(Math.abs(beforeSpan.x-.05)<1e-3,'held before t0: '+beforeSpan.x);
     assert.equal(beforeSpan.u,0);
+    assert.ok(defaultEarlyShow.x>beforeSpan.x+.01,'span edit changes early preview vs default show-clock: '+defaultEarlyShow.x+' vs '+beforeSpan.x);
+    assert.notDeepEqual(beforeSpan.bg,defaultEarlyShow.bg,'span edit changes early preview pixels vs default show-clock');
     assert.ok(Math.abs(midSpan.u-.5)<1e-6,'mid span progress: '+midSpan.u);
     assert.ok(Math.abs(midSpan.x-.275)<1e-3,'mid span crop.x: '+midSpan.x);
     assert.equal(afterSpan.u,1);
     assert.ok(Math.abs(afterSpan.x-.5)<1e-3,'held after t1: '+afterSpan.x);
+    assert.ok(afterSpan.x>defaultLateShow.x+.01,'span edit changes late preview vs default show-clock: '+afterSpan.x+' vs '+defaultLateShow.x);
+    assert.notDeepEqual(afterSpan.bg,defaultLateShow.bg,'span edit changes late preview pixels vs default show-clock');
     assert.ok(afterSpan.bg[0]>midSpan.bg[0]+8&&midSpan.bg[0]>beforeSpan.bg[0]+8,'red channel follows the span: '+[beforeSpan.bg[0],midSpan.bg[0],afterSpan.bg[0]]);
     for(const sample of [beforeSpan,midSpan,afterSpan])assert.deepEqual(sample.fg,[30,180,70,255]);
+    await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
+    await spanAt(.5);
+    await panSpanShot(p,'37-C-span-edit-preview.png',true);
+    // Collapsing the optional controls while active clearly indicates hidden state + active span; Use whole show resets cleanly.
+    await p.click('#backgroundSpanToggle');await settle();
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),false);
+    assert.equal(await p.locator('#backgroundSpanControls').getAttribute('data-span-open'),'false');
+    assert.equal(await p.locator('#backgroundSpanToggle').getAttribute('aria-expanded'),'false');
+    assert.equal(await p.locator('#backgroundSpanToggle').textContent(),'Show t0–t1 span');
+    assert.equal(await p.locator('#backgroundSpanState').getAttribute('data-span-open'),'false');
+    assert.equal(await p.locator('#backgroundSpanState').textContent(),'t0–t1 controls hidden · Active 1.00–3.00s');
+    await panSpanShot(p.locator('#backgroundMotionDetails'),'37-D-span-hidden-active.png');
+    await p.click('#backgroundSpanToggle');await settle();
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),true);
+    await p.click('#resetBackgroundSpan');await settle();
+    assert.equal((await state()).project.show.bg.motion.clock,'show');
+    assert.equal((await state()).project.show.bg.motion.span,undefined);
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),false);
+    assert.equal(await p.locator('#backgroundSpanState').textContent(),'Optional t0–t1 hidden · Whole show');
+    // Re-open via Travel = Continuous (span) and set 1..3s for export verification.
+    await p.selectOption('#backgroundMotionClock','span');await settle();
+    assert.equal(await p.locator('#backgroundSpanDrawer').isVisible(),true);
+    await change('backgroundSpanT0',1);await change('backgroundSpanT1',3);
     await p.locator('#backgroundMotionDetails').scrollIntoViewIfNeeded();
     await p.locator('#backgroundMotionDetails').screenshot({path:path.join(out,'pan-span-controls.png')});
     await spanAt(.5);await p.locator('#stage').screenshot({path:path.join(out,'pan-span-0.5s.png')});
@@ -482,6 +546,7 @@ print(doc['show_id'])
     assert.deepEqual(spanNet,[]);await spanOffline.close();
     await p.getByRole('button',{name:'Close export',exact:true}).click();
     check('HM-BG-SPAN-UI: continuous pan shows span t0–t1; default stays show-clock; preview and export match the authored window');
+    check('HM-PAN-SPAN-UI: optional t0–t1 span controls default to hidden on show-clock, clearly show hidden vs open state, and update preview when edited');
     // Restore the clip-background project the following checks build on.
     await p.setInputFiles('#projectInput',clipProjectPath);await p.waitForFunction(()=>HMStudio.project.show.show_id==='background-feature-test');await settle();if((await state()).onion)await p.click('#onionToggle');await p.click('.timeline-clip[data-index="0"]');await settle();
     const beforeBuiltIn=(await state()).project;
