@@ -1221,6 +1221,95 @@ test('HM-HF-02-SEEKABLE-PREVIEW: SEEKABLE_PREVIEW_CONTRACT defines renderStageAt
   assert.equal(flagWarn.blocksBake,false);
 });
 
+test('HM-HF-03-SHOW-JSON-LINT: structural + rhythm (#39) + Fix copy (HF-13) lint findings are soft warnings and do not block compose/bake',async()=>{
+  const cameraPresets=read('presets/camera_presets.json');
+  const fxPresets=read('presets/fx_presets.json');
+  const contract=HMComposeClient.SHOW_LINT_CONTRACT;
+  assert.equal(contract.id,'HM-HF-03-SHOW-JSON-LINT');
+  assert.deepEqual(contract.absorbs,['HM-RHYTHM-LINT','HM-HF-13']);
+  assert.equal(contract.blocksBake,false);
+  assert.deepEqual(contract.structuralCodes,['missing_plate','atom_overrun','empty_cam_preset','bad_fx_t_rel','unsafe_duration']);
+  assert.deepEqual(contract.rhythmCodes,['adjacent_same_cam','duration_outlier']);
+
+  // Gold 5s demo and 5s street sample are clean
+  const cleanDemo=HMComposeClient.lintShow(projectFromShow(demo()),{cameraPresets,fxPresets});
+  assert.equal(cleanDemo.clean,true);
+  assert.equal(cleanDemo.count,0);
+  assert.equal(cleanDemo.blocksBake,false);
+  assert.deepEqual(cleanDemo.findings,[]);
+
+  const cleanStreet=HMComposeClient.lintShow(projectFromShow(read('shows/street-old-city.json')),{cameraPresets,fxPresets});
+  assert.equal(cleanStreet.clean,true);
+  assert.equal(cleanStreet.count,0);
+
+  // Fixture with adjacent same-cam + long atom + missing plate + atom overrun + empty cam + bad fx t_rel + unsafe duration
+  const badProj=projectFromShow(demo());
+  const atoms=badProj.show.atoms;
+  badProj.show.duration_target_s=5.0;
+  // Atom 0 & Atom 1: adjacent same-cam (both slow_push, unchained)
+  atoms[0].camera={preset:'slow_push'};
+  atoms[1].camera={preset:'slow_push'};
+  // Atom 2: long atom outlier (1.80s > 1.40s street max) + missing plate P99_MISSING_404
+  atoms[2].duration_s=1.8;
+  atoms[2].hero.plates=['P99_MISSING_404'];
+  // Atom 3: empty/missing camera preset + bad FX hook t_rel=1.35 (> 1)
+  atoms[3].camera={preset:''};
+  atoms[3].fx_hooks=[{type:'hit_orange',t_rel:1.35,params:{}}];
+  // Atom 4: camera segments sum overrun (0.4s + 0.4s = 0.8s != 0.5s)
+  atoms[4].camera={preset:'whip_right',segments:[{preset:'whip_right',dur_s:0.4},{preset:'snap_zoom',dur_s:0.4}]};
+  // Atom 5: unsafe duration (> 3.0s freeze ceiling -> triggers both unsafe_duration and duration_outlier, plus show duration_target_s overrun)
+  atoms[5].duration_s=3.4;
+
+  const res=HMComposeClient.lintShow(badProj,{cameraPresets,fxPresets});
+  assert.equal(res.clean,false);
+  assert.equal(res.blocksBake,false);
+  assert.ok(res.count>=7,`expected >=7 findings, got ${res.count}`);
+
+  const codes=new Set(res.findings.map(f=>f.code));
+  for(const requiredCode of ['missing_plate','atom_overrun','empty_cam_preset','bad_fx_t_rel','unsafe_duration','adjacent_same_cam','duration_outlier']){
+    assert.ok(codes.has(requiredCode),`missing required lint code: ${requiredCode}`);
+  }
+
+  // Every finding must have { code, message, fix, atom_id? } and Fix: one sentence
+  for(const f of res.findings){
+    assert.equal(typeof f.code,'string');
+    assert.ok(f.code.length>0);
+    assert.equal(typeof f.message,'string');
+    assert.ok(f.message.length>0);
+    assert.equal(typeof f.fix,'string');
+    assert.ok(f.fix.startsWith('Fix: '),`fix must start with "Fix: ", got: ${f.fix}`);
+    assert.ok(f.fix.endsWith('.'),`fix must end with ".", got: ${f.fix}`);
+    // Single sentence check: no internal sentence break ". " inside the Fix body
+    const body=f.fix.slice(5,-1);
+    assert.equal(/\.\s+[A-Z]/.test(body),false,`fix must be one sentence, got: ${f.fix}`);
+    assert.equal(f.blocksBake,false);
+    assert.equal(f.severity,'warn');
+  }
+
+  // Specific atom_id checks for Jump-to-atom
+  assert.ok(res.findings.some(f=>f.code==='adjacent_same_cam'&&f.atom_id===atoms[1].id));
+  assert.ok(res.findings.some(f=>f.code==='missing_plate'&&f.atom_id===atoms[2].id));
+  assert.ok(res.findings.some(f=>f.code==='duration_outlier'&&f.atom_id===atoms[2].id));
+  assert.ok(res.findings.some(f=>f.code==='empty_cam_preset'&&f.atom_id===atoms[3].id));
+  assert.ok(res.findings.some(f=>f.code==='bad_fx_t_rel'&&f.atom_id===atoms[3].id));
+  assert.ok(res.findings.some(f=>f.code==='atom_overrun'&&f.atom_id===atoms[4].id));
+  assert.ok(res.findings.some(f=>f.code==='unsafe_duration'&&f.atom_id===atoms[5].id));
+
+  // Soft warnings do NOT block compose when allowSoftLint: true
+  const composed=await HMComposeClient.composeShow(badProj.show,{
+    allowSoftLint:true,
+    cameraPresets,
+    fxPresets,
+    loadJson:async p=>badProj.layouts[p]||read(p),
+  });
+  assert.equal(composed.ok,true,`compose with allowSoftLint should succeed, got errors: ${(composed.errors||[]).join('; ')}`);
+  assert.ok(composed.warnings.length>0);
+  // Missing plate on atom 2 becomes a non-blocking slate in layout
+  const atom2Slot=Object.values(composed.layout).find(e=>e.atom===atoms[2].id);
+  assert.ok(atom2Slot&&atom2Slot.slate&&atom2Slot.slate.includes('MISSING PLATE'));
+});
+
+
 
 
 
