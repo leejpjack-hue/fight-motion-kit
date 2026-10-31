@@ -913,6 +913,7 @@
 
   async function composeShow(show, opts) {
     opts = opts || {};
+    const allowSoftLint = opts.allowSoftLint === true;
     const errors = [];
     const warns = [];
     const loadJson = opts.loadJson || ((p) => fetchJson('/' + String(p).replace(/^\//, '')));
@@ -924,6 +925,15 @@
       : (opts.fxPresets && opts.fxPresets.hooks) || [];
     const cams = {};
     camList.forEach((p) => { cams[p.id] = p; });
+    const fallbackStaticCam = cams.static_hold || {
+      id: 'static_hold',
+      curves: {
+        x: { type: 'const', v: 0 },
+        y: { type: 'const', v: 0 },
+        s: { type: 'const', v: 1 },
+        r: { type: 'const', v: 0 },
+      },
+    };
     const fxp = {};
     fxList.forEach((h) => { fxp[h.id] = h; });
 
@@ -996,21 +1006,36 @@
 
     for (const a of atoms) {
       validateBackground(a.background, a.id);
-      const d = +a.duration_s;
-      const npl = +a.plates_needed;
-      if (!Number.isFinite(d) || d < 0.1 || !Number.isInteger(npl) || npl < 1 || npl > 1000) {
-        errors.push(a.id + ': duration must be at least 0.1s and plates_needed a positive integer');
-        continue;
+      const rawD = +a.duration_s;
+      const rawNpl = +a.plates_needed;
+      let d = rawD;
+      let npl = rawNpl;
+      if (!Number.isFinite(rawD) || rawD < 0.1 || !Number.isInteger(rawNpl) || rawNpl < 1 || rawNpl > 1000) {
+        if (allowSoftLint) {
+          d = Number.isFinite(rawD) && rawD >= 0.1 ? rawD : 0.5;
+          npl = Number.isInteger(rawNpl) && rawNpl >= 1 && rawNpl <= 1000 ? rawNpl : 1;
+          warns.push(a.id + ': unsafe duration or plates_needed normalized for preview/bake');
+        } else {
+          errors.push(a.id + ': duration must be at least 0.1s and plates_needed a positive integer');
+          continue;
+        }
       }
       const plateDuration = d / npl;
       const t0 = t;
       const t1 = t + d;
       const cam = a.camera || {};
-      const segs = cam.segments || [
-        { preset: cam.preset, dur_s: d, params: cam.params, u_range: cam.u_range, nudge: cam.nudge, intensity: cam.intensity },
-      ];
+      const segs = Array.isArray(cam.segments) && cam.segments.length
+        ? cam.segments.map((s) => Object.assign({}, s))
+        : [{ preset: cam.preset, dur_s: d, params: cam.params, u_range: cam.u_range, nudge: cam.nudge, intensity: cam.intensity }];
       const segSum = segs.reduce((s, x) => s + +x.dur_s, 0);
-      if (Math.abs(segSum - d) > 1e-6) errors.push(a.id + ': camera segments sum != duration');
+      if (Math.abs(segSum - d) > 1e-6) {
+        if (allowSoftLint) {
+          warns.push(a.id + ': camera segments sum != duration');
+          scaleSegmentDurs(segs, d);
+        } else {
+          errors.push(a.id + ': camera segments sum != duration');
+        }
+      }
       const cs = [];
       let st = t0;
       const atomNudge = cam.nudge && typeof cam.nudge === 'object' ? cam.nudge : {};
@@ -1019,15 +1044,23 @@
       const camEase = typeof cam.ease === 'string' ? cam.ease : '';
       if (camEase && CAM_EASES.indexOf(camEase) < 0) errors.push(a.id + ': unknown camera ease ' + camEase);
       for (const s of segs) {
-        if (!cams[s.preset]) {
-          errors.push(a.id + ': unknown camera preset ' + s.preset);
-          continue;
+        let camPresetObj = cams[s.preset];
+        let segPresetName = s.preset;
+        if (!camPresetObj) {
+          if (allowSoftLint) {
+            warns.push(a.id + ': unknown or empty camera preset ' + (s.preset || '(empty)') + ' (fallback static_hold)');
+            camPresetObj = fallbackStaticCam;
+            segPresetName = 'static_hold';
+          } else {
+            errors.push(a.id + ': unknown camera preset ' + s.preset);
+            continue;
+          }
         }
         const u0 = (s.u_range || [0, 1])[0];
         const u1 = (s.u_range || [0, 1])[1];
         const segNudge = s.nudge && typeof s.nudge === 'object' ? s.nudge : atomNudge;
         const segIntensity = s.intensity != null ? +s.intensity : atomIntensity;
-        const scaled = applyCamIntensity(mergeCurves(cams[s.preset], s.params), segIntensity);
+        const scaled = applyCamIntensity(mergeCurves(camPresetObj, s.params), segIntensity);
         const curves = applyCamNudge(scaled, segNudge);
         const segEase = typeof s.ease === 'string' && s.ease ? s.ease : camEase;
         if (s.ease && CAM_EASES.indexOf(s.ease) < 0) errors.push(a.id + ': unknown camera ease ' + s.ease);
@@ -1036,7 +1069,7 @@
         cs.push({
           t0: Math.round(st * 10000) / 10000,
           t1: Math.round((st + s.dur_s) * 10000) / 10000,
-          u0, u1, preset: s.preset, curves,
+          u0, u1, preset: segPresetName, curves,
           ...(segEase ? { ease: segEase } : {}),
           ...(snapZoom ? { snap_zoom: true } : {}),
         });
@@ -1059,42 +1092,62 @@
           if (i < srcIds.length) {
             const lsrc = h.layout_source;
             if (!lsrc) {
-              errors.push(a.id + ': hero missing layout_source');
-              continue;
-            }
-            if (!heroLayouts[lsrc]) {
-              try {
-                heroLayouts[lsrc] = await loadJson(lsrc);
-              } catch (e) {
-                errors.push(a.id + ': cannot load layout_source ' + lsrc + ' — ' + e.message);
+              if (allowSoftLint) {
+                entry.source_plate = srcIds[i] || ('P' + String(i + 1).padStart(2, '0'));
+                entry.slate = 'MISSING PLATE · ' + entry.source_plate + ' (no layout)';
+                warns.push(a.id + ': hero missing layout_source (slate)');
+              } else {
+                errors.push(a.id + ': hero missing layout_source');
                 continue;
               }
-            }
-            const se = heroLayouts[lsrc][srcIds[i]];
-            if (!se) {
-              errors.push(a.id + ': plate ' + srcIds[i] + ' not in ' + lsrc);
-              continue;
-            }
-            const ldir = dirname(lsrc);
-            const srcBg = se.bg;
-            if (srcBg) {
-              const mapped = mapLayoutBgToKey(srcBg, bg);
-              if (mapped) entry.bg = mapped;
-              else warns.push(a.id + ': layout bg ' + JSON.stringify(srcBg) + ' not in show.bg; keeping ' + entry.bg);
-            }
-            if (se.bg_zoom != null) entry.bg_zoom = se.bg_zoom;
-            if (se.floor != null) entry.floor = se.floor;
-            entry.source_plate = srcIds[i];
-            entry.kind = se.kind || a.kind;
-            if (se.full) entry.full = joinRel(ldir, se.full);
-            else {
-              entry.parts = (se.parts || []).map((p) =>
-                Object.assign({}, p, { src: joinRel(ldir, p.src) })
-              );
-              entry.shadows = deepClone(se.shadows || []);
+            } else {
+              if (!heroLayouts[lsrc]) {
+                try {
+                  heroLayouts[lsrc] = await loadJson(lsrc);
+                } catch (e) {
+                  if (allowSoftLint) {
+                    heroLayouts[lsrc] = null;
+                    warns.push(a.id + ': cannot load layout_source ' + lsrc + ' (slate)');
+                  } else {
+                    errors.push(a.id + ': cannot load layout_source ' + lsrc + ' — ' + e.message);
+                    continue;
+                  }
+                }
+              }
+              const se = heroLayouts[lsrc] && heroLayouts[lsrc][srcIds[i]];
+              if (!se) {
+                if (allowSoftLint) {
+                  entry.source_plate = srcIds[i];
+                  entry.slate = 'MISSING PLATE · ' + srcIds[i];
+                  warns.push(a.id + ': plate ' + srcIds[i] + ' not in ' + lsrc + ' (slate)');
+                } else {
+                  errors.push(a.id + ': plate ' + srcIds[i] + ' not in ' + lsrc);
+                  continue;
+                }
+              } else {
+                const ldir = dirname(lsrc);
+                const srcBg = se.bg;
+                if (srcBg) {
+                  const mapped = mapLayoutBgToKey(srcBg, bg);
+                  if (mapped) entry.bg = mapped;
+                  else warns.push(a.id + ': layout bg ' + JSON.stringify(srcBg) + ' not in show.bg; keeping ' + entry.bg);
+                }
+                if (se.bg_zoom != null) entry.bg_zoom = se.bg_zoom;
+                if (se.floor != null) entry.floor = se.floor;
+                entry.source_plate = srcIds[i];
+                entry.kind = se.kind || a.kind;
+                if (se.full) entry.full = joinRel(ldir, se.full);
+                else {
+                  entry.parts = (se.parts || []).map((p) =>
+                    Object.assign({}, p, { src: joinRel(ldir, p.src) })
+                  );
+                  entry.shadows = deepClone(se.shadows || []);
+                }
+              }
             }
           } else {
             const briefs = h.pose_briefs || [];
+            entry.source_plate = 'P' + String(i + 1).padStart(2, '0');
             entry.slate =
               'HERO PENDING · ' +
               ((a.motion && a.motion.beat_class) || '?') +
@@ -1121,11 +1174,21 @@
         const hk = typeof rawHk === 'string' ? { type: rawHk, t_rel: 0.08, params: {} } : rawHk;
         const p = fxp[hk.type];
         if (!p) {
+          if (allowSoftLint) {
+            warns.push(a.id + ': unknown fx hook ' + hk.type);
+            continue;
+          }
           errors.push(a.id + ': unknown fx hook ' + hk.type);
           continue;
         }
-        const tRel = hk.t_rel != null ? +hk.t_rel : 0.08;
-        const tRelEnd = hk.t_rel_end != null ? +hk.t_rel_end : 1;
+        const rawTRel = hk.t_rel != null ? +hk.t_rel : 0.08;
+        const rawTRelEnd = hk.t_rel_end != null ? +hk.t_rel_end : 1;
+        const tRel = allowSoftLint
+          ? (Number.isFinite(rawTRel) ? Math.min(1, Math.max(0, rawTRel)) : 0.08)
+          : rawTRel;
+        const tRelEnd = allowSoftLint
+          ? (Number.isFinite(rawTRelEnd) && rawTRelEnd > tRel ? Math.min(1, Math.max(0, rawTRelEnd)) : Math.min(1, Math.max(tRel + 0.08, 0.92)))
+          : rawTRelEnd;
         const prm = Object.assign({}, p.defaults || {}, hk.params || {});
         const ht = Math.round((t0 + tRel * d) * 10000) / 10000;
         const he = Math.round((t0 + tRelEnd * d) * 10000) / 10000;
@@ -1765,49 +1828,49 @@
       const plates = Array.isArray(hero.plates) ? hero.plates : [];
       const need = Number.isInteger(atom.plates_needed) && atom.plates_needed > 0 ? atom.plates_needed : plates.length;
       if (!plates.length || plates.length < need) {
-        pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + plates.length + '/' + (need || 0) });
+        pushChecklist(warns, { kind: 'plate', level: 'warn', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + plates.length + '/' + (need || 0) });
       }
       const layout = hero.layout_source ? layouts[hero.layout_source] : null;
       if (!hero.layout_source || !layout) {
-        pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · no layout' });
+        pushChecklist(warns, { kind: 'plate', level: 'warn', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · no layout' });
         return;
       }
       const dir = dirname(hero.layout_source);
       plates.forEach((pid) => {
         const entry = layout[pid];
         if (!entry) {
-          pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid });
+          pushChecklist(warns, { kind: 'plate', level: 'warn', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid });
           return;
         }
         if (entry.full) {
           const src = joinRel(dir, entry.full);
           if (!assetResolved(project, src) && !assetResolved(project, entry.full)) {
-            pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · ' + where + ' · plate ' + pid });
+            pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · plate ' + pid });
           }
         } else if (Array.isArray(entry.parts) && entry.parts.length) {
           entry.parts.forEach((part, pi) => {
             if (!part || !part.src) {
-              pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid + ' part ' + (pi + 1) });
+              pushChecklist(blocks, { kind: 'plate', level: 'block', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid + ' part ' + (pi + 1) });
               return;
             }
             const src = joinRel(dir, part.src);
             if (!assetResolved(project, src) && !assetResolved(project, part.src)) {
-              pushChecklist(blocks, { kind: 'asset', level: 'block', text: 'Unresolved asset · ' + where + ' · ' + pid });
+              pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · ' + pid });
             }
           });
         } else {
-          pushChecklist(blocks, { kind: 'plate', level: 'block', text: 'Missing plate · ' + where + ' · ' + pid + ' has no image' });
+          pushChecklist(blocks, { kind: 'plate', level: 'block', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid + ' has no image' });
         }
         if (entry.bg) {
           const mapped = mapLayoutBgToKey(entry.bg, show.bg || {});
-          if (!mapped) pushChecklist(warns, { kind: 'bg', level: 'warn', text: 'Broken BG · ' + where + ' · layout bg ' + entry.bg + ' does not match show.bg' });
+          if (!mapped) pushChecklist(warns, { kind: 'bg', level: 'warn', atom_id: atom.id || null, text: 'Broken BG · ' + where + ' · layout bg ' + entry.bg + ' does not match show.bg' });
         }
         if (entry.background && Object.prototype.hasOwnProperty.call(entry.background, 'src') && entry.background.src && !assetResolved(project, entry.background.src)) {
-          pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + where + ' · ' + pid });
+          pushChecklist(blocks, { kind: 'bg', level: 'block', atom_id: atom.id || null, text: 'Broken BG · ' + where + ' · ' + pid });
         }
       });
       if (atom.background && Object.prototype.hasOwnProperty.call(atom.background, 'src') && atom.background.src && !assetResolved(project, atom.background.src)) {
-        pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + where });
+        pushChecklist(blocks, { kind: 'bg', level: 'block', atom_id: atom.id || null, text: 'Broken BG · ' + where });
       }
     });
     const bg = show.bg || {};
@@ -1838,6 +1901,525 @@
       }
     });
     return { active: true, parity: true, blocks, warns, clean: blocks.length === 0 && warns.length === 0 };
+  }
+
+  const DEFAULT_CAM_PRESET_IDS = Object.freeze([
+    'low_rise',
+    'eye_orbit',
+    'eye_push',
+    'ecu_jitter',
+    'low_dive_under',
+    'upward_inside',
+    'ots_R_hold',
+    'eye_lateral',
+    'waist_ots_chase',
+    'fence_sweep_roll',
+    'floor_hold',
+    'eye_hold',
+    'floor_race',
+    'whip_A_to_B',
+    'high_dive',
+    'box_side_pan',
+    'face_whip',
+    'pass_between',
+    'dutch_spiral',
+    'ecu_fist_lens',
+    'low_hold',
+    'high_hold',
+    'ots_L_hold',
+    'pull_aftermath',
+    'rise_from_floor',
+    'dutch_snap',
+    'static_hold',
+    'slow_push',
+    'slow_pull',
+    'slide_left',
+    'slide_right',
+    'gentle_orbit',
+  ]);
+
+  const SHOW_LINT_CONTRACT = Object.freeze({
+    id: 'HM-HF-03-SHOW-JSON-LINT',
+    absorbs: Object.freeze(['HM-RHYTHM-LINT', 'HM-HF-13']),
+    blocksBake: false,
+    structuralCodes: Object.freeze([
+      'missing_plate',
+      'atom_overrun',
+      'empty_cam_preset',
+      'bad_fx_t_rel',
+      'unsafe_duration',
+    ]),
+    rhythmCodes: Object.freeze([
+      'adjacent_same_cam',
+      'duration_outlier',
+    ]),
+    rhythmWindow: Object.freeze({
+      target_median_s: 0.5,
+      max_s: 1.4,
+      min_floor_s: 0.1,
+      hard_freeze_s: 3.0,
+    }),
+    // Plate-pack rest camera. The 5.00s demo and street sample are authored
+    // entirely as static_hold; repeating it is the baseline, not a jump-cut.
+    neutralCamPreset: 'static_hold',
+  });
+
+  function resolveKnownCamSet(cameraPresets) {
+    const set = new Set(DEFAULT_CAM_PRESET_IDS);
+    const list = Array.isArray(cameraPresets)
+      ? cameraPresets
+      : (cameraPresets && Array.isArray(cameraPresets.presets) ? cameraPresets.presets : []);
+    list.forEach((p) => { if (p && p.id) set.add(p.id); });
+    if (cameraPresets && typeof cameraPresets === 'object' && !Array.isArray(cameraPresets) && !Array.isArray(cameraPresets.presets)) {
+      Object.keys(cameraPresets).forEach((k) => set.add(k));
+    }
+    return set;
+  }
+
+  function effectiveAtomCamPreset(atom) {
+    const cam = atom && atom.camera;
+    if (!cam || typeof cam !== 'object') return '';
+    const p = typeof cam.preset === 'string' ? cam.preset.trim() : '';
+    if (p && p !== 'none') return p;
+    if (Array.isArray(cam.segments) && cam.segments.length) {
+      const s0 = cam.segments[0] && typeof cam.segments[0].preset === 'string' ? cam.segments[0].preset.trim() : '';
+      return s0 && s0 !== 'none' ? s0 : '';
+    }
+    return '';
+  }
+
+  function medianOfNumbers(values) {
+    const sorted = values.filter((n) => Number.isFinite(n) && n > 0).slice().sort((a, b) => a - b);
+    if (!sorted.length) return 0.5;
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 1 ? sorted[mid] : round4((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+
+  function lintShow(showOrProject, opts) {
+    opts = opts || {};
+    const isProject = !!(showOrProject && typeof showOrProject === 'object' && showOrProject.show && typeof showOrProject.show === 'object');
+    const project = isProject ? showOrProject : { show: showOrProject || {}, layouts: opts.layouts || null, media: opts.media || [], assets: opts.assets || {} };
+    const show = (project && project.show) || {};
+    const atoms = Array.isArray(show.atoms) ? show.atoms : [];
+    const layouts = project.layouts || opts.layouts || null;
+    const hasLayouts = !!(layouts && typeof layouts === 'object' && Object.keys(layouts).length > 0);
+    const knownCams = resolveKnownCamSet(opts.cameraPresets);
+    const knownFx = resolveFxMap(opts.fxPresets);
+    const findings = [];
+    const seen = new Set();
+
+    function pushFinding(code, message, fix, atom, index, category) {
+      const atomId = atom && typeof atom.id === 'string' && atom.id.trim() ? atom.id.trim() : (typeof atom === 'string' && atom ? atom : undefined);
+      const atomIdx = Number.isInteger(index) && index >= 0 ? index : undefined;
+      const fixText = String(fix || '').trim();
+      const normalizedFix = (fixText.startsWith('Fix: ') ? fixText : 'Fix: ' + fixText.replace(/^fix:\s*/i, '')).replace(/\.*$/, '.');
+      const key = code + '|' + (atomId || '') + '|' + message;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const item = {
+        code,
+        message,
+        fix: normalizedFix,
+        ...(atomId ? { atom_id: atomId } : {}),
+        ...(atomIdx !== undefined ? { atom_index: atomIdx } : {}),
+        category: category || (SHOW_LINT_CONTRACT.rhythmCodes.indexOf(code) >= 0 ? 'rhythm' : 'structural'),
+        severity: 'warn',
+        blocksBake: false,
+      };
+      findings.push(item);
+    }
+
+    const durations = atoms.map((a) => +a?.duration_s);
+    const medianDur = medianOfNumbers(durations);
+    const targetDur = Number.isFinite(+show.duration_target_s) && +show.duration_target_s > 0 ? +show.duration_target_s : null;
+    let totalDur = 0;
+    let overrunReported = false;
+
+    atoms.forEach((atom, i) => {
+      if (!atom || typeof atom !== 'object') return;
+      const atomId = atom.id || ('atom_' + String(i + 1).padStart(2, '0'));
+      const label = atom.label ? atomId + ' (' + atom.label + ')' : atomId;
+      const d = +atom.duration_s;
+
+      // 1. Structural: unsafe_duration
+      if (!Number.isFinite(d) || d < SHOW_LINT_CONTRACT.rhythmWindow.min_floor_s) {
+        pushFinding(
+          'unsafe_duration',
+          label + ': duration_s (' + String(atom.duration_s) + 's) is below the 0.10s minimum floor',
+          'Fix: Set the clip duration_s to a finite value of at least 0.10 seconds.',
+          atomId,
+          i,
+          'structural'
+        );
+      } else if (d > SHOW_LINT_CONTRACT.rhythmWindow.hard_freeze_s) {
+        pushFinding(
+          'unsafe_duration',
+          label + ': duration_s (' + d.toFixed(2) + 's) exceeds the 3.00s static freeze ceiling',
+          'Fix: Trim duration_s to 3.00 seconds or less, or split the hold across multiple plates.',
+          atomId,
+          i,
+          'structural'
+        );
+      }
+
+      if (Number.isFinite(d) && d > 0) {
+        const prevTotal = totalDur;
+        totalDur = round4(totalDur + d);
+        if (targetDur != null && !overrunReported && totalDur > targetDur + 1e-3 && prevTotal <= targetDur + 1e-3) {
+          overrunReported = true;
+          pushFinding(
+            'atom_overrun',
+            label + ': cumulative runtime reaches ' + totalDur.toFixed(2) + 's and overruns duration_target_s (' + targetDur.toFixed(2) + 's)',
+            'Fix: Trim clip durations or use the Fit timing chips so the total runtime stays within duration_target_s.',
+            atomId,
+            i,
+            'structural'
+          );
+        }
+      }
+
+      // 2. Structural: missing_plate (hero / layout / plate ID / 404 / unresolved asset)
+      const hero = atom.hero && typeof atom.hero === 'object' ? atom.hero : null;
+      const plates = hero && Array.isArray(hero.plates) ? hero.plates : [];
+      const need = Number.isInteger(atom.plates_needed) && atom.plates_needed > 0 ? atom.plates_needed : (plates.length || 1);
+      const lsrc = hero && typeof hero.layout_source === 'string' ? hero.layout_source.trim() : '';
+
+      if (!hero || !lsrc) {
+        pushFinding(
+          'missing_plate',
+          label + ': missing hero.layout_source for plate lookup',
+          'Fix: Set hero.layout_source to a valid layout JSON path included in the project.',
+          atomId,
+          i,
+          'structural'
+        );
+      } else if (hasLayouts && !layouts[lsrc]) {
+        pushFinding(
+          'missing_plate',
+          label + ': layout_source "' + lsrc + '" is missing or returned 404',
+          'Fix: Set hero.layout_source to a valid layout JSON path included in the project.',
+          atomId,
+          i,
+          'structural'
+        );
+      } else {
+        if (!plates.length || plates.length < need) {
+          pushFinding(
+            'missing_plate',
+            label + ': missing plate assignment (' + plates.length + '/' + need + ' plates assigned)',
+            'Fix: Select this clip and choose a library plate so every required plate slot is filled.',
+            atomId,
+            i,
+            'structural'
+          );
+        }
+        const layout = hasLayouts ? layouts[lsrc] : null;
+        const ldir = dirname(lsrc);
+        plates.forEach((pid, slotIdx) => {
+          const pidStr = String(pid || '').trim();
+          if (!pidStr || /404|missing/i.test(pidStr)) {
+            if (!layout || !layout[pidStr]) {
+              pushFinding(
+                'missing_plate',
+                label + ': plate "' + (pidStr || ('slot ' + (slotIdx + 1))) + '" is missing or unresolved (404)',
+                'Fix: Assign an existing plate ID from the active layout or import the missing image in the Media panel.',
+                atomId,
+                i,
+                'structural'
+              );
+              return;
+            }
+          }
+          if (layout) {
+            const entry = layout[pidStr];
+            if (!entry || entry.missing === true || entry.status === 404) {
+              pushFinding(
+                'missing_plate',
+                label + ': plate "' + pidStr + '" not found in ' + lsrc + ' (missing plate / 404)',
+                'Fix: Assign an existing plate ID from the active layout or import the missing image in the Media panel.',
+                atomId,
+                i,
+                'structural'
+              );
+              return;
+            }
+            if (entry.full) {
+              const src = joinRel(ldir, entry.full);
+              if ((!assetResolved(project, src) && !assetResolved(project, entry.full)) || /404|missing/i.test(String(entry.full))) {
+                pushFinding(
+                  'missing_plate',
+                  label + ': plate "' + pidStr + '" image path "' + entry.full + '" is unresolved or 404',
+                  'Fix: Replace the unresolved image path with a local library plate or embedded project asset.',
+                  atomId,
+                  i,
+                  'structural'
+                );
+              }
+            } else if (Array.isArray(entry.parts) && entry.parts.length) {
+              entry.parts.forEach((part, pi) => {
+                if (!part || !part.src) {
+                  pushFinding(
+                    'missing_plate',
+                    label + ': plate "' + pidStr + '" part ' + (pi + 1) + ' is missing an image source',
+                    'Fix: Assign an existing plate ID from the active layout or import the missing image in the Media panel.',
+                    atomId,
+                    i,
+                    'structural'
+                  );
+                  return;
+                }
+                const src = joinRel(ldir, part.src);
+                if (!assetResolved(project, src) && !assetResolved(project, part.src)) {
+                  pushFinding(
+                    'missing_plate',
+                    label + ': plate "' + pidStr + '" cutout "' + part.src + '" is unresolved',
+                    'Fix: Replace the unresolved image path with a local library plate or embedded project asset.',
+                    atomId,
+                    i,
+                    'structural'
+                  );
+                }
+              });
+            } else {
+              pushFinding(
+                'missing_plate',
+                label + ': plate "' + pidStr + '" has no full image or cutout parts',
+                'Fix: Assign an existing plate ID from the active layout or import the missing image in the Media panel.',
+                atomId,
+                i,
+                'structural'
+              );
+            }
+          }
+        });
+      }
+
+      // 3. Structural: empty_cam_preset
+      const cam = atom.camera && typeof atom.camera === 'object' ? atom.camera : null;
+      const segs = cam && Array.isArray(cam.segments) ? cam.segments : null;
+      const topPreset = cam && typeof cam.preset === 'string' ? cam.preset.trim() : '';
+      if (!cam || (!topPreset && (!segs || !segs.length)) || topPreset === 'none') {
+        pushFinding(
+          'empty_cam_preset',
+          label + ': camera preset is empty or missing',
+          'Fix: Choose a valid camera motion preset such as static_hold or slow_push in Clip Settings.',
+          atomId,
+          i,
+          'structural'
+        );
+      } else if (topPreset && !knownCams.has(topPreset)) {
+        pushFinding(
+          'empty_cam_preset',
+          label + ': unknown camera preset "' + topPreset + '"',
+          'Fix: Choose a valid camera motion preset such as static_hold or slow_push in Clip Settings.',
+          atomId,
+          i,
+          'structural'
+        );
+      }
+      if (segs && segs.length) {
+        segs.forEach((s, si) => {
+          const sp = s && typeof s.preset === 'string' ? s.preset.trim() : '';
+          if (!sp || sp === 'none') {
+            pushFinding(
+              'empty_cam_preset',
+              label + ': camera segment ' + (si + 1) + ' has an empty camera preset',
+              'Fix: Choose a valid camera motion preset such as static_hold or slow_push in Clip Settings.',
+              atomId,
+              i,
+              'structural'
+            );
+          } else if (!knownCams.has(sp)) {
+            pushFinding(
+              'empty_cam_preset',
+              label + ': camera segment ' + (si + 1) + ' uses unknown preset "' + sp + '"',
+              'Fix: Choose a valid camera motion preset such as static_hold or slow_push in Clip Settings.',
+              atomId,
+              i,
+              'structural'
+            );
+          }
+        });
+      }
+
+      // 4. Structural: atom_overrun (camera segments sum mismatch / overrun)
+      if (segs && segs.length && Number.isFinite(d) && d > 0) {
+        const segSum = segs.reduce((acc, s) => acc + (+(s && s.dur_s) || 0), 0);
+        if (Math.abs(segSum - d) > 1e-3) {
+          pushFinding(
+            'atom_overrun',
+            label + ': camera.segments sum (' + segSum.toFixed(2) + 's) does not match atom duration_s (' + d.toFixed(2) + 's)',
+            'Fix: Rescale camera.segments durations or toggle Dual-segment cam so segment times sum to duration_s.',
+            atomId,
+            i,
+            'structural'
+          );
+        }
+      }
+
+      // 5. Structural: bad_fx_t_rel & FX atom_overrun
+      const hooks = Array.isArray(atom.fx_hooks) ? atom.fx_hooks : [];
+      hooks.forEach((rawHk, hi) => {
+        const hk = typeof rawHk === 'string' ? { type: rawHk, t_rel: 0.08, params: {} } : (rawHk || {});
+        const type = typeof hk.type === 'string' ? hk.type.trim() : '';
+        if (!type || !knownFx[type]) {
+          pushFinding(
+            'bad_fx_t_rel',
+            label + ': fx_hooks[' + hi + '] has invalid or unknown type "' + (type || '(empty)') + '"',
+            'Fix: Pick a supported impact or atmosphere chip in Clip Settings or remove the invalid fx_hooks entry.',
+            atomId,
+            i,
+            'structural'
+          );
+        }
+        if (hk.t_rel !== undefined) {
+          const tr = +hk.t_rel;
+          if (!Number.isFinite(tr) || tr < 0 || tr > 1) {
+            pushFinding(
+              'bad_fx_t_rel',
+              label + ': fx_hooks[' + hi + '] (' + (type || 'fx') + ') t_rel=' + String(hk.t_rel) + ' is outside [0, 1]',
+              'Fix: Set fx_hooks t_rel and t_rel_end to normalized values between 0 and 1 with t_rel_end greater than t_rel.',
+              atomId,
+              i,
+              'structural'
+            );
+          }
+        }
+        if (hk.t_rel_end !== undefined) {
+          const tre = +hk.t_rel_end;
+          const tr = hk.t_rel !== undefined && Number.isFinite(+hk.t_rel) ? +hk.t_rel : 0.08;
+          if (!Number.isFinite(tre) || tre < 0 || tre > 1 || tre <= tr) {
+            pushFinding(
+              'bad_fx_t_rel',
+              label + ': fx_hooks[' + hi + '] (' + (type || 'fx') + ') t_rel_end=' + String(hk.t_rel_end) + ' must be in (t_rel, 1]',
+              'Fix: Set fx_hooks t_rel and t_rel_end to normalized values between 0 and 1 with t_rel_end greater than t_rel.',
+              atomId,
+              i,
+              'structural'
+            );
+          }
+          if (Number.isFinite(tre) && tre > 1) {
+            pushFinding(
+              'atom_overrun',
+              label + ': fx_hooks[' + hi + '] (' + (type || 'fx') + ') t_rel_end=' + tre.toFixed(2) + ' overruns the end of the atom',
+              'Fix: Shorten the FX hook duration or move t_rel earlier so the effect finishes inside the clip.',
+              atomId,
+              i,
+              'structural'
+            );
+          }
+        }
+        const explicitDur = hk.params && hk.params.dur != null ? +hk.params.dur : null;
+        const trValid = hk.t_rel !== undefined && Number.isFinite(+hk.t_rel) && +hk.t_rel >= 0 && +hk.t_rel <= 1 ? +hk.t_rel : 0.08;
+        if (explicitDur != null && Number.isFinite(explicitDur) && Number.isFinite(d) && d > 0) {
+          const endS = trValid * d + explicitDur;
+          if (endS > d + 1e-3) {
+            pushFinding(
+              'atom_overrun',
+              label + ': fx_hooks[' + hi + '] (' + (type || 'fx') + ') span (' + endS.toFixed(2) + 's) overruns atom duration (' + d.toFixed(2) + 's)',
+              'Fix: Shorten the FX hook duration or move t_rel earlier so the effect finishes inside the clip.',
+              atomId,
+              i,
+              'structural'
+            );
+          }
+        }
+      });
+
+      // 6. Rhythm (#39 absorbed): adjacent_same_cam
+      if (i > 0) {
+        const prevAtom = atoms[i - 1];
+        const prevCam = effectiveAtomCamPreset(prevAtom);
+        const curCam = effectiveAtomCamPreset(atom);
+        const sameChain = !!(
+          prevAtom?.camera?.chain?.id &&
+          atom?.camera?.chain?.id &&
+          prevAtom.camera.chain.id === atom.camera.chain.id
+        );
+        if (prevCam && curCam && prevCam === curCam && prevCam !== SHOW_LINT_CONTRACT.neutralCamPreset && !sameChain) {
+          const prevId = prevAtom.id || ('atom_' + String(i).padStart(2, '0'));
+          pushFinding(
+            'adjacent_same_cam',
+            label + ': repeats camera preset "' + curCam + '" from previous clip ' + prevId,
+            'Fix: Switch one of the adjacent clips to a contrasting camera preset or chain them intentionally.',
+            atomId,
+            i,
+            'rhythm'
+          );
+        }
+      }
+
+      // 7. Rhythm (#39 absorbed): duration_outlier (sparse vs median ~0.5s / max <= 1.4s)
+      if (Number.isFinite(d) && d > 0) {
+        const overStreetMax = d > SHOW_LINT_CONTRACT.rhythmWindow.max_s;
+        const sparseVsMedian = atoms.length >= 3 && d > 1.0 && medianDur <= 0.85 && d >= medianDur * 2.2;
+        if (overStreetMax || sparseVsMedian) {
+          pushFinding(
+            'duration_outlier',
+            label + ': duration ' + d.toFixed(2) + 's is a sparse rhythm outlier vs street density (median ' + medianDur.toFixed(2) + 's, max 1.40s)',
+            'Fix: Trim this clip toward the street rhythm window (around 0.50s median, 1.40s max) or split it into faster cuts.',
+            atomId,
+            i,
+            'rhythm'
+          );
+        }
+      }
+    });
+
+    // Show-level duration ceiling check
+    if (totalDur > 120) {
+      const lastAtom = atoms[atoms.length - 1];
+      pushFinding(
+        'unsafe_duration',
+        'show "' + (show.show_id || 'untitled') + '": total duration ' + totalDur.toFixed(2) + 's exceeds the 120.00s maximum sequence limit',
+        'Fix: Shorten or remove clips so the total sequence runtime stays at or below 120 seconds.',
+        lastAtom && lastAtom.id ? lastAtom.id : undefined,
+        atoms.length ? atoms.length - 1 : undefined,
+        'structural'
+      );
+    }
+
+    // Fold any remaining project-level dirtyChecklist items (BG / overlay / FG / chars) into missing_plate so the Lint panel is the single place
+    if (isProject) {
+      const dirt = parityDirtyChecklist(project);
+      const extraRows = [...(dirt.blocks || []), ...(dirt.warns || [])];
+      extraRows.forEach((row) => {
+        if (!row || !row.text) return;
+        // Avoid duplicating per-atom plate messages already captured above
+        if (row.kind === 'plate' && row.atom_id && findings.some((f) => f.code === 'missing_plate' && f.atom_id === row.atom_id)) {
+          return;
+        }
+        const atomIdx = row.atom_id ? atoms.findIndex((a) => a && a.id === row.atom_id) : -1;
+        const fixLine = row.kind === 'char'
+          ? 'Fix: Add both L and R character names under show.chars in the show JSON.'
+          : 'Fix: Replace the unresolved image path with a local library plate or embedded project asset.';
+        pushFinding(
+          'missing_plate',
+          row.text,
+          fixLine,
+          row.atom_id || undefined,
+          atomIdx >= 0 ? atomIdx : undefined,
+          'structural'
+        );
+      });
+    }
+
+    const byCode = {};
+    findings.forEach((f) => {
+      byCode[f.code] = (byCode[f.code] || 0) + 1;
+    });
+
+    return {
+      contract: SHOW_LINT_CONTRACT.id,
+      show_id: show.show_id || '',
+      count: findings.length,
+      clean: findings.length === 0,
+      blocksBake: false,
+      median_duration_s: medianDur,
+      total_duration_s: totalDur,
+      by_code: byCode,
+      findings,
+    };
   }
 
   function requireHoldSeconds(value, label) {
@@ -2020,6 +2602,8 @@
     isPlatePackShow,
     charHonesty,
     parityDirtyChecklist,
+    SHOW_LINT_CONTRACT,
+    lintShow,
     BG_CROP_MIN,
     BG_CROP_FULL,
     validBackgroundCrop,

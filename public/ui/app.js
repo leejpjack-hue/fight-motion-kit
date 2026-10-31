@@ -94,9 +94,9 @@
     for (const a of p.show.atoms) {
       if (ids.has(a.id)) throw new Error('Duplicate clip ID: ' + a.id); ids.add(a.id);
       if (!Number.isFinite(a.duration_s) || a.duration_s < .1 || !Number.isInteger(a.plates_needed) || a.plates_needed < 1) throw new Error('Each clip needs a duration of at least 0.1 seconds and at least one plate.');
-      if (a.pose_mode !== 'hero' || !a.hero || !p.layouts[a.hero.layout_source]) throw new Error('This editor needs a plate layout for each clip. Library pose synthesis remains a kit-only tool.');
-      if (!Array.isArray(a.hero.plates) || a.hero.plates.length !== a.plates_needed || a.hero.plates.some(id => !p.layouts[a.hero.layout_source][id])) throw new Error('A clip refers to a missing plate.');
-      if (a.camera?.segments?.length) syncSegmentsToDuration(a.camera, a.duration_s);
+      if (a.pose_mode !== 'hero' || !a.hero) throw new Error('This editor needs a plate layout for each clip. Library pose synthesis remains a kit-only tool.');
+      if (!Array.isArray(a.hero.plates)) a.hero.plates = [];
+      if (a.camera?.segments?.length && a.camera.segments.some(s => !Number.isFinite(+s?.dur_s) || +s.dur_s <= 0)) syncSegmentsToDuration(a.camera, a.duration_s);
       if(a.background)pathsSafe(a.background);
     }
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
@@ -157,27 +157,27 @@
   }
   async function compile() {
     const v=++compileVersion;
-    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();renderFramePeekStrip();return null;}
+    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();renderFramePeekStrip();renderShowLintPanel();return null;}
     const snapshot=copy(project);captionOverlays(snapshot.show);
     const dirt=HMComposeClient.parityDirtyChecklist(snapshot);
     if(dirt.active&&dirt.blocks.length){
-      result=null;renderer=null;renderedVersion=v;renderPlateJump();renderFramePeekStrip();
+      result=null;renderer=null;renderedVersion=v;renderPlateJump();renderFramePeekStrip();renderShowLintPanel();
       const message='Compose blocked · '+dirt.blocks.map(row=>row.text).join(' · ');
       status(message,true);
       throw new Error(message);
     }
     try {
-      const r=await HMComposeClient.composeShow(snapshot.show,{cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
+      const r=await HMComposeClient.composeShow(snapshot.show,{allowSoftLint:true,cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       next.onRenderHook=(t,opts)=>recordSeekPreviewCall(t,opts,'stage');
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;renderFramePeekStrip();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+      result=r;renderer=next;renderedVersion=v;renderFramePeekStrip();renderShowLintPanel();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
       const warns=HMComposeClient.parityDirtyChecklist(snapshot);
       if(warns.active&&warns.warns.length)status('Checklist · '+warns.warns.map(row=>row.text).join(' · '),true);
       else status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);
       return r;
-    }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();renderFramePeekStrip();status('Preview unavailable: '+e.message,true);}throw e;}
+    }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();renderFramePeekStrip();renderShowLintPanel();status('Preview unavailable: '+e.message,true);}throw e;}
   }
   function activeAtFor(p, t) {
     if (!p?.show?.atoms?.length) return 0;
@@ -273,6 +273,7 @@
     const snapshotB = copy(projectB); captionOverlays(snapshotB.show);
     try {
       const r = await HMComposeClient.composeShow(snapshotB.show, {
+        allowSoftLint: true,
         cameraPresets: presets,
         fxPresets: effects,
         loadJson: async p => { if (snapshotB.layouts[p]) return snapshotB.layouts[p]; return json('/' + p); }
@@ -364,9 +365,10 @@
     updateAbUI();
     draw();
   }
+  const MISSING_THUMB_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
   function mediaFor(a) {return project.media.find(m=>m.layoutSource===a?.hero?.layout_source&&m.plateId===a.hero.plates[0]);}
   function assetSrc(path) {return project.assets?.[path] || (/^(data:|blob:|\/)/.test(path)?path:'/'+path);}
-  function thumbnail(a) {return assetSrc(mediaFor(a)?.src || '');}
+  function thumbnail(a) {const src=mediaFor(a)?.src;return src?assetSrc(src):MISSING_THUMB_DATA;}
   function updateOnionGhost() {
     const prevEl = $('onionPrev'), nextEl = $('onionNext');
     if (!prevEl || !nextEl) return;
@@ -392,7 +394,7 @@
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
   }
   function showHasSidedCutouts(p) {
     for (const clip of p?.show?.atoms || []) {
@@ -464,6 +466,112 @@
       $('dirtyChecklistHint').textContent = list.blocks?.length
         ? 'Export stays blocked until every missing plate, broken background, and unresolved asset is fixed.'
         : (list.warns?.length ? 'Export can continue. These warnings stay on the checklist.' : '');
+    }
+  }
+  function currentShowLint() {
+    if (!project || !project.show) {
+      return {
+        contract: HMComposeClient.SHOW_LINT_CONTRACT.id,
+        show_id: '',
+        count: 0,
+        clean: true,
+        blocksBake: false,
+        median_duration_s: 0.5,
+        total_duration_s: 0,
+        by_code: {},
+        findings: [],
+      };
+    }
+    return HMComposeClient.lintShow(project, { cameraPresets: presets, fxPresets: effects });
+  }
+  function jumpToLintAtom(atomIdOrIndex) {
+    if (recording || !project?.show?.atoms?.length) return false;
+    const atoms = project.show.atoms;
+    let idx = -1;
+    if (typeof atomIdOrIndex === 'number' && Number.isInteger(atomIdOrIndex)) {
+      idx = atomIdOrIndex;
+    } else if (atomIdOrIndex != null) {
+      const target = String(atomIdOrIndex).trim();
+      idx = atoms.findIndex((a) => a && a.id === target);
+    }
+    if (idx < 0 || idx >= atoms.length) return false;
+    pause();
+    selected = idx;
+    rangeAnchor = idx;
+    rangeEnd = idx;
+    const t0 = startOf(idx);
+    renderAt(t0);
+    renderTimeline();
+    renderInspector();
+    const clipBtn = document.querySelector(`#timelineClips [data-index="${idx}"]`);
+    clipBtn?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const a = atoms[idx];
+    status(`Jumped to ${a.label || a.id} (${a.id}) at ${t0.toFixed(2)}s`);
+    return true;
+  }
+  function renderShowLintPanel() {
+    const panel = $('showLintPanel');
+    if (!panel) return;
+    const lint = currentShowLint();
+    const count = lint.count || 0;
+    panel.dataset.count = String(count);
+    panel.dataset.state = count > 0 ? 'warn' : 'clean';
+    const badge = $('showLintCount');
+    if (badge) {
+      badge.dataset.count = String(count);
+      badge.textContent = count === 1 ? '1 warning' : `${count} warnings`;
+    }
+    const sub = $('showLintSub');
+    if (sub) {
+      sub.textContent = count > 0
+        ? 'Soft warnings · Does not block bake'
+        : 'All checks clean · Does not block bake';
+    }
+    const empty = $('showLintEmpty');
+    const list = $('showLintList');
+    if (empty) empty.hidden = count > 0;
+    if (list) {
+      list.hidden = count === 0;
+      list.replaceChildren();
+      const atoms = project?.show?.atoms || [];
+      for (const f of lint.findings) {
+        const li = document.createElement('li');
+        li.className = 'show-lint-item';
+        li.dataset.code = f.code;
+        li.dataset.category = f.category || 'structural';
+        if (f.atom_id) li.dataset.atomId = f.atom_id;
+        const head = document.createElement('div');
+        head.className = 'show-lint-item-head';
+        const codeEl = document.createElement('code');
+        codeEl.className = 'lint-code';
+        codeEl.dataset.category = f.category || 'structural';
+        codeEl.textContent = f.code;
+        head.append(codeEl);
+        if (f.atom_id) {
+          const atomPill = document.createElement('span');
+          atomPill.className = 'lint-atom-pill';
+          atomPill.textContent = f.atom_id;
+          head.append(atomPill);
+          if (atoms.some((a) => a && a.id === f.atom_id)) {
+            const jumpBtn = document.createElement('button');
+            jumpBtn.type = 'button';
+            jumpBtn.className = 'lint-jump';
+            jumpBtn.dataset.jumpAtom = f.atom_id;
+            jumpBtn.textContent = `Jump to ${f.atom_id} ↗`;
+            jumpBtn.setAttribute('aria-label', `Jump to atom ${f.atom_id}`);
+            jumpBtn.onclick = () => jumpToLintAtom(f.atom_id);
+            head.append(jumpBtn);
+          }
+        }
+        const msgEl = document.createElement('div');
+        msgEl.className = 'lint-message';
+        msgEl.textContent = f.message;
+        const fixEl = document.createElement('div');
+        fixEl.className = 'lint-fix';
+        fixEl.textContent = f.fix;
+        li.append(head, msgEl, fixEl);
+        list.append(li);
+      }
     }
   }
   function renderPlateJump() {
@@ -1647,6 +1755,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
