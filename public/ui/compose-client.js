@@ -1524,6 +1524,48 @@
 
   const FRAME_PEEK_OFFSETS = Object.freeze([0, 0.3]);
 
+  const SEEKABLE_PREVIEW_CONTRACT = Object.freeze({
+    id: 'HM-HF-02-SEEKABLE-PREVIEW',
+    sot: Object.freeze(['renderStageAt', 'renderStageBAt', 'renderAt', 'sampleStageFrameAt']),
+    surfaces: Object.freeze(['scrub', 'ab_panes', 'frame_peek', 'bake_frame_sample', 'transport_play']),
+    softWarnBlocksBake: false,
+  });
+
+  function evaluateSeekPreviewCall(call, durationS) {
+    const c = call && typeof call === 'object' ? call : {};
+    const rawT = Number(c.t);
+    const dur = Number.isFinite(+durationS) && +durationS > 0 ? +durationS : 0;
+    const viaSoT = c.viaSoT === true;
+    const source = String(c.source || (viaSoT ? 'renderStageAt' : 'direct-renderer.render'));
+    const wallClockTimestamp = Number.isFinite(rawT) && rawT > Math.max(120, dur + 1) && rawT > 500;
+    const unconstrainedRaf = c.unconstrainedRaf === true || c.wallClock === true || wallClockTimestamp || !viaSoT;
+    if (!unconstrainedRaf) {
+      return {
+        ok: true,
+        warn: false,
+        blocksBake: false,
+        code: 'ok',
+        source,
+        t: Number.isFinite(rawT) ? round4(rawT) : 0,
+        message: '',
+      };
+    }
+    const reason = wallClockTimestamp
+      ? `wall-clock timestamp (${Math.round(rawT)}ms)`
+      : (c.unconstrainedRaf === true || c.wallClock === true)
+        ? 'unconstrained rAF / wall-clock preview call'
+        : `direct renderer.render(${Number.isFinite(rawT) ? rawT.toFixed(2) : 't'}) bypassed renderStageAt(t) / renderAt(t)`;
+    return {
+      ok: false,
+      warn: true,
+      blocksBake: false,
+      code: 'unconstrained-preview-pixels',
+      source,
+      t: Number.isFinite(rawT) ? round4(rawT) : 0,
+      message: `Soft warning · Preview pixels sampled via ${reason} (${source}). Route scrub, A/B, peek, and bake sampling through renderAt(t) / renderStageAt(t). Bake and export stay enabled.`,
+    };
+  }
+
   function sanitizeFilenamePart(raw, fallback) {
     const clean = String(raw || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
     return clean || fallback || 'item';
@@ -1962,6 +2004,8 @@
     plateJumpChips,
     resolvePlateJump,
     FRAME_PEEK_OFFSETS,
+    SEEKABLE_PREVIEW_CONTRACT,
+    evaluateSeekPreviewCall,
     framePeekFilename,
     framePeekPlan,
     activeFramePeekAt,

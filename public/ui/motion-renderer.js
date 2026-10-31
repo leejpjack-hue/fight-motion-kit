@@ -387,7 +387,7 @@ function cameraPoseOnSegment(seg, t) {
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0;
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -574,6 +574,11 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function render(time, opts = {}) {
     lastTime = Math.round((Number(time) || 0) * 10000) / 10000;
+    lastRenderViaSoT = opts.viaSoT === true;
+    lastRenderSource = String(opts.source || (lastRenderViaSoT ? 'renderStageAt' : 'direct-renderer.render'));
+    if (typeof onRenderHook === 'function') {
+      try { onRenderHook(time, opts); } catch (_) {}
+    }
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
     if (!timeline || !timeline.plates.length) { ctx.restore(); return; }
@@ -835,7 +840,16 @@ function createMotionRenderer(canvas, assets = {}) {
     });
     ctx.restore();
   }
-  return { load, render, images, get lastTime() { return lastTime; }, get duration() { return timeline?.duration_s || 0; } };
+  return {
+    load,
+    render,
+    images,
+    get lastTime() { return lastTime; },
+    get lastRenderViaSoT() { return lastRenderViaSoT; },
+    get lastRenderSource() { return lastRenderSource; },
+    set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
+    get duration() { return timeline?.duration_s || 0; }
+  };
 }
 const hmRoot = typeof globalThis !== 'undefined' ? globalThis : window;
 hmRoot.backgroundMotionFrame = backgroundMotionFrame;

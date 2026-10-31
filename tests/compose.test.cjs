@@ -1185,6 +1185,42 @@ test('HM-HF-01-FRAME-PEEK: framePeekPlan computes midpoint (+0.0s) and +0.3s sam
   assert.equal(HMComposeClient.activeFramePeekAt(plan,4.95).index,15);
 });
 
+test('HM-HF-02-SEEKABLE-PREVIEW: SEEKABLE_PREVIEW_CONTRACT defines renderStageAt/renderAt SoT, accepts viaSoT calls, and soft-warns on unconstrained rAF or wall-clock preview calls without blocking bake',async()=>{
+  const contract=HMComposeClient.SEEKABLE_PREVIEW_CONTRACT;
+  assert.equal(contract.id,'HM-HF-02-SEEKABLE-PREVIEW');
+  assert.deepEqual(contract.sot,['renderStageAt','renderStageBAt','renderAt','sampleStageFrameAt']);
+  assert.deepEqual(contract.surfaces,['scrub','ab_panes','frame_peek','bake_frame_sample','transport_play']);
+  assert.equal(contract.softWarnBlocksBake,false);
+  // Valid SoT calls (scrub, A/B, peek, bake sample, transport play)
+  for(const [source,t] of [['scrub',1.25],['renderStageAt',0.25],['renderStageBAt',1.675],['frame-peek-strip',0.4999],['bake-export-frames',2.5],['transport-play',3.1]]){
+    const res=HMComposeClient.evaluateSeekPreviewCall({t,viaSoT:true,source},5);
+    assert.equal(res.ok,true,`${source} at t=${t} is ok`);
+    assert.equal(res.warn,false,`${source} at t=${t} does not warn`);
+    assert.equal(res.blocksBake,false);
+    assert.equal(res.code,'ok');
+  }
+  // Direct renderer.render without viaSoT -> soft-warn, does not block bake
+  const directWarn=HMComposeClient.evaluateSeekPreviewCall({t:1.375,viaSoT:false,source:'direct-stage.render'},5);
+  assert.equal(directWarn.ok,false);
+  assert.equal(directWarn.warn,true);
+  assert.equal(directWarn.blocksBake,false);
+  assert.equal(directWarn.code,'unconstrained-preview-pixels');
+  assert.match(directWarn.message,/Soft warning/);
+  assert.match(directWarn.message,/renderAt\(t\) \/ renderStageAt\(t\)/);
+  assert.match(directWarn.message,/Bake and export stay enabled/);
+  // Wall-clock rAF timestamp (e.g. performance.now() = 14823.4ms passed to preview) -> soft-warn, does not block bake
+  const rafWarn=HMComposeClient.evaluateSeekPreviewCall({t:14823.4,viaSoT:true,source:'unconstrained-raf'},5);
+  assert.equal(rafWarn.ok,false);
+  assert.equal(rafWarn.warn,true);
+  assert.equal(rafWarn.blocksBake,false);
+  assert.match(rafWarn.message,/wall-clock timestamp/);
+  // Explicit unconstrainedRaf flag -> soft-warn
+  const flagWarn=HMComposeClient.evaluateSeekPreviewCall({t:0.5,viaSoT:true,unconstrainedRaf:true,source:'custom-raf'},5);
+  assert.equal(flagWarn.ok,false);
+  assert.equal(flagWarn.warn,true);
+  assert.equal(flagWarn.blocksBake,false);
+});
+
 
 
 

@@ -22,6 +22,40 @@
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false, rangeAnchor = 0, rangeEnd = 0;
   let peekGroupCache = new Map(), lastPeekShowId = '', lastActivePeekSig = '';
+  let seekPreviewWarns = [], lastSeekPreviewEntry = 'init', lastSeekPreviewTime = 0;
+  function updateSeekPreviewWarnBanner() {
+    const banner = $('seekPreviewWarnBanner'), text = $('seekPreviewWarnText');
+    if (!banner) return;
+    const latest = seekPreviewWarns.at(-1);
+    banner.hidden = !latest;
+    banner.dataset.warnState = latest ? 'warn' : 'clean';
+    banner.dataset.warnCount = String(seekPreviewWarns.length);
+    if (text) text.textContent = latest ? latest.message : '';
+  }
+  function recordSeekPreviewCall(t, opts = {}, stageId = 'stage') {
+    const dur = stageId === 'stageB' ? durationB() : duration();
+    const check = HMComposeClient.evaluateSeekPreviewCall({
+      t,
+      viaSoT: opts.viaSoT === true,
+      source: opts.source || (opts.viaSoT ? 'renderStageAt' : `direct-${stageId}.render`),
+      unconstrainedRaf: opts.unconstrainedRaf === true,
+      wallClock: opts.wallClock === true,
+    }, dur);
+    lastSeekPreviewEntry = check.source;
+    lastSeekPreviewTime = check.t;
+    if (check.warn) {
+      const entry = { ...check, stage: stageId, at: Date.now() };
+      seekPreviewWarns.push(entry);
+      if (seekPreviewWarns.length > 25) seekPreviewWarns.shift();
+      updateSeekPreviewWarnBanner();
+      console.warn('[HM-HF-02-SEEKABLE-PREVIEW]', check.message);
+    }
+    return check;
+  }
+  function clearSeekPreviewWarnings() {
+    seekPreviewWarns = [];
+    updateSeekPreviewWarnBanner();
+  }
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
   const durationB = () => projectB ? durationOf(projectB) : Math.round((resultB?.timeline?.duration_s || 0) * 10000) / 10000;
@@ -136,6 +170,7 @@
       const r=await HMComposeClient.composeShow(snapshot.show,{cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
+      next.onRenderHook=(t,opts)=>recordSeekPreviewCall(t,opts,'stage');
       if(v!==compileVersion)return null;
       result=r;renderer=next;renderedVersion=v;renderFramePeekStrip();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
       const warns=HMComposeClient.parityDirtyChecklist(snapshot);
@@ -245,6 +280,7 @@
       if (!r.ok) throw new Error(r.errors.join('; '));
       const nextB = HMMotion($('stageB'), snapshotB.assets || {});
       await nextB.load(r);
+      nextB.onRenderHook = (t, opts) => recordSeekPreviewCall(t, opts, 'stageB');
       if (v !== compileVersionB) return null;
       resultB = r; rendererB = nextB;
       updateAbUI(); draw();
@@ -696,6 +732,7 @@
     syncPlateJumpState();
     syncFramePeekState();
   }
+  // HM-HF-02-SEEKABLE-PREVIEW: Single Source of Truth (SoT) for time -> pixels across scrub, A/B panes, Frame Peek, and bake sampling.
   function renderStageAt(t, opts = {}) {
     if(!project?.show?.atoms?.length||!renderer){
       $('stage')?.getContext('2d').clearRect(0,0,1280,720);
@@ -704,10 +741,30 @@
     const standIn=opts.standIn!==undefined?!!opts.standIn:(!playing&&!recording);
     const useOnion=opts.onion!==undefined?!!opts.onion:(onion&&standIn);
     const d=duration(),clamped=Math.min(t,Math.max(0,d-1e-5)),i=activeAt(clamped),a=project.show.atoms[i],t0=startOf(i),t1=t0+(a?.duration_s||.5);
-    renderer.render(t,{onion:useOnion,fxStandIn:standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1]});
+    renderer.render(t,{onion:useOnion,fxStandIn:standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1],viaSoT:opts.viaSoT!==false,source:opts.source||'renderStageAt'});
   }
-  function drawStageA() {
-    renderStageAt(time);
+  function renderStageBAt(t, opts = {}) {
+    if(!abEnabled||!projectB?.show?.atoms?.length||!rendererB){
+      if(!projectB?.show?.atoms?.length)$('stageB')?.getContext('2d').clearRect(0,0,1280,720);
+      return;
+    }
+    const standIn=opts.standIn!==undefined?!!opts.standIn:(!playing&&!recording);
+    const dB=durationB(),iB=activeAtFor(projectB,Math.min(t,Math.max(0,dB-1e-5))),aB=projectB.show.atoms[iB];
+    const t0B=projectB.show.atoms.slice(0,iB).reduce((s,x)=>s+x.duration_s,0),t1B=t0B+(aB?.duration_s||.5);
+    rendererB.render(t,{onion:false,fxStandIn:standIn,liveHooks:aB?.fx_hooks||[],atomWindow:[t0B,t1B],viaSoT:opts.viaSoT!==false,source:opts.source||'renderStageBAt'});
+  }
+  function sampleStageFrameAt(t, opts = {}) {
+    const targetRenderer=opts.renderer||renderer;
+    if(!targetRenderer)return;
+    if(targetRenderer===renderer){
+      renderStageAt(t,{standIn:opts.standIn!==undefined?!!opts.standIn:false,onion:opts.onion!==undefined?!!opts.onion:false,viaSoT:opts.viaSoT!==false,source:opts.source||'sampleStageFrameAt'});
+      return;
+    }
+    const d=duration(),clamped=Math.min(t,Math.max(0,d-1e-5)),i=activeAt(clamped),a=project?.show?.atoms?.[i],t0=a?startOf(i):0,t1=t0+(a?.duration_s||.5);
+    targetRenderer.render(t,{onion:!!opts.onion,fxStandIn:!!opts.standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1],viaSoT:opts.viaSoT!==false,source:opts.source||'sampleStageFrameAt'});
+  }
+  function drawStageA(source = 'drawStageA') {
+    renderStageAt(time,{source});
   }
   function renderFramePeekStrip() {
     const track=$('framePeekTrack'),strip=$('framePeekStrip');
@@ -853,7 +910,7 @@
       if(entry.renderSig!==renderSig){
         for(let s=0;s<2;s++){
           const peek=ag.peeks[s];
-          renderStageAt(peek.t,{standIn:true,onion});
+          renderStageAt(peek.t,{standIn:true,onion,source:'frame-peek-strip'});
           const g=entry.cards[s].canvas.getContext('2d');
           g.clearRect(0,0,160,90);
           g.drawImage($('stage'),0,0,160,90);
@@ -917,17 +974,17 @@
     selected=Math.max(0,Math.min(peek.atom_index,project.show.atoms.length-1));
     rangeAnchor=selected;
     rangeEnd=selected;
-    time=Math.min(maxScrubDuration(),Math.max(0,peek.t));
-    renderTimeline();renderInspector();renderMedia();draw();
+    renderTimeline();renderInspector();renderMedia();
+    renderAt(peek.t,{source:'frame-peek-seek'});
     const tagText=peek.sample_kind==='mid'?'mid +0.0s':(peek.clamped?'+0.3s (atom end)':'+0.3s');
     status(`Peek · ${peek.source_plate} ${tagText} · ${format(peek.t_nominal)}`);
     return peek;
   }
   async function peekCanvasBlob(peek) {
     const stage=$('stage');
-    renderStageAt(peek.t,{standIn:true,onion});
+    renderStageAt(peek.t,{standIn:true,onion,source:'frame-peek-export'});
     const blob=await new Promise(resolve=>stage.toBlob(resolve,'image/png'));
-    drawStageA();
+    drawStageA('frame-peek-restore');
     if(!blob)throw new Error('Could not encode frame peek PNG.');
     return blob;
   }
@@ -968,21 +1025,26 @@
     status(`Downloaded ${plan.peeks.length} frame peeks · ${zipName}`);
     return zipName;
   }
-  function draw() {
+  function draw(source = 'draw') {
     const standIn=!playing&&!recording;
-    drawStageA();
-    if(abEnabled&&projectB?.show?.atoms?.length){
-      const dB=durationB(),iB=activeAtFor(projectB,Math.min(time,Math.max(0,dB-1e-5))),aB=projectB.show.atoms[iB];
-      const t0B=projectB.show.atoms.slice(0,iB).reduce((s,x)=>s+x.duration_s,0),t1B=t0B+(aB?.duration_s||.5);
-      rendererB?.render(time,{onion:false,fxStandIn:standIn,liveHooks:aB?.fx_hooks||[],atomWindow:[t0B,t1B]});
-    }else if(!projectB?.show?.atoms?.length){
-      $('stageB')?.getContext('2d').clearRect(0,0,1280,720);
-    }
+    renderStageAt(time,{standIn,source});
+    renderStageBAt(time,{standIn,source});
     updateTransport();
     syncFxPathOverlay();
   }
-  function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw();}}
-  function tick(now) {if(!playing)return;time=timeStart+(now-clockStart)/1000;const d=duration();if(time>=d){if(looping){time%=d;timeStart=time;clockStart=now;}else{time=d;playing=false;}}draw();if(playing)playbackFrame=requestAnimationFrame(tick);}
+  function renderAt(t, opts = {}) {
+    if(opts.sampleOnly){
+      renderStageAt(t,{...opts,source:opts.source||'renderAt-sample'});
+      if(opts.includeB)renderStageBAt(t,{...opts,source:opts.source||'renderAt-sample'});
+      return time;
+    }
+    if(!opts.keepPlaying)pause();
+    time=Math.min(maxScrubDuration(),Math.max(0,Number(t)||0));
+    draw(opts.source||'renderAt');
+    return time;
+  }
+  function pause() {playing=false;preparing=false;playToken++;cancelAnimationFrame(playbackFrame);if(project){draw('pause');}}
+  function tick(now) {if(!playing)return;let nextTime=timeStart+(now-clockStart)/1000;const d=duration();if(nextTime>=d){if(looping){nextTime%=d;timeStart=nextTime;clockStart=now;}else{nextTime=d;playing=false;}}renderAt(nextTime,{keepPlaying:true,source:'transport-play'});if(playing)playbackFrame=requestAnimationFrame(tick);}
   async function play() {if(!duration()||recording)return;if(playing||preparing){pause();return;}const token=++playToken;preparing=true;updateTransport();try{if(!renderer||renderedVersion!==compileVersion)await compile();if(token!==playToken||!renderer)return;if(time>=duration()-.001)time=0;timeStart=time;clockStart=performance.now();playing=true;playbackFrame=requestAnimationFrame(tick);}finally{if(token===playToken){preparing=false;updateTransport();}}}
   function setDuration(next) {if(!Number.isFinite(next)||next<.1)throw new Error('Use a clip duration of at least 0.1 seconds.');edit(()=>{const a=atom();a.duration_s=+next.toFixed(4);delete a.timing_hold;if(a.camera?.segments)syncSegmentsToDuration(a.camera,a.duration_s);if(a.camera?.chain?.id)HMComposeClient.reflowCamChain(project.show.atoms,a.camera.chain.id);time=startOf(selected);});}
   function rippleTrim(delta) {if(!atom())return;const next=Math.max(0.1,+(atom().duration_s+delta).toFixed(4));setDuration(next);status(`Ripple trimmed clip to ${next.toFixed(2)}s · Total ${duration().toFixed(2)}s`);}
@@ -1154,11 +1216,12 @@
     });
   }
   on('loop',()=>{looping=!looping;$('loop').setAttribute('aria-pressed',String(looping));});
-  on('onionToggle',()=>{onion=!onion;$('onionToggle').setAttribute('aria-pressed',String(onion));renderFramePeekStrip();draw();});
+  on('onionToggle',()=>{onion=!onion;$('onionToggle').setAttribute('aria-pressed',String(onion));renderFramePeekStrip();draw('onion-toggle');});
   on('downloadPeekPng',()=>downloadPeekPng());
   on('downloadPeekZip',()=>downloadAllPeeksZip());
+  on('seekPreviewWarnDismiss',()=>clearSeekPreviewWarnings());
   on('fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('stage').requestFullscreen();});
-  $('scrub').oninput=()=>{const value=+$('scrub').value;pause();time=value;draw();};$('ruler').onclick=e=>{pause();time=duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth));draw();};
+  $('scrub').oninput=()=>{renderAt(+$('scrub').value,{source:'scrub'});};$('ruler').onclick=e=>{renderAt(duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth)),{source:'ruler-scrub'});};
   on('undo',()=>restore(-1));on('redo',()=>restore(1));on('duplicate',duplicate);on('delete',remove);
   on('trimMinus',()=>rippleTrim(-0.1));on('trimPlus',()=>rippleTrim(0.1));
   document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=safe(()=>fitToSeconds(+b.dataset.fit)));
@@ -1584,6 +1647,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

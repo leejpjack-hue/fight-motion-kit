@@ -1989,6 +1989,82 @@ print(doc['show_id'])
       }
       try{await p.locator('.timeline-panel').screenshot({path:path.join(capDir,'46-D-strip-scrub-sync.png')});}catch(_){}
       check('HM-HF-01-FRAME-PEEK: Frame Peek Strip renders mid (+0.0s) and +0.3s peeks, seeks on click with pixel parity, syncs on scrub, and downloads PNGs locally');
+      // HM-HF-02-SEEKABLE-PREVIEW: scrub t vs programmatic renderAt(t) vs renderStageAt(t) agree on fixture markers + soft-warn banner on unconstrained rAF / direct render
+      await p.evaluate(()=>HMStudio.clearSeekPreviewWarnings());
+      assert.equal(await p.locator('#seekPreviewWarnBanner').isHidden(),true);
+      for(const markerT of [0.25,1.375,1.675,3.25,4.8]){
+        await p.fill('#scrub',String(markerT));
+        await p.locator('#scrub').dispatchEvent('input');
+        const scrubSample=await p.evaluate(()=>{
+          const gA=document.getElementById('stage').getContext('2d');
+          const gB=document.getElementById('stageB').getContext('2d');
+          const pts=[[640,360],[320,240],[960,480],[640,640],[430,390]];
+          return {
+            t:HMStudio.time,
+            labelA:document.getElementById('stageLabel').textContent,
+            labelB:document.getElementById('stageLabelB').textContent,
+            linked:document.getElementById('abLinkedTime').textContent,
+            activePeek:document.getElementById('framePeekActive').textContent,
+            viaSoTA:HMStudio.renderer.lastRenderViaSoT,
+            viaSoTB:HMStudio.rendererB.lastRenderViaSoT,
+            sourceA:HMStudio.renderer.lastRenderSource,
+            pxA:pts.map(([x,y])=>Array.from(gA.getImageData(x,y,1,1).data)),
+            pxB:pts.map(([x,y])=>Array.from(gB.getImageData(x,y,1,1).data))
+          };
+        });
+        await p.evaluate(()=>HMStudio.renderAt(0));
+        const progSample=await p.evaluate(t=>{
+          HMStudio.renderAt(t,{source:'test-programmatic-renderAt'});
+          const gA=document.getElementById('stage').getContext('2d');
+          const gB=document.getElementById('stageB').getContext('2d');
+          const pts=[[640,360],[320,240],[960,480],[640,640],[430,390]];
+          const pxA=pts.map(([x,y])=>Array.from(gA.getImageData(x,y,1,1).data));
+          const pxB=pts.map(([x,y])=>Array.from(gB.getImageData(x,y,1,1).data));
+          const labelA=document.getElementById('stageLabel').textContent;
+          const labelB=document.getElementById('stageLabelB').textContent;
+          const linked=document.getElementById('abLinkedTime').textContent;
+          const activePeek=document.getElementById('framePeekActive').textContent;
+          HMStudio.renderStageAt(0);
+          HMStudio.renderStageAt(t,{standIn:true,onion:HMStudio.onion,source:'test-renderStageAt'});
+          const stageAtPxA=pts.map(([x,y])=>Array.from(gA.getImageData(x,y,1,1).data));
+          return {t:HMStudio.time,labelA,labelB,linked,activePeek,pxA,pxB,stageAtPxA,warns:HMStudio.seekPreviewContract.warns.length};
+        },markerT);
+        assert.equal(scrubSample.t,progSample.t,`scrub t == renderAt(t) at ${markerT}s`);
+        assert.equal(scrubSample.viaSoTA,true);
+        assert.equal(scrubSample.viaSoTB,true);
+        assert.equal(scrubSample.sourceA,'scrub');
+        assert.equal(scrubSample.labelA,progSample.labelA,`stageLabel matches at ${markerT}s`);
+        assert.equal(scrubSample.labelB,progSample.labelB,`stageLabelB matches at ${markerT}s`);
+        assert.equal(scrubSample.linked,progSample.linked,`abLinkedTime matches at ${markerT}s`);
+        assert.equal(scrubSample.activePeek,progSample.activePeek,`activePeek matches at ${markerT}s`);
+        assert.deepEqual(scrubSample.pxA,progSample.pxA,`stage A pixels match between #scrub and renderAt(${markerT})`);
+        assert.deepEqual(scrubSample.pxB,progSample.pxB,`stage B pixels match between #scrub and renderAt(${markerT})`);
+        assert.deepEqual(scrubSample.pxA,progSample.stageAtPxA,`stage A pixels match renderStageAt(${markerT})`);
+        assert.equal(progSample.warns,0,'SoT calls do not fire soft-warn');
+      }
+      try{await p.locator('main').screenshot({path:path.join(capDir,'47-B-scrub-renderAt-parity.png')});}catch(_){}
+      // Trigger unconstrained wall-clock / direct rAF preview render -> soft-warn banner visible, bake stays enabled
+      const warnState=await p.evaluate(()=>{
+        HMStudio.renderer.render(performance.now(),{unconstrainedRaf:true,source:'unconstrained-raf-preview'});
+        return HMStudio.seekPreviewContract;
+      });
+      assert.equal(warnState.warns.length,1);
+      assert.equal(warnState.warns[0].code,'unconstrained-preview-pixels');
+      assert.equal(warnState.warns[0].blocksBake,false);
+      assert.equal(await p.locator('#seekPreviewWarnBanner').isVisible(),true);
+      assert.equal(await p.locator('#seekPreviewWarnBanner').getAttribute('data-warn-state'),'warn');
+      assert.match(await p.locator('#seekPreviewWarnText').textContent(),/Soft warning · Preview pixels sampled via/);
+      assert.match(await p.locator('#seekPreviewWarnText').textContent(),/Bake and export stay enabled/);
+      try{await p.locator('main').screenshot({path:path.join(capDir,'47-A-soft-warn-banner.png')});}catch(_){}
+      await p.click('#exportOpen');
+      assert.equal(await p.locator('#exportHtml').isDisabled(),false,'soft-warn does not block exportHtml');
+      assert.equal(await p.locator('#exportFrames').isDisabled(),false,'soft-warn does not block exportFrames');
+      assert.equal(await p.locator('#exportFrame').isDisabled(),false,'soft-warn does not block exportFrame');
+      await p.getByRole('button',{name:'Close export',exact:true}).click();
+      await p.click('#seekPreviewWarnDismiss');
+      assert.equal(await p.locator('#seekPreviewWarnBanner').isHidden(),true);
+      await p.evaluate(()=>HMStudio.renderAt(1.375));
+      check('HM-HF-02-SEEKABLE-PREVIEW: scrub t, renderAt(t), and renderStageAt(t) share one time->pixels SoT and unconstrained rAF preview calls surface a non-blocking soft-warn banner');
     }
     await p.click('#exportOpen');
     const streetHtml=await downloadFrom('exportHtml','street-old-city.html');
