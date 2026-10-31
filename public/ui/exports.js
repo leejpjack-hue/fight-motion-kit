@@ -84,7 +84,7 @@
   }
   $('exportPreset').addEventListener('change',paintExportHints);
   on('exportOpen',()=>{S.pause();report('');paintExportHints();applyExportGate();$('exportDialog').showModal();});
-  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);renderer.render(S.time);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
+  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportTiming',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();
@@ -105,7 +105,7 @@
   function standalonePlayer(data) {
     const get=id=>document.getElementById(id);const r=createMotionRenderer(get('stage'),data.assets);let t=0,playing=false,start=0,offset=0;
     const duration=data.timeline.duration_s;get('seek').max=duration;get('title').textContent=data.timeline.title;document.title=data.timeline.title;
-    function draw(){r.render(t);get('seek').value=t;get('time').textContent=t.toFixed(2)+' / '+duration.toFixed(2)+'s';get('play').textContent=playing?'Pause':'Play';}
+    function draw(){r.render(t,{viaSoT:true,source:'standalone-player'});get('seek').value=t;get('time').textContent=t.toFixed(2)+' / '+duration.toFixed(2)+'s';get('play').textContent=playing?'Pause':'Play';}
     function tick(now){if(!playing)return;t=Math.min(duration,offset+(now-start)/1000);if(t>=duration)playing=false;draw();if(playing)requestAnimationFrame(tick);}
     function toggle(){if(playing)playing=false;else{if(t>=duration)t=0;offset=t;start=performance.now();playing=true;requestAnimationFrame(tick);}draw();}
     get('play').onclick=toggle;get('seek').oninput=()=>{playing=false;t=+get('seek').value;draw();};document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();toggle();}});
@@ -122,7 +122,7 @@
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);
     const files=[];
     for(let i=0;i<plan.length;i++){
-      r.render(plan[i].t);
+      S.sampleStageFrameAt(plan[i].t,{renderer:r,standIn:false,onion:false,source:'bake-export-frames'});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       if(!blob)throw new Error('Could not export frame '+(i+1)+'.');
       files.push({name:plan[i].file,data:new Uint8Array(await blob.arrayBuffer())});
@@ -141,13 +141,13 @@
     assertExportAllowed();
     S.pause();await S.compile();S.recording=true;const preset=selectedPreset();
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
-    const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);r.render(0);
+    const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);S.sampleStageFrameAt(0,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
     const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:preset.videoBitsPerSecond});
     const done=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;recorder.onerror=e=>reject(e.error||new Error('Video recorder failed'));});
     let visibilityChanged=false;const interrupted=()=>{if(document.hidden)visibilityChanged=true;};document.addEventListener('visibilitychange',interrupted);
     try{
       recorder.start();const start=performance.now(),duration=S.duration;
-      await new Promise(resolve=>{const frame=now=>{const t=Math.min(duration,(now-start)/1000);r.render(t);report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
+      await new Promise(resolve=>{const frame=now=>{const t=Math.min(duration,(now-start)/1000);S.sampleStageFrameAt(t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
       recorder.stop();await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
       download(S.project.show.show_id+(mime.includes('mp4')?'.mp4':'.webm'),new Blob(chunks,{type:mime}));report('Video downloaded.');
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
