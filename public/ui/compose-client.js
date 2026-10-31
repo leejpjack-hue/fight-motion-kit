@@ -1522,6 +1522,146 @@
     return null;
   }
 
+  const FRAME_PEEK_OFFSETS = Object.freeze([0, 0.3]);
+
+  function sanitizeFilenamePart(raw, fallback) {
+    const clean = String(raw || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+    return clean || fallback || 'item';
+  }
+
+  function framePeekFilename(showId, peek) {
+    const sid = sanitizeFilenamePart(showId || (peek && peek.show_id), 'motion');
+    const atomNum = String(((peek && peek.atom_index) || 0) + 1).padStart(2, '0');
+    const plate = sanitizeFilenamePart(peek && peek.source_plate, 'P' + atomNum);
+    const kind = peek && peek.sample_kind === 'plus_03' ? 'plus03' : 'mid';
+    const tNom = Number.isFinite(+(peek && peek.t_nominal)) ? (+peek.t_nominal).toFixed(2) : (Number.isFinite(+(peek && peek.t)) ? (+peek.t).toFixed(2) : '0.00');
+    return `${sid}-peek-${atomNum}-${plate}-${kind}-${tNom}s.png`;
+  }
+
+  function framePeekPlan(showOrProject, composed) {
+    const show = showOrProject && showOrProject.show ? showOrProject.show : showOrProject;
+    const rawAtoms = Array.isArray(show && show.atoms)
+      ? show.atoms
+      : Array.isArray(composed && composed.timeline && composed.timeline.atoms)
+        ? composed.timeline.atoms
+        : [];
+    const showId = String((show && show.show_id) || (composed && composed.timeline && composed.timeline.show_id) || 'motion');
+    const atoms = [];
+    const peeks = [];
+    let acc = 0;
+    for (let i = 0; i < rawAtoms.length; i++) {
+      const a = rawAtoms[i] || {};
+      const dur = round4(
+        Number.isFinite(+a.duration_s) && +a.duration_s > 0
+          ? +a.duration_s
+          : Number.isFinite(+a.t1 - +a.t0) && +a.t1 > +a.t0
+            ? +a.t1 - +a.t0
+            : 0.5
+      );
+      const t0 = round4(acc);
+      const t1 = round4(t0 + dur);
+      acc = t1;
+      const mid = round4(t0 + dur / 2);
+      const endSeek = round4(Math.max(t0, t1 - 1e-4));
+      const rawPlus = round4(mid + 0.3);
+      const clamped = rawPlus >= t1 - 1e-9;
+      const tNominalPlus = clamped ? t1 : rawPlus;
+      const tSeekPlus = clamped ? endSeek : rawPlus;
+      const heroPlates = Array.isArray(a.hero && a.hero.plates) ? a.hero.plates : [];
+      const fallbackPlate = heroPlates[0] || a.id || ('P' + String(i + 1).padStart(2, '0'));
+      const midInspect = composed ? inspectAt(composed, mid) : null;
+      const plusInspect = composed ? inspectAt(composed, tSeekPlus) : null;
+      const midPlate = (midInspect && midInspect.source_plate) || fallbackPlate;
+      const plusPlate = (plusInspect && plusInspect.source_plate) || heroPlates[heroPlates.length - 1] || fallbackPlate;
+      const atomId = a.id || ('atom-' + (i + 1));
+      const atomLabel = a.label || atomId;
+      const midPeek = {
+        index: peeks.length,
+        show_id: showId,
+        atom_index: i,
+        atom_id: atomId,
+        atom_label: atomLabel,
+        source_plate: midPlate,
+        sample_index: 0,
+        sample_kind: 'mid',
+        offset_s: 0,
+        offset_label: '+0.0s',
+        t0,
+        t1,
+        duration_s: dur,
+        mid_t: mid,
+        raw_t: mid,
+        t_nominal: mid,
+        t: mid,
+        clamped: false,
+      };
+      midPeek.filename = framePeekFilename(showId, midPeek);
+      peeks.push(midPeek);
+      const plusPeek = {
+        index: peeks.length,
+        show_id: showId,
+        atom_index: i,
+        atom_id: atomId,
+        atom_label: atomLabel,
+        source_plate: plusPlate,
+        sample_index: 1,
+        sample_kind: 'plus_03',
+        offset_s: 0.3,
+        offset_label: '+0.3s',
+        t0,
+        t1,
+        duration_s: dur,
+        mid_t: mid,
+        raw_t: rawPlus,
+        t_nominal: tNominalPlus,
+        t: tSeekPlus,
+        clamped,
+      };
+      plusPeek.filename = framePeekFilename(showId, plusPeek);
+      peeks.push(plusPeek);
+      atoms.push({
+        atom_index: i,
+        atom_id: atomId,
+        atom_label: atomLabel,
+        source_plate: midPlate,
+        t0,
+        t1,
+        duration_s: dur,
+        mid_t: mid,
+        plus_03_t: tSeekPlus,
+        plus_03_nominal_t: tNominalPlus,
+        plus_03_clamped: clamped,
+        peeks: [midPeek, plusPeek],
+      });
+    }
+    return {
+      show_id: showId,
+      atom_count: atoms.length,
+      peek_count: peeks.length,
+      duration_s: round4(acc),
+      atoms,
+      peeks,
+    };
+  }
+
+  function activeFramePeekAt(planOrPeeks, time) {
+    const peeks = Array.isArray(planOrPeeks) ? planOrPeeks : (planOrPeeks && Array.isArray(planOrPeeks.peeks) ? planOrPeeks.peeks : []);
+    if (!peeks.length) return null;
+    const dur = +(peeks[peeks.length - 1].t1 || 0);
+    const tc = Math.min(Math.max(0, Number(time) || 0), Math.max(0, dur - 1e-7));
+    let inAtom = peeks.filter((p) => tc >= p.t0 - 1e-7 && tc < p.t1 - 1e-7);
+    if (!inAtom.length) {
+      const lastAtomIdx = peeks[peeks.length - 1].atom_index;
+      inAtom = peeks.filter((p) => p.atom_index === lastAtomIdx);
+    }
+    let best = inAtom[0];
+    for (let i = 1; i < inAtom.length; i++) {
+      const cand = inAtom[i];
+      if (Math.abs(tc - cand.t) < Math.abs(tc - best.t) - 1e-7) best = cand;
+    }
+    return best;
+  }
+
   function platePackStats(show) {
     const atoms = (show && show.atoms) || [];
     let nHero = 0, nPlate = 0, dur = 0;
@@ -1821,6 +1961,10 @@
     plateJumpOption,
     plateJumpChips,
     resolvePlateJump,
+    FRAME_PEEK_OFFSETS,
+    framePeekFilename,
+    framePeekPlan,
+    activeFramePeekAt,
     classifyFxHook,
     classifyFxHooks,
     LIVE_FX_COMPONENTS,
