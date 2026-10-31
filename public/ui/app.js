@@ -21,6 +21,7 @@
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false, rangeAnchor = 0, rangeEnd = 0;
+  let peekGroupCache = new Map(), lastPeekShowId = '', lastActivePeekSig = '';
   const durationOf = p => Math.round((p?.show?.atoms?.reduce((s,a) => s + a.duration_s, 0) || 0) * 10000) / 10000;
   const duration = () => durationOf(project);
   const durationB = () => projectB ? durationOf(projectB) : Math.round((resultB?.timeline?.duration_s || 0) * 10000) / 10000;
@@ -122,11 +123,11 @@
   }
   async function compile() {
     const v=++compileVersion;
-    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();return null;}
+    if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();renderFramePeekStrip();return null;}
     const snapshot=copy(project);captionOverlays(snapshot.show);
     const dirt=HMComposeClient.parityDirtyChecklist(snapshot);
     if(dirt.active&&dirt.blocks.length){
-      result=null;renderer=null;renderedVersion=v;renderPlateJump();
+      result=null;renderer=null;renderedVersion=v;renderPlateJump();renderFramePeekStrip();
       const message='Compose blocked · '+dirt.blocks.map(row=>row.text).join(' · ');
       status(message,true);
       throw new Error(message);
@@ -136,12 +137,12 @@
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+      result=r;renderer=next;renderedVersion=v;renderFramePeekStrip();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
       const warns=HMComposeClient.parityDirtyChecklist(snapshot);
       if(warns.active&&warns.warns.length)status('Checklist · '+warns.warns.map(row=>row.text).join(' · '),true);
       else status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);
       return r;
-    }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();status('Preview unavailable: '+e.message,true);}throw e;}
+    }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();renderFramePeekStrip();status('Preview unavailable: '+e.message,true);}throw e;}
   }
   function activeAtFor(p, t) {
     if (!p?.show?.atoms?.length) return 0;
@@ -693,15 +694,279 @@
     updateOnionGhost();
     updateFxHonestyUI();
     syncPlateJumpState();
+    syncFramePeekState();
+  }
+  function renderStageAt(t, opts = {}) {
+    if(!project?.show?.atoms?.length||!renderer){
+      $('stage')?.getContext('2d').clearRect(0,0,1280,720);
+      return;
+    }
+    const standIn=opts.standIn!==undefined?!!opts.standIn:(!playing&&!recording);
+    const useOnion=opts.onion!==undefined?!!opts.onion:(onion&&standIn);
+    const d=duration(),clamped=Math.min(t,Math.max(0,d-1e-5)),i=activeAt(clamped),a=project.show.atoms[i],t0=startOf(i),t1=t0+(a?.duration_s||.5);
+    renderer.render(t,{onion:useOnion,fxStandIn:standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1]});
   }
   function drawStageA() {
-    const standIn=!playing&&!recording;
-    if(project?.show?.atoms?.length){
-      const d=duration(),i=activeAt(Math.min(time,Math.max(0,d-1e-5))),a=project.show.atoms[i],t0=startOf(i),t1=t0+(a?.duration_s||.5);
-      renderer?.render(time,{onion:onion&&standIn,fxStandIn:standIn,liveHooks:a?.fx_hooks||[],atomWindow:[t0,t1]});
-    }else{
-      $('stage')?.getContext('2d').clearRect(0,0,1280,720);
+    renderStageAt(time);
+  }
+  function renderFramePeekStrip() {
+    const track=$('framePeekTrack'),strip=$('framePeekStrip');
+    if(!track||!strip)return;
+    if(!project?.show?.atoms?.length||!result||!renderer){
+      peekGroupCache.clear();
+      lastPeekShowId='';
+      lastActivePeekSig='';
+      track.replaceChildren();
+      strip.dataset.empty='true';
+      if($('framePeekSummary'))$('framePeekSummary').textContent='0 atoms · 0 peeks';
+      if($('framePeekActive'))$('framePeekActive').textContent='No clips';
+      syncFramePeekState();
+      return;
     }
+    const plan=HMComposeClient.framePeekPlan(project,result);
+    strip.dataset.empty='false';
+    if($('framePeekSummary'))$('framePeekSummary').textContent=`${plan.atom_count} atoms · ${plan.peek_count} peeks (mid +0.0s / +0.3s)`;
+    if(lastPeekShowId!==plan.show_id){
+      peekGroupCache.clear();
+      track.replaceChildren();
+      lastPeekShowId=plan.show_id;
+    }
+    for(const k of [...peekGroupCache.keys()]){
+      if(k>=plan.atom_count){
+        peekGroupCache.get(k)?.el?.remove();
+        peekGroupCache.delete(k);
+      }
+    }
+    const bg=project.show.bg||{};
+    const nonCaptionOverlays=(project.show.overlays||[]).filter(o=>!o.editor_caption);
+    const hasGlobalClockDep=!!(
+      bg.swap||
+      bg.swap_t!=null||
+      (bg.motion&&bg.motion.preset&&bg.motion.preset!=='follow_camera'&&bg.motion.preset!=='static'&&bg.motion.clock!=='per_atom'&&bg.motion.clock!=='legacy')||
+      (project.show.fg?.props?.length)||
+      nonCaptionOverlays.length
+    );
+    const baseEnvSig=JSON.stringify({
+      show_id:plan.show_id,
+      dur:hasGlobalClockDep?plan.duration_s:0,
+      bg,
+      fg:project.show.fg||null,
+      fx_profile:HMComposeClient.resolveFxProfile(project.show),
+      overlays:nonCaptionOverlays,
+      onion:!!onion
+    });
+    let anyPainted=false;
+    for(const ag of plan.atoms){
+      const i=ag.atom_index;
+      const a=project.show.atoms[i];
+      const prevPlate=project.show.atoms[i-1]?.hero?.plates?.[0]||'';
+      const nextPlate=project.show.atoms[i+1]?.hero?.plates?.[0]||'';
+      const layoutEntry=project.layouts?.[a?.hero?.layout_source]?.[a?.hero?.plates?.[0]]||null;
+      const renderSig=baseEnvSig+'|'+JSON.stringify({
+        i,
+        a,
+        t0:hasGlobalClockDep?ag.t0:0,
+        t1:hasGlobalClockDep?ag.t1:ag.duration_s,
+        prevPlate,
+        nextPlate,
+        layoutEntry
+      });
+      let entry=peekGroupCache.get(i);
+      if(!entry||entry.el.parentElement!==track){
+        const groupEl=document.createElement('div');
+        groupEl.className='peek-atom-group';
+        groupEl.setAttribute('role','listitem');
+        groupEl.dataset.atomIndex=String(i);
+        const headEl=document.createElement('div');
+        headEl.className='peek-atom-head';
+        const titleEl=document.createElement('span');
+        titleEl.className='peek-atom-title';
+        const durEl=document.createElement('span');
+        durEl.className='peek-atom-dur';
+        headEl.append(titleEl,durEl);
+        const pairEl=document.createElement('div');
+        pairEl.className='peek-pair';
+        const cards=[];
+        for(let s=0;s<2;s++){
+          const pIdx=i*2+s;
+          const kind=s===0?'mid':'plus_03';
+          const itemEl=document.createElement('div');
+          itemEl.className='peek-item';
+          itemEl.dataset.peekIndex=String(pIdx);
+          itemEl.dataset.atomIndex=String(i);
+          itemEl.dataset.sampleKind=kind;
+          const cardBtn=document.createElement('button');
+          cardBtn.type='button';
+          cardBtn.className='peek-card';
+          cardBtn.dataset.peekIndex=String(pIdx);
+          cardBtn.dataset.atomIndex=String(i);
+          cardBtn.dataset.sampleKind=kind;
+          cardBtn.setAttribute('aria-pressed','false');
+          const c=document.createElement('canvas');
+          c.className='peek-canvas';
+          c.width=160;
+          c.height=90;
+          const meta=document.createElement('span');
+          meta.className='peek-meta';
+          const badgeEl=document.createElement('span');
+          badgeEl.className='peek-badge';
+          badgeEl.dataset.kind=kind;
+          const timeEl=document.createElement('span');
+          timeEl.className='peek-time';
+          meta.append(badgeEl,timeEl);
+          cardBtn.append(c,meta);
+          cardBtn.onclick=safe(()=>seekToPeek(pIdx));
+          const dlBtn=document.createElement('button');
+          dlBtn.type='button';
+          dlBtn.className='peek-dl';
+          dlBtn.dataset.downloadPeek=String(pIdx);
+          dlBtn.textContent='↓ PNG';
+          dlBtn.onclick=safe(e=>{e.stopPropagation();return downloadPeekPng(pIdx);});
+          itemEl.append(cardBtn,dlBtn);
+          pairEl.append(itemEl);
+          cards.push({itemEl,cardBtn,canvas:c,badgeEl,timeEl,dlBtn});
+        }
+        groupEl.append(headEl,pairEl);
+        track.append(groupEl);
+        entry={renderSig:'',el:groupEl,titleEl,durEl,cards,peeks:ag.peeks};
+        peekGroupCache.set(i,entry);
+      }
+      entry.peeks=ag.peeks;
+      entry.el.dataset.atomId=ag.atom_id;
+      entry.titleEl.textContent=`${String(i+1).padStart(2,'0')} · ${ag.source_plate} · ${ag.atom_label}`;
+      entry.durEl.textContent=`${ag.duration_s.toFixed(2)}s`;
+      for(let s=0;s<2;s++){
+        const peek=ag.peeks[s];
+        const card=entry.cards[s];
+        const tagText=peek.sample_kind==='mid'?'mid +0.0s':(peek.clamped?'+0.3s ⇥end':'+0.3s');
+        card.cardBtn.dataset.t=String(peek.t);
+        card.cardBtn.dataset.tNominal=String(peek.t_nominal);
+        card.cardBtn.dataset.clamped=String(peek.clamped);
+        card.cardBtn.title=`Seek to ${peek.source_plate} (${tagText}) at ${peek.t_nominal.toFixed(2)}s`;
+        card.cardBtn.setAttribute('aria-label',card.cardBtn.title);
+        card.badgeEl.dataset.clamped=String(peek.clamped);
+        card.badgeEl.textContent=tagText;
+        card.timeEl.textContent=`${peek.t_nominal.toFixed(2)}s`;
+        card.dlBtn.title=`Download ${peek.filename}`;
+        card.dlBtn.setAttribute('aria-label',`Download ${peek.filename}`);
+      }
+      if(entry.renderSig!==renderSig){
+        for(let s=0;s<2;s++){
+          const peek=ag.peeks[s];
+          renderStageAt(peek.t,{standIn:true,onion});
+          const g=entry.cards[s].canvas.getContext('2d');
+          g.clearRect(0,0,160,90);
+          g.drawImage($('stage'),0,0,160,90);
+          anyPainted=true;
+        }
+        entry.renderSig=renderSig;
+      }
+    }
+    if(anyPainted)drawStageA();
+    lastActivePeekSig='';
+    syncFramePeekState();
+  }
+  function syncFramePeekState() {
+    const hasAtoms=!!(project?.show?.atoms?.length&&result&&renderer);
+    if($('downloadPeekPng'))$('downloadPeekPng').disabled=!hasAtoms||recording;
+    if($('downloadPeekZip'))$('downloadPeekZip').disabled=!hasAtoms||recording;
+    if(!hasAtoms)return;
+    const plan=HMComposeClient.framePeekPlan(project,result);
+    const active=HMComposeClient.activeFramePeekAt(plan,time);
+    const activeIdx=active?active.index:-1;
+    const activeAtom=active?active.atom_index:-1;
+    const sig=`${activeIdx}:${activeAtom}:${recording}:${active?.t_nominal??''}:${active?.source_plate??''}:${active?.clamped??''}`;
+    if(sig===lastActivePeekSig)return;
+    lastActivePeekSig=sig;
+    for(const [i,entry] of peekGroupCache.entries()){
+      const onAtom=i===activeAtom;
+      entry.el.classList.toggle('active',onAtom);
+      entry.el.dataset.active=String(onAtom);
+      for(let s=0;s<2;s++){
+        const pIdx=i*2+s;
+        const onPeek=pIdx===activeIdx;
+        const card=entry.cards[s];
+        card.cardBtn.classList.toggle('active',onPeek);
+        card.cardBtn.dataset.active=String(onPeek);
+        card.cardBtn.setAttribute('aria-pressed',String(onPeek));
+        card.cardBtn.disabled=recording;
+        card.dlBtn.disabled=recording;
+      }
+    }
+    if($('framePeekActive')&&active){
+      const kindLabel=active.sample_kind==='mid'?'mid +0.0s':(active.clamped?'+0.3s ⇥end':'+0.3s');
+      $('framePeekActive').textContent=`${String(active.atom_index+1).padStart(2,'0')} ${active.source_plate} · ${kindLabel} · ${active.t_nominal.toFixed(2)}s`;
+      $('framePeekActive').dataset.peekIndex=String(active.index);
+      $('framePeekActive').dataset.atomIndex=String(active.atom_index);
+      $('framePeekActive').dataset.sampleKind=active.sample_kind;
+    }
+    const activeEntry=peekGroupCache.get(activeAtom),track=$('framePeekTrack');
+    if(track&&activeEntry?.el){
+      const el=activeEntry.el,left=el.offsetLeft-track.offsetLeft,right=left+el.offsetWidth;
+      if(left<track.scrollLeft)track.scrollLeft=Math.max(0,left-8);
+      else if(right>track.scrollLeft+track.clientWidth)track.scrollLeft=right-track.clientWidth+8;
+    }
+  }
+  function seekToPeek(indexOrPeek) {
+    if(recording||!project?.show?.atoms?.length)return null;
+    const plan=HMComposeClient.framePeekPlan(project,result);
+    const idx=typeof indexOrPeek==='number'?indexOrPeek:Number(indexOrPeek?.index);
+    const peek=Number.isInteger(idx)?plan.peeks[idx]:null;
+    if(!peek)return null;
+    pause();
+    selected=Math.max(0,Math.min(peek.atom_index,project.show.atoms.length-1));
+    rangeAnchor=selected;
+    rangeEnd=selected;
+    time=Math.min(maxScrubDuration(),Math.max(0,peek.t));
+    renderTimeline();renderInspector();renderMedia();draw();
+    const tagText=peek.sample_kind==='mid'?'mid +0.0s':(peek.clamped?'+0.3s (atom end)':'+0.3s');
+    status(`Peek · ${peek.source_plate} ${tagText} · ${format(peek.t_nominal)}`);
+    return peek;
+  }
+  async function peekCanvasBlob(peek) {
+    const stage=$('stage');
+    renderStageAt(peek.t,{standIn:true,onion});
+    const blob=await new Promise(resolve=>stage.toBlob(resolve,'image/png'));
+    drawStageA();
+    if(!blob)throw new Error('Could not encode frame peek PNG.');
+    return blob;
+  }
+  async function downloadPeekPng(indexOrPeek) {
+    if(recording)return null;
+    if(!project?.show?.atoms?.length)throw new Error('Add a clip before downloading a frame peek.');
+    pause();
+    if(!renderer||renderedVersion!==compileVersion)await compile();
+    const plan=HMComposeClient.framePeekPlan(project,result);
+    let peek=null;
+    if(indexOrPeek==null)peek=HMComposeClient.activeFramePeekAt(plan,time)||plan.peeks[0];
+    else{
+      const idx=typeof indexOrPeek==='number'?indexOrPeek:Number(indexOrPeek?.index);
+      peek=Number.isInteger(idx)?plan.peeks[idx]:null;
+    }
+    if(!peek)throw new Error('Frame peek not found.');
+    const blob=await peekCanvasBlob(peek);
+    download(peek.filename,blob);
+    status(`Downloaded frame peek · ${peek.filename}`);
+    return peek;
+  }
+  async function downloadAllPeeksZip() {
+    if(recording)return null;
+    if(!project?.show?.atoms?.length)throw new Error('Add a clip before downloading frame peeks.');
+    pause();
+    if(!renderer||renderedVersion!==compileVersion)await compile();
+    const plan=HMComposeClient.framePeekPlan(project,result);
+    const files=[];
+    for(const peek of plan.peeks){
+      const blob=await peekCanvasBlob(peek);
+      files.push({name:'peeks/'+peek.filename,data:new Uint8Array(await blob.arrayBuffer())});
+    }
+    const manifest={kind:'hm-frame-peeks',version:1,...plan};
+    files.unshift({name:'peeks.json',data:new TextEncoder().encode(JSON.stringify(manifest,null,2)+'\n')});
+    const zip=HMXExport.zipStore(files);
+    const zipName=`${plan.show_id}-frame-peeks.zip`;
+    download(zipName,new Blob([zip],{type:'application/zip'}));
+    status(`Downloaded ${plan.peeks.length} frame peeks · ${zipName}`);
+    return zipName;
   }
   function draw() {
     const standIn=!playing&&!recording;
@@ -889,7 +1154,9 @@
     });
   }
   on('loop',()=>{looping=!looping;$('loop').setAttribute('aria-pressed',String(looping));});
-  on('onionToggle',()=>{onion=!onion;$('onionToggle').setAttribute('aria-pressed',String(onion));draw();});
+  on('onionToggle',()=>{onion=!onion;$('onionToggle').setAttribute('aria-pressed',String(onion));renderFramePeekStrip();draw();});
+  on('downloadPeekPng',()=>downloadPeekPng());
+  on('downloadPeekZip',()=>downloadAllPeeksZip());
   on('fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('stage').requestFullscreen();});
   $('scrub').oninput=()=>{const value=+$('scrub').value;pause();time=value;draw();};$('ruler').onclick=e=>{pause();time=duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth));draw();};
   on('undo',()=>restore(-1));on('redo',()=>restore(1));on('duplicate',duplicate);on('delete',remove);
@@ -1317,6 +1584,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt(t){pause();time=Math.min(maxScrubDuration(),Math.max(0,t));draw();},seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

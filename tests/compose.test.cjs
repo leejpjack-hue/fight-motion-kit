@@ -1141,5 +1141,50 @@ test('HM-PAN-SPAN-UI: optional t0–t1 span UI state defaults to hidden on show-
   assert.ok(spanLate>showLate+0.01);
 });
 
+test('HM-HF-01-FRAME-PEEK: framePeekPlan computes midpoint (+0.0s) and +0.3s samples (clamped to atom end), stays inside each atom on inspectAt, and syncs active peek across scrub',async()=>{
+  assert.deepEqual(HMComposeClient.FRAME_PEEK_OFFSETS,[0,0.3]);
+  const street=read('shows/street-old-city.json');
+  const composed=await compose(street);
+  assert.equal(composed.ok,true);
+  const plan=HMComposeClient.framePeekPlan(street,composed);
+  assert.equal(plan.show_id,'street-old-city');
+  assert.equal(plan.atom_count,8);
+  assert.equal(plan.peek_count,16);
+  assert.equal(plan.duration_s,5);
+  // Atom 0 (0.00..0.50s, dur 0.50s): mid = 0.25s, +0.3s = 0.55s -> clamped to atom end (nominal 0.50s, seek 0.4999s)
+  assert.equal(plan.atoms[0].mid_t,0.25);
+  assert.equal(plan.atoms[0].plus_03_clamped,true);
+  assert.equal(plan.atoms[0].plus_03_nominal_t,0.5);
+  assert.equal(plan.atoms[0].plus_03_t,0.4999);
+  assert.equal(plan.peeks[0].filename,'street-old-city-peek-01-P09-mid-0.25s.png');
+  assert.equal(plan.peeks[1].filename,'street-old-city-peek-01-P09-plus03-0.50s.png');
+  // Atom 2 (1.00..1.75s, dur 0.75s): mid = 1.375s, +0.3s = 1.675s < 1.75s -> unclamped
+  assert.equal(plan.atoms[2].mid_t,1.375);
+  assert.equal(plan.atoms[2].plus_03_clamped,false);
+  assert.equal(plan.atoms[2].plus_03_nominal_t,1.675);
+  assert.equal(plan.atoms[2].plus_03_t,1.675);
+  assert.equal(plan.peeks[4].filename,'street-old-city-peek-03-P11-mid-1.38s.png');
+  assert.equal(plan.peeks[5].filename,'street-old-city-peek-03-P11-plus03-1.68s.png');
+  // Atom 7 (4.00..5.00s, dur 1.00s): mid = 4.50s, +0.3s = 4.80s < 5.00s -> unclamped
+  assert.equal(plan.atoms[7].mid_t,4.5);
+  assert.equal(plan.atoms[7].plus_03_clamped,false);
+  assert.equal(plan.atoms[7].plus_03_nominal_t,4.8);
+  assert.equal(plan.atoms[7].plus_03_t,4.8);
+  // Every peek seeks inside its own atom and matches activeFramePeekAt
+  for(const peek of plan.peeks){
+    const here=HMComposeClient.inspectAt(composed,peek.t);
+    assert.equal(here.atom_index,peek.atom_index,`peek ${peek.index} stays in atom ${peek.atom_index}`);
+    assert.equal(here.source_plate,peek.source_plate,`peek ${peek.index} plate matches inspectAt`);
+    const active=HMComposeClient.activeFramePeekAt(plan,peek.t);
+    assert.equal(active.index,peek.index,`activeFramePeekAt at peek.t (${peek.t}) highlights peek ${peek.index}`);
+  }
+  assert.equal(HMComposeClient.activeFramePeekAt(plan,0.1).index,0);
+  assert.equal(HMComposeClient.activeFramePeekAt(plan,0.45).index,1);
+  assert.equal(HMComposeClient.activeFramePeekAt(plan,1.2).index,4);
+  assert.equal(HMComposeClient.activeFramePeekAt(plan,1.65).index,5);
+  assert.equal(HMComposeClient.activeFramePeekAt(plan,4.95).index,15);
+});
+
+
 
 

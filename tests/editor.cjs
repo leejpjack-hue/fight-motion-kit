@@ -1888,6 +1888,108 @@ print(doc['show_id'])
     assert.deepEqual(Object.values((await state()).composed.layout).map(l=>l.source_plate),['P09','P10','P11','P12','P13','P14','P15','P16']);
     assert.equal((await state()).composed.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');
     assert.deepEqual(failed.filter(x=>/teqcon|:8770/.test(x)),[]);
+    {
+      // HM-HF-01-FRAME-PEEK: Frame Peek Strip on street-old-city (8 atoms, 16 peeks: mid +0.0s & +0.3s clamped)
+      const capDir='/workspace/deliverables/hm-sat-hf-2026-10-31/capscreens';
+      try{fs.mkdirSync(capDir,{recursive:true});}catch(_){}
+      assert.equal(await p.locator('#framePeekStrip').isVisible(),true);
+      assert.equal(await p.locator('#framePeekStrip').getAttribute('data-empty'),'false');
+      assert.match(await p.locator('#framePeekSummary').textContent(),/8 atoms · 16 peeks/);
+      assert.equal(await p.locator('#framePeekTrack .peek-atom-group').count(),8);
+      assert.equal(await p.locator('#framePeekTrack .peek-card').count(),16);
+      const peekMeta=await p.locator('#framePeekTrack .peek-card').evaluateAll(els=>els.map(el=>({
+        idx:+el.dataset.peekIndex,
+        atom:+el.dataset.atomIndex,
+        kind:el.dataset.sampleKind,
+        t:+el.dataset.t,
+        tNom:+el.dataset.tNominal,
+        clamped:el.dataset.clamped==='true',
+        pressed:el.getAttribute('aria-pressed')==='true'
+      })));
+      assert.equal(peekMeta.length,16);
+      assert.deepEqual(peekMeta[0],{idx:0,atom:0,kind:'mid',t:0.25,tNom:0.25,clamped:false,pressed:true});
+      assert.deepEqual(peekMeta[1],{idx:1,atom:0,kind:'plus_03',t:0.4999,tNom:0.5,clamped:true,pressed:false});
+      assert.deepEqual(peekMeta[4],{idx:4,atom:2,kind:'mid',t:1.375,tNom:1.375,clamped:false,pressed:false});
+      assert.deepEqual(peekMeta[5],{idx:5,atom:2,kind:'plus_03',t:1.675,tNom:1.675,clamped:false,pressed:false});
+      try{await p.locator('#framePeekStrip').screenshot({path:path.join(capDir,'46-A-strip-visible.png')});}catch(_){}
+      // Click peek -> seek scrub + pixels match stage at that t
+      for(const targetIdx of [1,4,5,15]){
+        await p.click(`#framePeekTrack .peek-card[data-peek-index="${targetIdx}"]`);
+        const match=await p.evaluate(idx=>{
+          const card=document.querySelector(`#framePeekTrack .peek-card[data-peek-index="${idx}"]`);
+          const peekCanvas=card.querySelector('canvas.peek-canvas');
+          const stageCanvas=document.getElementById('stage');
+          const ref=document.createElement('canvas');ref.width=peekCanvas.width;ref.height=peekCanvas.height;
+          const rg=ref.getContext('2d');rg.drawImage(stageCanvas,0,0,ref.width,ref.height);
+          const pg=peekCanvas.getContext('2d');
+          const pts=[[80,45],[40,30],[120,60],[80,80],[20,20]];
+          const peekPx=pts.map(([x,y])=>Array.from(pg.getImageData(x,y,1,1).data));
+          const stagePx=pts.map(([x,y])=>Array.from(rg.getImageData(x,y,1,1).data));
+          const pd=pg.getImageData(0,0,ref.width,ref.height).data,sd=rg.getImageData(0,0,ref.width,ref.height).data;
+          let diff=0;
+          for(let i=0;i<pd.length;i+=16)if(pd[i]!==sd[i]){diff++;break;}
+          return {
+            time:HMStudio.time,
+            scrubVal:+document.getElementById('scrub').value,
+            expectedT:+card.dataset.t,
+            selected:HMStudio.selectedIndex,
+            expectedAtom:+card.dataset.atomIndex,
+            pressed:card.getAttribute('aria-pressed'),
+            activeOut:document.getElementById('framePeekActive').dataset.peekIndex,
+            peekPx,
+            stagePx,
+            diff
+          };
+        },targetIdx);
+        assert.equal(match.time,match.expectedT,`peek ${targetIdx} seeks HMStudio.time`);
+        assert.ok(Math.abs(match.scrubVal-match.expectedT)<1e-4,`peek ${targetIdx} seeks #scrub`);
+        assert.equal(match.selected,match.expectedAtom,`peek ${targetIdx} selects atom`);
+        assert.equal(match.pressed,'true');
+        assert.equal(match.activeOut,String(targetIdx));
+        assert.deepEqual(match.peekPx,match.stagePx,`peek ${targetIdx} sample pixels match #stage`);
+        assert.equal(match.diff,0,`peek ${targetIdx} full frame matches #stage`);
+      }
+      await p.click('#framePeekTrack .peek-card[data-peek-index="5"]');
+      try{await p.locator('main').screenshot({path:path.join(capDir,'46-B-click-peek-seek-match.png')});}catch(_){}
+      // Download PNG locally (per-frame & active button & zip) and verify PNG pixels match #stage
+      const peekPngPath=await downloadFrom('downloadPeekPng','street-peek-05.png');
+      try{fs.copyFileSync(peekPngPath,path.join(capDir,'46-C-downloaded-peek.png'));}catch(_){}
+      const pngVerify=await p.evaluate(async src=>{
+        const im=new Image();im.src=src;await im.decode();
+        const c=document.createElement('canvas');c.width=im.width;c.height=im.height;
+        const g=c.getContext('2d');g.drawImage(im,0,0);
+        const sg=document.getElementById('stage').getContext('2d');
+        const pts=[[640,360],[320,240],[960,480],[640,640]];
+        return {
+          w:im.width,
+          h:im.height,
+          dlPx:pts.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data)),
+          stagePx:pts.map(([x,y])=>Array.from(sg.getImageData(x,y,1,1).data))
+        };
+      },'data:image/png;base64,'+fs.readFileSync(peekPngPath).toString('base64'));
+      assert.equal(pngVerify.w,1280);
+      assert.equal(pngVerify.h,720);
+      assert.deepEqual(pngVerify.dlPx,pngVerify.stagePx,'downloaded peek PNG pixels match #stage');
+      const peekZipPath=await downloadFrom('downloadPeekZip','street-old-city-frame-peeks.zip');
+      const zipBytes=fs.readFileSync(peekZipPath);
+      assert.ok(zipBytes.length>1000,'frame peeks zip is non-empty');
+      assert.equal(zipBytes[0],0x50);assert.equal(zipBytes[1],0x4b);
+      // Scrubbing keeps Frame Peek Strip highlight in sync
+      for(const [scrubT,expectPeekIdx,expectAtomIdx] of [[0.1,0,0],[0.45,1,0],[1.2,4,2],[1.65,5,2],[3.75,12,6],[4.85,15,7]]){
+        await p.fill('#scrub',String(scrubT));
+        await p.locator('#scrub').dispatchEvent('input');
+        const syncState=await p.evaluate(()=>({
+          activeCard:+document.querySelector('#framePeekTrack .peek-card[aria-pressed="true"]')?.dataset.peekIndex,
+          activeGroup:+document.querySelector('#framePeekTrack .peek-atom-group.active')?.dataset.atomIndex,
+          activePill:+document.getElementById('framePeekActive')?.dataset.peekIndex
+        }));
+        assert.equal(syncState.activeCard,expectPeekIdx,`scrub ${scrubT}s highlights peek ${expectPeekIdx}`);
+        assert.equal(syncState.activeGroup,expectAtomIdx,`scrub ${scrubT}s highlights atom ${expectAtomIdx}`);
+        assert.equal(syncState.activePill,expectPeekIdx,`scrub ${scrubT}s updates active pill ${expectPeekIdx}`);
+      }
+      try{await p.locator('.timeline-panel').screenshot({path:path.join(capDir,'46-D-strip-scrub-sync.png')});}catch(_){}
+      check('HM-HF-01-FRAME-PEEK: Frame Peek Strip renders mid (+0.0s) and +0.3s peeks, seeks on click with pixel parity, syncs on scrub, and downloads PNGs locally');
+    }
     await p.click('#exportOpen');
     const streetHtml=await downloadFrom('exportHtml','street-old-city.html');
     await p.getByRole('button',{name:'Close export',exact:true}).click();
