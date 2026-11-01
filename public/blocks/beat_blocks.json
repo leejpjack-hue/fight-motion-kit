@@ -1,0 +1,189 @@
+{
+  "id": "hm-hf-04-street",
+  "version": "hm-hf-04",
+  "theme": "STREET",
+  "apply": {
+    "writes": ["camera.preset", "fx_hooks", "caption", "caption_style", "motion.beat_class", "motion.grammar_role"],
+    "keeps": ["id", "duration_s", "timing_hold", "hero", "poses", "plates", "pose_mode", "label"],
+    "camera_note": "Replaces camera.preset and drops segments, chain, and u_range so the block preset is the shot. Keeps nudge and a non-default intensity.",
+    "undo": "Apply is a normal composer edit on this device. Undo restores the previous clip. No compose or registry HTTP."
+  },
+  "blocks": [
+    {
+      "id": "street_wide_open",
+      "label": "Wide open",
+      "theme": "STREET",
+      "description": "Alley wide open on a low rise.",
+      "camera": { "preset": "low_rise" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Wide", "role": "Wide" }
+    },
+    {
+      "id": "street_ots_intent_L",
+      "label": "OTS intent L",
+      "theme": "STREET",
+      "description": "Over-the-shoulder hold before the left fighter moves.",
+      "camera": { "preset": "ots_L_hold" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Intent", "role": "Intent" }
+    },
+    {
+      "id": "street_eye_intent",
+      "label": "Eye intent",
+      "theme": "STREET",
+      "description": "Eye-level hold that reads intent.",
+      "camera": { "preset": "eye_hold" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Intent", "role": "Intent" }
+    },
+    {
+      "id": "street_lateral_read",
+      "label": "Lateral read",
+      "theme": "STREET",
+      "description": "Lateral eye pass across the alley.",
+      "camera": { "preset": "eye_lateral" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Intent", "role": "Intent" }
+    },
+    {
+      "id": "street_whip_action",
+      "label": "Whip action",
+      "theme": "STREET",
+      "description": "Whip pan with speed lines on the exchange.",
+      "camera": { "preset": "whip_A_to_B" },
+      "fx_hooks": ["speed_lines"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_eye_push_action",
+      "label": "Eye push",
+      "theme": "STREET",
+      "description": "Push-in with a smear trail on the strike.",
+      "camera": { "preset": "eye_push" },
+      "fx_hooks": ["smear_trail"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_ecu_fist",
+      "label": "ECU fist",
+      "theme": "STREET",
+      "description": "Fist-to-lens impact with an orange hit and a 2-frame hold.",
+      "camera": { "preset": "ecu_fist_lens" },
+      "fx_hooks": ["hit_orange", "hitstop_2f"],
+      "caption": "HIT",
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_impact_white",
+      "label": "White impact",
+      "theme": "STREET",
+      "description": "Eye push with a white impact frame.",
+      "camera": { "preset": "eye_push" },
+      "fx_hooks": ["impact_white"],
+      "caption": "BANG",
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_face_whip",
+      "label": "Face whip",
+      "theme": "clash",
+      "description": "Face whip across the clash.",
+      "camera": { "preset": "face_whip" },
+      "fx_hooks": ["smear_trail"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_dive_clash",
+      "label": "Dive clash",
+      "theme": "clash",
+      "description": "High dive into the clash with speed lines.",
+      "camera": { "preset": "high_dive" },
+      "fx_hooks": ["speed_lines"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Action", "role": "Action" }
+    },
+    {
+      "id": "street_ecu_jitter",
+      "label": "ECU jitter",
+      "theme": "STREET",
+      "description": "ECU jitter and shake on the reaction.",
+      "camera": { "preset": "ecu_jitter" },
+      "fx_hooks": ["shake"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Reaction", "role": "Reaction" }
+    },
+    {
+      "id": "street_ots_react_R",
+      "label": "OTS react R",
+      "theme": "STREET",
+      "description": "Over-the-shoulder hold on the right fighter's reaction.",
+      "camera": { "preset": "ots_R_hold" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Reaction", "role": "Reaction" }
+    },
+    {
+      "id": "street_pull_aftermath",
+      "label": "Pull aftermath",
+      "theme": "aftermath",
+      "description": "Pull-out after the hit with an orange flash.",
+      "camera": { "preset": "pull_aftermath" },
+      "fx_hooks": ["flash_orange"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Reaction", "role": "Reaction" }
+    },
+    {
+      "id": "street_floor_hold",
+      "label": "Floor hold",
+      "theme": "aftermath",
+      "description": "Floor hold with a dust puff after the exchange.",
+      "camera": { "preset": "floor_hold" },
+      "fx_hooks": ["dust"],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Reaction", "role": "Reaction" }
+    },
+    {
+      "id": "street_wide_reestablish",
+      "label": "Wide re-establish",
+      "theme": "STREET",
+      "description": "Eye orbit that re-establishes the alley.",
+      "camera": { "preset": "eye_orbit" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Wide", "role": "Wide" }
+    },
+    {
+      "id": "street_rise_after",
+      "label": "Rise after",
+      "theme": "aftermath",
+      "description": "Rise off the floor back to a wide read.",
+      "camera": { "preset": "rise_from_floor" },
+      "fx_hooks": [],
+      "caption": null,
+      "caption_style": null,
+      "motion": { "beat_class": "Wide", "role": "Wide" }
+    }
+  ]
+}

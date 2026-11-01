@@ -6,7 +6,6 @@ require('../public/ui/catalog-query.js');
 const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const cameras = read('public/presets/camera_presets.json');
 const fx = read('public/presets/fx_presets.json');
-const emptyBlocks = read('public/presets/beat_blocks.json');
 
 function atom(extra) {
   return Object.assign({
@@ -23,7 +22,7 @@ function atom(extra) {
 }
 
 test('empty beat-block registry still indexes cam presets and FX hooks', () => {
-  for (const beatBlocks of [null, undefined, { blocks: [] }, emptyBlocks, { nope: true }]) {
+  for (const beatBlocks of [null, undefined, { blocks: [] }, { nope: true }]) {
     const index = HMCatalogQuery.buildIndex({ cameras, fx, beatBlocks, catalog: null });
     assert.equal(index.counts.block, 0);
     assert.ok(index.counts.cam >= 25, String(index.counts.cam));
@@ -156,6 +155,21 @@ test('catalog.beat_blocks is picked up when the presets file is empty', () => {
   });
   assert.equal(index.counts.block, 1);
   assert.equal(index.hits.find(hit => hit.kind === 'block').id, 'from_catalog');
+});
+
+test('tip beat registry at blocks/beat_blocks.json indexes STREET block ids', () => {
+  const doc = read('public/blocks/beat_blocks.json');
+  const index = HMCatalogQuery.buildIndex({ cameras, fx, beatBlocks: doc, catalog: { beat_blocks: { path: 'blocks/beat_blocks.json', theme: 'STREET', count: 16 } } });
+  assert.equal(index.counts.block, 16);
+  const whip = HMCatalogQuery.query(index, { q: 'street_whip_action', kind: 'block' });
+  assert.equal(whip.length, 1);
+  assert.equal(whip[0].payload.camera.preset, 'whip_A_to_B');
+  assert.deepEqual(whip[0].payload.fx_hooks, ['speed_lines']);
+  const fist = index.hits.find(hit => hit.id === 'street_ecu_fist');
+  assert.equal(fist.kind, 'block');
+  assert.equal(fist.payload.camera.preset, 'ecu_fist_lens');
+  assert.deepEqual(fist.payload.fx_hooks, ['hit_orange', 'hitstop_2f']);
+  assert.ok(fist.themes.includes('STREET'));
 });
 
 test('caption stub sets caption_style and leaves an existing caption', () => {

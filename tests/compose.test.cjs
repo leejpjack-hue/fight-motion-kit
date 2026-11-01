@@ -1347,6 +1347,89 @@ test('HM-HF-03-SHOW-JSON-LINT: structural + rhythm (#39) + Fix copy (HF-13) lint
   assert.ok(atom2Slot&&atom2Slot.slate&&atom2Slot.slate.includes('MISSING PLATE'));
 });
 
+test('HM-HF-04 beat blocks resolve on tip presets and apply keeps plates and timing',()=>{
+  const kitReg=JSON.parse(fs.readFileSync('kit/blocks/beat_blocks.json','utf8'));
+  const pubReg=JSON.parse(fs.readFileSync('public/blocks/beat_blocks.json','utf8'));
+  assert.deepEqual(pubReg,kitReg);
+  const blocks=kitReg.blocks;
+  assert.ok(blocks.length>=12&&blocks.length<=20,'block count '+blocks.length);
+  const kitCams=new Set(JSON.parse(fs.readFileSync('kit/presets/camera_presets.json','utf8')).presets.map(p=>p.id));
+  const pubCams=new Set(read('presets/camera_presets.json').presets.map(p=>p.id));
+  const kitHooks=JSON.parse(fs.readFileSync('kit/presets/fx_presets.json','utf8')).hooks;
+  const kitFx=new Set(kitHooks.map(h=>h.id));
+  const pubFx=new Set(read('presets/fx_presets.json').hooks.map(h=>h.id));
+  const ids=new Set();
+  const usedCams=new Set();
+  const usedFx=new Set();
+  for(const b of blocks){
+    assert.equal(ids.has(b.id),false,b.id);
+    ids.add(b.id);
+    assert.ok(b.label&&b.theme&&b.description,b.id);
+    assert.equal(kitCams.has(b.camera.preset),true,b.camera.preset);
+    assert.equal(pubCams.has(b.camera.preset),true,b.camera.preset);
+    usedCams.add(b.camera.preset);
+    assert.ok(Array.isArray(b.fx_hooks));
+    for(const fx of b.fx_hooks){
+      assert.equal(typeof fx,'string',b.id);
+      assert.equal(kitFx.has(fx),true,fx);
+      assert.equal(pubFx.has(fx),true,fx);
+      usedFx.add(fx);
+    }
+    const role=b.motion&&b.motion.role;
+    assert.ok(['Intent','Action','Reaction','Wide'].includes(role),b.id+' '+role);
+  }
+  for(const catPath of ['public/catalog.json','kit/catalog.json','src/catalog.json']){
+    const cat=JSON.parse(fs.readFileSync(catPath,'utf8'));
+    assert.equal(cat.beat_blocks.path,'blocks/beat_blocks.json');
+    assert.equal(cat.beat_blocks.theme,'STREET');
+    assert.equal(cat.beat_blocks.count,blocks.length);
+  }
+  const show=demo();
+  const before=JSON.parse(JSON.stringify(show.atoms[0]));
+  const other=JSON.parse(JSON.stringify(show.atoms[1]));
+  show.atoms[0].camera={preset:'static_hold',nudge:{x:4,y:0,s:0,r:0},intensity:1.25,segments:[{preset:'static_hold',dur_s:show.atoms[0].duration_s}],chain:{id:'c1',index:0,count:2}};
+  show.atoms[0].timing_hold={pack:'dialogue_film_slow',kind:'hold',soft_cam:false};
+  show.atoms[0].fx_hooks=[{type:'sparks',t_rel:0.2}];
+  const fist=blocks.find(b=>b.id==='street_ecu_fist');
+  const next=HMComposeClient.applyBeatBlock(show,[0],fist,{cameraIds:[...kitCams],fxPresets:{hooks:kitHooks}});
+  const a=next.atoms[0];
+  assert.equal(a.id,before.id);
+  assert.equal(a.duration_s,before.duration_s);
+  assert.deepEqual(a.hero,before.hero);
+  assert.equal(a.pose_mode,before.pose_mode);
+  assert.deepEqual(a.timing_hold,show.atoms[0].timing_hold);
+  assert.equal(a.camera.preset,'ecu_fist_lens');
+  assert.equal(a.camera.nudge.x,4);
+  assert.equal(a.camera.intensity,1.25);
+  assert.equal(a.camera.segments,undefined);
+  assert.equal(a.camera.chain,undefined);
+  assert.deepEqual(a.fx_hooks.map(h=>h.type),['hit_orange','hitstop_2f']);
+  assert.equal(a.caption,'HIT');
+  assert.equal(a.motion.beat_class,'Action');
+  assert.equal(a.motion.grammar_role,'Action');
+  assert.equal(a.motion.family,before.motion.family);
+  assert.deepEqual(next.atoms[1],other);
+  const whip=blocks.find(b=>b.id==='street_whip_action');
+  const whipped=HMComposeClient.applyBeatBlock(show,[0],whip,{cameraIds:[...pubCams],fxIds:[...pubFx],fxPresets:read('presets/fx_presets.json')});
+  assert.equal(whipped.atoms[0].fx_hooks[0].type,'speed_lines');
+  assert.equal(whipped.atoms[0].fx_hooks[0].t_rel,0);
+  assert.equal(whipped.atoms[0].fx_hooks[0].t_rel_end,1);
+  assert.equal(whipped.atoms[0].duration_s,before.duration_s);
+  const wide=blocks.find(b=>b.id==='street_wide_open');
+  const opened=HMComposeClient.applyBeatBlock(next,[0,2],wide,{cameraIds:[...kitCams],fxPresets:{hooks:kitHooks}});
+  assert.equal(opened.atoms[0].camera.preset,'low_rise');
+  assert.deepEqual(opened.atoms[0].fx_hooks,[]);
+  assert.equal(opened.atoms[0].caption,'HIT');
+  assert.equal(opened.atoms[0].duration_s,before.duration_s);
+  assert.deepEqual(opened.atoms[0].hero,before.hero);
+  assert.equal(opened.atoms[2].camera.preset,'low_rise');
+  assert.deepEqual(opened.atoms[1],other);
+  assert.throws(()=>HMComposeClient.applyBeatBlock(show,[],fist),/Select a clip/);
+  assert.throws(()=>HMComposeClient.applyBeatBlock(show,[0],{id:'nope',camera:{preset:'wide_establish'},fx_hooks:[]},{cameraIds:[...kitCams]}),/not on the tip kit/);
+  assert.ok(usedCams.size>=8);
+  assert.ok(usedFx.has('dust')&&usedFx.has('impact_white')&&usedFx.has('hit_orange'));
+});
+
 
 
 

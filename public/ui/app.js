@@ -23,6 +23,7 @@
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false, rangeAnchor = 0, rangeEnd = 0;
   let peekGroupCache = new Map(), lastPeekShowId = '', lastActivePeekSig = '';
+  let beatRegistry = { blocks: [] }, beatBlockId = '';
   let seekPreviewWarns = [], lastSeekPreviewEntry = 'init', lastSeekPreviewTime = 0;
   let catalogIndex = null, catalogKind = '', catalogFocusId = '', catalogHitsView = [];
   function updateSeekPreviewWarnBanner() {
@@ -395,7 +396,7 @@
     ['play','previous','next','restart','exportOpen','fitThree','fitFive','fitEight','fitTen','fightCamPack'].forEach(id=>{if($(id))$(id).disabled=!project.show.atoms.length||recording;});
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
-    ['duplicate','delete','trimMinus','trimPlus'].forEach(id=>{if($(id))$(id).disabled=!atom();});
+    ['duplicate','delete','trimMinus','trimPlus','applyBeatBlock'].forEach(id=>{if($(id))$(id).disabled=!atom();});
     applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
   }
   function showHasSidedCutouts(p) {
@@ -763,6 +764,7 @@
     }
     renderPathEditor();
     updateFxHonestyUI();
+    renderBeatBlockList();
   }
   function paintedFxHooks(hooks) {
     const list=hooks||[];
@@ -1185,6 +1187,75 @@
     });
     status(`Timeline fitted to exactly ${target.toFixed(2)} seconds`);
   }
+  function beatBlockList() {
+    if (Array.isArray(beatRegistry)) return beatRegistry;
+    if (Array.isArray(beatRegistry?.blocks)) return beatRegistry.blocks;
+    if (Array.isArray(beatRegistry?.beat_blocks)) return beatRegistry.beat_blocks;
+    return [];
+  }
+  async function loadBeatBlocks() {
+    let reg = null;
+    try {
+      const cat = await json('/catalog.json');
+      const ref = cat.beat_blocks;
+      if (Array.isArray(ref)) reg = { blocks: ref, path: null };
+      else if (ref && Array.isArray(ref.blocks) && !ref.path) reg = ref;
+      else {
+        const path = typeof ref === 'string' ? ref : (ref && ref.path);
+        if (path) reg = await json('/' + String(path).replace(/^\//, ''));
+      }
+    } catch (_) {}
+    if (!reg || !(Array.isArray(reg.blocks) ? reg.blocks.length : Array.isArray(reg) && reg.length)) {
+      try { reg = await json('/blocks/beat_blocks.json'); } catch (_) { reg = { blocks: [] }; }
+    }
+    beatRegistry = reg || { blocks: [] };
+    const blocks = beatBlockList();
+    if (!beatBlockId || !blocks.some(b => b.id === beatBlockId)) beatBlockId = blocks[0]?.id || '';
+    renderBeatBlockList();
+  }
+  function renderBeatBlockList() {
+    const box = $('beatBlockList');
+    if (!box) return;
+    const blocks = beatBlockList();
+    const count = $('beatBlockCount');
+    if (count) count.textContent = `${blocks.length} STREET`;
+    box.replaceChildren();
+    box.dataset.count = String(blocks.length);
+    for (const b of blocks) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'beat-block' + (b.id === beatBlockId ? ' active' : '');
+      btn.dataset.blockId = b.id;
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-selected', String(b.id === beatBlockId));
+      const role = b.motion?.role || b.motion?.beat_class || '';
+      const fx = (b.fx_hooks || []).join(', ');
+      const cam = b.camera?.preset || '';
+      btn.innerHTML = `<strong>${esc(b.label || b.id)}</strong><small>${esc([b.theme, role, cam].filter(Boolean).join(' · '))}${fx ? ' · ' + esc(fx) : ''}</small><span>${esc(b.description || '')}</span>`;
+      btn.onclick = () => { beatBlockId = b.id; renderBeatBlockList(); };
+      box.append(btn);
+    }
+  }
+  function applySelectedBeatBlock() {
+    const block = beatBlockList().find(b => b.id === beatBlockId);
+    if (!block) throw new Error('Choose a beat block.');
+    const indices = selectedRun();
+    if (!indices.length) throw new Error('Select a clip before applying a beat block.');
+    const cameraIds = (presets?.presets || []).map(p => p.id);
+    const fxIds = (effects?.hooks || []).map(h => h.id);
+    edit(() => {
+      const next = HMComposeClient.applyBeatBlock(project.show, indices, block, {
+        cameraIds,
+        fxIds,
+        fxPresets: effects,
+      });
+      project.show.atoms = next.atoms;
+      HMComposeClient.reflowAllCamChains(project.show.atoms);
+    });
+    const names = indices.map(i => project.show.atoms[i]?.label || project.show.atoms[i]?.id || String(i + 1));
+    const fx = (atom()?.fx_hooks || []).map(h => h.type || h).join(', ') || 'none';
+    status(`Applied ${block.label} · ${atom()?.camera?.preset || ''} · ${fx} · ${names.join(', ')}`);
+  }
   function applyFightCamPack() {
     if(!project?.show?.atoms?.length)return;
     const packIds = fightPacks?.packs?.[0]?.presets || DEFAULT_FIGHT_PACK;
@@ -1382,6 +1453,23 @@
       status(result.message, true);
       return;
     }
+    if (hit.kind === 'block' && window.HMComposeClient && HMComposeClient.applyBeatBlock) {
+      let message = '';
+      edit(() => {
+        const next = HMComposeClient.applyBeatBlock(project.show, [selected], hit.payload, {
+          cameraIds: (presets?.presets || []).map(p => p.id),
+          fxIds: (effects?.hooks || []).map(h => h.id),
+          fxPresets: effects,
+        });
+        project.show.atoms = next.atoms;
+        HMComposeClient.reflowAllCamChains(project.show.atoms);
+        const fx = (atom().fx_hooks || []).map(h => h.type || h).join(', ') || 'none';
+        message = 'Applied block ' + hit.id + ' · cam ' + (atom().camera?.preset || '') + ' · fx ' + fx + '.';
+      });
+      if (note) { note.dataset.bad = 'false'; note.textContent = message; }
+      status(message, false);
+      return;
+    }
     let result;
     edit(() => { result = HMCatalogQuery.applyHit(atom(), hit); });
     if (note) { note.dataset.bad = 'false'; note.textContent = result.message; }
@@ -1394,14 +1482,15 @@
       json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
       json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS))
     ]);
-    let beatDoc = { blocks: [] };
-    let catalogDoc = null;
-    try { beatDoc = await json('/presets/beat_blocks.json'); } catch (_) { beatDoc = { blocks: [] }; }
-    try { catalogDoc = await json('/catalog.json'); } catch (_) { catalogDoc = null; }
-    catalogIndex = HMCatalogQuery.buildIndex({ cameras: presets, fx: effects, beatBlocks: beatDoc, catalog: catalogDoc });
-    renderCatalogQuery();
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
+    await loadBeatBlocks();
+    catalogIndex = HMCatalogQuery.buildIndex({
+      cameras: presets,
+      fx: effects,
+      beatBlocks: { blocks: beatBlockList() }
+    });
+    renderCatalogQuery();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=new URLSearchParams(location.search).get('show');
     const goldDefault=GOLD.includes(sid)?sid:DEMO;
@@ -1458,6 +1547,7 @@
     }finally{e.target.value='';}
   });
   on('fightCamPack',applyFightCamPack);
+  on('applyBeatBlock',applySelectedBeatBlock);
   on('applyTimingPack',applySelectedTimingPack);
   $('timingPack')?.addEventListener('change',()=>refreshTimingPackHint());
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
@@ -1934,6 +2024,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
