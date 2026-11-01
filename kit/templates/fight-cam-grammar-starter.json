@@ -1,0 +1,7 @@
+{
+ "id": "fight-cam-grammar-starter",
+ "kind": "show_template",
+ "label": "Fight cam grammar starter",
+ "description": "Fight Camera Grammar sample: three Intent \u2192 Action \u2192 Reaction triplets plus a Wide re-establish. Existing camera presets only.",
+ "seed_show": "shows/fight-cam-grammar-starter.json"
+}

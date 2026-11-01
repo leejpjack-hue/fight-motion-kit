@@ -9,8 +9,9 @@
   const ORIGINAL = 'daiyu-wang-codex-import';
   const CONTINUATION = 'daiyu-wang-ten-seconds';
   const STREET = 'street-old-city';
+  const GRAMMAR = 'fight-cam-grammar-starter';
   const GOLD = [DEMO, ORIGINAL, CONTINUATION];
-  const BUILTIN = [...GOLD, STREET];
+  const BUILTIN = [...GOLD, STREET, GRAMMAR];
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_TIMING_PACKS = {version:'p0',id:'street_timing',label:'Street timing',packs:[
     {id:'dialogue_film_slow',label:'Dialogue / film-slow hold',kind:'hold',duration_floor_s:1.5,soft_cam:{preset:'slow_push',intensity:0.45}},
@@ -1284,11 +1285,40 @@
     await loadB(defaultGold,'gold',goldDefault);
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
     else if(sid===STREET){await load(await builtIn(STREET));}
+    else if(sid===GRAMMAR){await load(await builtIn(GRAMMAR));}
     else if(sid&&!GOLD.includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
     else await load(copy(defaultGold));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
   on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));on('loadStreet',()=>openProject(builtIn(STREET)));
+  async function openTemplates(){
+    const dlg=$('templateDialog'), list=$('templateList'), note=$('templateStatus');
+    list.replaceChildren();
+    note.textContent='Loading templates…';
+    dlg.showModal();
+    let tpls=[];
+    try{
+      const cat=await json('/catalog.json');
+      tpls=(cat.templates||[]).filter(t=>t&&(t.id||t.seed_show));
+    }catch(e){
+      tpls=[{id:GRAMMAR,label:'Fight cam grammar starter',description:'Fight Camera Grammar sample flow.',seed_show:'shows/'+GRAMMAR+'.json',kind:'show_template'}];
+    }
+    if(!tpls.length){note.textContent='No templates in the catalog.';return;}
+    note.textContent='Pick a template to load its seed show. No server setup.';
+    for(const t of tpls){
+      const b=document.createElement('button');
+      b.type='button';
+      const seedId=String(t.seed_show||t.id||'').replace(/^shows\//,'').replace(/\.json$/,'');
+      b.innerHTML=`<strong>${esc(t.label||t.id)} <span>↗</span></strong><small>${esc(t.description||t.seed_show||'')}</small>`;
+      b.dataset.templateId=t.id||seedId;
+      b.onclick=safe(async()=>{
+        dlg.close();
+        await openProject(builtIn(seedId));
+      });
+      list.append(b);
+    }
+  }
+  on('openTemplates',()=>openTemplates());
   on('abToggle',()=>toggleAb());
   $('abSource')?.addEventListener('change',safe(e=>selectBSource(e.target.value)));
   on('abSnapshot',()=>snapshotAToB());

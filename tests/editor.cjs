@@ -2084,6 +2084,48 @@ print(doc['show_id'])
     await p.click('#loadDemo');await p.waitForFunction(()=>HMStudio.project.show.show_id==='daiyu-wang-five-seconds');await settle();
     await p.setViewportSize({width:390,height:844});await p.screenshot({path:path.join(out,'mobile.png'),fullPage:true});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.click('#play');await p.waitForTimeout(100);await p.click('#play');check('mobile layout has no horizontal overflow and playback works');
     const player=await context.newPage();await player.goto(base+'/player/?show=daiyu-wang-five-seconds');await player.evaluate(()=>window.ready);await player.click('#play');await player.waitForTimeout(150);await player.click('#play');const t=await player.locator('#time').textContent();await player.waitForTimeout(150);assert.equal(await player.locator('#time').textContent(),t);await player.close();check('standalone player play/pause is a real transport');
+    const grammarPage=await context.newPage();
+    const grammarErrors=[], grammarFailed=[];
+    grammarPage.on('pageerror',e=>grammarErrors.push(e.message));
+    grammarPage.on('response',r=>{if(r.status()>=400)grammarFailed.push(r.status()+' '+r.url());});
+    await grammarPage.goto(base+'/ui/');
+    await grammarPage.evaluate(()=>window.ready);
+    assert.equal(await grammarPage.locator('#openTemplates').innerText(),'Templates');
+    await grammarPage.click('#openTemplates');
+    await grammarPage.waitForSelector('#templateDialog[open]');
+    const grammarBtn=grammarPage.locator('#templateList button[data-template-id="fight-cam-grammar-starter"]');
+    assert.match(await grammarBtn.innerText(),/Fight cam grammar starter/);
+    await grammarPage.screenshot({path:path.join(out,'grammar-template-picker.png')});
+    const setupHits=[];
+    grammarPage.on('request',req=>{if(/\/api\/setup/.test(req.url()))setupHits.push(req.url());});
+    await grammarBtn.click();
+    await grammarPage.waitForFunction(()=>HMStudio.project&&HMStudio.project.show.show_id==='fight-cam-grammar-starter'&&HMStudio.duration===11&&HMStudio.composed&&HMStudio.composed.ok!==false);
+    const grammarState=await grammarPage.evaluate(()=>({
+      id:HMStudio.project.show.show_id,
+      duration:HMStudio.duration,
+      labels:HMStudio.project.show.atoms.map(a=>a.label),
+      roles:HMStudio.project.show.atoms.map(a=>a.grammar_role),
+      presets:HMStudio.project.show.atoms.map(a=>a.camera.preset),
+      plates:HMStudio.composed.stats.plates
+    }));
+    assert.equal(grammarState.duration,11);
+    assert.equal(grammarState.plates,22);
+    assert.deepEqual(grammarState.roles,['Wide','Intent','Action','Reaction','Intent','Action','Reaction','Intent','Action','Reaction','Wide']);
+    assert.equal(grammarState.presets.at(-1),'eye_orbit');
+    assert.equal(grammarState.presets[0],'low_rise');
+    assert.deepEqual(setupHits,[]);
+    assert.match(await grammarPage.locator('#timelineCount').innerText(),/11 clips/);
+    assert.match(await grammarPage.locator('#status').innerText(),/stays in your browser/);
+    await grammarPage.screenshot({path:path.join(out,'grammar-timeline.png'),fullPage:true});
+    const grammarDirect=await context.newPage();
+    await grammarDirect.goto(base+'/ui/?show=fight-cam-grammar-starter');
+    await grammarDirect.evaluate(()=>window.ready);
+    await grammarDirect.waitForFunction(()=>HMStudio.project.show.show_id==='fight-cam-grammar-starter'&&HMStudio.duration===11);
+    await grammarDirect.close();
+    await grammarPage.close();
+    assert.deepEqual(grammarErrors,[]);
+    assert.deepEqual(grammarFailed,[]);
+    check('Templates picker loads fight-cam grammar starter without /api/setup');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({checks,errors,failed},null,2));
   } finally {await browser.close();srv?.close();}
