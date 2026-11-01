@@ -24,6 +24,7 @@
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false, rangeAnchor = 0, rangeEnd = 0;
   let peekGroupCache = new Map(), lastPeekShowId = '', lastActivePeekSig = '';
   let seekPreviewWarns = [], lastSeekPreviewEntry = 'init', lastSeekPreviewTime = 0;
+  let catalogIndex = null, catalogKind = '', catalogFocusId = '', catalogHitsView = [];
   function updateSeekPreviewWarnBanner() {
     const banner = $('seekPreviewWarnBanner'), text = $('seekPreviewWarnText');
     if (!banner) return;
@@ -738,6 +739,14 @@
     if($('camEase')&&document.activeElement!==$('camEase'))$('camEase').value=HMComposeClient.CAM_EASES.includes(ease)?ease:'';
     if($('camChainHint'))$('camChainHint').textContent=chain?'Chained move. The next clip starts at this clip\'s end. Snap zoom punches late along the chain instead of drifting on every cut.':'Shift-click a run of clips, then chain them. The next clip starts where this one ends. Snap zoom punches in late instead of a slow linear drift.';
     $('caption').value=a.caption||'';
+    if($('captionStyleNote')){
+      $('captionStyleNote').hidden=!a.caption_style;
+      $('captionStyleNote').textContent=a.caption_style?('Style · '+a.caption_style):'';
+    }
+    if($('fxHookReadout')){
+      const ids=(a.fx_hooks||[]).map(h=>typeof h==='string'?h:(h&&h.type)||'').filter(Boolean);
+      $('fxHookReadout').textContent=ids.length?('fx_hooks: '+ids.join(', ')):'fx_hooks: none';
+    }
     refreshTimingPackHint();
     const effect=a.fx_hooks?.[0]?.type||'none';
     document.querySelectorAll('[data-effect]').forEach(b=>{b.classList.toggle('active',b.dataset.effect===effect);b.setAttribute('aria-pressed',String(b.dataset.effect===effect));});
@@ -1269,6 +1278,115 @@
       sel.append(group);
     }
   }
+  function catalogHits() {
+    if (!catalogIndex || !window.HMCatalogQuery) return [];
+    const theme = $('catalogTheme') ? $('catalogTheme').value : '';
+    const q = $('catalogQueryInput') ? $('catalogQueryInput').value : '';
+    return HMCatalogQuery.query(catalogIndex, { q, kind: catalogKind, theme });
+  }
+  function renderCatalogQuery() {
+    const list = $('catalogResults');
+    if (!list || !window.HMCatalogQuery) return;
+    const blockBtn = document.querySelector('#catalogKinds [data-catalog-kind="block"]');
+    if (blockBtn) blockBtn.hidden = !(catalogIndex && catalogIndex.counts.block);
+    if (catalogKind === 'block' && blockBtn && blockBtn.hidden) catalogKind = '';
+    document.querySelectorAll('#catalogKinds [data-catalog-kind]').forEach(btn => {
+      const on = (btn.dataset.catalogKind || '') === catalogKind;
+      btn.setAttribute('aria-pressed', String(on));
+    });
+    const themeSel = $('catalogTheme');
+    if (themeSel && catalogIndex) {
+      const current = themeSel.value;
+      const themes = catalogIndex.themes || [];
+      themeSel.replaceChildren();
+      const all = document.createElement('option');
+      all.value = '';
+      all.textContent = 'All themes';
+      themeSel.append(all);
+      for (const theme of themes) {
+        const opt = document.createElement('option');
+        opt.value = theme;
+        opt.textContent = theme;
+        themeSel.append(opt);
+      }
+      themeSel.value = themes.includes(current) ? current : '';
+    }
+    const hits = catalogHits();
+    catalogHitsView = hits;
+    list.replaceChildren();
+    const shown = hits.slice(0, 60);
+    if (!shown.length) {
+      const empty = document.createElement('li');
+      empty.className = 'catalog-empty';
+      empty.textContent = catalogKind === 'block'
+        ? 'No blocks in this registry. Cam and FX still apply.'
+        : 'No matches.';
+      list.append(empty);
+    }
+    if (catalogFocusId && !shown.some(hit => hit.kind + ':' + hit.id === catalogFocusId)) catalogFocusId = shown[0] ? shown[0].kind + ':' + shown[0].id : '';
+    if (!catalogFocusId && shown[0]) catalogFocusId = shown[0].kind + ':' + shown[0].id;
+    shown.forEach(hit => {
+      const key = hit.kind + ':' + hit.id;
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'catalog-hit';
+      btn.setAttribute('role', 'option');
+      btn.dataset.catalogKey = key;
+      btn.setAttribute('aria-selected', String(key === catalogFocusId));
+      btn.title = hit.description || hit.label;
+      const kind = document.createElement('span');
+      kind.className = 'catalog-kind';
+      kind.textContent = hit.kind;
+      const idLine = document.createElement('span');
+      idLine.className = 'catalog-hit-id';
+      idLine.textContent = hit.label && hit.label !== hit.id.replace(/_/g, ' ') ? hit.label + ' · ' + hit.id : hit.id;
+      const meta = document.createElement('span');
+      meta.className = 'catalog-hit-meta';
+      meta.textContent = hit.meta || '';
+      btn.append(kind, idLine, meta);
+      btn.onclick = () => {
+        catalogFocusId = key;
+        document.querySelectorAll('#catalogResults [data-catalog-key]').forEach(el => {
+          el.setAttribute('aria-selected', String(el.dataset.catalogKey === catalogFocusId));
+        });
+      };
+      btn.ondblclick = safe(() => { catalogFocusId = key; applyCatalogSelection(); });
+      li.append(btn);
+      list.append(li);
+    });
+    const meta = $('catalogQueryMeta');
+    if (meta && catalogIndex) {
+      const counts = catalogIndex.counts;
+      meta.textContent = counts.cam + ' cam · ' + counts.fx + ' fx' + (counts.block ? ' · ' + counts.block + ' block' : '');
+    }
+    if (hits.length > shown.length) {
+      const more = document.createElement('li');
+      more.className = 'catalog-empty';
+      more.textContent = 'Showing ' + shown.length + ' of ' + hits.length + '. Type to narrow.';
+      list.append(more);
+    }
+  }
+  function applyCatalogSelection() {
+    const hit = catalogHitsView.find(item => item.kind + ':' + item.id === catalogFocusId) || catalogHitsView[0];
+    const note = $('catalogQueryStatus');
+    if (!hit) {
+      if (note) { note.dataset.bad = 'true'; note.textContent = 'No catalog hit to apply.'; }
+      status('No catalog hit to apply.', true);
+      return;
+    }
+    const target = atom();
+    if (!target) {
+      const result = HMCatalogQuery.applyHit(null, hit);
+      if (note) { note.dataset.bad = 'true'; note.textContent = result.message; }
+      status(result.message, true);
+      return;
+    }
+    let result;
+    edit(() => { result = HMCatalogQuery.applyHit(atom(), hit); });
+    if (note) { note.dataset.bad = 'false'; note.textContent = result.message; }
+    status(result.message, false);
+  }
   async function boot() {
     [presets,effects,fightPacks,timingPacks]=await Promise.all([
       json('/presets/camera_presets.json'),
@@ -1276,6 +1394,12 @@
       json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
       json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS))
     ]);
+    let beatDoc = { blocks: [] };
+    let catalogDoc = null;
+    try { beatDoc = await json('/presets/beat_blocks.json'); } catch (_) { beatDoc = { blocks: [] }; }
+    try { catalogDoc = await json('/catalog.json'); } catch (_) { catalogDoc = null; }
+    catalogIndex = HMCatalogQuery.buildIndex({ cameras: presets, fx: effects, beatBlocks: beatDoc, catalog: catalogDoc });
+    renderCatalogQuery();
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
@@ -1489,6 +1613,31 @@
     });
     status(ease==='snap'?'Snap zoom on the whole chain':ease?'Easing applied to the chain':'Chain uses each preset curve');
   });
+  if ($('catalogQueryInput')) {
+    $('catalogQueryInput').addEventListener('input', () => renderCatalogQuery());
+    $('catalogQueryInput').addEventListener('keydown', e => {
+      const shown = [...document.querySelectorAll('#catalogResults [data-catalog-key]')];
+      const keys = shown.map(btn => btn.dataset.catalogKey);
+      const at = Math.max(0, keys.indexOf(catalogFocusId));
+      if (e.key === 'ArrowDown' && keys.length) {
+        e.preventDefault();
+        catalogFocusId = keys[Math.min(keys.length - 1, at + 1)];
+        renderCatalogQuery();
+      } else if (e.key === 'ArrowUp' && keys.length) {
+        e.preventDefault();
+        catalogFocusId = keys[Math.max(0, at - 1)];
+        renderCatalogQuery();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        applyCatalogSelection();
+      }
+    });
+  }
+  if ($('catalogTheme')) $('catalogTheme').onchange = () => renderCatalogQuery();
+  document.querySelectorAll('#catalogKinds [data-catalog-kind]').forEach(btn => {
+    btn.onclick = () => { catalogKind = btn.dataset.catalogKind || ''; renderCatalogQuery(); };
+  });
+  on('catalogApply', () => applyCatalogSelection());
   on('impactPunch',()=>{edit(()=>{
     const a=atom();if(!a)return;
     delete a.timing_hold;
@@ -1785,6 +1934,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

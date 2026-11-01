@@ -1,0 +1,5 @@
+{
+  "version": "empty",
+  "source": "HM-HF-05 reads this file when it is present. HM-HF-04 fills blocks. An empty list is valid and cam/FX query does not depend on it.",
+  "blocks": []
+}
