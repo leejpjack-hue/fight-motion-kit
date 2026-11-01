@@ -40,7 +40,8 @@ async function ensureServer(urlStr){
   const check=label=>{checks.push(label);console.log('PASS '+label);};
   const click=async id=>{await p.click('#'+id);await settle();};
   const change=async(id,value)=>{await p.fill('#'+id,String(value));await p.locator('#'+id).dispatchEvent('change');await settle();};
-  async function downloadFrom(id,name){const event=p.waitForEvent('download');await p.click('#'+id);const d=await event;assert.equal(await d.failure(),null);const target=path.join(out,name||d.suggestedFilename());await d.saveAs(target);return target;}
+  // Peek zip can exceed the 30s default after the long session. A covered control still fails on the shorter click timeout.
+  async function downloadFrom(id,name){const event=p.waitForEvent('download',{timeout:90000});await p.click('#'+id,{timeout:15000});const d=await event;assert.equal(await d.failure(),null);const target=path.join(out,name||d.suggestedFilename());await d.saveAs(target);return target;}
   try{
     await p.goto(base+'/ui/');await p.evaluate(()=>window.ready);
     assert.equal((await state()).duration,5);assert.equal(await p.locator('.timeline-clip').count(),8);
@@ -2126,6 +2127,50 @@ print(doc['show_id'])
     assert.deepEqual(grammarErrors,[]);
     assert.deepEqual(grammarFailed,[]);
     check('Templates picker loads fight-cam grammar starter without /api/setup');
+    const beatPage=await context.newPage();
+    const beatApi=[];
+    const beatHits=[];
+    beatPage.on('request',req=>{if(/\/api\//.test(req.url()))beatApi.push(req.url());});
+    beatPage.on('response',res=>{if(/beat_blocks\.json/.test(res.url()))beatHits.push(res.status()+' '+res.url());});
+    await beatPage.goto(base+'/ui/?show=daiyu-wang-five-seconds');
+    await beatPage.evaluate(()=>window.ready);
+    await beatPage.waitForFunction(()=>HMStudio.beatBlocks.length>=12);
+    const beatCount=await beatPage.locator('#beatBlockList .beat-block').count();
+    assert.ok(beatCount>=12&&beatCount<=20,'registry count '+beatCount);
+    assert.equal(await beatPage.locator('#beatBlockCount').innerText(),beatCount+' STREET');
+    assert.equal(await beatPage.locator('#beatBlockList').getAttribute('data-count'),String(beatCount));
+    await beatPage.locator('#beatBlockList').screenshot({path:path.join(out,'hm-hf-04-registry.png')});
+    const beforeBeat=await beatPage.evaluate(()=>{
+      const a=HMStudio.project.show.atoms[0];
+      const b=HMStudio.project.show.atoms[1];
+      return {id:a.id,duration:a.duration_s,plates:a.hero.plates.slice(),preset:a.camera.preset,fx:(a.fx_hooks||[]).map(h=>h.type||h),otherPreset:b.camera.preset,otherFx:(b.fx_hooks||[]).map(h=>h.type||h)};
+    });
+    await beatPage.click('#beatBlockList [data-block-id="street_ecu_fist"]');
+    await beatPage.click('#applyBeatBlock');
+    await beatPage.waitForFunction(()=>HMStudio.project.show.atoms[0].camera.preset==='ecu_fist_lens'&&!HMStudio.loading);
+    await beatPage.evaluate(()=>HMStudio.compile());
+    const afterBeat=await beatPage.evaluate(()=>{
+      const a=HMStudio.project.show.atoms[0];
+      const b=HMStudio.project.show.atoms[1];
+      return {id:a.id,duration:a.duration_s,plates:a.hero.plates.slice(),preset:a.camera.preset,fx:a.fx_hooks.map(h=>h.type||h),caption:a.caption||'',role:a.motion.beat_class,camSelect:document.querySelector('#camera').value,otherPreset:b.camera.preset,otherFx:(b.fx_hooks||[]).map(h=>h.type||h)};
+    });
+    assert.equal(afterBeat.preset,'ecu_fist_lens');
+    assert.equal(afterBeat.camSelect,'ecu_fist_lens');
+    assert.deepEqual(afterBeat.fx,['hit_orange','hitstop_2f']);
+    assert.equal(afterBeat.caption,'HIT');
+    assert.equal(afterBeat.role,'Action');
+    assert.equal(afterBeat.id,beforeBeat.id);
+    assert.equal(afterBeat.duration,beforeBeat.duration);
+    assert.deepEqual(afterBeat.plates,beforeBeat.plates);
+    assert.equal(afterBeat.otherPreset,beforeBeat.otherPreset);
+    assert.deepEqual(afterBeat.otherFx,beforeBeat.otherFx);
+    await beatPage.locator('#beatBlockGroup').screenshot({path:path.join(out,'hm-hf-04-apply.png')});
+    await beatPage.click('#undo');
+    await beatPage.waitForFunction(preset=>HMStudio.project.show.atoms[0].camera.preset===preset,beforeBeat.preset);
+    assert.deepEqual(beatApi.filter(u=>/beat|registry/i.test(u)),[]);
+    assert.ok(beatHits.some(h=>h.startsWith('200 ')),beatHits.join(' | '));
+    await beatPage.close();
+    check('HM-HF-04 beat block registry lists STREET blocks and Apply updates cam and fx_hooks');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({checks,errors,failed},null,2));
   } finally {await browser.close();srv?.close();}

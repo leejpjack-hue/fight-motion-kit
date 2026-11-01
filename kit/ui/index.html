@@ -1752,6 +1752,14 @@ function renderInsp(){
  const cam = a.camera || {};
  const nudge = (cam.nudge && typeof cam.nudge==='object') ? cam.nudge : {};
  const presetOpts = (CAT.presets||[]).map(p=>`<option value="${p.id}" ${cam.preset===p.id?'selected':''}>${p.id}</option>`).join('');
+ const beatList=(CAT&&CAT.beat_blocks&&Array.isArray(CAT.beat_blocks.blocks))?CAT.beat_blocks.blocks:[];
+ const beatBlock=`<div class="bfSec">Beat blocks</div>
+  <div style="font:10px monospace;color:var(--dim)">${beatList.length} STREET · cam + FX on the selected atom. Plates and timing stay.</div>
+  <div id="beatBlockList" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto;margin:4px 0">${beatList.map(b=>{
+    const role=(b.motion&&(b.motion.role||b.motion.beat_class))||'';
+    const fx=(b.fx_hooks||[]).join(', ');
+    return `<button type="button" class="small" data-beat-block="${b.id}" style="text-align:left;white-space:normal"><b>${b.label||b.id}</b> · ${b.theme||'STREET'} · ${role}<br><span style="color:var(--dim)">${b.description||''} · ${b.camera&&b.camera.preset||''}${fx?' · '+fx:''}</span></button>`;
+  }).join('')||'<span class="tag">registry not loaded</span>'}</div>`;
  const camBlock=`<div style="font:10px monospace;color:var(--dim);margin-top:4px">camera (live preview)</div>
   <label>preset<select id="iCamPreset">${presetOpts}</select></label>
   <div class="camNudge">
@@ -1765,7 +1773,7 @@ function renderInsp(){
  const hooks=new Set(hookIds.filter(Boolean));
  const fxChips=`<div style="font:10px monospace;color:var(--dim)">fx_hooks (chips write string ids; JSON keeps full objects)</div><div class="chiprow" id="fxHookChips">${FX_HOOK_CHIPS.map(h=>`<button type="button" class="chip fx ${hooks.has(h)?'on':''}" data-fxh="${h}">${h}</button>`).join('')}</div>`;
  const swapHint=isPlatePackShow()?`<div class="bfSec">Swap plate</div><button type="button" class="small" id="inspSwapBtn" style="width:100%">Swap plate with library source</button>`:'';
- box.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px"><div class="bfSec">Plates</div>${quick}<div class="bfSec">Timing</div>${durBlock}<div class="bfSec">Cam</div>${camBlock}${swapHint}<label>mode<select id="iMode"><option ${a.pose_mode==='library'?'selected':''}>library</option><option ${a.pose_mode==='hero'?'selected':''}>hero</option></select></label>
+ box.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px"><div class="bfSec">Plates</div>${quick}${beatBlock}<div class="bfSec">Timing</div>${durBlock}<div class="bfSec">Cam</div>${camBlock}${swapHint}<label>mode<select id="iMode"><option ${a.pose_mode==='library'?'selected':''}>library</option><option ${a.pose_mode==='hero'?'selected':''}>hero</option></select></label>
   ${ovBlock}${fxChips}
   <textarea id="iJson">${JSON.stringify(a,null,1)}</textarea><button id="iApply">apply JSON</button></div>`;
  box.querySelectorAll('select[data-side]').forEach(s=>s.onchange=()=>{a.poses[s.dataset.side]=s.value; pushHist(); markDirty(); renderTL(); paintPreview()});
@@ -1798,6 +1806,23 @@ function renderInsp(){
  if($('durSplit')) $('durSplit').onclick=()=>splitSelectedAtom();
  if($('durMerge')) $('durMerge').onclick=()=>mergeWithNext();
  box.querySelectorAll('[data-swap-pi]').forEach(b=>b.onclick=()=>openPlatePicker(SEL, +b.dataset.swapPi));
+ box.querySelectorAll('[data-beat-block]').forEach(btn=>btn.onclick=()=>{
+   const blocks=(CAT.beat_blocks&&CAT.beat_blocks.blocks)||[];
+   const block=blocks.find(b=>b.id===btn.dataset.beatBlock);
+   if(!block){status('beat block missing',true);return}
+   const idxs=SEL_SET.size?[...SEL_SET].sort((a,b)=>a-b):(SEL>=0?[SEL]:[]);
+   if(!idxs.length){status('select a timeline row',true);return}
+   const camIds=Object.keys(PRESETS||{});
+   const fxList=Array.isArray(CAT.fx)?CAT.fx:[];
+   idxs.forEach(i=>{
+     if(!SHOW.atoms[i]) return;
+     const applied=HMComposeClient.applyBeatBlock({atoms:[SHOW.atoms[i]]},[0],block,{cameraIds:camIds,fxPresets:fxList});
+     SHOW.atoms[i]=applied.atoms[0];
+   });
+   pushHist(); markDirty(); renderInsp(); renderTL(); paintPreview();
+   const fxNames=(block.fx_hooks||[]).join(', ')||'none';
+   status('Applied '+block.label+' · cam '+block.camera.preset+' · FX '+fxNames);
+ });
  if($('iCamPreset')) $('iCamPreset').onchange=()=>{
    a.camera=a.camera||{}; a.camera.preset=$('iCamPreset').value;
    pushHist(); markDirty(); renderTL(); paintPreview();
@@ -2643,6 +2668,27 @@ function mergeLocalShowsIntoCatalog(){
   });
 }
 
+async function attachBeatBlocks(){
+  if(!CAT) return;
+  const ref=CAT.beat_blocks;
+  let path='blocks/beat_blocks.json';
+  if(typeof ref==='string' && ref) path=ref;
+  else if(ref && typeof ref==='object' && ref.path) path=ref.path;
+  const urls=['/'+path.replace(/^\//,''), '../'+path.replace(/^\//,''), './'+path.replace(/^\//,'')];
+  for(const u of urls){
+    try{
+      const r=await fetch(u,{cache:'no-store'});
+      if(!r.ok) continue;
+      const doc=await r.json();
+      const blocks=Array.isArray(doc)?doc:(doc.blocks||[]);
+      if(!blocks.length) continue;
+      if(!CAT.beat_blocks || typeof CAT.beat_blocks!=='object' || Array.isArray(CAT.beat_blocks)) CAT.beat_blocks={path:path};
+      CAT.beat_blocks.blocks=blocks;
+      CAT.beat_blocks.loaded=true;
+      return;
+    }catch(e){}
+  }
+}
 async function loadCatalog(keep){
  // HM-COMPOSE-07: static catalog first — product path never requires /api/*
  apiOK=false;
@@ -2688,6 +2734,7 @@ async function loadCatalog(keep){
  }
  FE_ONLY=true;
  if(CAT.cloud) FE_ONLY=true;
+ await attachBeatBlocks();
  mergeLocalShowsIntoCatalog();
  PRESETS=Object.fromEntries((CAT.presets||[]).map(p=>[p.id,p]));
  // HM-COMPOSE-03: always refresh example-shows picker (even on keep) so Save as ids appear

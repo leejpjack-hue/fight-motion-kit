@@ -571,10 +571,96 @@
     };
   }
 
+  function idSet(value) {
+    if (!value) return null;
+    if (value instanceof Set) return value;
+    if (Array.isArray(value)) return new Set(value);
+    return null;
+  }
+
+  function fxPresetMap(fxPresets) {
+    const hooks = fxPresets && Array.isArray(fxPresets.hooks) ? fxPresets.hooks : (Array.isArray(fxPresets) ? fxPresets : []);
+    const map = new Map();
+    hooks.forEach((hook) => { if (hook && hook.id) map.set(hook.id, hook); });
+    return map;
+  }
+
+  function beatFxHook(entry, fxById) {
+    const id = typeof entry === 'string' ? entry : (entry && entry.type);
+    if (!id || typeof id !== 'string') throw new Error('Beat block fx hook is not a tip id.');
+    if (entry && typeof entry === 'object') {
+      const hook = deepClone(entry);
+      if (hook.t_rel == null) hook.t_rel = 0.08;
+      return hook;
+    }
+    const spec = fxById.get(id);
+    const span = !!(spec && spec.span) || id === 'speed_lines' || id === 'fence_shake';
+    const params = spec && spec.defaults && typeof spec.defaults === 'object' ? deepClone(spec.defaults) : {};
+    const hook = { type: id, t_rel: span ? 0 : 0.08, params: params };
+    if (span) hook.t_rel_end = 1;
+    return hook;
+  }
+
+  function applyBeatBlockToAtom(atom, block, ctx) {
+    const preset = block && block.camera && typeof block.camera.preset === 'string' ? block.camera.preset : '';
+    if (!preset) throw new Error('Beat block needs camera.preset.');
+    if (ctx.cameraIds && !ctx.cameraIds.has(preset)) throw new Error('Beat block camera.preset is not on the tip kit: ' + preset);
+    const next = deepClone(atom);
+    const prev = next.camera && typeof next.camera === 'object' ? next.camera : {};
+    const cam = { preset: preset };
+    if (prev.nudge && typeof prev.nudge === 'object' && Object.keys(prev.nudge).length) cam.nudge = deepClone(prev.nudge);
+    if (prev.intensity != null && prev.intensity !== 1) cam.intensity = prev.intensity;
+    if (prev.ease) cam.ease = prev.ease;
+    next.camera = cam;
+    const raw = Array.isArray(block.fx_hooks) ? block.fx_hooks : [];
+    next.fx_hooks = raw.map((entry) => {
+      const hook = beatFxHook(entry, ctx.fxById);
+      if (ctx.fxIds && !ctx.fxIds.has(hook.type)) throw new Error('Beat block fx hook is not on the tip kit: ' + hook.type);
+      return hook;
+    });
+    if (typeof block.caption === 'string' && block.caption) next.caption = block.caption;
+    if (typeof block.caption_style === 'string' && block.caption_style) next.caption_style = block.caption_style;
+    const motion = block.motion && typeof block.motion === 'object' ? block.motion : null;
+    if (motion && (motion.beat_class || motion.role || motion.grammar_role)) {
+      const base = next.motion && typeof next.motion === 'object' ? next.motion : { family: 'fight', beat_class: '' };
+      next.motion = base;
+      if (!next.motion.family) next.motion.family = 'fight';
+      if (typeof motion.beat_class === 'string' && motion.beat_class) next.motion.beat_class = motion.beat_class;
+      const role = typeof motion.role === 'string' && motion.role ? motion.role : (typeof motion.grammar_role === 'string' ? motion.grammar_role : '');
+      if (role) next.motion.grammar_role = role;
+    }
+    return next;
+  }
+
+  function applyBeatBlock(show, selectedIndices, block, opts) {
+    if (!show || !Array.isArray(show.atoms)) throw new Error('Beat block needs a show.');
+    if (!block || typeof block !== 'object') throw new Error('Choose a beat block.');
+    const selected = [];
+    const seen = {};
+    const list = selectedIndices || [];
+    for (let i = 0; i < list.length; i++) {
+      const idx = list[i];
+      if (!Number.isInteger(idx) || idx < 0 || idx >= show.atoms.length || seen[idx]) continue;
+      seen[idx] = true;
+      selected.push(idx);
+    }
+    if (!selected.length) throw new Error('Select a clip before applying a beat block.');
+    const options = opts || {};
+    const cameraIds = idSet(options.cameraIds) || idSet((options.cameraPresets && options.cameraPresets.presets || []).map((p) => p && p.id));
+    const fxById = fxPresetMap(options.fxPresets);
+    const fxIds = idSet(options.fxIds) || (fxById.size ? new Set(fxById.keys()) : null);
+    const next = deepClone(show);
+    selected.forEach((i) => {
+      next.atoms[i] = applyBeatBlockToAtom(next.atoms[i], block, { cameraIds: cameraIds, fxIds: fxIds, fxById: fxById });
+    });
+    return next;
+  }
+
   global.HMComposeClient = {
     composeShow,
     FPS_PLATES,
     applyCamNudge,
     isParityMode,
+    applyBeatBlock,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
