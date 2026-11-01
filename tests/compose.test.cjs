@@ -92,6 +92,44 @@ test('street sample opens eight existing continuation plates for five seconds wi
   assert.equal(fs.existsSync('public/assets/street-old-city'),false);
 });
 
+test('fight-cam grammar starter is a catalog template whose seed presets exist and compose',async()=>{
+  const show=read('shows/fight-cam-grammar-starter.json');
+  const kitShow=JSON.parse(fs.readFileSync('kit/shows/fight-cam-grammar-starter.json','utf8'));
+  const tpl=JSON.parse(fs.readFileSync('kit/templates/fight-cam-grammar-starter.json','utf8'));
+  const catalog=read('catalog.json');
+  const cams=new Set(read('presets/camera_presets.json').presets.map(p=>p.id));
+  const kitCams=new Set(JSON.parse(fs.readFileSync('kit/presets/camera_presets.json','utf8')).presets.map(p=>p.id));
+  assert.equal(show.show_id,'fight-cam-grammar-starter');
+  assert.deepEqual(kitShow,show);
+  assert.equal(tpl.kind,'show_template');
+  assert.equal(tpl.id,'fight-cam-grammar-starter');
+  assert.equal(tpl.seed_show,'shows/fight-cam-grammar-starter.json');
+  assert.ok(catalog.templates.some(t=>t.id==='fight-cam-grammar-starter'&&t.kind==='show_template'&&t.seed_show==='shows/fight-cam-grammar-starter.json'));
+  assert.ok(catalog.shows.some(s=>s.path==='shows/fight-cam-grammar-starter.json'&&s.show?.show_id==='fight-cam-grammar-starter'));
+  const roles=show.atoms.map(a=>a.grammar_role);
+  assert.deepEqual(roles,['Wide','Intent','Action','Reaction','Intent','Action','Reaction','Intent','Action','Reaction','Wide']);
+  assert.equal(show.atoms.filter(a=>a.grammar_role==='Wide').length,2);
+  assert.equal(show.atoms.at(-1).id,'wide_reestablish_eye_orbit');
+  assert.equal(show.atoms.at(-1).camera.preset,'eye_orbit');
+  assert.equal(show.atoms[0].camera.preset,'low_rise');
+  const presets=show.atoms.map(a=>a.camera.preset);
+  assert.ok(presets.every(id=>cams.has(id)&&kitCams.has(id)),presets.filter(id=>!cams.has(id)||!kitCams.has(id)).join(','));
+  assert.ok(!presets.some(id=>id.startsWith('wide_')));
+  const dur=show.atoms.reduce((s,a)=>s+a.duration_s,0);
+  assert.equal(dur,11);
+  assert.ok(dur>=6&&dur<=12);
+  assert.equal(show.duration_target_s,dur);
+  const result=await compose(show);
+  assert.equal(result.ok,true,JSON.stringify(result.errors));
+  assert.equal(result.duration_s,11);
+  assert.equal(result.timeline.plates.length,22);
+  assert.equal(result.timeline.bg.base,'assets/daiyu-wang-continuation/rooftop-dusk.png');
+  for(const p of [show.bg.base, show.atoms[0].hero.layout_source, 'assets/daiyu-wang-eight/P01.png'])assert.equal(fs.existsSync('public/'+p),true,p);
+  const five=read('shows/daiyu-wang-five-seconds.json');
+  assert.equal(five.duration_target_s,5);
+  assert.equal(five.atoms.length,8);
+});
+
 test('replacing backgrounds preserves named base/swap layout choices and white-key preference',async()=>{
   const show=demo();show.atoms=show.atoms.slice(0,2);show.bg={base:'backgrounds/new-base.png',swap:'backgrounds/new-swap.png',swap_t:0,key_white:true,aliases:{base:['old-roof'],swap:['old-sunset']}};
   const layout=read(show.atoms[0].hero.layout_source);layout.P01.bg='old-roof.png';layout.P02.bg='old-sunset';

@@ -373,7 +373,7 @@
  <nav class="hnav" aria-label="Primary">
   <button type="button" class="hnavOn" id="navFights" title="Land / open fights">Fights</button>
   <button type="button" id="navPacks" title="Plate-pack fights">Plate Packs</button>
-  <button type="button" disabled title="Templates — later">Templates</button>
+  <button type="button" id="navTemplates" title="Open a starter template">Templates</button>
   <button type="button" disabled title="Settings — later">Settings</button>
  </nav>
  <div class="hproj" id="hdrProject">Project: —</div>
@@ -415,6 +415,12 @@
  <label class="chk" style="display:flex;align-items:center;gap:4px;color:var(--dim)"><input type="checkbox" id="dupCompose"> also compose (off = duplicate only)</label>
  <div id="dupOut" style="font:11px monospace;color:var(--dim)">—</div>
  <div class="acts"><button id="dupCancel">Cancel</button><button id="dupRun" class="pri">Duplicate</button></div>
+</div></div>
+<div id="tplModal" class="modal"><div class="box">
+ <h4>Templates</h4>
+ <div style="color:var(--dim);font:12px monospace">Loads the seed show in this browser. Run Setup stays unavailable on the frontend-only composer.</div>
+ <div id="tplList"></div>
+ <div class="acts"><button type="button" id="tplClose">Close</button></div>
 </div></div>
 <div id="platePick" class="modal"><div class="box">
  <h4>Swap plate</h4>
@@ -2704,7 +2710,7 @@ async function loadCatalog(keep){
  if(st){
    const tpls=(CAT.templates||[]).map(x=>({id:x.id||x.path, label:x.label||x.path||x.id}));
    const fromShows=(CAT.shows||[]).filter(s=>s.show).map(s=>({id:s.path, label:'show: '+s.show.show_id}));
-   const all=tpls.length?tpls:fromShows;
+   const all=[...tpls, ...fromShows];
    st.innerHTML=all.map(x=>`<option value="${x.id}">${x.label}</option>`).join('');
  }
  ['setupLibL','setupLibR'].forEach((id,i)=>{
@@ -3213,6 +3219,43 @@ loadCatalog().then(()=>{
     const imp=[...document.querySelectorAll('aside .grp h3')].find(h=>/Import plate pack/i.test(h.textContent||''));
     if(imp) try{ imp.parentElement.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
   };
+  async function openTemplateSeed(tpl){
+    const seed=tpl.seed_show||'';
+    const id=(tpl.id||'').trim();
+    let hit=(CAT.shows||[]).find(s=>s.path===seed || (s.show && (s.show.show_id===id || (seed && s.path===seed))));
+    if(!hit && seed){
+      for(const u of ['/'+seed, '../'+seed, './'+seed]){
+        try{
+          const r=await fetch(u,{cache:'no-store'});
+          if(!r.ok) continue;
+          const show=await r.json();
+          hit={path:seed, show};
+          if(!(CAT.shows||[]).some(s=>s.path===seed)) CAT.shows.push(hit);
+          refreshExamplePicker(false);
+          break;
+        }catch(e){}
+      }
+    }
+    if(!hit||!hit.show){ status('template seed missing: '+(tpl.label||id), true); return; }
+    if($('example')) $('example').value=hit.path;
+    loadShow(hit.show);
+    if(typeof exitLandToComposer==='function') exitLandToComposer({});
+    status('loaded '+(tpl.label||id)+' · FE seed (no /api/setup)');
+  }
+  function renderTemplatePicker(){
+    const list=$('tplList'); if(!list) return;
+    const tpls=(CAT&&CAT.templates)||[];
+    list.innerHTML=tpls.length?tpls.map(t=>`<button type="button" class="pri" data-tpl="${t.id||t.path}" style="display:block;width:100%;text-align:left;margin:6px 0">${t.label||t.id||t.path}<div style="font:11px monospace;color:var(--dim);font-weight:400">${t.description||t.seed_show||''}</div></button>`).join(''):'<div style="color:var(--dim)">No templates in catalog.</div>';
+    list.querySelectorAll('[data-tpl]').forEach(btn=>{
+      btn.onclick=()=>{
+        const tpl=tpls.find(t=>(t.id||t.path)===btn.dataset.tpl);
+        $('tplModal').classList.remove('on');
+        if(tpl) openTemplateSeed(tpl);
+      };
+    });
+  }
+  if($('navTemplates')) $('navTemplates').onclick=()=>{ renderTemplatePicker(); $('tplModal').classList.add('on'); };
+  if($('tplClose')) $('tplClose').onclick=()=>$('tplModal').classList.remove('on');
   if($('navFights')) $('navFights').onclick=()=>enterLandShell();
   if($('navPacks')) $('navPacks').onclick=()=>{ if(LAND_MODE) exitLandToComposer({}); };
   if($('followPlayheadChk')){

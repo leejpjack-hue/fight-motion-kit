@@ -1,0 +1,320 @@
+{
+ "show_id": "fight-cam-grammar-starter",
+ "title": "Fight cam grammar · sample start",
+ "duration_target_s": 11,
+ "floor_y": 684,
+ "grounded": true,
+ "parity_mode": true,
+ "compose_mode": "parity",
+ "chars": {
+  "L": {
+   "name": "Lin Daiyu"
+  },
+  "R": {
+   "name": "Wang Xifeng"
+  }
+ },
+ "bg": {
+  "base": "assets/daiyu-wang-continuation/rooftop-dusk.png"
+ },
+ "overlays": [],
+ "atoms": [
+  {
+   "id": "wide_open_low_rise",
+   "label": "Wide · low_rise",
+   "grammar_role": "Wide",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "guard_recover",
+    "grammar_role": "Wide"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P01",
+     "P01"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t1_intent_ots_L_hold",
+   "label": "Intent · ots_L_hold",
+   "grammar_role": "Intent",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "windup",
+    "grammar_role": "Intent"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P02",
+     "P02"
+    ]
+   },
+   "camera": {
+    "preset": "ots_L_hold"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t1_action_eye_push",
+   "label": "Action · eye_push",
+   "grammar_role": "Action",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "straight",
+    "grammar_role": "Action"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P03",
+     "P03"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t1_reaction_ots_R_hold",
+   "label": "Reaction · ots_R_hold",
+   "grammar_role": "Reaction",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold",
+    "grammar_role": "Reaction"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P04",
+     "P04"
+    ]
+   },
+   "camera": {
+    "preset": "ots_R_hold"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t2_intent_eye_lateral",
+   "label": "Intent · eye_lateral",
+   "grammar_role": "Intent",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "windup",
+    "grammar_role": "Intent"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P05",
+     "P05"
+    ]
+   },
+   "camera": {
+    "preset": "eye_lateral"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t2_action_whip_A_to_B",
+   "label": "Action · whip_A_to_B",
+   "grammar_role": "Action",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "clash",
+    "grammar_role": "Action"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P06",
+     "P06"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t2_reaction_ecu_jitter",
+   "label": "Reaction · ecu_jitter",
+   "grammar_role": "Reaction",
+   "kind": "close",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold",
+    "grammar_role": "Reaction"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P07",
+     "P07"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t3_intent_eye_hold",
+   "label": "Intent · eye_hold",
+   "grammar_role": "Intent",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "windup",
+    "grammar_role": "Intent"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P08",
+     "P08"
+    ]
+   },
+   "camera": {
+    "preset": "eye_hold"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t3_action_ecu_fist_lens",
+   "label": "Action · ecu_fist_lens",
+   "grammar_role": "Action",
+   "kind": "close",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "straight",
+    "grammar_role": "Action"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P03",
+     "P03"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_fist_lens"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "t3_reaction_pull_aftermath",
+   "label": "Reaction · pull_aftermath",
+   "grammar_role": "Reaction",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "impact_hold",
+    "grammar_role": "Reaction"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P04",
+     "P04"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath"
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "wide_reestablish_eye_orbit",
+   "label": "Wide · eye_orbit",
+   "grammar_role": "Wide",
+   "kind": "duo",
+   "duration_s": 1,
+   "plates_needed": 2,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "guard_recover",
+    "grammar_role": "Wide"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-wang-eight/layout.json",
+    "plates": [
+     "P01",
+     "P01"
+    ]
+   },
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "fx_hooks": []
+  }
+ ],
+ "meta": {
+  "grammar": "Fight Camera Grammar",
+  "template_id": "fight-cam-grammar-starter",
+  "triplets": 3,
+  "wide_open_atom": "wide_open_low_rise",
+  "wide_reestablish_atom": "wide_reestablish_eye_orbit",
+  "camera_presets": [
+   "low_rise",
+   "ots_L_hold",
+   "eye_push",
+   "ots_R_hold",
+   "eye_lateral",
+   "whip_A_to_B",
+   "ecu_jitter",
+   "eye_hold",
+   "ecu_fist_lens",
+   "pull_aftermath",
+   "eye_orbit"
+  ],
+  "wide_preset_note": "No wide_* curves. Wide open uses low_rise. Wide re-establish uses eye_orbit.",
+  "plates": "Reuses assets/daiyu-wang-eight P01–P08 (hero plate-pack). No new art."
+ }
+}
