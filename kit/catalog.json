@@ -2541,6 +2541,11 @@
   "seed_show": "shows/fight-cam-grammar-starter.json"
  }
  ],
+ "beat_blocks": {
+  "path": "blocks/beat_blocks.json",
+  "theme": "STREET",
+  "count": 16
+ },
  "cloud": true,
  "fe_only": true,
  "product_note": "HM-COMPOSE-07 frontend-only — compose/save/import in browser; serve.py is optional QA"
