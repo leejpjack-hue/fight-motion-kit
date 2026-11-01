@@ -387,7 +387,7 @@ function cameraPoseOnSegment(seg, t) {
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null;
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] };
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -499,9 +499,20 @@ function createMotionRenderer(canvas, assets = {}) {
       if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
     }
   }
+  const PIXELFX_WAVE1_IDS = [
+    'impacts/hit-spark', 'impacts/blunt-hit', 'impacts/crit-hit', 'impacts/hit-flash',
+    'impacts/impact-frame', 'impacts/parry', 'impacts/ground-slam', 'impacts/heavy-landing',
+    'melee/uppercut', 'explosions/cartoon-pow', 'explosions/dirt-explosion', 'explosions/smoke-bomb',
+  ];
+  function isPixelfxHook(raw, type) {
+    if (raw && raw.source === 'pixelfx') return true;
+    if (PIXELFX_WAVE1_IDS.indexOf(type) >= 0) return true;
+    const api = globalThis.HMPixelFx;
+    return !!(api && typeof api.has === 'function' && api.has(type));
+  }
   function hooksToFx(hooks, t0, t1) {
     const d = Math.max(0.05, t1 - t0);
-    const out = { hits: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [] };
+    const out = { hits: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [], pixelfx: [] };
     for (const raw of hooks || []) {
       const type = typeof raw === 'string' ? raw : raw?.type;
       if (!type || type === 'none') continue;
@@ -510,6 +521,10 @@ function createMotionRenderer(canvas, assets = {}) {
       const tRel = raw?.t_rel != null ? +raw.t_rel : 0.08;
       const tRelEnd = raw?.t_rel_end != null ? +raw.t_rel_end : 0.92;
       const ht = t0 + tRel * d;
+      if (isPixelfxHook(raw, type)) {
+        out.pixelfx.push([ht, type]);
+        continue;
+      }
       const he = t0 + tRelEnd * d;
       const span = Number.isFinite(+prm.dur) && +prm.dur > 0 ? +prm.dur : (raw?.t_rel_end != null ? Math.max(0.01, he - ht) : (type === 'exposure_warm_crush' ? 0.10 : type === 'leg_arc' ? 0.28 : type === 'tornado_spiral' ? 0.50 : 0.36));
       if (type === 'hit_orange') out.hits.push([ht, prm.color || '#ff8a1e']);
@@ -830,6 +845,47 @@ function createMotionRenderer(canvas, assets = {}) {
       }
       ctx.putImageData(frame, 0, 0);
     }
+    const pixelfxMissed = [];
+    const pixelfxDrawn = [];
+    const pixelfxList = fxSource.pixelfx || [];
+    for (let pi = 0; pi < pixelfxList.length; pi++) {
+      const entry = pixelfxList[pi];
+      const hitT = entry[0];
+      const fxId = entry[1];
+      if (hitT == null || !fxId) continue;
+      const api = globalThis.HMPixelFx;
+      const meta = api && typeof api.meta === 'function' ? api.meta(fxId) : null;
+      const dur = meta && Number(meta.duration) > 0 ? Number(meta.duration) : 0.6;
+      const elapsed = t - hitT;
+      let local = -1;
+      if (elapsed >= -1e-4 && elapsed <= dur + 1e-4) local = Math.min(dur, Math.max(0, elapsed));
+      else if (standIn && inAtom(hitT)) local = Math.min(dur * 0.35, 0.2);
+      if (local < 0) continue;
+      if (!api || typeof api.paint !== 'function') {
+        pixelfxMissed.push(fxId);
+        continue;
+      }
+      try {
+        const res = api.paint(fxId, local, ctx);
+        if (res && res.drew) pixelfxDrawn.push(fxId);
+        else pixelfxMissed.push(fxId);
+      } catch (_) {
+        pixelfxMissed.push(fxId);
+      }
+    }
+    lastPixelfx = { drawn: pixelfxDrawn, missed: pixelfxMissed };
+    if (typeof document !== 'undefined') {
+      const pxBanner = document.getElementById('pixelfxHonesty');
+      if (pxBanner) {
+        if (pixelfxMissed.length) {
+          pxBanner.hidden = false;
+          pxBanner.textContent = 'Pixelfx did not draw: ' + pixelfxMissed.join(', ') + '. Those hooks stay on the clip and did not paint.';
+        } else {
+          pxBanner.hidden = true;
+          pxBanner.textContent = '';
+        }
+      }
+    }
     if (pinkOn) {
       ctx.fillStyle = '#ff2f9a';
       ctx.fillRect(0, 0, 1280, 720);
@@ -847,6 +903,7 @@ function createMotionRenderer(canvas, assets = {}) {
     get lastTime() { return lastTime; },
     get lastRenderViaSoT() { return lastRenderViaSoT; },
     get lastRenderSource() { return lastRenderSource; },
+    get lastPixelfx() { return lastPixelfx; },
     set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
     get duration() { return timeline?.duration_s || 0; }
   };

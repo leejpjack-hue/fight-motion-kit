@@ -1,0 +1,9 @@
+pixelfx @ 679844a6e45b7dbdc4b3d1f76f2dd0fdcc2bc892
+https://github.com/leejpjack-hue/pixelfx
+Vendored for HTML Motion Wave 1 only: core runtime these 12 modules import,
+plus impacts/_lib.js, melee/_lib.js, and explosions/_lib.js.
+FX modules: impacts/hit-spark, impacts/blunt-hit, impacts/crit-hit,
+impacts/hit-flash, impacts/impact-frame, impacts/parry, impacts/ground-slam,
+impacts/heavy-landing, melee/uppercut, explosions/cartoon-pow,
+explosions/dirt-explosion, explosions/smoke-bomb.
+MIT. See LICENSE.

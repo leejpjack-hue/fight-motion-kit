@@ -1,0 +1,30 @@
+{
+  "preview": {
+    "drawn": [
+      "impacts/hit-spark"
+    ],
+    "missed": []
+  },
+  "baked": {
+    "drawn": [
+      "impacts/hit-spark",
+      "impacts/blunt-hit",
+      "impacts/crit-hit",
+      "impacts/hit-flash",
+      "impacts/impact-frame",
+      "impacts/parry",
+      "impacts/ground-slam",
+      "impacts/heavy-landing",
+      "melee/uppercut",
+      "explosions/cartoon-pow",
+      "explosions/dirt-explosion",
+      "explosions/smoke-bomb"
+    ],
+    "missed": []
+  },
+  "hook": {
+    "type": "<wave1-id>",
+    "t_rel": 0.08,
+    "source": "pixelfx"
+  }
+}

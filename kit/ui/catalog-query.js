@@ -1,6 +1,8 @@
 /* Offline catalog index for HM-HF-05.
  * Cam and FX come from static presets. Beat blocks are optional.
+ * Wave 1 pixelfx rows are extra FX hits (family and source pixelfx).
  * Apply adds an FX hook if it is missing. It does not replace the hook list.
+ * A pixelfx hit writes { type, t_rel: 0.08, source: "pixelfx" }.
  * Cam Apply sets the preset and drops stale curve params. Poses, duration,
  * motion timing, nudge, and existing hooks stay.
  */
@@ -157,6 +159,30 @@
       });
     }
 
+    const wave = asList(src.pixelfx, ['hooks', 'fx', 'effects']);
+    for (const row of wave) {
+      if (!row || !row.id) continue;
+      pushHit({
+        kind: 'fx',
+        id: row.id,
+        label: labelOf(row, row.id),
+        themes: uniq([row.role, 'pixelfx']),
+        description: row.notes || row.comment || '',
+        meta: 'pixelfx · ' + (row.role || 'fx'),
+        family: 'pixelfx',
+        source: 'pixelfx',
+        payload: {
+          id: row.id,
+          role: row.role || '',
+          label: labelOf(row, row.id),
+          notes: row.notes || '',
+          family: 'pixelfx',
+          source: 'pixelfx',
+          components: ['pixelfx']
+        }
+      });
+    }
+
     for (const block of blocks) {
       const id = block.id || block.block_id;
       const presetId = presetIdOf(block);
@@ -204,6 +230,7 @@
       sources: {
         cameras: cameras.length,
         fx: fx.length,
+        pixelfx: wave.length,
         blocks: blocks.length,
         caption_styles: styles.length,
         caption_stubs: !authoredStyles.length
@@ -263,6 +290,7 @@
     if (spec.params && typeof spec.params === 'object' && Object.keys(spec.params).length) {
       entry.params = JSON.parse(JSON.stringify(spec.params));
     }
+    if (spec.source === 'pixelfx') entry.source = 'pixelfx';
     atom.fx_hooks.push(entry);
     return 'added';
   }
@@ -270,11 +298,14 @@
   function applyFx(atom, hook) {
     const id = hook && hook.id;
     if (!id) return { ok: false, code: 'empty-hit', message: 'That FX hook has no id.' };
+    const payload = hook.payload || {};
+    const pix = hook.source === 'pixelfx' || payload.source === 'pixelfx' || payload.family === 'pixelfx';
     const state = addFx(atom, {
       id,
       type: id,
-      span: !!(hook.payload && hook.payload.span),
-      t_rel: 0.08
+      span: !!payload.span,
+      t_rel: 0.08,
+      source: pix ? 'pixelfx' : undefined
     });
     if (state === 'present') {
       return { ok: true, code: 'unchanged', message: id + ' is already on this clip.' };

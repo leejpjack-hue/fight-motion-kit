@@ -996,7 +996,7 @@
     const fx = {
       hits: [], flash: [], hitstop: [], shake: [], bgflash: [], dust: [],
       sparks: [], speed: [], fence: [], trails: [], pink_cut: null,
-      exposure: [], fist: [], leg: [], tornado: [],
+      exposure: [], fist: [], leg: [], tornado: [], pixelfx: [],
     };
     const fxProfile = resolveFxProfile(show);
     const heroLayouts = {};
@@ -1172,7 +1172,8 @@
       const atomFx = [];
       for (const rawHk of a.fx_hooks || []) {
         const hk = typeof rawHk === 'string' ? { type: rawHk, t_rel: 0.08, params: {} } : rawHk;
-        const p = fxp[hk.type];
+        let p = fxp[hk.type];
+        if (!p && isPixelfxHook(hk)) p = pixelfxPreset(hk.type);
         if (!p) {
           if (allowSoftLint) {
             warns.push(a.id + ': unknown fx hook ' + hk.type);
@@ -1219,12 +1220,14 @@
           else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('fist_pressure', prm.path), xf] : [ht, span, resolveFxPath('fist_pressure', prm.path)]);
           else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('leg_arc', prm.path), xf] : [ht, span, resolveFxPath('leg_arc', prm.path)]);
           else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('tornado_spiral', prm.path), xf] : [ht, span, resolveFxPath('tornado_spiral', prm.path)]);
+          else if (comp === 'pixelfx') fx.pixelfx.push([ht, hk.type]);
         }
         }
         const cls = classifyFxHook(hk, fxp);
         atomFx.push({
           type: hk.type,
           t_rel: tRel,
+          ...(hk.source === 'pixelfx' || isPixelfxHook(hk) ? { source: 'pixelfx' } : {}),
           ...(hk.t_rel_end != null ? { t_rel_end: tRelEnd } : {}),
           params: prm,
           mode: cls.mode,
@@ -1336,9 +1339,32 @@
     };
   }
 
+  const PIXELFX_WAVE1_IDS = [
+    'impacts/hit-spark',
+    'impacts/blunt-hit',
+    'impacts/crit-hit',
+    'impacts/hit-flash',
+    'impacts/impact-frame',
+    'impacts/parry',
+    'impacts/ground-slam',
+    'impacts/heavy-landing',
+    'melee/uppercut',
+    'explosions/cartoon-pow',
+    'explosions/dirt-explosion',
+    'explosions/smoke-bomb',
+  ];
+  const PIXELFX_WAVE1_SET = new Set(PIXELFX_WAVE1_IDS);
+  function isPixelfxHook(hk) {
+    if (!hk) return false;
+    if (typeof hk === 'string') return PIXELFX_WAVE1_SET.has(hk);
+    return hk.source === 'pixelfx' || PIXELFX_WAVE1_SET.has(hk.type);
+  }
+  function pixelfxPreset(type) {
+    return { id: type, components: ['pixelfx'], source: 'pixelfx', family: 'pixelfx' };
+  }
   const LIVE_FX_COMPONENTS = [
     'impact_burst', 'flash', 'shake', 'tint', 'trail', 'dust', 'speed', 'sparks', 'pink_cut',
-    'exposure_warm_crush', 'fist_pressure', 'leg_arc', 'tornado_spiral',
+    'exposure_warm_crush', 'fist_pressure', 'leg_arc', 'tornado_spiral', 'pixelfx',
   ];
   const COMPOSE_ONLY_FX_COMPONENTS = ['hitstop_2f', 'fence'];
   const DEFAULT_FX_PRESETS = {
@@ -1385,7 +1411,7 @@
     const type = String(hk.type || '').trim();
     if (!type || type === 'none') return null;
     const map = resolveFxMap(fxPresets);
-    const p = map[type] || null;
+    const p = map[type] || (isPixelfxHook(hk) ? pixelfxPreset(type) : null);
     const comps = (p && Array.isArray(p.components)) ? p.components.slice() : [];
     const canPreviewLive = comps.some((c) => LIVE_FX_COMPONENTS.indexOf(c) >= 0);
     const composeOnly = !canPreviewLive;
@@ -2262,7 +2288,7 @@
       hooks.forEach((rawHk, hi) => {
         const hk = typeof rawHk === 'string' ? { type: rawHk, t_rel: 0.08, params: {} } : (rawHk || {});
         const type = typeof hk.type === 'string' ? hk.type.trim() : '';
-        if (!type || !knownFx[type]) {
+        if (!type || (!knownFx[type] && !isPixelfxHook(hk))) {
           pushFinding(
             'bad_fx_t_rel',
             label + ': fx_hooks[' + hi + '] has invalid or unknown type "' + (type || '(empty)') + '"',
