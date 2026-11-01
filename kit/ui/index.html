@@ -102,6 +102,12 @@
  .modal .acts{display:flex;gap:8px;justify-content:flex-end}
 
  .chiprow{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+ .cqResults{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#0a1418}
+ .cqHit{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;background:transparent;border:0;border-radius:0;padding:6px 8px;font:11px monospace;color:var(--ink)}
+ .cqHit[aria-selected="true"]{background:#0f3a3a}
+ .cqKind{font:10px monospace;color:var(--acc);text-transform:uppercase}
+ .cqMeta{font:10px monospace;color:var(--dim)}
+ #cqStatus[data-bad="true"]{color:var(--bad)}
  .chip{padding:3px 8px;font:11px monospace;border-radius:999px;background:#12303a;border:1px solid var(--line);color:var(--ink);cursor:pointer}
  .chip:hover,.chip.on{border-color:var(--acc);color:var(--acc);background:#0f3a3a}
  .chip.fx{background:#2a1808;color:#fca}
@@ -564,6 +570,14 @@
    <label>base<select id="bgBase"></select></label><label>swap<select id="bgSwap"></select></label>
    <label>swap at (s)<input id="bgSwapT" type="number" step="0.5" min="0"></label><img id="bgthumb">
   </div>
+  <div class="grp keepFocus" id="catalogQueryGrp"><h3>Catalog query</h3>
+   <input id="cqInput" placeholder="whip, hit, clash…" aria-label="Search catalog" autocomplete="off" spellcheck="false">
+   <div class="chiprow" id="cqKinds" role="group" aria-label="Kind filter"></div>
+   <label>theme<select id="cqTheme" aria-label="Theme filter"><option value="">all themes</option></select></label>
+   <div id="cqResults" class="cqResults" role="listbox" aria-label="Catalog hits"></div>
+   <button type="button" id="cqApply" class="pri">Apply</button>
+   <div id="cqStatus" style="font:10px monospace;color:var(--dim)" role="status"></div>
+  </div>
   <div class="grp keepFocus" id="atomInspGrp"><h3><span class="inspIdle">Selected atom</span><span class="inspBeat">Beat focus inspector</span> <span class="bfBadge">ACTIVE</span></h3><div id="insp" class="empty">select a timeline row</div></div>
   <div class="grp"><h3>Wording / overlays (v3)</h3>
    <div style="font:10px monospace;color:var(--dim)">Artificial text (runtime) preferred · legacy PNG optional</div>
@@ -616,6 +630,7 @@
 </main>
 <script src="compose-client.js"></script>
 <script src="fe-store.js"></script>
+<script src="catalog-query.js"></script>
 <script>
 
 const $=id=>document.getElementById(id);
@@ -2689,6 +2704,91 @@ async function attachBeatBlocks(){
     }catch(e){}
   }
 }
+let CQ_INDEX=null, CQ_KIND='', CQ_FOCUS='', CQ_HITS=[];
+function cqEsc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function optJson(u){
+  try{ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) return null; return await r.json(); }
+  catch(e){ return null; }
+}
+async function initCatalogQuery(){
+  if(!window.HMCatalogQuery||!$('cqInput')) return;
+  const fileCam=await optJson('../presets/camera_presets.json')||await optJson('/presets/camera_presets.json');
+  const fileFx=await optJson('../presets/fx_presets.json')||await optJson('/presets/fx_presets.json');
+  const cameras=[...((CAT&&CAT.presets)||[]), ...((fileCam&&fileCam.presets)||[])];
+  const fx=[...((CAT&&CAT.fx)||[]), ...((fileFx&&(fileFx.hooks||fileFx.fx))||[])];
+  const blocks=(CAT&&CAT.beat_blocks&&Array.isArray(CAT.beat_blocks.blocks))?CAT.beat_blocks.blocks:[];
+  CQ_INDEX=HMCatalogQuery.buildIndex({cameras, fx, beatBlocks:{blocks}});
+  renderCatalogQuery();
+}
+function renderCatalogQuery(){
+  if(!CQ_INDEX||!$('cqResults')) return;
+  if(CQ_KIND==='block'&&!CQ_INDEX.counts.block) CQ_KIND='';
+  const kinds=[{id:'',label:'All'},{id:'cam',label:'Cam'},{id:'fx',label:'FX'},{id:'block',label:'Block'},{id:'caption_style',label:'Caption'}];
+  if($('cqKinds')){
+    $('cqKinds').innerHTML=kinds.filter(k=>k.id!=='block'||CQ_INDEX.counts.block).map(k=>`<button type="button" class="chip ${CQ_KIND===k.id?'on':''}" data-cqkind="${k.id}">${k.label}</button>`).join('');
+    $('cqKinds').querySelectorAll('[data-cqkind]').forEach(btn=>btn.onclick=()=>{ CQ_KIND=btn.dataset.cqkind||''; renderCatalogQuery(); });
+  }
+  const themeSel=$('cqTheme');
+  if(themeSel){
+    const current=themeSel.value;
+    themeSel.innerHTML='<option value="">all themes</option>'+(CQ_INDEX.themes||[]).map(t=>`<option value="${cqEsc(t)}">${cqEsc(t)}</option>`).join('');
+    themeSel.value=(CQ_INDEX.themes||[]).includes(current)?current:'';
+  }
+  const q=$('cqInput')?$('cqInput').value:'';
+  const theme=themeSel?themeSel.value:'';
+  CQ_HITS=HMCatalogQuery.query(CQ_INDEX,{q,kind:CQ_KIND,theme}).slice(0,60);
+  if(CQ_FOCUS&&!CQ_HITS.some(h=>h.kind+':'+h.id===CQ_FOCUS)) CQ_FOCUS=CQ_HITS[0]?CQ_HITS[0].kind+':'+CQ_HITS[0].id:'';
+  if(!CQ_FOCUS&&CQ_HITS[0]) CQ_FOCUS=CQ_HITS[0].kind+':'+CQ_HITS[0].id;
+  $('cqResults').innerHTML=CQ_HITS.length?CQ_HITS.map(hit=>{
+    const key=hit.kind+':'+hit.id;
+    const title=hit.label&&hit.label!==hit.id.replace(/_/g,' ')?hit.label+' · '+hit.id:hit.id;
+    return `<button type="button" class="cqHit" data-cqkey="${cqEsc(key)}" aria-selected="${key===CQ_FOCUS?'true':'false'}" title="${cqEsc(hit.description||'')}"><span class="cqKind">${cqEsc(hit.kind)}</span><span>${cqEsc(title)}</span><span class="cqMeta">${cqEsc(hit.meta||'')}</span></button>`;
+  }).join(''):`<div class="cqMeta" style="padding:8px">${CQ_KIND==='block'?'No blocks in this registry. Cam and FX still apply.':'No matches.'}</div>`;
+  $('cqResults').querySelectorAll('[data-cqkey]').forEach(btn=>{
+    btn.onclick=()=>{
+      CQ_FOCUS=btn.dataset.cqkey;
+      $('cqResults').querySelectorAll('[data-cqkey]').forEach(el=>el.setAttribute('aria-selected', el.dataset.cqkey===CQ_FOCUS?'true':'false'));
+    };
+    btn.ondblclick=()=>{ CQ_FOCUS=btn.dataset.cqkey; applyCatalogHit(); };
+  });
+}
+function applyCatalogHit(){
+  const hit=CQ_HITS.find(item=>item.kind+':'+item.id===CQ_FOCUS)||CQ_HITS[0];
+  const note=$('cqStatus');
+  if(!hit){ if(note){note.dataset.bad='true';note.textContent='No catalog hit to apply.';} status('No catalog hit to apply.',true); return; }
+  const atom=SHOW&&SHOW.atoms&&SEL>=0?SHOW.atoms[SEL]:null;
+  if(hit.kind==='block' && window.HMComposeClient && HMComposeClient.applyBeatBlock){
+    if(!atom){ if(note){note.dataset.bad='true';note.textContent='Select a clip, then Apply.';} status('Select a clip, then Apply.',true); return; }
+    const applied=HMComposeClient.applyBeatBlock({atoms:[atom]},[0],hit.payload,{
+      cameraIds:Object.keys(PRESETS||{}),
+      fxPresets:Array.isArray(CAT.fx)?CAT.fx:((CAT.fx&&CAT.fx.hooks)||[])
+    });
+    SHOW.atoms[SEL]=applied.atoms[0];
+    pushHist(); markDirty(); renderInsp(); renderTL(); if(typeof paintPreview==='function') paintPreview();
+    const fx=(applied.atoms[0].fx_hooks||[]).map(h=>h.type||h).join(', ')||'none';
+    const message='Applied block '+hit.id+' · cam '+(applied.atoms[0].camera&&applied.atoms[0].camera.preset||'')+' · fx '+fx+'.';
+    if(note){note.dataset.bad='false';note.textContent=message;}
+    status(message);
+    return;
+  }
+  const result=HMCatalogQuery.applyHit(atom, hit);
+  if(note){ note.dataset.bad=result.ok?'false':'true'; note.textContent=result.message; }
+  if(!result.ok){ status(result.message,true); return; }
+  if(result.code==='applied'){
+    pushHist(); markDirty(); renderInsp(); renderTL(); if(typeof paintPreview==='function') paintPreview();
+  }
+  status(result.message);
+}
+function wireCatalogQuery(){
+  if(!$('cqInput')||$('cqInput').dataset.wired) return;
+  $('cqInput').dataset.wired='1';
+  $('cqInput').addEventListener('input',()=>renderCatalogQuery());
+  $('cqInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); applyCatalogHit(); }
+  });
+  if($('cqTheme')) $('cqTheme').onchange=()=>renderCatalogQuery();
+  if($('cqApply')) $('cqApply').onclick=()=>applyCatalogHit();
+}
 async function loadCatalog(keep){
  // HM-COMPOSE-07: static catalog first — product path never requires /api/*
  apiOK=false;
@@ -2737,6 +2837,8 @@ async function loadCatalog(keep){
  await attachBeatBlocks();
  mergeLocalShowsIntoCatalog();
  PRESETS=Object.fromEntries((CAT.presets||[]).map(p=>[p.id,p]));
+ wireCatalogQuery();
+ await initCatalogQuery();
  // HM-COMPOSE-03: always refresh example-shows picker (even on keep) so Save as ids appear
  refreshExamplePicker(!!keep);
  if(keep) return;
