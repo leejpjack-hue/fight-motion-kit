@@ -1430,6 +1430,36 @@ test('HM-HF-04 beat blocks resolve on tip presets and apply keeps plates and tim
   assert.ok(usedFx.has('dust')&&usedFx.has('impact_white')&&usedFx.has('hit_orange'));
 });
 
+test('wave 1 pixelfx hooks compose beside kit fx and keep plates', async () => {
+  const ids = [
+    'impacts/hit-spark', 'impacts/blunt-hit', 'impacts/crit-hit', 'impacts/hit-flash',
+    'impacts/impact-frame', 'impacts/parry', 'impacts/ground-slam', 'impacts/heavy-landing',
+    'melee/uppercut', 'explosions/cartoon-pow', 'explosions/dirt-explosion', 'explosions/smoke-bomb'
+  ];
+  const s = demo();
+  const plates = s.atoms[0].hero.plates.slice();
+  const duration = s.atoms[0].duration_s;
+  s.atoms[0].fx_hooks = [{ type: 'shake', t_rel: 0.2, params: { amp: 4 } }].concat(ids.map(id => ({ type: id, t_rel: 0.08, source: 'pixelfx' })));
+  const r = await compose(s);
+  assert.equal(r.ok, true);
+  assert.equal(r.duration_s, 5);
+  assert.equal(r.timeline.plates.length, 8);
+  assert.equal(s.atoms[0].duration_s, duration);
+  assert.deepEqual(s.atoms[0].hero.plates, plates);
+  assert.ok(r.timeline.fx.shake.some(entry => entry[0] > 0));
+  assert.deepEqual(r.timeline.fx.pixelfx.map(entry => entry[1]), ids);
+  const composedHooks = r.timeline.atoms[0].fx_hooks;
+  assert.equal(composedHooks[0].type, 'shake');
+  assert.equal(composedHooks[0].source, undefined);
+  assert.equal(composedHooks[1].source, 'pixelfx');
+  assert.equal(composedHooks[1].t_rel, 0.08);
+  const info = HMComposeClient.classifyFxHooks(s.atoms[0].fx_hooks, read('presets/fx_presets.json'));
+  assert.equal(info.live.filter(h => h.type === 'impacts/hit-spark').length, 1);
+  assert.equal(info.composeOnly.some(h => ids.includes(h.type)), false);
+  const lint = HMComposeClient.lintShow(projectFromShow(s), { cameraPresets: read('presets/camera_presets.json'), fxPresets: read('presets/fx_presets.json') });
+  assert.equal(lint.findings.filter(item => item.code === 'bad_fx_t_rel').length, 0);
+});
+
 
 
 

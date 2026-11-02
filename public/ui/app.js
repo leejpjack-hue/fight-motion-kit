@@ -791,8 +791,12 @@
         badge.hidden=false;badge.dataset.fxMode='live-standin';badge.textContent=`⚡ Live FX stand-in · ${stageInfo.live.map(h=>h.type).join(' + ')}`;
       }
     }
+    const pxMiss=renderer&&renderer.lastPixelfx&&Array.isArray(renderer.lastPixelfx.missed)?renderer.lastPixelfx.missed:[];
     if(banner){
-      if(hasAtoms&&stageInfo.hasComposeOnly){
+      if(hasAtoms&&pxMiss.length){
+        banner.hidden=false;banner.dataset.honesty='pixelfx-miss';
+        banner.textContent=`Pixelfx did not draw: ${pxMiss.join(', ')}. Those hooks stay on the clip and did not paint.`;
+      }else if(hasAtoms&&stageInfo.hasComposeOnly){
         banner.hidden=false;banner.dataset.honesty='compose-only';
         banner.textContent=`⚠ Compose-only FX (${stageInfo.composeOnly.map(h=>h.type).join(', ')}) — cannot preview live on canvas; full pass renders on Compose / export.`;
       }else{
@@ -1482,12 +1486,18 @@
       json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
       json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS))
     ]);
+    let pixelfxWave1=[];
+    try{
+      const waveDoc=await json('/presets/pixelfx_wave1.json');
+      pixelfxWave1=Array.isArray(waveDoc)?waveDoc:(waveDoc&&(waveDoc.hooks||waveDoc.effects))||[];
+    }catch(_){pixelfxWave1=[];}
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
     await loadBeatBlocks();
     catalogIndex = HMCatalogQuery.buildIndex({
       cameras: presets,
       fx: effects,
+      pixelfx: pixelfxWave1,
       beatBlocks: { blocks: beatBlockList() }
     });
     renderCatalogQuery();

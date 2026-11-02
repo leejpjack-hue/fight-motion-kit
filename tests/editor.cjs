@@ -2252,6 +2252,9 @@ print(doc['show_id'])
     await emptyPage.route('**/blocks/beat_blocks.json',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({blocks:[]})}));
     await emptyPage.goto(base+'/ui/');
     await emptyPage.evaluate(()=>window.ready);
+    await emptyPage.evaluate(async()=>{
+      if(!HMStudio.project?.show?.atoms?.length) await HMStudio.openProject(HMStudio.builtIn('daiyu-wang-five-seconds'));
+    });
     assert.equal(await emptyPage.locator('#catalogKinds [data-catalog-kind="block"]').isHidden(),true);
     await emptyPage.fill('#catalogQueryInput','face_whip');
     await emptyPage.click('#catalogKinds [data-catalog-kind="cam"]');
@@ -2274,6 +2277,77 @@ print(doc['show_id'])
     assert.deepEqual(emptyFailed,[]);
     await emptyPage.close();
     check('HM-HF-05 cam and FX Apply still work when the beat registry is empty');
+
+    const pxPage=await context.newPage();
+    const pxErrors=[], pxFailed=[];
+    pxPage.on('pageerror',e=>pxErrors.push(e.message));
+    pxPage.on('response',r=>{if(r.status()>=400)pxFailed.push(r.status()+' '+r.url());});
+    await pxPage.goto(base+'/ui/');
+    await pxPage.evaluate(()=>window.ready);
+    await pxPage.waitForFunction(()=>window.HMPixelFx&&HMPixelFx.ready&&HMPixelFx.ids.length===12);
+    const pxProof=path.resolve('docs/proof/hm-pixelfx-composer-fx');
+    fs.mkdirSync(pxProof,{recursive:true});
+    const chips=await pxPage.locator('#effectOptions [data-effect]').evaluateAll(els=>els.map(el=>el.dataset.effect));
+    assert.ok(chips.includes('hit_pink')&&chips.includes('none'));
+    assert.equal(chips.some(id=>String(id).includes('/')),false);
+    await pxPage.click('#catalogKinds [data-catalog-kind="fx"]');
+    await pxPage.fill('#catalogQueryInput','Hit spark');
+    await pxPage.waitForFunction(()=>[...document.querySelectorAll('#catalogResults .catalog-hit-id')].some(el=>el.textContent.includes('impacts/hit-spark')));
+    await pxPage.locator('#catalogQuery').screenshot({path:path.join(pxProof,'query-hit-spark.png')});
+    const kept=await pxPage.evaluate(()=>{const a=HMStudio.project.show.atoms[0];return {duration:a.duration_s,plates:a.hero.plates.slice(),preset:a.camera.preset,fx:(a.fx_hooks||[]).map(h=>h.type||h)};});
+    await pxPage.locator('#catalogResults [data-catalog-key="fx:impacts/hit-spark"]').click();
+    await pxPage.click('#catalogApply');
+    await pxPage.waitForFunction(()=>HMStudio.project.show.atoms[0].fx_hooks.some(h=>h&&h.type==='impacts/hit-spark'&&h.source==='pixelfx'&&h.t_rel===0.08));
+    let after=await pxPage.evaluate(()=>HMStudio.project.show.atoms[0]);
+    assert.deepEqual(after.fx_hooks.at(-1),{type:'impacts/hit-spark',t_rel:0.08,source:'pixelfx'});
+    assert.deepEqual(after.fx_hooks.slice(0,-1).map(h=>h.type||h),kept.fx);
+    assert.equal(after.duration_s,kept.duration);
+    assert.deepEqual(after.hero.plates,kept.plates);
+    assert.equal(after.camera.preset,kept.preset);
+    await pxPage.click('#catalogApply');
+    after=await pxPage.evaluate(()=>HMStudio.project.show.atoms[0]);
+    assert.equal(after.fx_hooks.filter(h=>(h.type||h)==='impacts/hit-spark').length,1);
+    await pxPage.locator('#catalogQueryStatus').screenshot({path:path.join(pxProof,'apply-hit-spark.png')});
+    await pxPage.evaluate(()=>HMStudio.renderAt(0.12));
+    const preview=await pxPage.evaluate(()=>HMStudio.renderer.lastPixelfx);
+    assert.ok(preview.drawn.includes('impacts/hit-spark'),JSON.stringify(preview));
+    assert.deepEqual(preview.missed,[]);
+    await pxPage.locator('#stage').screenshot({path:path.join(pxProof,'preview-hit-spark.png')});
+    const waveIds=['impacts/hit-spark','impacts/blunt-hit','impacts/crit-hit','impacts/hit-flash','impacts/impact-frame','impacts/parry','impacts/ground-slam','impacts/heavy-landing','melee/uppercut','explosions/cartoon-pow','explosions/dirt-explosion','explosions/smoke-bomb'];
+    await pxPage.evaluate(async ids=>{
+      HMStudio.editProject(project=>{project.show.atoms[0].fx_hooks=ids.map(id=>({type:id,t_rel:0.08,source:'pixelfx'}));});
+      await HMStudio.compile();
+    },waveIds);
+    const composedIds=await pxPage.evaluate(()=>HMStudio.composed.timeline.fx.pixelfx.map(entry=>entry[1]));
+    assert.deepEqual(composedIds,waveIds);
+    await pxPage.evaluate(()=>HMStudio.sampleStageFrameAt(0.16,{standIn:false,source:'pixelfx-compose'}));
+    const baked=await pxPage.evaluate(()=>HMStudio.renderer.lastPixelfx);
+    assert.ok(baked.drawn.length>=10,JSON.stringify(baked));
+    fs.writeFileSync(path.join(pxProof,'draw-report.json'),JSON.stringify({preview,baked,hook:{type:'<wave1-id>',t_rel:0.08,source:'pixelfx'}},null,2));
+    if(baked.missed.length){
+      const banner=await pxPage.locator('#fxHonestyBanner').innerText();
+      assert.equal(await pxPage.locator('#fxHonestyBanner').isHidden(),false);
+      for(const id of baked.missed) assert.ok(banner.includes(id),banner);
+    }else{
+      assert.equal(await pxPage.locator('#fxHonestyBanner').isHidden(),true);
+    }
+    await pxPage.locator('#stage').screenshot({path:path.join(pxProof,'compose-wave1.png')});
+    await pxPage.evaluate(()=>{HMPixelFx.paint=()=>({drew:false,pixels:0,reason:'forced-miss'});});
+    await pxPage.evaluate(()=>HMStudio.renderAt(0.16,{source:'pixelfx-miss'}));
+    const missBanner=await pxPage.locator('#fxHonestyBanner').innerText();
+    assert.equal(await pxPage.locator('#fxHonestyBanner').isHidden(),false);
+    assert.match(missBanner,/Pixelfx did not draw:/);
+    assert.match(missBanner,/impacts\/hit-spark/);
+    await pxPage.locator('#fxHonestyBanner').screenshot({path:path.join(pxProof,'honesty-miss.png')});
+    await pxPage.evaluate(()=>HMStudio.editProject(project=>{project.show.atoms=[];}));
+    await pxPage.fill('#catalogQueryInput','cartoon pow');
+    await pxPage.locator('#catalogResults [data-catalog-key="fx:explosions/cartoon-pow"]').click();
+    await pxPage.click('#catalogApply');
+    assert.match(await pxPage.locator('#catalogQueryStatus').innerText(),/Select a clip/);
+    assert.deepEqual(pxErrors,[]);
+    assert.deepEqual(pxFailed,[]);
+    await pxPage.close();
+    check('HM-PIXELFX wave 1 catalog Apply draws on preview and compose');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({checks,errors,failed},null,2));
   } finally {await browser.close();srv?.close();}

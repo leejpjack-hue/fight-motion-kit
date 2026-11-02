@@ -172,6 +172,63 @@ test('tip beat registry at blocks/beat_blocks.json indexes STREET block ids', ()
   assert.ok(fist.themes.includes('STREET'));
 });
 
+test('wave 1 pixelfx rows index as fx and Apply adds the hook without wiping the clip', () => {
+  const wave = read('public/presets/pixelfx_wave1.json');
+  const index = HMCatalogQuery.buildIndex({ cameras, fx, pixelfx: wave, beatBlocks: { blocks: [] } });
+  const ids = [
+    'impacts/hit-spark', 'impacts/blunt-hit', 'impacts/crit-hit', 'impacts/hit-flash',
+    'impacts/impact-frame', 'impacts/parry', 'impacts/ground-slam', 'impacts/heavy-landing',
+    'melee/uppercut', 'explosions/cartoon-pow', 'explosions/dirt-explosion', 'explosions/smoke-bomb'
+  ];
+  assert.equal(wave.length, 12);
+  assert.equal(index.sources.pixelfx, 12);
+  assert.ok(index.counts.fx >= 15 + 12);
+  for (const id of ids) {
+    const hit = index.hits.find(item => item.kind === 'fx' && item.id === id);
+    assert.ok(hit, id);
+    assert.equal(hit.family, 'pixelfx');
+    assert.equal(hit.source, 'pixelfx');
+    assert.ok(hit.themes.includes('pixelfx'));
+    const row = wave.find(item => item.id === id);
+    assert.equal(hit.label, row.label);
+    assert.equal(hit.description, row.notes);
+  }
+  assert.ok(index.hits.some(hit => hit.kind === 'fx' && hit.id === 'hit_pink' && hit.source !== 'pixelfx'));
+  const spark = HMCatalogQuery.query(index, { q: 'Hit spark', kind: 'fx' });
+  assert.ok(spark.some(hit => hit.id === 'impacts/hit-spark'));
+  const byId = HMCatalogQuery.query(index, { q: 'explosions/smoke-bomb', kind: 'fx' });
+  assert.equal(byId.length, 1);
+  assert.equal(byId[0].label, 'Smoke bomb');
+  const themed = HMCatalogQuery.query(index, { theme: 'pixelfx', kind: 'fx' });
+  assert.equal(themed.length, 12);
+
+  const clip = atom();
+  const before = {
+    plates: clip.hero.plates.slice(),
+    duration: clip.duration_s,
+    preset: clip.camera.preset,
+    nudge: clip.camera.nudge.x,
+    timing: clip.timing_hold.kind
+  };
+  const hit = index.hits.find(item => item.id === 'impacts/hit-spark');
+  const added = HMCatalogQuery.applyHit(clip, hit);
+  assert.equal(added.code, 'applied');
+  assert.deepEqual(clip.fx_hooks[1], { type: 'impacts/hit-spark', t_rel: 0.08, source: 'pixelfx' });
+  assert.equal(clip.fx_hooks[0].type, 'shake');
+  assert.equal(clip.hero.plates[0], before.plates[0]);
+  assert.equal(clip.duration_s, before.duration);
+  assert.equal(clip.camera.preset, before.preset);
+  assert.equal(clip.camera.nudge.x, before.nudge);
+  assert.equal(clip.timing_hold.kind, before.timing);
+  const again = HMCatalogQuery.applyHit(clip, hit);
+  assert.equal(again.code, 'unchanged');
+  assert.equal(clip.fx_hooks.length, 2);
+  const missing = HMCatalogQuery.applyHit(null, hit);
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, 'no-selection');
+  assert.match(missing.message, /Select a clip/);
+});
+
 test('caption stub sets caption_style and leaves an existing caption', () => {
   const index = HMCatalogQuery.buildIndex({ cameras, fx, beatBlocks: { blocks: [] } });
   const stub = index.hits.find(hit => hit.id === 'impact_hit');
