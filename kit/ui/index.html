@@ -578,6 +578,18 @@
    <button type="button" id="cqApply" class="pri">Apply</button>
    <div id="cqStatus" style="font:10px monospace;color:var(--dim)" role="status"></div>
   </div>
+  <details class="grp keepFocus" id="tlJsonGrp">
+   <summary style="font:600 11px monospace;color:var(--dim);text-transform:uppercase;letter-spacing:1px;cursor:pointer">Timeline JSON</summary>
+   <div style="font:10px monospace;color:var(--dim)">Abs times from the scrub clock. Read-only — this drawer does not write the show.</div>
+   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <button type="button" id="tlJsonCopy" class="small pri">Copy JSON</button>
+    <button type="button" id="tlJsonRefresh" class="small">Refresh</button>
+    <span id="tlJsonStatus" role="status" style="font:10px monospace;color:var(--ok)" data-state="idle"></span>
+   </div>
+   <div id="tlJsonList"></div>
+   <div id="tlJsonDiff" role="status" data-diff="none" style="font:11px monospace;color:var(--dim)">no prior save</div>
+   <textarea id="tlJsonFallback" readonly hidden aria-label="Timeline JSON"></textarea>
+  </details>
   <div class="grp keepFocus" id="atomInspGrp"><h3><span class="inspIdle">Selected atom</span><span class="inspBeat">Beat focus inspector</span> <span class="bfBadge">ACTIVE</span></h3><div id="insp" class="empty">select a timeline row</div></div>
   <div class="grp"><h3>Wording / overlays (v3)</h3>
    <div style="font:10px monospace;color:var(--dim)">Artificial text (runtime) preferred · legacy PNG optional</div>
@@ -631,6 +643,7 @@
 <script src="compose-client.js"></script>
 <script src="fe-store.js"></script>
 <script src="catalog-query.js"></script>
+<script src="timeline-json.js"></script>
 <script>
 
 const $=id=>document.getElementById(id);
@@ -1701,6 +1714,7 @@ function renderTL(){
   tl.appendChild(r);
  });
  renderInsp(); updateScrub(); renderPlateStrip(); updateDurWarn(); paintPreview();
+ renderTimelineJson();
 }
 function dropAt(e,at){
  const row=e.dataTransfer.getData('text/x-row'), atom=e.dataTransfer.getData('text/x-atom');
@@ -2457,6 +2471,7 @@ async function doSave(){
   // HM-COMPOSE-07: persist in browser (localStorage) + download / File System Access
   try{
     if(window.HMFeStore) HMFeStore.putLocalShow(spec());
+    try{ if(window.HMTimelineJson) HMTimelineJson.writeSave(localStorage, spec()); }catch(e){}
     dirtyDisk=false; lastSavedHash=showHash(); clearDraft();
     updateBanner();
     const r=await HMFeStore.saveWithFilePicker(SHOW.show_id+'.json', spec());
@@ -2779,6 +2794,72 @@ function applyCatalogHit(){
   }
   status(result.message);
 }
+function priorTimelineSave(showId){
+  let localShow=null;
+  try{ if(window.HMFeStore && typeof HMFeStore.getLocalShow==='function') localShow=HMFeStore.getLocalShow(showId); }catch(e){ localShow=null; }
+  try{ return HMTimelineJson.readPrior(localStorage, showId, localShow); }catch(e){ return null; }
+}
+function renderTimelineJson(){
+  if(!window.HMTimelineJson || !$('tlJsonList')) return;
+  const atoms=(SHOW&&SHOW.atoms)||[];
+  const dump=HMTimelineJson.dump(atoms,{show_id:SHOW&&SHOW.show_id||''});
+  const list=$('tlJsonList');
+  list.innerHTML='';
+  if(!dump.atom_count){
+    list.innerHTML='<div class="empty" style="padding:8px">No atoms. Copy JSON still copies an empty atoms array.</div>';
+  } else {
+    dump.atoms.forEach(row=>{
+      const el=document.createElement('div');
+      el.className='tl-json-row';
+      el.dataset.index=String(row.index);
+      el.dataset.id=row.id;
+      el.dataset.selected=row.index===SEL?'true':'false';
+      el.style.cssText='padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;background:var(--panel)';
+      if(row.index===SEL) el.style.borderColor='var(--acc)';
+      const head=document.createElement('div');
+      head.style.cssText='display:flex;gap:8px;font:11px monospace';
+      head.textContent=String(row.index+1).padStart(2,'0')+'  '+row.id+'  '+row.abs_start.toFixed(2)+'s → '+row.abs_end.toFixed(2)+'s';
+      const meta=document.createElement('div');
+      meta.style.cssText='font:10px monospace;color:var(--dim)';
+      meta.textContent='cam '+(row.camera_preset||'—')+' · fx '+(row.fx_hooks.length?row.fx_hooks.join(', '):'none')+' · plates '+(row.plate_keys.length?row.plate_keys.join(', '):'none');
+      el.append(head, meta);
+      list.appendChild(el);
+    });
+  }
+  const diffEl=$('tlJsonDiff');
+  if(diffEl){
+    const diff=HMTimelineJson.diff(atoms, priorTimelineSave(SHOW&&SHOW.show_id));
+    diffEl.dataset.diff=diff.status==='no prior save'?'none':diff.status;
+    diffEl.textContent=HMTimelineJson.diffStatusText(diff);
+  }
+  const count=$('tlJsonGrp')&&$('tlJsonGrp').querySelector('summary');
+  if(count) count.textContent='Timeline JSON · '+(dump.atom_count===1?'1 atom':dump.atom_count+' atoms');
+}
+async function copyTimelineJsonKit(){
+  if(!window.HMTimelineJson) return;
+  const atoms=(SHOW&&SHOW.atoms)||[];
+  const dump=HMTimelineJson.dump(atoms,{show_id:SHOW&&SHOW.show_id||''});
+  const text=HMTimelineJson.serialize(dump);
+  const statusEl=$('tlJsonStatus');
+  const okText=dump.atom_count?'Copied timeline JSON':'Copied timeline JSON (empty show)';
+  const box=$('tlJsonFallback');
+  try{
+    if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function') throw new Error('clipboard');
+    await navigator.clipboard.writeText(text);
+    if(box) box.hidden=true;
+    if(statusEl){ statusEl.dataset.state='ok'; statusEl.textContent=okText; }
+  }catch(e){
+    let copied=false;
+    if(box){ box.hidden=false; box.value=text; box.focus(); box.select(); try{ copied=document.execCommand('copy'); }catch(err){ copied=false; } }
+    if(statusEl){ statusEl.dataset.state=copied?'ok':'error'; statusEl.textContent=copied?okText:'Clipboard blocked. JSON is in the box below. The show was not changed.'; }
+  }
+}
+function wireTimelineJson(){
+  if(!$('tlJsonCopy')||$('tlJsonCopy').dataset.wired) return;
+  $('tlJsonCopy').dataset.wired='1';
+  $('tlJsonCopy').onclick=()=>{ copyTimelineJsonKit(); };
+  if($('tlJsonRefresh')) $('tlJsonRefresh').onclick=()=>{ renderTimelineJson(); status('Timeline JSON refreshed'); };
+}
 function wireCatalogQuery(){
   if(!$('cqInput')||$('cqInput').dataset.wired) return;
   $('cqInput').dataset.wired='1';
@@ -2838,6 +2919,7 @@ async function loadCatalog(keep){
  mergeLocalShowsIntoCatalog();
  PRESETS=Object.fromEntries((CAT.presets||[]).map(p=>[p.id,p]));
  wireCatalogQuery();
+ wireTimelineJson();
  await initCatalogQuery();
  // HM-COMPOSE-03: always refresh example-shows picker (even on keep) so Save as ids appear
  refreshExamplePicker(!!keep);
