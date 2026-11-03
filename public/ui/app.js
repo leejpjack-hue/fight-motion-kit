@@ -577,6 +577,92 @@
       }
     }
   }
+  function fmtAbs(t) { return (Number.isFinite(t) ? t : 0).toFixed(2) + 's'; }
+  function timelineDump() {
+    const atoms = project?.show?.atoms || [];
+    return HMTimelineJson.dump(atoms, { show_id: project?.show?.show_id || '' });
+  }
+  function priorTimelineSave(showId) {
+    let localShow = null;
+    try {
+      if (window.HMFeStore && typeof HMFeStore.getLocalShow === 'function') localShow = HMFeStore.getLocalShow(showId);
+    } catch (e) { localShow = null; }
+    try { return HMTimelineJson.readPrior(localStorage, showId, localShow); }
+    catch (e) { return null; }
+  }
+  function renderTimelineJsonPanel() {
+    const panel = $('timelineJsonPanel');
+    if (!panel || !window.HMTimelineJson) return;
+    const dump = timelineDump();
+    panel.dataset.count = String(dump.atom_count);
+    const count = $('timelineJsonCount');
+    if (count) count.textContent = dump.atom_count === 1 ? '1 atom' : `${dump.atom_count} atoms`;
+    const empty = $('timelineJsonEmpty');
+    const list = $('timelineJsonList');
+    if (empty) empty.hidden = dump.atom_count > 0;
+    if (list) {
+      list.hidden = dump.atom_count === 0;
+      list.replaceChildren();
+      for (const row of dump.atoms) {
+        const li = document.createElement('li');
+        li.className = 'tl-json-row';
+        li.dataset.index = String(row.index);
+        li.dataset.id = row.id;
+        li.dataset.selected = row.index === selected ? 'true' : 'false';
+        const head = document.createElement('div');
+        head.className = 'tl-json-head';
+        const idx = document.createElement('span');
+        idx.className = 'tl-json-index';
+        idx.textContent = String(row.index + 1).padStart(2, '0');
+        const id = document.createElement('span');
+        id.className = 'tl-json-id';
+        id.textContent = row.id;
+        const time = document.createElement('span');
+        time.className = 'tl-json-time';
+        time.textContent = `${fmtAbs(row.abs_start)} → ${fmtAbs(row.abs_end)}`;
+        head.append(idx, id, time);
+        const meta = document.createElement('div');
+        meta.className = 'tl-json-meta';
+        meta.textContent = `cam ${row.camera_preset || '—'} · fx ${row.fx_hooks.length ? row.fx_hooks.join(', ') : 'none'} · plates ${row.plate_keys.length ? row.plate_keys.join(', ') : 'none'}`;
+        li.append(head, meta);
+        list.append(li);
+      }
+    }
+    const diffEl = $('timelineJsonDiff');
+    if (diffEl) {
+      const diff = HMTimelineJson.diff(project?.show?.atoms || [], priorTimelineSave(project?.show?.show_id));
+      diffEl.dataset.diff = diff.status === 'no prior save' ? 'none' : diff.status;
+      diffEl.textContent = HMTimelineJson.diffStatusText(diff);
+    }
+  }
+  async function copyTimelineJson() {
+    const dump = timelineDump();
+    const text = HMTimelineJson.serialize(dump);
+    const statusEl = $('timelineJsonStatus');
+    const okText = dump.atom_count ? 'Copied timeline JSON' : 'Copied timeline JSON (empty show)';
+    const box = $('timelineJsonFallback');
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') throw new Error('clipboard');
+      await navigator.clipboard.writeText(text);
+      if (box) box.hidden = true;
+      if (statusEl) { statusEl.dataset.state = 'ok'; statusEl.textContent = okText; }
+      return true;
+    } catch (e) {
+      let copied = false;
+      if (box) {
+        box.hidden = false;
+        box.value = text;
+        box.focus();
+        box.select();
+        try { copied = document.execCommand('copy'); } catch (err) { copied = false; }
+      }
+      if (statusEl) {
+        statusEl.dataset.state = copied ? 'ok' : 'error';
+        statusEl.textContent = copied ? okText : 'Clipboard blocked. JSON is in the box below. The show was not changed.';
+      }
+      return copied;
+    }
+  }
   function renderPlateJump() {
     const box=$('plateJumpChips'), list=$('plateJumpList');
     if(!box||!list) return;
@@ -676,6 +762,7 @@
     });
     $('ruler').replaceChildren();for(let i=0;i<=5;i++){const s=document.createElement('span');s.textContent=(d*i/5).toFixed(d<10?1:0)+'s';s.style.left=i*20+'%';$('ruler').append(s);}
     $('scrub').max=maxScrubDuration()||1;
+    renderTimelineJsonPanel();
   }
   function syncFxProfileChips() {
     const profile=HMComposeClient.resolveFxProfile(project?.show);
@@ -2028,12 +2115,15 @@
   });
   on('replaceImage',()=>{replacing=!replacing;if(replacing&&project&&HMComposeClient.isPlatePackShow(project.show)){pickerOpen=true;applyPickerChrome();}document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
   on('helpOpen',()=>$('helpDialog').showModal());
+  on('timelineJsonOpen',()=>{const panel=$('timelineJsonPanel');if(panel)panel.open=true;renderTimelineJsonPanel();panel?.scrollIntoView({block:'nearest'});});
+  on('timelineJsonCopy',()=>copyTimelineJson());
+  on('timelineJsonRefresh',()=>{renderTimelineJsonPanel();status('Timeline JSON refreshed');});
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
     const mod=e.metaKey||e.ctrlKey;
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
