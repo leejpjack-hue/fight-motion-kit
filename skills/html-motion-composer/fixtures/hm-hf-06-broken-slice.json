@@ -1,0 +1,32 @@
+{
+  "show_id": "hm-hf-06-qa-slice",
+  "title": "HM-HF-06 Frame-QA slice",
+  "duration_target_s": 0.5,
+  "floor_y": 684,
+  "grounded": true,
+  "parity_mode": true,
+  "compose_mode": "parity",
+  "chars": {
+    "L": { "name": "Lin Daiyu" },
+    "R": { "name": "Wang Xifeng" }
+  },
+  "bg": {},
+  "overlays": [],
+  "atoms": [
+    {
+      "id": "beat-01",
+      "label": "Opening clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": { "family": "fight", "beat_class": "clash" },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": ["P01"]
+      },
+      "camera": { "preset": "" },
+      "fx_hooks": [{ "type": "shake", "t_rel": 0.08, "params": { "amp": 5, "dur": 0.15 } }]
+    }
+  ]
+}

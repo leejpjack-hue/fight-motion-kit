@@ -11,5 +11,7 @@ __pycache__/
 *.pyc
 .DS_Store
 
-# Local previews, test downloads, and scratch captures
+# Local previews, test downloads, and scratch captures.
+# HM-HF-06 Frame-QA writes lint.json, frame-peek.json, and claim.json under work/qa/.
+# Peek PNGs, zips, and WebM exports stay here too. Do not force those binaries into a PR.
 work/
