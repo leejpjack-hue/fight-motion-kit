@@ -13,11 +13,16 @@
   const GOLD = [DEMO, ORIGINAL, CONTINUATION];
   const BUILTIN = [...GOLD, STREET, GRAMMAR];
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
+  const DEFAULT_CUT_PRESETS = {version:'hm-hf-08',presets:[
+    {id:'freeze_hold',label:'Freeze hold',defaults:{dur_s:0.12,hold_s:0.12,dir:1}},
+    {id:'white_flash',label:'White flash',defaults:{dur_s:0.08,hold_s:0,dir:1}},
+    {id:'whip_cut',label:'Whip cut',defaults:{dur_s:0.10,hold_s:0,dir:1}}
+  ]};
   const DEFAULT_TIMING_PACKS = {version:'p0',id:'street_timing',label:'Street timing',packs:[
     {id:'dialogue_film_slow',label:'Dialogue / film-slow hold',kind:'hold',duration_floor_s:1.5,soft_cam:{preset:'slow_push',intensity:0.45}},
     {id:'micro_cut_flurry',label:'Micro-cut flurry',kind:'micro_cut',short_hold_s:0.12,impact_hold_s:1.2,flurry_presets:['ecu_jitter','dutch_snap','whip_A_to_B'],impact_preset:'static_hold',impact_beat_classes:['clash','impact','hit'],impact_fx:['hit_orange','hit_pink','flash_orange','hitstop_2f']}
   ]};
-  let project, presets, effects, fightPacks, timingPacks, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
+  let project, presets, effects, fightPacks, timingPacks, cutPresets, renderer, result, selected = 0, time = 0, playing = false, looping = false, onion = true, copiedCam = null;
   let abEnabled = true, projectB = null, resultB = null, rendererB = null, sourceKindB = 'gold', sourceValueB = DEMO, importedProjectB = null;
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
@@ -170,7 +175,7 @@
       throw new Error(message);
     }
     try {
-      const r=await HMComposeClient.composeShow(snapshot.show,{allowSoftLint:true,cameraPresets:presets,fxPresets:effects,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
+      const r=await HMComposeClient.composeShow(snapshot.show,{allowSoftLint:true,cameraPresets:presets,fxPresets:effects,cutPresets,loadJson:async p=>{if(snapshot.layouts[p])return snapshot.layouts[p];return json('/'+p);}});
       if(!r.ok)throw new Error(r.errors.join('; '));
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       next.onRenderHook=(t,opts)=>recordSeekPreviewCall(t,opts,'stage');
@@ -279,6 +284,7 @@
         allowSoftLint: true,
         cameraPresets: presets,
         fxPresets: effects,
+        cutPresets,
         loadJson: async p => { if (snapshotB.layouts[p]) return snapshotB.layouts[p]; return json('/' + p); }
       });
       if (!r.ok) throw new Error(r.errors.join('; '));
@@ -789,7 +795,7 @@
   }
   function renderInspector() {
     renderCharHonesty();
-    const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a){syncFxProfileChips();return;}
+    const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a){syncFxProfileChips();syncCutInspector();return;}
     $('clipThumbnail').src=thumbnail(a);$('clipName').value=a.label||a.id;$('duration').value=+a.duration_s.toFixed(4);$('timingHint').textContent=`${startOf(selected).toFixed(2)}s → ${(startOf(selected)+a.duration_s).toFixed(2)}s`;
     const cam=a.camera||{};
     $('camera').value=cam.preset||cam.segments?.[0]?.preset||'static_hold';
@@ -851,6 +857,7 @@
     }
     renderPathEditor();
     updateFxHonestyUI();
+    syncCutInspector();
     renderBeatBlockList();
   }
   function paintedFxHooks(hooks) {
@@ -1367,6 +1374,67 @@
     const packs = timingPacks?.packs?.length ? timingPacks.packs : DEFAULT_TIMING_PACKS.packs;
     return packs.find(p => p.id === id) || null;
   }
+  function cutPresetById(id) {
+    const packs = cutPresets?.presets?.length ? cutPresets.presets : DEFAULT_CUT_PRESETS.presets;
+    return packs.find(p => p.id === id) || null;
+  }
+  function populateCutPresets() {
+    const sel = $('cutPreset');
+    if (!sel) return;
+    const packs = cutPresets?.presets?.length ? cutPresets.presets : DEFAULT_CUT_PRESETS.presets;
+    sel.replaceChildren();
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'Hard cut';
+    sel.append(none);
+    for (const p of packs) {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.label || p.id;
+      sel.append(o);
+    }
+  }
+  function syncCutInspector() {
+    const preset = $('cutPreset'), dur = $('cutDur'), dir = $('cutDir'), hint = $('cutHint');
+    if (!preset || !dur || !dir || !hint) return;
+    const a = atom();
+    const incoming = !!a && selected > 0;
+    const cut = incoming && a.cut && typeof a.cut === 'object' ? a.cut : null;
+    const id = cut && cut.preset && cut.preset !== 'none' ? cut.preset : '';
+    preset.disabled = !incoming;
+    dur.disabled = !incoming || !id;
+    dir.disabled = !incoming || id !== 'whip_cut';
+    if (document.activeElement !== preset) preset.value = cutPresetById(id) ? id : '';
+    if (document.activeElement !== dur) {
+      const fallback = cutPresetById(id)?.defaults?.dur_s || 0.08;
+      dur.value = cut && Number.isFinite(+cut.dur_s) ? +cut.dur_s : (id === 'freeze_hold' && cut && Number.isFinite(+cut.hold_s) ? +cut.hold_s : fallback);
+    }
+    if (document.activeElement !== dir) dir.value = cut && cut.dir < 0 ? '-1' : '1';
+    const path = 'show.atoms[' + Math.max(0, selected) + '].cut';
+    if (!incoming) hint.textContent = 'The first clip has no incoming cut. ' + path + ' is the clip the cut enters.';
+    else if (!id) hint.textContent = 'Hard cut. A preset writes ' + path + ' and the preview draws it when you scrub the boundary.';
+    else if (id === 'freeze_hold') hint.textContent = 'Freeze hold on ' + path + '. The outgoing plate stays up for this many seconds.';
+    else if (id === 'white_flash') hint.textContent = 'White flash on ' + path + '. It peaks on the boundary.';
+    else hint.textContent = 'Whip cut on ' + path + '. The streak crosses the boundary.';
+  }
+  function writeCutFromForm(usePresetDefault) {
+    if (selected < 1 || !atom()) return;
+    const id = $('cutPreset').value;
+    if (!id) { edit(() => { delete atom().cut; }); return; }
+    const pack = cutPresetById(id);
+    const def = pack?.defaults || {};
+    if (usePresetDefault && Number.isFinite(+def.dur_s)) $('cutDur').value = def.dur_s;
+    const dur = Math.min(0.5, Math.max(0.02, +$('cutDur').value || +def.dur_s || 0.08));
+    const dir = $('cutDir').value === '-1' ? -1 : 1;
+    edit(() => {
+      atom().cut = {
+        preset: id,
+        dur_s: +dur.toFixed(4),
+        hold_s: id === 'freeze_hold' ? +dur.toFixed(4) : 0,
+        dir,
+      };
+    });
+  }
   function populateTimingPacks() {
     const sel = $('timingPack');
     if (!sel) return;
@@ -1567,11 +1635,12 @@
     status(result.message, false);
   }
   async function boot() {
-    [presets,effects,fightPacks,timingPacks]=await Promise.all([
+    [presets,effects,fightPacks,timingPacks,cutPresets]=await Promise.all([
       json('/presets/camera_presets.json'),
       json('/presets/fx_presets.json'),
       json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
-      json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS))
+      json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS)),
+      json('/presets/cut_transitions.json').catch(()=>copy(DEFAULT_CUT_PRESETS))
     ]);
     let pixelfxWave1=[];
     try{
@@ -1580,6 +1649,7 @@
     }catch(_){pixelfxWave1=[];}
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
+    populateCutPresets();
     await loadBeatBlocks();
     catalogIndex = HMCatalogQuery.buildIndex({
       cameras: presets,
@@ -1647,6 +1717,9 @@
   on('applyBeatBlock',applySelectedBeatBlock);
   on('applyTimingPack',applySelectedTimingPack);
   $('timingPack')?.addEventListener('change',()=>refreshTimingPackHint());
+  $('cutPreset')?.addEventListener('change', safe(() => writeCutFromForm(true)));
+  $('cutDur')?.addEventListener('change', safe(() => writeCutFromForm(false)));
+  $('cutDir')?.addEventListener('change', safe(() => writeCutFromForm(false)));
   on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;

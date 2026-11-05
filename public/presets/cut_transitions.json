@@ -1,0 +1,24 @@
+{
+  "version": "hm-hf-08",
+  "id": "cut_transitions",
+  "label": "Cut transitions",
+  "field": "show.atoms[i].cut",
+  "note": "The cut sits on the atom it enters (i >= 1). It does not add time. The outgoing plate ends at the boundary; the preset draws across that boundary.",
+  "presets": [
+    {
+      "id": "freeze_hold",
+      "label": "Freeze hold",
+      "defaults": { "dur_s": 0.12, "hold_s": 0.12, "dir": 1 }
+    },
+    {
+      "id": "white_flash",
+      "label": "White flash",
+      "defaults": { "dur_s": 0.08, "hold_s": 0, "dir": 1 }
+    },
+    {
+      "id": "whip_cut",
+      "label": "Whip cut",
+      "defaults": { "dur_s": 0.10, "hold_s": 0, "dir": 1 }
+    }
+  ]
+}

@@ -2387,6 +2387,112 @@ print(doc['show_id'])
     assert.deepEqual(pxFailed,[]);
     await pxPage.close();
     check('HM-PIXELFX wave 1 catalog Apply draws on preview and compose');
+
+    const cutPage=await context.newPage();
+    const cutErrors=[], cutFailed=[];
+    cutPage.on('pageerror',e=>cutErrors.push(e.message));
+    cutPage.on('response',r=>{if(r.status()>=400)cutFailed.push(r.status()+' '+r.url());});
+    await cutPage.goto(base+'/ui/');
+    await cutPage.evaluate(()=>window.ready);
+    await cutPage.evaluate(async()=>{await HMStudio.openProject(HMStudio.builtIn('daiyu-wang-five-seconds'));});
+    await cutPage.waitForFunction(()=>!HMStudio.loading&&HMStudio.project.show.show_id==='daiyu-wang-five-seconds'&&HMStudio.selectedIndex===0);
+    const cutProof=path.resolve('docs/proof/hm-hf-08');
+    fs.mkdirSync(cutProof,{recursive:true});
+    const optionIds=await cutPage.locator('#cutPreset option').evaluateAll(opts=>opts.map(o=>o.value));
+    assert.deepEqual(optionIds,['','freeze_hold','white_flash','whip_cut']);
+    assert.equal(await cutPage.locator('#cutPreset').isDisabled(),true);
+    await cutPage.click('.timeline-clip[data-index="1"]');
+    await cutPage.waitForFunction(()=>!document.getElementById('cutPreset').disabled);
+    await cutPage.selectOption('#cutPreset','freeze_hold');
+    await cutPage.waitForFunction(()=>HMStudio.project.show.atoms[1].cut&&HMStudio.project.show.atoms[1].cut.preset==='freeze_hold'&&!HMStudio.loading);
+    const written=await cutPage.evaluate(()=>HMStudio.project.show.atoms[1].cut);
+    assert.equal(written.preset,'freeze_hold');
+    assert.equal(written.hold_s,written.dur_s);
+    assert.equal(await cutPage.evaluate(()=>HMStudio.composed.timeline.cuts[0].before_id),'beat-02');
+    assert.equal(await cutPage.evaluate(()=>HMStudio.duration),5);
+    await cutPage.locator('#cutTransitionGroup').screenshot({path:path.join(cutProof,'inspector-freeze-hold.png')});
+    const roundTrip=await cutPage.evaluate(async()=>{
+      const raw=JSON.stringify(HMStudio.project);
+      const again=JSON.parse(raw);
+      if(again.show.atoms[1].cut.preset!=='freeze_hold')throw new Error('save dropped show.atoms[1].cut');
+      await HMStudio.load(again);
+      return HMStudio.project.show.atoms[1].cut;
+    });
+    assert.equal(roundTrip.preset,'freeze_hold');
+    await cutPage.evaluate(async()=>{
+      const show=await (await fetch('/shows/hm-hf-08-cuts.json')).json();
+      const cur=HMStudio.project;
+      await HMStudio.load({version:1,show,layouts:cur.layouts,media:cur.media,assets:cur.assets||{}});
+    });
+    await cutPage.waitForFunction(()=>!HMStudio.loading&&HMStudio.project.show.show_id==='hm-hf-08-cuts'&&HMStudio.composed&&HMStudio.composed.ok);
+    const loadedCuts=await cutPage.evaluate(()=>HMStudio.composed.timeline.cuts.map(c=>({preset:c.preset,t:c.t,field:'show.atoms['+c.index+'].cut'})));
+    assert.deepEqual(loadedCuts,[
+      {preset:'freeze_hold',t:0.5,field:'show.atoms[1].cut'},
+      {preset:'white_flash',t:1,field:'show.atoms[2].cut'},
+      {preset:'whip_cut',t:1.5,field:'show.atoms[3].cut'},
+    ]);
+    const saveStage=async name=>fs.writeFileSync(path.join(cutProof,name),Buffer.from(await cutPage.evaluate(()=>document.getElementById('stage').toDataURL('image/png').split(',')[1]),'base64'));
+    if(await cutPage.locator('#onionToggle').getAttribute('aria-pressed')==='true')await cutPage.click('#onionToggle');
+    const scrubCut=async t=>cutPage.evaluate(t=>{
+      const el=document.getElementById('scrub');
+      el.value=String(t);
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      const g=document.getElementById('stage').getContext('2d');
+      const data=g.getImageData(180,140,120,80).data;
+      let hash=0;
+      for(let i=0;i<data.length;i++)hash=(hash*33+data[i])>>>0;
+      const one=(x,y)=>Array.from(g.getImageData(x,y,1,1).data);
+      const cut=HMStudio.renderer.lastCut;
+      return {t:HMStudio.time,source:HMStudio.renderer.lastRenderSource,hash,center:one(640,80),corner:one(24,24),cut:cut&&{preset:cut.preset,pictureT:cut.pictureT,white:cut.white,freeze:cut.freeze,barX:cut.whip&&cut.whip.barX}};
+    },t);
+    const freezeA=await scrubCut(0.54);
+    const freezeB=await scrubCut(0.6);
+    assert.equal(freezeA.source,'scrub');
+    assert.equal(freezeA.cut.preset,'freeze_hold');
+    assert.equal(freezeB.cut.preset,'freeze_hold');
+    assert.equal(freezeA.cut.pictureT,freezeB.cut.pictureT);
+    assert.equal(freezeA.hash,freezeB.hash);
+    const afterFreeze=await scrubCut(0.74);
+    assert.equal(afterFreeze.cut,null);
+    assert.notEqual(afterFreeze.hash,freezeA.hash);
+    await scrubCut(0.56);
+    await saveStage('scrub-freeze-hold.png');
+    const flash=await scrubCut(1);
+    assert.equal(flash.source,'scrub');
+    assert.equal(flash.cut.preset,'white_flash');
+    assert.equal(flash.cut.white,1);
+    assert.deepEqual(flash.center.slice(0,3),[255,255,255]);
+    assert.deepEqual(flash.corner.slice(0,3),[255,255,255]);
+    const beforeFlash=await scrubCut(0.9);
+    assert.equal(beforeFlash.cut,null);
+    assert.notDeepEqual(beforeFlash.center.slice(0,3),[255,255,255]);
+    await scrubCut(1);
+    await saveStage('scrub-white-flash.png');
+    const whipBefore=await scrubCut(1.4);
+    const whip=await scrubCut(1.5);
+    const whipAfter=await scrubCut(1.62);
+    assert.equal(whipBefore.cut,null);
+    assert.equal(whip.source,'scrub');
+    assert.equal(whip.cut.preset,'whip_cut');
+    assert.equal(whip.cut.barX,640-36);
+    assert.ok(whip.center.every((v,i)=>i===3?v===255:v>=250),JSON.stringify(whip.center));
+    assert.notDeepEqual(whip.center,whipBefore.center);
+    assert.equal(whipAfter.cut,null);
+    assert.notEqual(whipAfter.hash,whip.hash);
+    await scrubCut(1.5);
+    await saveStage('scrub-whip-cut.png');
+    fs.writeFileSync(path.join(cutProof,'scrub-report.json'),JSON.stringify({
+      field:'show.atoms[i].cut',
+      presets:['freeze_hold','white_flash','whip_cut'],
+      cuts:loadedCuts,
+      freeze:{a:freezeA,b:freezeB,after:afterFreeze},
+      flash:{at:flash,before:beforeFlash},
+      whip:{before:whipBefore,at:whip,after:whipAfter},
+    },null,2));
+    assert.deepEqual(cutErrors,[]);
+    assert.deepEqual(cutFailed,[]);
+    await cutPage.close();
+    check('HM-HF-08 cut presets draw on scrub and round-trip in show JSON');
     assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);check('zero uncaught browser errors or failed asset requests');
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({checks,errors,failed},null,2));
   } finally {await browser.close();srv?.close();}

@@ -310,6 +310,35 @@
     }
    }
   },
+  "cut": {
+   "type": "object",
+   "description": "Cut transition at the boundary this atom enters. Field path show.atoms[i].cut (i >= 1). Preset id in presets/cut_transitions.json: freeze_hold, white_flash, whip_cut. Does not add duration.",
+   "required": ["preset"],
+   "properties": {
+    "preset": {
+     "type": "string",
+     "enum": ["freeze_hold", "white_flash", "whip_cut", "none"]
+    },
+    "dur_s": {
+     "type": "number",
+     "minimum": 0.02,
+     "maximum": 0.5,
+     "description": "White flash and whip-cut span, centered on the boundary. Freeze hold uses hold_s."
+    },
+    "hold_s": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 0.5,
+     "description": "Freeze hold length into this atom, in seconds."
+    },
+    "dir": {
+     "type": "number",
+     "enum": [-1, 1],
+     "description": "Whip-cut direction. 1 travels right, -1 travels left."
+    }
+   },
+   "additionalProperties": false
+  },
   "bg": {
    "type": "object",
    "properties": {
