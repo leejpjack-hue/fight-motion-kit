@@ -1,4 +1,8 @@
-/* Shared deterministic renderer: the editor, player, HTML export and video use this same code. */
+/* Shared deterministic renderer: the editor, player, HTML export and video use this same code.
+ * Cut resolve/paint lives in cut-transitions.js. This file only calls it. */
+if (typeof module === 'object' && module && module.exports && typeof require === 'function') {
+  require('./cut-transitions.js');
+}
 
 // HM-BG-MOTION: the crop rect is a window on the source.
 // Pan/zoom slide that window when the source has room outside it.
@@ -383,71 +387,6 @@ function cameraPoseOnSegment(seg, t) {
   // Extra scale follows the chain parameter so both sides of a cut share one zoom.
   if (seg.snap_zoom) camera.s += 0.18 * cameraEase('snap', u0 + (u1 - u0) * local);
   return camera;
-}
-function resolveCutTransition(cuts, time) {
-  const t = +time || 0;
-  const list = Array.isArray(cuts) ? cuts : [];
-  let best = null;
-  for (let i = 0; i < list.length; i++) {
-    const cut = list[i];
-    if (!cut || !Number.isFinite(+cut.t)) continue;
-    const preset = cut.preset;
-    let t0;
-    let t1;
-    if (preset === 'freeze_hold') {
-      const hold = Math.max(0, +cut.hold_s || +cut.dur_s || 0);
-      t0 = +cut.t;
-      t1 = +cut.t + hold;
-    } else {
-      const dur = Math.max(0.02, +cut.dur_s || 0.08);
-      t0 = +cut.t - dur / 2;
-      t1 = +cut.t + dur / 2;
-    }
-    if (t < t0 - 1e-6 || t >= t1 - 1e-9) continue;
-    const u = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
-    const dist = Math.abs(t - +cut.t);
-    if (!best || dist < best.dist) best = { cut, u, dist };
-  }
-  if (!best) return null;
-  const u = Math.min(1, Math.max(0, best.u));
-  const peak = 1 - Math.abs(u * 2 - 1);
-  const dir = best.cut.dir < 0 ? -1 : 1;
-  const preset = best.cut.preset;
-  return {
-    preset,
-    t: +best.cut.t,
-    u,
-    peak,
-    freeze: preset === 'freeze_hold',
-    white: preset === 'white_flash' ? peak : 0,
-    whip: preset === 'whip_cut' ? {
-      dir,
-      u,
-      peak,
-      shift: (u - 0.5) * 520 * dir,
-      barX: (dir > 0 ? u : 1 - u) * 1280 - 36,
-    } : null,
-    after_id: best.cut.after_id || null,
-    before_id: best.cut.before_id || null,
-  };
-}
-function drawWhipCut(ctx, whip) {
-  const peak = whip.peak;
-  if (!(peak > 0)) return;
-  const dir = whip.dir < 0 ? -1 : 1;
-  ctx.save();
-  for (let i = 0; i < 16; i++) {
-    const y = (i / 16) * 720;
-    const travel = dir > 0 ? whip.u : (1 - whip.u);
-    const x = travel * 1500 - 360 - (i % 4) * 28 * dir;
-    ctx.globalAlpha = 0.22 * peak;
-    ctx.fillStyle = i % 2 ? '#f4f7f8' : '#101820';
-    ctx.fillRect(x, y, 280, 720 / 16 + 1);
-  }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(whip.barX, 0, 72, 720);
-  ctx.restore();
 }
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
@@ -958,13 +897,7 @@ function createMotionRenderer(canvas, assets = {}) {
       ctx.fillStyle = '#ff2f9a';
       ctx.fillRect(0, 0, 1280, 720);
     }
-    if (heldCut && heldCut.white > 0) {
-      ctx.save();
-      ctx.globalAlpha = heldCut.white;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 1280, 720);
-      ctx.restore();
-    }
+    paintCutOverlay(ctx, heldCut);
     if (heldCut && heldCut.whip) drawWhipCut(ctx, heldCut.whip);
     paintOverlays.filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
       ctx.save();ctx.globalAlpha=clamp(o.opacity??1,0,1);ctx.translate(o.x??640,o.y??640);ctx.scale(o.scale||1,o.scale||1);
@@ -1025,6 +958,7 @@ if (hmRoot.HMComposeClient) {
 }
 hmRoot.resolveCutTransition = resolveCutTransition;
 hmRoot.drawWhipCut = drawWhipCut;
+hmRoot.paintCutOverlay = paintCutOverlay;
 hmRoot.cameraEase = cameraEase;
 hmRoot.cameraPoseOnSegment = cameraPoseOnSegment;
 hmRoot.HMMotion = createMotionRenderer;
