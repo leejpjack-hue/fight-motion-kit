@@ -62,6 +62,8 @@ The **Background → Apply to** selector defaults to **Selected clip**. `atom.ba
 
 ## Cameras, effects, captions
 
+A cut between atoms is `show.atoms[i].cut` on the atom the cut enters (`i >= 1`). It does not add duration. Preset ids live in `public/presets/cut_transitions.json`: `freeze_hold`, `white_flash`, and `whip_cut`. `dur_s` is the flash or whip span centered on the boundary. `hold_s` is how long a freeze hold keeps the outgoing plate. `dir` is `1` or `-1` for the whip. The first atom ignores `cut`. Compose copies each one onto `timeline.cuts[]` and the existing motion renderer draws it while you scrub.
+
 Load preset IDs from `public/presets/camera_presets.json` and hook IDs from `fx_presets.json`. Simple cameras include `static_hold`, `slow_push`, `slow_pull`, `slide_left`, `slide_right`, `gentle_orbit`. Camera `params` can override x/y/s/r curves (`const`, `lerp`, `sin`, `saw`, `alt_bump`); x/y are pixels, s is scale, r is degrees. Use subtle values for already tightly framed plates. Rotation automatically raises minimum scale to avoid exposed corners.
 
 Overlays use `{id,kind:"text",text,t_start,t_end,x,y,style:{fontSize,fill,stroke,strokeWidth}}`. Keep preserved overlays unchanged when extending. Editor atom `caption` is converted into timeline overlays when compiled by the UI. The build helper materializes captions in its validation compose so reports match the editor.

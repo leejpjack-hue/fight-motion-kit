@@ -911,6 +911,51 @@
     return r.json();
   }
 
+  const CUT_TRANSITION_IDS = ['freeze_hold', 'white_flash', 'whip_cut'];
+  const CUT_TRANSITION_DEFAULTS = {
+    freeze_hold: { id: 'freeze_hold', label: 'Freeze hold', dur_s: 0.12, hold_s: 0.12, dir: 1 },
+    white_flash: { id: 'white_flash', label: 'White flash', dur_s: 0.08, hold_s: 0, dir: 1 },
+    whip_cut: { id: 'whip_cut', label: 'Whip cut', dur_s: 0.10, hold_s: 0, dir: 1 },
+  };
+
+  function cutPresetTable(raw) {
+    const list = Array.isArray(raw) ? raw : (raw && raw.presets) || [];
+    const table = {};
+    CUT_TRANSITION_IDS.forEach((id) => { table[id] = Object.assign({}, CUT_TRANSITION_DEFAULTS[id]); });
+    list.forEach((p) => {
+      if (!p || CUT_TRANSITION_IDS.indexOf(p.id) < 0) return;
+      const d = p.defaults || {};
+      table[p.id] = {
+        id: p.id,
+        label: p.label || table[p.id].label,
+        dur_s: Number.isFinite(+d.dur_s) ? +d.dur_s : table[p.id].dur_s,
+        hold_s: Number.isFinite(+d.hold_s) ? +d.hold_s : table[p.id].hold_s,
+        dir: d.dir < 0 ? -1 : 1,
+      };
+    });
+    return table;
+  }
+
+  function clampCutSeconds(n, fallback) {
+    const v = Number.isFinite(+n) ? +n : fallback;
+    return Math.round(Math.min(0.5, Math.max(0.02, v)) * 10000) / 10000;
+  }
+
+  function normalizeAtomCut(raw, table) {
+    const presets = table || cutPresetTable(null);
+    if (raw == null || raw === false) return null;
+    const preset = typeof raw === 'string' ? raw : raw.preset;
+    if (!preset || preset === 'none' || preset === 'hard') return null;
+    const spec = presets[preset];
+    if (!spec) return { error: 'unknown cut preset ' + preset };
+    const dur_s = clampCutSeconds(typeof raw === 'object' ? raw.dur_s : undefined, spec.dur_s);
+    const hold_s = preset === 'freeze_hold'
+      ? clampCutSeconds(typeof raw === 'object' && raw.hold_s != null ? raw.hold_s : (typeof raw === 'object' ? raw.dur_s : undefined), spec.hold_s)
+      : 0;
+    const dir = typeof raw === 'object' && raw.dir < 0 ? -1 : 1;
+    return { preset, dur_s, hold_s, dir };
+  }
+
   async function composeShow(show, opts) {
     opts = opts || {};
     const allowSoftLint = opts.allowSoftLint === true;
@@ -936,6 +981,7 @@
     };
     const fxp = {};
     fxList.forEach((h) => { fxp[h.id] = h; });
+    const cutTable = cutPresetTable(opts.cutPresets);
 
     const atoms = [];
     for (const raw of show.atoms || []) {
@@ -993,6 +1039,7 @@
     const layout = {};
     const plates = [];
     const tlAtoms = [];
+    const showCuts = [];
     const fx = {
       hits: [], flash: [], hitstop: [], shake: [], bgflash: [], dust: [],
       sparks: [], speed: [], fence: [], trails: [], pink_cut: null,
@@ -1004,7 +1051,8 @@
     let nPlate = 0;
     let nHero = 0;
 
-    for (const a of atoms) {
+    for (let atomIndex = 0; atomIndex < atoms.length; atomIndex++) {
+      const a = atoms[atomIndex];
       validateBackground(a.background, a.id);
       const rawD = +a.duration_s;
       const rawNpl = +a.plates_needed;
@@ -1236,6 +1284,33 @@
       }
 
       const holdMeta = timingHoldMeta(a);
+      let cutMeta = null;
+      if (atomIndex === 0) {
+        const named = a.cut && (typeof a.cut === 'string' ? a.cut : a.cut.preset);
+        if (named && named !== 'none' && named !== 'hard') {
+          warns.push(a.id + ': cut ignored on the first atom (no incoming boundary)');
+        }
+      } else if (a.cut) {
+        const cutNorm = normalizeAtomCut(a.cut, cutTable);
+        if (cutNorm && cutNorm.error) {
+          errors.push(a.id + ': ' + cutNorm.error);
+        } else if (cutNorm) {
+          if (cutNorm.preset === 'freeze_hold') {
+            cutNorm.hold_s = Math.min(cutNorm.hold_s, Math.max(0.02, Math.round((d - 0.02) * 10000) / 10000));
+          }
+          cutMeta = {
+            t: Math.round(t0 * 10000) / 10000,
+            after_id: atoms[atomIndex - 1].id,
+            before_id: a.id,
+            index: atomIndex,
+            preset: cutNorm.preset,
+            dur_s: cutNorm.dur_s,
+            hold_s: cutNorm.hold_s,
+            dir: cutNorm.dir,
+          };
+          showCuts.push(cutMeta);
+        }
+      }
       tlAtoms.push({
         id: a.id,
         t0: Math.round(t0 * 10000) / 10000,
@@ -1247,6 +1322,7 @@
         fx_hooks: atomFx,
         source_refs: a.source_refs || [],
         ...(holdMeta ? { timing_hold: holdMeta } : {}),
+        ...(cutMeta ? { cut: cutMeta } : {}),
       });
       t = t1;
     }
@@ -1309,6 +1385,7 @@
       chars: show.chars,
       atoms: tlAtoms,
       plates,
+      cuts: showCuts,
       fx,
       fx_profile: fxProfile,
       overlays,
@@ -2688,6 +2765,9 @@
 
   global.HMComposeClient = {
     composeShow,
+    CUT_TRANSITION_IDS,
+    cutPresetTable,
+    normalizeAtomCut,
     applyTimingPack,
     isFightImpact,
     frameSequenceDump,

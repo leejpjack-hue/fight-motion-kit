@@ -1,0 +1,199 @@
+{
+  "field": "show.atoms[i].cut",
+  "presets": [
+    "freeze_hold",
+    "white_flash",
+    "whip_cut"
+  ],
+  "cuts": [
+    {
+      "preset": "freeze_hold",
+      "t": 0.5,
+      "field": "show.atoms[1].cut"
+    },
+    {
+      "preset": "white_flash",
+      "t": 1,
+      "field": "show.atoms[2].cut"
+    },
+    {
+      "preset": "whip_cut",
+      "t": 1.5,
+      "field": "show.atoms[3].cut"
+    }
+  ],
+  "freeze": {
+    "a": {
+      "t": 0.54,
+      "source": "scrub",
+      "hash": 1839930382,
+      "center": [
+        253,
+        253,
+        253,
+        255
+      ],
+      "corner": [
+        254,
+        253,
+        254,
+        255
+      ],
+      "cut": {
+        "preset": "freeze_hold",
+        "pictureT": 0.4999,
+        "white": 0,
+        "freeze": true,
+        "barX": null
+      }
+    },
+    "b": {
+      "t": 0.6,
+      "source": "scrub",
+      "hash": 1839930382,
+      "center": [
+        253,
+        253,
+        253,
+        255
+      ],
+      "corner": [
+        254,
+        253,
+        254,
+        255
+      ],
+      "cut": {
+        "preset": "freeze_hold",
+        "pictureT": 0.4999,
+        "white": 0,
+        "freeze": true,
+        "barX": null
+      }
+    },
+    "after": {
+      "t": 0.74,
+      "source": "scrub",
+      "hash": 986323237,
+      "center": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "corner": [
+        255,
+        255,
+        254,
+        255
+      ],
+      "cut": null
+    }
+  },
+  "flash": {
+    "at": {
+      "t": 1,
+      "source": "scrub",
+      "hash": 2062993920,
+      "center": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "corner": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "cut": {
+        "preset": "white_flash",
+        "pictureT": 1,
+        "white": 1,
+        "freeze": false,
+        "barX": null
+      }
+    },
+    "before": {
+      "t": 0.9,
+      "source": "scrub",
+      "hash": 637933731,
+      "center": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "corner": [
+        254,
+        253,
+        253,
+        255
+      ],
+      "cut": null
+    }
+  },
+  "whip": {
+    "before": {
+      "t": 1.4,
+      "source": "scrub",
+      "hash": 3481827835,
+      "center": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "corner": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "cut": null
+    },
+    "at": {
+      "t": 1.5,
+      "source": "scrub",
+      "hash": 1924537616,
+      "center": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "corner": [
+        253,
+        253,
+        253,
+        255
+      ],
+      "cut": {
+        "preset": "whip_cut",
+        "pictureT": 1.5,
+        "white": 0,
+        "freeze": false,
+        "barX": 604
+      }
+    },
+    "after": {
+      "t": 1.62,
+      "source": "scrub",
+      "hash": 3738677322,
+      "center": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "corner": [
+        254,
+        254,
+        254,
+        255
+      ],
+      "cut": null
+    }
+  }
+}
