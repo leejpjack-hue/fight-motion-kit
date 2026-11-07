@@ -27,6 +27,13 @@
   let history = [], historyIndex = -1, compileVersion = 0, renderedVersion = -1, compileVersionB = 0, saveVersion = 0, replacing = false, recording = false, preparing = false, playToken = 0;
   let clockStart = 0, timeStart = 0, dragIndex = -1, playbackFrame = 0, plateJumpSig = null, jumpingPlate = false, pathDrag = null;
   let loadRequest = 0, loading = false, loadRequestB = 0, loadingB = false, pickerOpen = false, rangeAnchor = 0, rangeEnd = 0;
+  let saveQueue=Promise.resolve(), snapshotCommit=false, projectRevision=0;
+  const destinationToken=()=>({revision:projectRevision,request:loadRequest});
+  function requireEditable(){if(snapshotCommit)throw Error('Pending strip storage transaction is in progress. Try again after it finishes.');}
+  function writeSnapshot(snapshot){
+    const write=saveQueue.catch(()=>{}).then(()=>HMAssetStore.put('active',snapshot));
+    saveQueue=write;return write;
+  }
   let peekGroupCache = new Map(), lastPeekShowId = '', lastActivePeekSig = '';
   let beatRegistry = { blocks: [] }, beatBlockId = '';
   let seekPreviewWarns = [], lastSeekPreviewEntry = 'init', lastSeekPreviewTime = 0;
@@ -110,6 +117,7 @@
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
     if(p.assets)for(const value of Object.values(p.assets))if(typeof value!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,/.test(value))throw new Error('Embedded assets must be image data, not external URLs.');
     Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); Object.values(p.show.bg||{}).filter(v=>typeof v==='string').forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);}); if(p.show.fg)pathsSafe(p.show.fg);
+    HMStripAdapter.validateProject(p);
   }
   async function builtIn(id) {
     const show = await json('/shows/' + id + '.json'); const layouts = {};
@@ -127,9 +135,11 @@
     return {version:1, show, layouts, media};
   }
   async function load(p) {
+    requireEditable();projectRevision++;
     const request=++loadRequest;loading=true;
     try {
-    validate(p); pause(); project=copy(p); pickerOpen=false; selected=project.show.atoms.length?0:-1;rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=0;
+    p=copy(p);validate(p);await HMStripAdapter.decodeProject(p);if(request!==loadRequest)return false;
+    pause(); project=p; pickerOpen=false; selected=project.show.atoms.length?0:-1;rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=0;
     history=[copy(project)];historyIndex=0;result=null;
     update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
     status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
@@ -138,32 +148,62 @@
     } finally {if(request===loadRequest)loading=false;}
   }
   async function openProject(source) {
+    requireEditable();
     const request=++loadRequest;loading=true;pause();status('Opening project…');
     try {const next=await source;if(request===loadRequest)return await load(next);return false;}
     finally {if(request===loadRequest)loading=false;}
   }
   function historyReplace(url) { window.history.replaceState(null,'',url); }
   async function persist() {
+    requireEditable();
     const v=++saveVersion; $('saveState').textContent='Saving…';
-    try { await HMAssetStore.put('active', copy(project)); if(v===saveVersion)$('saveState').textContent='Saved on this device'; }
+    try { await writeSnapshot(copy(project)); if(v===saveVersion)$('saveState').textContent='Saved on this device'; }
     catch(e){$('saveState').textContent='Not saved · download a project';status('Browser storage unavailable. Use Save project to keep your work.',true);}
   }
   function commit() {
     validate(project); pause();
     if(JSON.stringify(project)===JSON.stringify(history[historyIndex])){update();return;}
-    history=history.slice(0,historyIndex+1);history.push(copy(project)); if(history.length>60)history.shift();historyIndex=history.length-1;
+    projectRevision++;history=history.slice(0,historyIndex+1);history.push(copy(project)); if(history.length>60)history.shift();historyIndex=history.length-1;
     time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();
   }
   function edit(fn) {
+    requireEditable();
     const before=copy(project);
     try {fn();validate(project);commit();} catch(e){project=before;update();throw e;}
   }
-  function restore(delta) {const i=historyIndex+delta;if(i<0||i>=history.length)return;pause();historyIndex=i;project=copy(history[i]);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();status(delta<0?'Undid last edit':'Redid last edit');}
+  function restore(delta) {requireEditable();const i=historyIndex+delta;if(i<0||i>=history.length)return;pause();projectRevision++;historyIndex=i;project=copy(history[i]);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();status(delta<0?'Undid last edit':'Redid last edit');}
+  async function commitCandidate(token,mutate){
+    requireEditable();
+    if(loading||recording||preparing||document.querySelector('.workspace').inert)throw Error('Wait for the current project operation to finish.');
+    if(!token||token.revision!==projectRevision||token.request!==loadRequest)throw Error('The destination changed. Open the strip importer again.');
+    pause();
+    snapshotCommit=true;
+    const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(el=>!el.closest('#stripDialog'));
+    const disabled=controls.map(el=>el.disabled);controls.forEach(el=>el.disabled=true);
+    const workspace=document.querySelector('.workspace');workspace.inert=true;
+    try {
+      const draft=copy(project);
+      if(mutate(draft)?.then)throw Error('Candidate preparation must be synchronous.');
+      const candidate=copy(draft);validate(candidate);
+      const nextHistory=history.slice(0,historyIndex+1);nextHistory.push(copy(candidate));if(nextHistory.length>60)nextHistory.shift();
+      // All earlier autosaves drain first. No optimistic live/history publication and
+      // no compensating disk write: a failed IDB transaction leaves its old value.
+      await saveQueue.catch(()=>{});
+      await writeSnapshot(copy(candidate));
+      // A crash here can reopen the durable candidate. Memory + IDB are not ACID.
+      project=candidate;history=nextHistory;historyIndex=history.length-1;projectRevision++;
+    } finally {
+      snapshotCommit=false;workspace.inert=false;controls.forEach((el,i)=>el.disabled=disabled[i]);
+    }
+    $('saveState').textContent='Saved on this device';update();
+    void compile().catch(e=>status(e.message,true));
+  }
   function captionOverlays(show) {
     show.overlays=(show.overlays||[]).filter(o=>!o.editor_caption);let t=0;
     show.atoms.forEach(a=>{if(a.caption)show.overlays.push({id:'caption-'+a.id,editor_caption:true,kind:'text',text:a.caption,t_start:t,t_end:t+a.duration_s,x:640,y:644,z:20,style:{fontSize:38,fill:'#ffffff',stroke:'#17201d',strokeWidth:7}});t+=a.duration_s;});
   }
   async function compile() {
+    validate(project);
     const v=++compileVersion;
     if(!project.show.atoms.length){result=null;renderer=null;$('stage').getContext('2d').clearRect(0,0,1280,720);updateTransport();renderPlateJump();renderFramePeekStrip();renderShowLintPanel();return null;}
     const snapshot=copy(project);captionOverlays(snapshot.show);
@@ -740,12 +780,17 @@
     const query=$('mediaSearch').value.toLowerCase();$('mediaGrid').replaceChildren();
     project.media.filter(m=>m.name.toLowerCase().includes(query)).forEach(m=>{
       const card=document.createElement('div');card.className='media-card'+(mediaFor(atom())?.id===m.id?' selected':'');
+      if(m.pendingMotion){
+        const name=document.createElement('strong'),note=document.createElement('p');name.textContent=m.name;
+        note.textContent='PENDING · NOT PLAYABLE until SG02. Original PNG + JSON saved; no plate, background or animation export.';
+        card.dataset.pendingMotion='true';card.append(name,note);$('mediaGrid').append(card);return;
+      }
       card.innerHTML=`<button class="media-image" title="Use ${esc(m.name)} in selected clip" aria-label="Use ${esc(m.name)} in selected clip"><img src="${esc(assetSrc(m.src))}" alt="${esc(m.name)}"></button><div class="media-meta"><span>${esc(m.name)}</span><button class="media-add" title="Add ${esc(m.name)} to timeline" aria-label="Add ${esc(m.name)} to timeline">＋</button></div>`;
       card.querySelector('.media-image').onclick=safe(()=>{if(!atom())return addMedia(m);edit(()=>{atom().hero={layout_source:m.layoutSource,plates:[m.plateId]};atom().plates_needed=1;});replacing=false;document.querySelector('.inspector').dataset.replacing='false';status('Replaced selected plate with '+m.name);});
       card.querySelector('.media-add').onclick=safe(()=>addMedia(m));$('mediaGrid').append(card);
     });
   }
-  function addMedia(m) {edit(()=>{project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=project.show.atoms.length-1;time=startOf(selected);});}
+  function addMedia(m) {if(m.pendingMotion)throw Error('Pending strip is NOT PLAYABLE until SG02.');edit(()=>{project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=project.show.atoms.length-1;time=startOf(selected);});}
   function beatTickMarkup(raw) {
     const hk=typeof raw==='string'?{type:raw}:(raw&&typeof raw==='object'?raw:null);
     if(!hk||!hk.type)return '';
@@ -1483,7 +1528,8 @@
   function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=selected<0?0:startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   async function importImages(files) {
-    if(!files.length)return;const before=copy(project);
+    requireEditable();if(!files.length)return;
+    const destination=destinationToken();
     try {
       const items=[];
       for(const file of [...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}))) {
@@ -1493,9 +1539,10 @@
         const im=new Image();im.src=data;await im.decode();const id=uid();
         items.push({id,name:file.name.replace(/\.[^.]+$/,''),src:data,layoutSource:'embedded/'+id+'/layout.json',plateId:'P01'});
       }
+      if(destination.revision!==projectRevision||destination.request!==loadRequest)throw Error('The destination changed. Import images again.');
       edit(()=>{for(const m of items){project.media.push(m);project.layouts[m.layoutSource]={[m.plateId]:{full:m.src}};}if(!project.show.atoms.length){for(const m of items)project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=0;time=0;}});
       status(`Imported ${items.length} images · Saved with this project on your device`);
-    } catch(e) {project=before;update();throw e;} finally {$('imageInput').value='';}
+    } finally {$('imageInput').value='';}
   }
   function download(name,blob) {const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}
   function populateCameraSelect(sel) {
@@ -2197,6 +2244,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get selectedIndex(){return selected;},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},destinationToken,commitCandidate,get pendingCommit(){return snapshotCommit;},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();
