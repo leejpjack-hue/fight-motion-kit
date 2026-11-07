@@ -15,6 +15,7 @@ async function ensureServer(urlStr){
   const u=new URL(urlStr);
   const ok=await new Promise(r=>{const req=http.get(urlStr+'/ui/',res=>{res.resume();r(res.statusCode===200);});req.on('error',()=>r(false));req.setTimeout(600,()=>{req.destroy();r(false);});});
   if(ok)return null;
+  if(process.env.TEST_BASE_URL)throw Error('Configured TEST_BASE_URL is unavailable; refusing to start a fallback server: '+urlStr);
   const root=path.resolve('public');
   const srv=http.createServer((req,res)=>{
     const clean=decodeURIComponent(new URL(req.url,urlStr).pathname).replace(/^\/+/,'');
@@ -31,7 +32,7 @@ async function ensureServer(urlStr){
 }
 (async()=>{
   const srv=await ensureServer(base);
-  const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||undefined,env:process.env,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu']});
+  const browser=await chromium.launch({headless:true,chromiumSandbox:true,channel:process.env.BROWSER_CHANNEL||undefined,env:process.env,args:['--disable-dev-shm-usage','--disable-gpu']});
   const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   const p=await context.newPage(), errors=[], failed=[], checks=[];
   p.on('pageerror',e=>errors.push(e.message));p.on('response',r=>{if(r.status()>=400)failed.push(r.status()+' '+r.url());});
