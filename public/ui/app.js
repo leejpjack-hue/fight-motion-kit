@@ -447,6 +447,7 @@
   }
   function update() {
     productFlowGatePanel?.refresh();
+    productFlowNotifyPanel?.refresh();
     $('projectTitle').value=project.show.title||project.show.show_id;$('previewTitle').textContent=project.show.title||'Untitled exchange';
     $('mediaCount').textContent=project.media.length+' images';$('timelineCount').textContent=`${project.show.atoms.length} clips · ${duration().toFixed(2)}s`;
     $('emptyStage').hidden=!!project.show.atoms.length;$('stageLabel').hidden=!project.show.atoms.length;
@@ -2298,6 +2299,12 @@
     target?.focus();
     target?.scrollIntoView({block:'nearest'});
   }
+  const productFlowNotifyPanel = window.HMProductFlowNotify.mountNotifyPanel($('pf53NotifyPanel'), {
+    getProject: () => project,
+    getNotes: () => $('pf09GateNotes')?.value || '',
+    getResumeHint: () => $('pf09ResumeHint')?.value || '',
+    origin: '',
+  });
   const productFlowGatePanel = window.HMProductFlowGate.mountGatePanel($('pf09GatePanel'), {
     getProject: () => project,
     beforeDecision: () => { requireEditable(); if (loading) throw new Error('Wait for the show to finish opening.'); },
