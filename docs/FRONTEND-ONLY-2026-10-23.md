@@ -40,6 +40,10 @@ Open fight → tweak 1 plate + 1 cam + 1 timing → Compose → see result **≤
 | Import plate pack | File / folder / zip via File API → client store (IndexedDB and/or FS Access); no `POST /api/import_pack` |
 | Composed `out/<id>/` | Client compose produces `timeline.json` + `layout.json` in memory + local persist; player reads same-origin static **or** blob/object URLs from that store |
 
+## HM-PF-44 edit loop
+
+Character plates, per-atom camera, and compose timing/FX write one project. The `html-motion-composer:draft:<show_id>` autosave and the downloaded `.motion.json` both carry cam, timing, FX, and plates. Pin and recent keys stay `hm.composer.pinPlatePack` and `hm.composer.recentPlatePack`. See [`docs/product-flow/MOTION-JSON-SOT.md`](product-flow/MOTION-JSON-SOT.md).
+
 ## Compose on the product path
 Compose **must run in the browser** for the Jack bar on Workers (network only to the static host).
 

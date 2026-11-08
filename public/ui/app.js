@@ -160,9 +160,13 @@
     finally {if(request===loadRequest)loading=false;}
   }
   function historyReplace(url) { window.history.replaceState(null,'',url); }
+  function writeShowDraft(){
+    try{ if(window.HMMotionSot&&project&&project.show) HMMotionSot.writeDraft(localStorage,project,time); }catch(e){}
+  }
   async function persist() {
     requireEditable();
     const v=++saveVersion; $('saveState').textContent='Saving…';
+    writeShowDraft();
     try { await writeSnapshot(copy(project)); if(v===saveVersion)$('saveState').textContent='Saved on this device'; }
     catch(e){$('saveState').textContent='Not saved · download a project';status('Browser storage unavailable. Use Save project to keep your work.',true);}
   }

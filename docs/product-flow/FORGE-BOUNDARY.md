@@ -26,7 +26,7 @@ The product path is frontend-only. See [`docs/FRONTEND-ONLY-2026-10-23.md`](../F
 Allowed on the product path:
 
 - Cloudflare Workers, or another static host, serving the UI and the lean catalog.
-- Browser IndexedDB and portable `.motion.json`.
+- Browser IndexedDB, the `html-motion-composer:draft:*` autosave, and portable `.motion.json`. See [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) (HM-PF-44).
 - Compose in the browser. Network only to the static host.
 
 Out of the product path:
