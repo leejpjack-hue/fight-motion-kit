@@ -447,6 +447,7 @@
   }
   function update() {
     productFlowGatePanel?.refresh();
+    productFlowNotifyPanel?.refresh();
     $('projectTitle').value=project.show.title||project.show.show_id;$('previewTitle').textContent=project.show.title||'Untitled exchange';
     $('mediaCount').textContent=project.media.length+' images';$('timelineCount').textContent=`${project.show.atoms.length} clips · ${duration().toFixed(2)}s`;
     $('emptyStage').hidden=!!project.show.atoms.length;$('stageLabel').hidden=!project.show.atoms.length;
@@ -2305,6 +2306,12 @@
   });
   $('pf09OpenStory').addEventListener('click', safe(e => { e.preventDefault(); focusStoryboard(); }));
   on('timelineJsonCopy',()=>copyTimelineJson());
+  const productFlowNotifyPanel = window.HMProductFlowNotify.mountNotifyPanel($('pf53NotifyPanel'), {
+    getProject: () => project,
+    getNotes: () => $('pf09GateNotes')?.value || '',
+    getResumeHint: () => $('pf09ResumeHint')?.value || '',
+    origin: '',
+  });
   on('timelineJsonRefresh',()=>{renderTimelineJsonPanel();status('Timeline JSON refreshed');});
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
