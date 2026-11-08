@@ -45,6 +45,8 @@ This is animation of existing plates with cuts, camera motion and effects. It do
 
 ## AI skill and ten-second continuation
 
+For character creation before composing, use [`hm-character-lock`](skills/hm-character-lock/SKILL.md) to turn a dual-cast brief into local costume-lock JSON and sheets. It reuses `prompt-sheets` and `json-pose-from-image` outside the frontend, then hands off to **Open project** with the JSON and companion images selected together. A [local example and contract check](skills/hm-character-lock/references/pack-contract.md) reuse shipped assets without generation or provider login.
+
 The reusable skill lives in [`skills/html-motion-composer/SKILL.md`](skills/html-motion-composer/SKILL.md). It describes project authoring, new image generation, actual-alpha compositing, preservation of an existing edit, and verified offline/video exports. Its two helpers build a portable project and export through the actual editor in an isolated browser. They are parameterized by checkout, show/project, output paths, and fps.
 
 The editor's **Open 10-second continuation** button opens the extended sample: the original eight clips and first five seconds are preserved, then eight newly generated transparent character PNGs play over a new dusk rooftop background. It is also available at `/ui/?show=daiyu-wang-ten-seconds` and `/player/?show=daiyu-wang-ten-seconds`.

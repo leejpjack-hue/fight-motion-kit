@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Character Lock"
+  short_description: "Prepare local dual-cast costume lock packs"
+  default_prompt: "Use $hm-character-lock to turn my cast brief and references into local costume_lock JSON and sheets that I can open in the HTML Motion Composer."
