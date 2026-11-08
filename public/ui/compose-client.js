@@ -2658,6 +2658,39 @@
     return next;
   }
 
+  // HM-PF-43: block-pack apply for the gold HF-08 cut presets (show.atoms[i].cut).
+  // Same write the per-clip Cut-in form makes; atom 0 never gets a cut (no
+  // incoming boundary). Cuts add no time, so durations and plate times stay put.
+  function applyCutPack(show, selectedIndices, opts) {
+    if (!show || !Array.isArray(show.atoms)) throw new Error('Cut pack needs a show.');
+    const options = opts || {};
+    const mode = options.preset || 'cycle';
+    const table = cutPresetTable(options.cutPresets);
+    let order;
+    if (mode === 'cycle') order = CUT_TRANSITION_IDS.slice();
+    else {
+      if (!table[mode]) throw new Error('Unknown cut preset: ' + mode + '.');
+      order = [mode];
+    }
+    const selected = [];
+    const seen = {};
+    const list = selectedIndices || [];
+    for (let i = 0; i < list.length; i++) {
+      const idx = list[i];
+      if (!Number.isInteger(idx) || idx < 1 || idx >= show.atoms.length || seen[idx]) continue;
+      seen[idx] = true;
+      selected.push(idx);
+    }
+    selected.sort((a, b) => a - b);
+    if (!selected.length) throw new Error('Cut pack lands on entering clips (i >= 1). Select a clip after the first.');
+    const next = deepClone(show);
+    selected.forEach((i, k) => {
+      const spec = table[order[k % order.length]];
+      next.atoms[i].cut = { preset: spec.id, dur_s: spec.dur_s, hold_s: spec.id === 'freeze_hold' ? spec.hold_s : 0, dir: spec.dir };
+    });
+    return next;
+  }
+
   function frameSequenceDump(composed, fps) {
     const rate = fps == null ? 24 : +fps;
     if (!Number.isFinite(rate) || rate < 1 || rate > 120) throw new Error('Frame sequence fps must be between 1 and 120.');
@@ -3162,6 +3195,7 @@
     cutPresetTable,
     normalizeAtomCut,
     applyTimingPack,
+    applyCutPack,
     isFightImpact,
     frameSequenceDump,
     timingExport,

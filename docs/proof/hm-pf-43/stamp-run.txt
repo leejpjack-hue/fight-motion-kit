@@ -1,0 +1,24 @@
+$ node skills/hm-compose-fx-impact/scripts/stamp-cut-pack.cjs --show <copy of public/shows/hm-hf-08-cuts.json, cuts stripped> --all
+Cut catalog: /workspace/repos/fight-motion-kit-hm-pf-43/public/presets/cut_transitions.json
+Mode: cycle (freeze_hold -> white_flash -> whip_cut)
+  beat-01[0]: skipped — first atom has no incoming boundary
+  beat-02[1]: freeze_hold (dur 0.12s, hold 0.12s, dir 1)
+  beat-03[2]: white_flash (dur 0.08s, hold 0s, dir 1)
+  beat-04[3]: whip_cut (dur 0.1s, hold 0s, dir 1)
+Stamped 3 atom(s): freeze_hold/white_flash/whip_cut, skipped 1 (first atom).
+Wrote: /tmp/tmp.0qOrsACFaQ/show.json (backup: /tmp/tmp.0qOrsACFaQ/show.json.bak)
+
+$ node skills/hm-compose-fx-impact/scripts/stamp-cut-pack.cjs --show <same> --preset white_flash --atoms beat-02,beat-04 --out after-white-flash.json
+Cut catalog: /workspace/repos/fight-motion-kit-hm-pf-43/public/presets/cut_transitions.json
+Mode: white_flash [White flash]
+  beat-02[1]: white_flash (dur 0.08s, hold 0s, dir 1)
+  beat-04[3]: white_flash (dur 0.08s, hold 0s, dir 1)
+Stamped 2 atom(s): white_flash.
+Wrote: /tmp/tmp.0qOrsACFaQ/after-white-flash.json
+
+$ node skills/hm-compose-fx-impact/scripts/stamp-cut-pack.cjs --show <same> --preset sparkle --all
+stamp-cut-pack: unknown cut preset "sparkle". Known ids:
+  freeze_hold
+  white_flash
+  whip_cut
+exit=3
