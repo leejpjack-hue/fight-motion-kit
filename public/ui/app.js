@@ -147,7 +147,13 @@
     return true;
     } finally {if(request===loadRequest)loading=false;}
   }
+  function confirmReplaceOpenProject(action) {
+    if(!project||typeof window.confirm!=='function')return true;
+    if(window.confirm(`${action?`${action}? `:''}This will replace the currently open project and discard its session work. Use Save project first to keep your work.`))return true;
+    status('Kept the open project.');return false;
+  }
   async function openProject(source) {
+    if(!confirmReplaceOpenProject('Open project'))return false;
     requireEditable();
     const request=++loadRequest;loading=true;pause();status('Opening project…');
     try {const next=await source;if(request===loadRequest)return await load(next);return false;}
@@ -1767,7 +1773,10 @@
   $('cutPreset')?.addEventListener('change', safe(() => writeCutFromForm(true)));
   $('cutDur')?.addEventListener('change', safe(() => writeCutFromForm(false)));
   $('cutDir')?.addEventListener('change', safe(() => writeCutFromForm(false)));
-  on('newProject',()=>load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})}));
+  on('newProject',()=>{
+    if(!confirmReplaceOpenProject('New project'))return false;
+    return load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})});
+  });
   on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;
   on('play',play);on('restart',()=>{pause();time=0;draw();});on('previous',()=>select(Math.max(0,(activeAt(Math.min(time,duration()-.0001))) - 1)));on('next',()=>select(Math.min(project.show.atoms.length-1,activeAt(Math.min(time,duration()-.0001))+1)));
