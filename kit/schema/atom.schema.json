@@ -17,6 +17,11 @@
    "type": "string",
    "minLength": 1
   },
+  "beat_id": {
+   "type": "string",
+   "minLength": 1,
+   "description": "HM-PF-08 stable storyboard beat id. When set, equals id. HF-04 beat-block ids stay on the block registry and are not written here."
+  },
   "duration_s": {
    "enum": [
     0.5,

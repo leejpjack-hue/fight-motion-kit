@@ -1311,8 +1311,10 @@
           showCuts.push(cutMeta);
         }
       }
+      const bridgedBeatId = beatToken(a.beat_id);
       tlAtoms.push({
         id: a.id,
+        ...(bridgedBeatId ? { beat_id: bridgedBeatId } : {}),
         t0: Math.round(t0 * 10000) / 10000,
         t1: Math.round(t1 * 10000) / 10000,
         pose_mode: mode,
@@ -2056,6 +2058,9 @@
       'adjacent_same_cam',
       'duration_outlier',
     ]),
+    bridgeCodes: Object.freeze([
+      'beat_id_conflict',
+    ]),
     rhythmWindow: Object.freeze({
       target_median_s: 0.5,
       max_s: 1.4,
@@ -2507,6 +2512,17 @@
       });
     }
 
+    lintBeatBridge(show, opts.board).forEach((c) => {
+      pushFinding(
+        'beat_id_conflict',
+        c.message,
+        c.fix,
+        c.atom_id || c.beat_id,
+        Number.isInteger(c.index) ? c.index : undefined,
+        'bridge'
+      );
+    });
+
     const byCode = {};
     findings.forEach((f) => {
       byCode[f.code] = (byCode[f.code] || 0) + 1;
@@ -2763,6 +2779,383 @@
     return next;
   }
 
+  // HM-PF-08. beat_id is the storyboard id on a show atom.
+  // HF-04 block ids (street_ecu_fist and the rest) are a different namespace.
+  // atom.id is the alias until beat_id is stamped. A rename writes both or neither.
+  const BEAT_ID_BRIDGE = Object.freeze({
+    id: 'HM-PF-08-BEAT-ID-BRIDGE',
+    field: 'beat_id',
+    alias: 'id',
+    kind: 'hm-pf-08-board',
+    skill: 'hm-storyboard-cantonese',
+    pf06: 'HM-PF-06',
+    blocksBake: false,
+  });
+  const BEAT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+
+  function beatToken(value) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function validBeatId(value) {
+    return BEAT_ID_RE.test(value);
+  }
+
+  function bridgeConflict(code, message, fix, extra) {
+    const fixText = String(fix || '').trim();
+    const normalized = (fixText.startsWith('Fix: ') ? fixText : 'Fix: ' + fixText).replace(/\.*$/, '.');
+    return Object.assign({ code: code, message: message, fix: normalized }, extra || {});
+  }
+
+  function cloneJson(value) {
+    if (value == null) return null;
+    return deepClone(value);
+  }
+
+  function bridgeFail(show, board, conflicts) {
+    return {
+      ok: false,
+      code: 'beat_id_conflict',
+      conflicts: conflicts,
+      show: cloneJson(show),
+      board: cloneJson(board),
+    };
+  }
+
+  function bridgeOk(show, board) {
+    return {
+      ok: true,
+      code: 'ok',
+      conflicts: [],
+      show: cloneJson(show),
+      board: cloneJson(board),
+    };
+  }
+
+  function effectiveBeat(atom) {
+    if (!atom || typeof atom !== 'object') return { id: '', split: false, atomId: '' };
+    const beat = beatToken(atom.beat_id);
+    const atomId = beatToken(atom.id);
+    if (beat && atomId && beat !== atomId) return { id: beat, split: true, atomId: atomId };
+    return { id: beat || atomId, split: false, atomId: atomId };
+  }
+
+  function readBoardBeat(beat) {
+    if (!beat || typeof beat !== 'object') return { id: '', split: false, alias: '' };
+    const beatId = beatToken(beat.beat_id);
+    const alias = beatToken(beat.id);
+    if (beatId && alias && beatId !== alias) return { id: beatId, split: true, alias: alias };
+    return { id: beatId || alias, split: false, alias: alias };
+  }
+
+  function badBeatConflict(label) {
+    return bridgeConflict(
+      'bad_beat_id',
+      label + ' is not a stable beat id.',
+      'Fix: Use a beat id of letters, numbers, hyphens, underscores, or dots.'
+    );
+  }
+
+  function scanShowBeats(show) {
+    const conflicts = [];
+    const atomIndexById = new Map();
+    if (!show || typeof show !== 'object' || !Array.isArray(show.atoms)) {
+      conflicts.push(bridgeConflict(
+        'missing_show',
+        'Show has no atoms array.',
+        'Fix: Open a show whose atoms are the storyboard beats.'
+      ));
+      return { conflicts: conflicts, atomIndexById: atomIndexById };
+    }
+    show.atoms.forEach((atom, index) => {
+      const eff = effectiveBeat(atom);
+      if (eff.split) {
+        conflicts.push(bridgeConflict(
+          'id_split',
+          'Clip ' + eff.atomId + ' beat_id "' + eff.id + '" does not match its id.',
+          'Fix: Set the clip id to its beat_id or rename the beat so both sides keep one id.',
+          { atom_id: eff.atomId, beat_id: eff.id, index: index }
+        ));
+        return;
+      }
+      if (!eff.id || !validBeatId(eff.id)) {
+        const item = badBeatConflict('Clip ' + (index + 1));
+        item.index = index;
+        if (eff.atomId) item.atom_id = eff.atomId;
+        conflicts.push(item);
+        return;
+      }
+      if (atomIndexById.has(eff.id)) {
+        conflicts.push(bridgeConflict(
+          'duplicate_atom',
+          'Beat id "' + eff.id + '" is on more than one clip.',
+          'Fix: Give each clip a distinct beat_id before syncing the board.',
+          { beat_id: eff.id, atom_id: eff.atomId || eff.id, index: index }
+        ));
+        return;
+      }
+      atomIndexById.set(eff.id, index);
+    });
+    return { conflicts: conflicts, atomIndexById: atomIndexById };
+  }
+
+  function scanBoardBeats(board) {
+    const conflicts = [];
+    const boardIds = [];
+    const boardSeen = new Set();
+    if (!board || typeof board !== 'object' || !Array.isArray(board.beats)) {
+      conflicts.push(bridgeConflict(
+        'missing_show',
+        'Board has no beats array.',
+        'Fix: Pass a board whose beats carry beat_id values.'
+      ));
+      return { conflicts: conflicts, boardIds: boardIds, boardSeen: boardSeen };
+    }
+    board.beats.forEach((beat, index) => {
+      const read = readBoardBeat(beat);
+      if (read.split) {
+        conflicts.push(bridgeConflict(
+          'id_split',
+          'Board beat ' + (index + 1) + ' beat_id "' + read.id + '" does not match its id alias "' + read.alias + '".',
+          'Fix: Set the beat id alias to beat_id or drop the alias so the board has one id.',
+          { beat_id: read.id, index: index }
+        ));
+        return;
+      }
+      if (!read.id || !validBeatId(read.id)) {
+        const item = badBeatConflict('Board beat ' + (index + 1));
+        item.index = index;
+        conflicts.push(item);
+        return;
+      }
+      if (boardSeen.has(read.id)) {
+        conflicts.push(bridgeConflict(
+          'duplicate_beat',
+          'Board beat id "' + read.id + '" is repeated.',
+          'Fix: Give each board beat a distinct beat_id before syncing the show.',
+          { beat_id: read.id, index: index }
+        ));
+        return;
+      }
+      boardSeen.add(read.id);
+      boardIds.push(read.id);
+    });
+    return { conflicts: conflicts, boardIds: boardIds, boardSeen: boardSeen };
+  }
+
+  function showMismatch(show, board) {
+    const showId = beatToken(show && show.show_id);
+    const boardShow = beatToken(board && board.show_id);
+    if (!showId || !boardShow || showId === boardShow) return null;
+    return bridgeConflict(
+      'show_mismatch',
+      'Board show_id "' + boardShow + '" does not match show "' + showId + '".',
+      'Fix: Use the same show_id on the board and the show before syncing beat ids.',
+      { beat_id: showId }
+    );
+  }
+
+  function boardFromShow(show) {
+    const scanned = scanShowBeats(show);
+    if (scanned.conflicts.length) return bridgeFail(show, null, scanned.conflicts);
+    const beats = [];
+    scanned.atomIndexById.forEach((index, id) => {
+      const atom = show.atoms[index];
+      beats.push({
+        beat_id: id,
+        label: atom && typeof atom.label === 'string' ? atom.label : '',
+        index: index,
+      });
+    });
+    beats.sort((a, b) => a.index - b.index);
+    return bridgeOk(show, {
+      kind: BEAT_ID_BRIDGE.kind,
+      show_id: beatToken(show.show_id),
+      beats: beats,
+    });
+  }
+
+  function applyBoardToShow(show, board) {
+    const conflicts = [];
+    const mismatch = showMismatch(show, board);
+    if (mismatch) conflicts.push(mismatch);
+    const atoms = scanShowBeats(show);
+    const beats = scanBoardBeats(board);
+    conflicts.push.apply(conflicts, atoms.conflicts);
+    conflicts.push.apply(conflicts, beats.conflicts);
+    if (!atoms.conflicts.length && !beats.conflicts.length) {
+      beats.boardIds.forEach((id, index) => {
+        if (!atoms.atomIndexById.has(id)) {
+          conflicts.push(bridgeConflict(
+            'unmatched_beat',
+            'Board beat_id "' + id + '" has no matching clip.',
+            'Fix: Add a clip whose id equals this beat_id or remove the beat from the board.',
+            { beat_id: id, index: index }
+          ));
+        }
+      });
+      atoms.atomIndexById.forEach((index, id) => {
+        if (!beats.boardSeen.has(id)) {
+          conflicts.push(bridgeConflict(
+            'unbridged_atom',
+            'Clip "' + id + '" has no matching board beat.',
+            'Fix: Add the clip to the board or remove it from the show before syncing.',
+            { beat_id: id, atom_id: id, index: index }
+          ));
+        }
+      });
+    }
+    if (conflicts.length) return bridgeFail(show, board, conflicts);
+    const nextShow = deepClone(show);
+    atoms.atomIndexById.forEach((index, id) => {
+      nextShow.atoms[index].beat_id = id;
+    });
+    const nextBoard = deepClone(board);
+    if (!nextBoard.kind) nextBoard.kind = BEAT_ID_BRIDGE.kind;
+    if (!beatToken(nextBoard.show_id) && beatToken(show.show_id)) nextBoard.show_id = beatToken(show.show_id);
+    nextBoard.beats.forEach((beat) => {
+      const id = readBoardBeat(beat).id;
+      beat.beat_id = id;
+      if (beatToken(beat.id)) beat.id = id;
+    });
+    return bridgeOk(nextShow, nextBoard);
+  }
+
+  function renameBeat(show, board, from, to) {
+    const src = beatToken(from);
+    const dst = beatToken(to);
+    if (!validBeatId(src) || !validBeatId(dst)) {
+      return bridgeFail(show, board, [bridgeConflict(
+        'bad_beat_id',
+        'Rename needs a source beat id and a destination beat id.',
+        'Fix: Use beat ids of letters, numbers, hyphens, underscores, or dots.'
+      )]);
+    }
+    let baseBoard = board;
+    if (baseBoard == null) {
+      const derived = boardFromShow(show);
+      if (!derived.ok) return derived;
+      baseBoard = derived.board;
+    }
+    const conflicts = [];
+    const mismatch = showMismatch(show, baseBoard);
+    if (mismatch) conflicts.push(mismatch);
+    if (!show || typeof show !== 'object' || !Array.isArray(show.atoms) || !baseBoard || !Array.isArray(baseBoard.beats)) {
+      conflicts.push(bridgeConflict(
+        'missing_show',
+        'Rename needs a show and a board.',
+        'Fix: Open a show whose atoms are the storyboard beats.'
+      ));
+      return bridgeFail(show, board, conflicts);
+    }
+    const beatHits = [];
+    baseBoard.beats.forEach((beat, index) => {
+      const read = readBoardBeat(beat);
+      if (read.split && (read.id === src || read.alias === src || read.id === dst || read.alias === dst)) {
+        conflicts.push(bridgeConflict(
+          'id_split',
+          'Board beat ' + (index + 1) + ' beat_id "' + read.id + '" does not match its id alias "' + read.alias + '".',
+          'Fix: Set the beat id alias to beat_id or drop the alias so the board has one id.',
+          { beat_id: read.id, index: index }
+        ));
+        return;
+      }
+      if (!read.split && read.id === src) beatHits.push(index);
+    });
+    const atomHits = [];
+    show.atoms.forEach((atom, index) => {
+      const eff = effectiveBeat(atom);
+      if (eff.split && (eff.id === src || eff.atomId === src || eff.id === dst || eff.atomId === dst)) {
+        conflicts.push(bridgeConflict(
+          'id_split',
+          'Clip ' + eff.atomId + ' beat_id "' + eff.id + '" does not match its id.',
+          'Fix: Set the clip id to its beat_id or rename the beat so both sides keep one id.',
+          { atom_id: eff.atomId, beat_id: eff.id, index: index }
+        ));
+        return;
+      }
+      if (!eff.split && eff.id === src) atomHits.push(index);
+    });
+    if (!conflicts.some((item) => item.code === 'id_split' || item.code === 'show_mismatch')) {
+      if (beatHits.length === 0 || atomHits.length === 0) {
+        conflicts.push(bridgeConflict(
+          'missing_beat',
+          'Beat id "' + src + '" is not on both the board and the show.',
+          'Fix: Rename a beat id that exists on both the board and the show.',
+          { beat_id: src }
+        ));
+      } else if (beatHits.length > 1 || atomHits.length > 1) {
+        conflicts.push(bridgeConflict(
+          'duplicate_beat',
+          'Beat id "' + src + '" is repeated on the board or the show.',
+          'Fix: Give each board beat a distinct beat_id before syncing the show.',
+          { beat_id: src }
+        ));
+      } else if (src !== dst) {
+        const dstBoard = baseBoard.beats.some((beat, index) => {
+          return index !== beatHits[0] && !readBoardBeat(beat).split && readBoardBeat(beat).id === dst;
+        });
+        const dstAtom = show.atoms.some((atom, index) => {
+          return index !== atomHits[0] && !effectiveBeat(atom).split && effectiveBeat(atom).id === dst;
+        });
+        if (dstBoard || dstAtom) {
+          conflicts.push(bridgeConflict(
+            'duplicate_target',
+            'Beat id "' + dst + '" is already used.',
+            'Fix: Pick a beat id that no other clip or board beat already uses.',
+            { beat_id: dst }
+          ));
+        }
+      }
+    }
+    if (conflicts.length) return bridgeFail(show, board, conflicts);
+    const nextShow = deepClone(show);
+    const nextBoard = deepClone(baseBoard);
+    nextShow.atoms[atomHits[0]].id = dst;
+    nextShow.atoms[atomHits[0]].beat_id = dst;
+    const beat = nextBoard.beats[beatHits[0]];
+    beat.beat_id = dst;
+    if (typeof beat.id === 'string') beat.id = dst;
+    return bridgeOk(nextShow, nextBoard);
+  }
+
+  function roundTripBoard(show, board) {
+    const applied = applyBoardToShow(show, board);
+    if (!applied.ok) return applied;
+    const back = boardFromShow(applied.show);
+    if (!back.ok) return bridgeFail(show, board, back.conflicts);
+    const forward = (board && Array.isArray(board.beats) ? board.beats : []).map((beat) => readBoardBeat(beat).id);
+    const returned = back.board.beats.map((beat) => beat.beat_id);
+    const same = forward.length === returned.length && forward.every((id, index) => id === returned[index]);
+    if (!same) {
+      return bridgeFail(show, board, [bridgeConflict(
+        'order_drift',
+        'Board beat order does not match show atom order.',
+        'Fix: Order board beats the same way as show atoms before a round trip.'
+      )]);
+    }
+    return bridgeOk(applied.show, back.board);
+  }
+
+  function assignCopiedBeatId(atom, nextId) {
+    const id = beatToken(nextId);
+    if (!atom || typeof atom !== 'object' || !validBeatId(id)) {
+      throw new Error('Clip copy needs an atom and a beat id.');
+    }
+    const next = deepClone(atom);
+    next.id = id;
+    if (beatToken(atom.beat_id)) next.beat_id = id;
+    return next;
+  }
+
+  function lintBeatBridge(show, board) {
+    if (board && typeof board === 'object' && Array.isArray(board.beats)) {
+      const applied = applyBoardToShow(show, board);
+      return applied.ok ? [] : applied.conflicts;
+    }
+    return scanShowBeats(show).conflicts;
+  }
+
   global.HMComposeClient = {
     composeShow,
     CUT_TRANSITION_IDS,
@@ -2773,6 +3166,12 @@
     frameSequenceDump,
     timingExport,
     applyBeatBlock,
+    BEAT_ID_BRIDGE,
+    boardFromShow,
+    applyBoardToShow,
+    renameBeat,
+    roundTripBoard,
+    assignCopiedBeatId,
     inspectAt,
     compareAt,
     plateCatalog,

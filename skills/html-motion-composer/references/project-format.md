@@ -34,7 +34,9 @@ The actual compose engine is `HMComposeClient.composeShow(show, {cameraPresets,f
 }
 ```
 
-`show_id` uses lowercase ASCII letters/numbers/hyphens/underscores. Keep atom IDs unique. `t_rel` is normalized inside the atom, not global seconds. For static background changes, `bg.swap`, `bg.swap_t`, and per-layout `bg: "base" | "swap"` are supported. Legacy layout tokens can match the show's asset stem; `bg.aliases.base` / `.swap` preserve those tokens when a background is replaced.
+`show_id` uses lowercase ASCII letters/numbers/hyphens/underscores. Keep atom IDs unique. `t_rel` is normalized inside the atom, not global seconds.
+
+`beat_id` (HM-PF-08) is the storyboard id for that atom. When it is set, it equals `id`. A board rename updates both or leaves the show unchanged. HF-04 beat-block ids are not this field. See `docs/product-flow/beat-id-bridge.md`. For static background changes, `bg.swap`, `bg.swap_t`, and per-layout `bg: "base" | "swap"` are supported. Legacy layout tokens can match the show's asset stem; `bg.aliases.base` / `.swap` preserve those tokens when a background is replaced.
 
 ## Layout, transparency, and paths
 
