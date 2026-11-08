@@ -1384,16 +1384,19 @@ test('HM-HF-04 beat blocks resolve on tip presets and apply keeps plates and tim
     assert.equal(cat.beat_blocks.theme,'STREET');
     assert.equal(cat.beat_blocks.count,blocks.length);
   }
+  assert.ok(kitReg.apply.keeps.includes('beat_id'));
   const show=demo();
   const before=JSON.parse(JSON.stringify(show.atoms[0]));
   const other=JSON.parse(JSON.stringify(show.atoms[1]));
   show.atoms[0].camera={preset:'static_hold',nudge:{x:4,y:0,s:0,r:0},intensity:1.25,segments:[{preset:'static_hold',dur_s:show.atoms[0].duration_s}],chain:{id:'c1',index:0,count:2}};
   show.atoms[0].timing_hold={pack:'dialogue_film_slow',kind:'hold',soft_cam:false};
   show.atoms[0].fx_hooks=[{type:'sparks',t_rel:0.2}];
+  show.atoms[0].beat_id=before.id;
   const fist=blocks.find(b=>b.id==='street_ecu_fist');
   const next=HMComposeClient.applyBeatBlock(show,[0],fist,{cameraIds:[...kitCams],fxPresets:{hooks:kitHooks}});
   const a=next.atoms[0];
   assert.equal(a.id,before.id);
+  assert.equal(a.beat_id,before.id);
   assert.equal(a.duration_s,before.duration_s);
   assert.deepEqual(a.hero,before.hero);
   assert.equal(a.pose_mode,before.pose_mode);

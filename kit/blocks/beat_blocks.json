@@ -4,7 +4,7 @@
   "theme": "STREET",
   "apply": {
     "writes": ["camera.preset", "fx_hooks", "caption", "caption_style", "motion.beat_class", "motion.grammar_role"],
-    "keeps": ["id", "duration_s", "timing_hold", "hero", "poses", "plates", "pose_mode", "label"],
+    "keeps": ["id", "beat_id", "duration_s", "timing_hold", "hero", "poses", "plates", "pose_mode", "label"],
     "camera_note": "Replaces camera.preset and drops segments, chain, and u_range so the block preset is the shot. Keeps nudge and a non-default intensity.",
     "undo": "Apply is a normal composer edit on this device. Undo restores the previous clip. No compose or registry HTTP."
   },
