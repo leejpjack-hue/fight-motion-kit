@@ -54,7 +54,7 @@ show_id: {show_id}
 
 For step 2, `{n}=2` and `{label}=Story`. A future notifier may send this via
 Slack and direct Jack to the form after HM UI inspection. **HM-PF-53 owns live
-notify.** HM-PF-09 sends no Slack messages and makes no gate network requests.
+notify** — see [`HM-PF-53-notify-bridge.md`](HM-PF-53-notify-bridge.md). HM-PF-09 sends no Slack messages and makes no gate network requests.
 
 ## Sources of truth
 

@@ -1,0 +1,2323 @@
+{
+  "name": "HM product flow 1..10 — gates + Jack notify (HM-PF-53)",
+  "nodes": [
+    {
+      "id": "b915d142-1473-8036-1820-56be1607c797",
+      "name": "Start (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "6f7f570a-7492-06e5-ce21-2ea829d63765",
+      "name": "Show input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5fa67f68-cfe5-61c4-2173-c6e598e2788f",
+              "name": "show_id",
+              "value": "daiyu-wang-five-seconds",
+              "type": "string"
+            },
+            {
+              "id": "bf4836d2-e773-af83-b9f6-b739b301e2d4",
+              "name": "hm_origin",
+              "value": "http://127.0.0.1:8765",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6c5bf043-98da-173a-df07-48103404f13b",
+      "name": "S1 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ba3c9e62-1252-c3b9-3f68-417721883253",
+              "name": "step",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "7d22cab5-82e3-95fa-9601-c04f50c6f1c5",
+              "name": "step_id",
+              "value": "character",
+              "type": "string"
+            },
+            {
+              "id": "7d98e1ee-ef23-7b8e-239b-8a7e35c277c2",
+              "name": "step_label",
+              "value": "1 Character creation",
+              "type": "string"
+            },
+            {
+              "id": "2e2f9b48-44b4-b98d-2b6f-ff01e1082c40",
+              "name": "label",
+              "value": "Character creation",
+              "type": "string"
+            },
+            {
+              "id": "65a8db5b-ee14-f15a-3082-123b0d8605c3",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: plate + character edit (plate library / chars)",
+              "type": "string"
+            },
+            {
+              "id": "b1b74ea5-3f6e-671c-f3f1-3d8d9f2b5fa1",
+              "name": "hm_anchor",
+              "value": "plateJumpList",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "799912d6-8fcc-d70e-7372-bc0d597cf8cd",
+      "name": "S1 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "e508acea-e4e1-3469-f80a-4ed782aa5823",
+      "name": "S1 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "c19b1eaa-5748-81fd-fa19-b71f43046862",
+      "name": "S1 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "webhookId": "0cbfe0d6-e443-1f73-db0e-9b2ed59de969",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 1 Character creation",
+        "formDescription": "HM UI: plate + character edit (plate library / chars). Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f598ea9d-8dd1-29ce-ac2c-d35edf15824c",
+      "name": "S1 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "08cee0ce-4642-eed5-cf12-d8075fbe8939",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2b5602e9-1ca7-8ce8-a09d-f7bc547e4b98",
+      "name": "S2 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "31aca71b-4c9a-53e2-4989-1fb488910d90",
+              "name": "step",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "ebf3020f-9c41-c05c-5768-2843f59c55f8",
+              "name": "step_id",
+              "value": "story",
+              "type": "string"
+            },
+            {
+              "id": "ea1b935d-59a5-9c7c-f6fd-bad4ee3950f7",
+              "name": "step_label",
+              "value": "2 Story",
+              "type": "string"
+            },
+            {
+              "id": "c4df4a5b-1fc3-5b22-425c-3191142bf3c1",
+              "name": "label",
+              "value": "Story",
+              "type": "string"
+            },
+            {
+              "id": "5016d4b9-74a0-8103-9154-6dba3e94b0af",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: atom sequence editor + HM-HF-07 timeline JSON",
+              "type": "string"
+            },
+            {
+              "id": "ec085687-8db9-ee50-ddf9-4399c2282e5d",
+              "name": "hm_anchor",
+              "value": "timelineJsonPanel",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9b7ac98d-8e9a-bd47-cbcb-168df29aa13d",
+      "name": "S2 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "c1c1f77a-adfa-2349-2601-3d2c8e3461f2",
+      "name": "S2 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "941fdd12-02c1-d32a-2942-b63221f135c2",
+      "name": "S2 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        300
+      ],
+      "webhookId": "84e77c9d-70b4-5f0f-0efd-e0c47bdbc563",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 2 Story",
+        "formDescription": "HM UI: atom sequence editor + HM-HF-07 timeline JSON. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "e248352f-d3ac-80aa-d9ea-083495aaf0c4",
+      "name": "S2 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "d6eac0b4-664d-2c8c-c702-ffdd93b8bec1",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "34038a6f-ffcd-696a-b5ea-6de57db011e9",
+      "name": "S3 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2640,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8b4475f-ffda-01b7-ac20-cb826bb56e80",
+              "name": "step",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "0cff56a1-b9a0-d443-d0a6-16af0c378b99",
+              "name": "step_id",
+              "value": "rhythm",
+              "type": "string"
+            },
+            {
+              "id": "98264c6c-8b08-2112-ac87-f0fdd0135f58",
+              "name": "step_label",
+              "value": "3 Rhythm",
+              "type": "string"
+            },
+            {
+              "id": "1751c44d-2a71-9a99-561b-7ceb86734520",
+              "name": "label",
+              "value": "Rhythm",
+              "type": "string"
+            },
+            {
+              "id": "8a938634-45f1-52bb-a4b4-828872f315ff",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: duration, frame peek, scrub + beat blocks",
+              "type": "string"
+            },
+            {
+              "id": "ad4c7ace-0230-933f-9c9c-a7586e560143",
+              "name": "hm_anchor",
+              "value": "framePeekStrip",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b7951b39-c73a-ab48-abec-ab71434f4d3c",
+      "name": "S3 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "5cbc8160-3d64-a96a-9c8d-483609e494b5",
+      "name": "S3 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        3080,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "6a33d9ac-4d21-dde2-1ee3-c491992b2134",
+      "name": "S3 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3300,
+        300
+      ],
+      "webhookId": "08a08df6-cd6c-861d-b72b-e0eb9cf008d1",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 3 Rhythm",
+        "formDescription": "HM UI: duration, frame peek, scrub + beat blocks. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "11c2c182-c657-cd94-b135-68782463ec22",
+      "name": "S3 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fb6e27d2-867c-9d96-8df6-1e9f46b7901a",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6da5091f-b17a-3430-a067-dc4ce2ed285a",
+      "name": "S4 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3740,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "207382e8-d219-16bf-02e6-9cbabea2bcb0",
+              "name": "step",
+              "value": 4,
+              "type": "number"
+            },
+            {
+              "id": "c4968123-9703-8a38-3dae-bdc83418a0b6",
+              "name": "step_id",
+              "value": "scene_cam_design",
+              "type": "string"
+            },
+            {
+              "id": "b2e9c141-215c-0ac8-3597-4dcbe18c7d99",
+              "name": "step_label",
+              "value": "4 Scene cam-shot design",
+              "type": "string"
+            },
+            {
+              "id": "f5c39046-c9a3-ea17-ded3-65a63b8c49bc",
+              "name": "label",
+              "value": "Scene cam-shot design",
+              "type": "string"
+            },
+            {
+              "id": "8605e967-fc0e-d3f0-38e8-39006fad34cd",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: camera-grammar templates + cut blocks",
+              "type": "string"
+            },
+            {
+              "id": "548c2453-bf14-5b82-f6a6-e0732e98b575",
+              "name": "hm_anchor",
+              "value": "cutTransitionGroup",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "37d6efff-731c-a37d-896e-0ed77ad15809",
+      "name": "S4 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "f941b04f-c587-df7b-4e87-3438c44c4d55",
+      "name": "S4 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        4180,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "8743031a-4b5a-81ce-f4f4-61dd49b31888",
+      "name": "S4 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4400,
+        300
+      ],
+      "webhookId": "6c643ccf-bf34-e6f6-375b-b385140b932b",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 4 Scene cam-shot design",
+        "formDescription": "HM UI: camera-grammar templates + cut blocks. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a58febf7-a125-f2bb-1ec8-d32956ab9b56",
+      "name": "S4 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "2035f78c-91b6-8432-797b-c83fc8b66a6e",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "912ce686-cd58-5486-f70f-4246f7c58b5c",
+      "name": "S5 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4840,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6514b4c3-7432-2214-ef53-d020a1a00c5b",
+              "name": "step",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "663fd922-b926-3101-6606-e3ea739c420d",
+              "name": "step_id",
+              "value": "per_scene_cam",
+              "type": "string"
+            },
+            {
+              "id": "88fdd60c-a392-c0a6-99d9-91daf8cb2ec3",
+              "name": "step_label",
+              "value": "5 Per-scene cam shots",
+              "type": "string"
+            },
+            {
+              "id": "1dc0a519-7179-f88f-1c03-c2a4fbf1f0f1",
+              "name": "label",
+              "value": "Per-scene cam shots",
+              "type": "string"
+            },
+            {
+              "id": "fe2db1b9-4fac-cc9e-c9f5-f2b91b1bca4f",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: per-atom camera presets",
+              "type": "string"
+            },
+            {
+              "id": "70e5ae42-95af-5484-598b-0f5ccc661b54",
+              "name": "hm_anchor",
+              "value": "camera",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8567c1a7-255b-7a3b-031c-600399db8eff",
+      "name": "S5 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "29c51843-8dec-ccca-d605-d74bf32a512f",
+      "name": "S5 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        5280,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "c51a4a1f-6e57-dc51-840b-57cf77b04545",
+      "name": "S5 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        300
+      ],
+      "webhookId": "a35baa4c-56de-05e6-a813-948da07e6544",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 5 Per-scene cam shots",
+        "formDescription": "HM UI: per-atom camera presets. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3fd403e4-bf00-44d0-4a34-e20d020bef39",
+      "name": "S5 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5c730696-88df-a791-dbdd-d0ab25aa0ff6",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3c650a62-528e-c272-78a8-93718cebae4b",
+      "name": "S6 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5940,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e716c4c8-82c1-adcc-5a24-1787a3e59c92",
+              "name": "step",
+              "value": 6,
+              "type": "number"
+            },
+            {
+              "id": "98ba6629-f4b1-d148-7ed5-fc42d05c8521",
+              "name": "step_id",
+              "value": "sprite_gen",
+              "type": "string"
+            },
+            {
+              "id": "a77da177-9956-aca2-daa9-e4d532fcca1c",
+              "name": "step_label",
+              "value": "6 Sprite gen",
+              "type": "string"
+            },
+            {
+              "id": "9c2b9391-9d1f-8cda-35fa-f4d8ffa458a7",
+              "name": "label",
+              "value": "Sprite gen",
+              "type": "string"
+            },
+            {
+              "id": "4ba2bf55-de85-e3d4-a52c-e8779e45fb48",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: staged strip picker (sprite-gen stays external; NOT PLAYABLE until SG-02)",
+              "type": "string"
+            },
+            {
+              "id": "9fe886b0-0859-63f3-634a-312f6e8b68bc",
+              "name": "hm_anchor",
+              "value": "importStrip",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a60c9dcf-4d93-671c-b584-5b11d86a0c3a",
+      "name": "S6 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6160,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "6373fed6-2c65-6b46-ba5e-6b80783500d9",
+      "name": "S6 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        6380,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "7e75d503-ed5a-1f22-7721-58377d77ab8a",
+      "name": "S6 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        6600,
+        300
+      ],
+      "webhookId": "58fedfc8-06aa-7847-5671-4d0811dfd6b6",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 6 Sprite gen",
+        "formDescription": "HM UI: staged strip picker (sprite-gen stays external; NOT PLAYABLE until SG-02). Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2f280afb-bbd8-21f4-a67f-c2ff9f16f5d1",
+      "name": "S6 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        6820,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a7feae60-7975-a425-5f79-e103751645ec",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d91a24c8-bf36-4b00-7218-47fdde7093a5",
+      "name": "S7 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7040,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d5691e9-b52b-1922-aa6a-4e3e408234c1",
+              "name": "step",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "47514d73-b79e-ac98-8e1a-5f02a5a3431b",
+              "name": "step_id",
+              "value": "background",
+              "type": "string"
+            },
+            {
+              "id": "ae25c0a1-f855-6b99-d7bc-b4a09c114b24",
+              "name": "step_label",
+              "value": "7 Background scene",
+              "type": "string"
+            },
+            {
+              "id": "56ddae88-2a8d-d28d-eb49-8fc9713f593e",
+              "name": "label",
+              "value": "Background scene",
+              "type": "string"
+            },
+            {
+              "id": "c490342d-85a7-5cc7-50e0-934b17b03495",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: background plates (crop, pan, span, parallax)",
+              "type": "string"
+            },
+            {
+              "id": "ba3ae108-7459-7399-1cfe-c7e2ccb43419",
+              "name": "hm_anchor",
+              "value": "backgroundMotionDetails",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3cb2f40c-7338-eab4-cf26-063586b8727d",
+      "name": "S7 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7260,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "17dc0d3f-5dee-f8cf-44d0-dc2bc552def2",
+      "name": "S7 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        7480,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "9a18434d-a41f-3d21-6de9-fd4851bfec91",
+      "name": "S7 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7700,
+        300
+      ],
+      "webhookId": "f0553a5f-75e5-4e79-9749-13c6b3148515",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 7 Background scene",
+        "formDescription": "HM UI: background plates (crop, pan, span, parallax). Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dc4e0e92-f259-2505-c199-fd23e478eab9",
+      "name": "S7 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7920,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "70a7f53c-5d71-1ced-8916-96142cef9e9d",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fa6a5e00-55fb-ddc8-20cd-3b209c2622c0",
+      "name": "S8 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8140,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5683162-100b-4255-b6c0-ddbd73eb72a7",
+              "name": "step",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "c32a2b8e-4a6c-f57d-a29c-17db217ff368",
+              "name": "step_id",
+              "value": "foreground",
+              "type": "string"
+            },
+            {
+              "id": "0caff156-f6ac-2c3a-4e4b-21ece8c6c9d3",
+              "name": "step_label",
+              "value": "8 Foreground",
+              "type": "string"
+            },
+            {
+              "id": "21f236cf-1ea1-e65e-ddf5-8711e79c0172",
+              "name": "label",
+              "value": "Foreground",
+              "type": "string"
+            },
+            {
+              "id": "170cada6-1c5e-c25b-1b37-e55e360d1cc7",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: foreground cutouts + IMPACT / COMPOSER-FX",
+              "type": "string"
+            },
+            {
+              "id": "fbd296da-f22b-6c0c-493c-fa80e5617b7f",
+              "name": "hm_anchor",
+              "value": "foregroundPanel",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8b9eea8a-c4a1-cc79-ddb1-de7492a4b5c3",
+      "name": "S8 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8360,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "e69baf7d-82ef-c33e-2644-35d45d2d0114",
+      "name": "S8 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        8580,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "fc512d09-8d66-6d46-2951-9b7904cc3dfe",
+      "name": "S8 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        8800,
+        300
+      ],
+      "webhookId": "639d592a-3112-293a-9a63-38529656f6bc",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 8 Foreground",
+        "formDescription": "HM UI: foreground cutouts + IMPACT / COMPOSER-FX. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "41f5e1e0-d6bf-ad28-4991-2e28e0bfa395",
+      "name": "S8 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        9020,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "8cc45d2e-5fbf-7b94-74b6-b5eb10767fe5",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "62428a16-d257-d1b2-6737-3b6b9d98d7cf",
+      "name": "S9 Gate prep",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9240,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cd5d4578-ce9f-f621-d8be-2e38aedd484e",
+              "name": "step",
+              "value": 9,
+              "type": "number"
+            },
+            {
+              "id": "61833858-e467-af25-1c51-23f8589fd179",
+              "name": "step_id",
+              "value": "hm_compose",
+              "type": "string"
+            },
+            {
+              "id": "b75f7b2b-7040-9db4-09bc-dc2522747bcf",
+              "name": "step_label",
+              "value": "9 HTML Motion cam-shot compose",
+              "type": "string"
+            },
+            {
+              "id": "d9a36212-083c-7655-913b-1b36e8ddd1e0",
+              "name": "label",
+              "value": "HTML Motion cam-shot compose",
+              "type": "string"
+            },
+            {
+              "id": "6e08bed1-aadb-19f7-2f69-25b4b1227b29",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: FE compose + 1280x720 canvas preview",
+              "type": "string"
+            },
+            {
+              "id": "b009ce23-87d1-b9c6-a1e5-8947af975496",
+              "name": "hm_anchor",
+              "value": "stage",
+              "type": "string"
+            },
+            {
+              "id": "3129d047-f683-a74c-82e6-cfc8e8b3ca8e",
+              "name": "show_id",
+              "value": "={{ $('Show input').first().json.show_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6a741165-dc60-08a5-4e86-60e34f95b676",
+              "name": "hm_origin",
+              "value": "={{ $('Show input').first().json.hm_origin }}",
+              "type": "string"
+            },
+            {
+              "id": "8f466c05-040a-bb83-984b-3aec3341283b",
+              "name": "Notes",
+              "value": "={{ $json.Notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a3f508b9-a3f3-16e4-963d-588c1dd55a68",
+      "name": "S9 Render notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9460,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// HM-PF-53 shared GATE-UX notify template (same text as HM UI \"Copy notify\").\n// Control + notify only: no HTTP, no compose/save, no .motion.json write.\nconst g = $input.first().json;\nconst show = g.show_id || '{show_id}';\nconst resume = $execution.resumeFormUrl || '{resumeFormUrl}';\nconst link = `${g.hm_origin}/ui/?show=${encodeURIComponent(show)}#${g.hm_anchor}`;\nconst title = `HM gate — Step ${g.step} ${g.label} — show ${show}`;\nconst lines = [\n  g.hm_ui_instruction,\n  `HM UI location: ${link}`,\n  `Resume form: ${resume}`,\n  'Decision: Approve|Rework',\n  `Notes: ${g.Notes || '{Notes}'}`,\n  `show_id: ${show}`,\n  `step: ${g.step}; step_id: ${g.step_id}; step_label: ${g.step_label}`,\n  'Open HM UI, review/edit, then submit Approve or Rework in the n8n form to resume.',\n];\nreturn [{ json: { ...g, notify_title: title, notify_text: title + '\\n' + lines.join('\\n'), hm_ui_deep_link: link, resume_form_url: resume } }];"
+      }
+    },
+    {
+      "id": "f5c1c6de-9a45-747e-a563-b8ec4a471b39",
+      "name": "S9 Slack notify (stub)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        9680,
+        300
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "SLACK_CREDENTIAL_PLACEHOLDER",
+          "name": "PLACEHOLDER — Slack bot (HM gates)"
+        }
+      },
+      "notes": "HM-PF-53 stub: disabled until Jack signs a Slack credential. Disabled nodes pass data through so the Wait still opens. Fallback: copy notify_text from Render notify (or HM UI Copy notify).",
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hm-gates",
+          "mode": "name"
+        },
+        "text": "={{ $json.notify_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "cde21e93-42e1-74f9-6175-6d119d8e220c",
+      "name": "S9 Wait — Jack form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        9900,
+        300
+      ],
+      "webhookId": "d9b23b13-f655-bc34-5561-ac9140f53773",
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM gate — Step 9 HTML Motion cam-shot compose",
+        "formDescription": "HM UI: FE compose + 1280x720 canvas preview. Review in HM UI first, then choose Approve or Rework.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "show_id"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "86d8162b-2f51-2c42-8777-0541bc48a643",
+      "name": "S9 Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        10120,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ed0fcca6-7424-6fcc-080b-dc2c394d9298",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3ba2d82c-f8f1-2c0e-f653-b17924280ae0",
+      "name": "S10 Voice — HOLD #41",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        10340,
+        300
+      ],
+      "disabled": true,
+      "notes": "Step 10 Voice stays HOLD (#41). No notify, no gate until a later approval lifts it.",
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Start (manual)": {
+      "main": [
+        [
+          {
+            "node": "Show input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show input": {
+      "main": [
+        [
+          {
+            "node": "S1 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S1 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S1 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S1 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S1 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S2 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S1 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S2 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S2 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S2 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S2 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S3 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S2 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S3 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S3 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S3 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S3 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S4 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S3 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S4 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S4 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S4 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S4 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S5 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S4 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S5 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S5 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S5 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S5 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S6 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S5 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S6 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S6 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S6 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S6 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S7 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S6 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S7 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S7 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S7 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S7 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S8 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S7 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S8 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S8 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S8 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S8 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S9 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S8 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Gate prep": {
+      "main": [
+        [
+          {
+            "node": "S9 Render notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Render notify": {
+      "main": [
+        [
+          {
+            "node": "S9 Slack notify (stub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Slack notify (stub)": {
+      "main": [
+        [
+          {
+            "node": "S9 Wait — Jack form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Wait — Jack form": {
+      "main": [
+        [
+          {
+            "node": "S9 Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Approve?": {
+      "main": [
+        [
+          {
+            "node": "S10 Voice — HOLD #41",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S9 Gate prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "hm_story": "HM-PF-53",
+    "contract": "n8n = control + gates + notify; HM UI = show/edit; no compose/save API; no .motion.json write; S10 HOLD"
+  },
+  "pinData": {}
+}
