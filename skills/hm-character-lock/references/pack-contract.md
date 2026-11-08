@@ -18,6 +18,7 @@ actual cast. The copy recipe below is specifically a shipped-asset smoke demo.
 | `title`, `venue` | Human-readable title and existing venue, such as `street`. |
 | `cast.L`, `cast.R` | Screen-side assignments, each with nonempty `name` and `costume_id`. Preserve supplied lock IDs. |
 | `cast.<side>.sheets` | One or more real local sheet images per side for this skill's completed output. The importer itself permits any one sheet/pose image across the pack; this skill intentionally promises a sheet for each cast member. |
+| `cast.<side>.lock_refs` | Earlier approved identity/costume reference images as `{ label, src }`. Required for each side by HM-PF-03's File API review; candidate sheet bytes cannot be their own reference. |
 | `cast.<side>.pose_refs` | Optional actual local image plates. JSON joint coordinates are not an image and must not be placed here. |
 | Image entry | Unique `id`, readable `label`, local `src`. Optional `duration_s` must be at least `0.1`; the importer defaults to `0.625`. |
 
@@ -82,25 +83,33 @@ for (const side of ['L', 'R']) {
   const cast = pack.cast[side];
   assert.ok(cast.name.trim() && cast.costume_id.trim(), `Missing ${side} identity/lock`);
   assert.ok(cast.sheets.length > 0, `Missing ${side} sheet`);
-  for (const ref of [...cast.sheets, ...(cast.pose_refs || [])]) {
+  assert.ok(cast.lock_refs.length > 0, `Missing ${side} locked references`);
+  for (const ref of [...cast.sheets, ...(cast.pose_refs || []), ...cast.lock_refs]) {
     assert.match(ref.src, /^[A-Za-z0-9_-]+\.(png|jpe?g|webp)$/i);
-    assert.ok(ref.id && !ids.has(ref.id), `Missing or duplicate plate id: ${ref.id}`);
-    ids.add(ref.id);
+    if (!cast.lock_refs.includes(ref)) {
+      assert.ok(ref.id && !ids.has(ref.id), `Missing or duplicate plate id: ${ref.id}`);
+      ids.add(ref.id);
+    }
     const bytes = fs.readFileSync(path.join(packDir, ref.src));
     assert.ok(bytes.length > 0, `Empty image: ${ref.src}`);
     localFiles[ref.src] = `data:${mime[path.extname(ref.src).toLowerCase()]};base64,${bytes.toString('base64')}`;
   }
 }
 const project = HMComposeClient.normalizeCostumeLockPack(pack, { localFiles });
+require('./public/ui/costume-drift.js');
+HMCostumeDrift.plan(pack, localFiles);
 assert.equal(HMComposeClient.parityDirtyChecklist(project).clean, true);
 for (const media of project.media) assert.ok(project.assets[media.src]);
-console.log(`Ready to import: ${project.media.length} local images; L=${project.show.chars.L.costume_id}; R=${project.show.chars.R.costume_id}`);
+console.log(`Ready for human review: ${project.media.length} local images; L=${project.show.chars.L.costume_id}; R=${project.show.chars.R.costume_id}`);
 NODE
 ```
 
 Then start `npm run dev` and open `http://127.0.0.1:8765/ui/`. In **Open
 project**, select only `costume_lock.json`, `L-sheet.png`, `R-sheet.png`,
-`L-guard.png`, and `R-guard.png` together. The example should show two costume
+`L-guard.png`, and `R-guard.png` together. The example should show two
+sheet/reference comparison groups first. Complete the human drift review
+with a reviewer name before the pack is imported. Rejection keeps the open
+project unchanged. See [the checklist](drift-review.md). After approval it shows two costume
 badges, four library images, and two pose-ref clips totaling 1.25 seconds.
 Swap a plate, verify both lock IDs remain, then **Save project** and reopen
 the portable `.motion.json` without needing the companion selection again.

@@ -362,6 +362,7 @@
 
     var lockManifest = {
       kind: 'costume_lock',
+      import_review: 'required',
       version: Number.isInteger(input.version) ? input.version : 1,
       pack_id: showId,
       L: {
@@ -509,12 +510,20 @@
       var res = await fetch(COSTUME_LOCK_PRESET_URL);
       if (!res.ok) throw new Error('Could not open ' + COSTUME_LOCK_PRESET_URL + ' (' + res.status + ')');
       var raw = await res.json();
-      return normalizeCostumeLockPack(raw);
+      var sample = normalizeCostumeLockPack(raw);
+      sample.show.costume_lock.import_review = 'builtin-sample';
+      return sample;
     }
 
     function prepareIncomingProject(p) {
-      var next = isCostumeLockPackInput(p) ? normalizeCostumeLockPack(p) : p;
+      if (isCostumeLockPackInput(p)) {
+        throw new Error('Costume sheet review is required before import. Use Open project and select the JSON, sheets, and locked references together.');
+      }
+      var next = p;
       if (next && next.show) {
+        if (next.show.costume_lock && next.show.costume_lock.import_review === 'required') {
+          throw new Error('Costume sheet review is required before import. Open the original standalone costume_lock JSON with its sheets and locked references.');
+        }
         if (next.show.chars) assertSafeLockTree(next.show.chars);
         if (next.show.costume_lock) assertSafeLockTree(next.show.costume_lock);
         if (next.show.lock_pack) assertSafeLockTree(next.show.lock_pack);

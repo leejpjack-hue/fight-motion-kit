@@ -153,3 +153,9 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 .pf53-title{display:block;margin:2px 0 6px;font-size:12px}
 .pf53-body{margin:0;padding:8px;border:1px solid var(--border);border-radius:6px;background:#0d0d0d;color:var(--text);white-space:pre-wrap;font:11px/1.4 ui-monospace,SFMono-Regular,monospace;max-height:220px;overflow:auto}
 .pf53-notify .field-hint{margin:6px 0 0}
+
+/* Local costume-sheet review before import. */
+.costume-review-dialog{box-sizing:border-box;max-width:94vw;width:min(960px,94vw);max-height:90vh;overflow:auto}.review-cast{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.review-cast fieldset{min-width:0}.review-images{display:flex;overflow:auto;gap:8px}.review-images figure{margin:0;flex:0 0 160px}.review-images img{width:160px;height:150px;object-fit:contain;background:#fff}.review-images figcaption{overflow-wrap:anywhere;font-size:12px}.costume-review-dialog label{display:block;margin:10px 0}.costume-review-dialog input[type=checkbox]{width:auto;margin-right:8px}.review-actions{display:flex;flex-wrap:wrap;gap:12px}.review-status{color:var(--accent,#43dbc7)}
+@media(max-width:650px){.review-cast{grid-template-columns:1fr}}
+
+.costume-review-dialog textarea{box-sizing:border-box;display:block;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg,#0b1118);color:var(--text);font:inherit}.inspect-review-image{padding:0;border:0;background:transparent}.costume-review-image{width:min(1280px,96vw);max-height:94vh;overflow:auto}.costume-review-image img{display:block;width:100%;height:auto;background:#fff;margin-top:12px}

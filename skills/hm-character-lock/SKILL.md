@@ -71,6 +71,10 @@ before writing files. Its source of truth is the shipped
 3. Write `costume_lock.json` using the canonical `kind: "costume_lock"`,
    `version: 1`, `pack_id`, and `cast.{L,R}` fields. Each side has a `name`,
    stable `costume_id`, and `sheets` array of `{ id, label, src }` entries.
+   Include `lock_refs` for each side: `{ label, src }` entries pointing to the
+   earlier approved identity/costume images, distinct from candidate sheets.
+   Keep these local reference images in the same output directory. If no
+   approved reference is available, report the pack as pending reference review.
    Include only images that exist. Optional `pose_refs` use the same shape;
    omit them or use `[]` when no pose-reference images were supplied.
 4. Write `prompts.md` with the sibling skills/REPORT actually used, labeled
@@ -88,13 +92,18 @@ Minimum completed output:
   costume_lock.json
   L-sheet.png
   R-sheet.png
+  L-reference.png
+  R-reference.png
   cast-brief.md
   prompts.md
   HANDOFF.md
 ```
 
 Additional sheets, pose-reference images, and `pose-data/` are optional. A
-prompt-only draft is useful preparation but is **not** a completed importable
+previously approved pose image may also serve as a locked reference, so the
+same file can appear in `pose_refs` and `lock_refs`. Candidate sheets cannot
+be their own lock reference. A prompt-only draft is useful preparation but is
+**not** a completed importable
 lock pack. Mark draft versus human-approved status in `HANDOFF.md`; a
 `costume_id` binds an outfit and does not prove approval or visual consistency.
 
@@ -111,6 +120,11 @@ lock pack. Mark draft versus human-approved status in `HANDOFF.md`; a
   `http://127.0.0.1:8765/ui/`, choose **Open project**, and select
   **`costume_lock.json` plus all companion images in the same selection**.
   A local file path in JSON alone does not give the browser access to that file.
+- Follow [the costume drift checklist](references/drift-review.md) before
+  import, then complete the visible HM-PF-03 comparison of candidate sheets
+  against `lock_refs`. Supply the reviewer name and pass every check for both
+  sides. Missing images, unchecked items, or Reject keep the current project
+  unchanged. An existing JSON approval claim never skips this review.
 - Confirm both names and costume-ID badges in **Clip Settings → Characters**;
   use the plate picker to inspect sheets/pose refs. The importer initially
   sequences pose refs if present, otherwise sheets. It does not synthesize
