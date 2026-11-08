@@ -352,10 +352,10 @@ test('SG01 pending aliases are rejected in plate/replacement/background/foregrou
 // bindings/boot are omitted; render/compile/storage are explicit test boundaries.
 const appSource=fs.readFileSync('public/ui/app.js','utf8');
 const section=(from,to)=>appSource.slice(appSource.indexOf(from),appSource.indexOf(to));
-function gateway(initial=project(),{put,Image,FileReader}={}){
+function gateway(initial=project(),{put,Image,FileReader,confirm}={}){
   const elements=new Map(),workspace={inert:false},controls=[{disabled:false,closest:()=>null},{disabled:true,closest:()=>null}];
   const el=id=>{if(!elements.has(id))elements.set(id,{textContent:'',value:'',style:{},classList:{add(){}}});return elements.get(id);};
-  const state={stored:clone(initial),writes:[],updates:0,compiles:0};
+  const state={stored:clone(initial),writes:[],updates:0,compiles:0,pauses:0};
   class HeaderImage{set src(data){this.data=data;}async decode(){const d=decoded(this.data);this.naturalWidth=d.width;this.naturalHeight=d.height;}}
   const context=vm.createContext({structuredClone,URL,TextDecoder,Uint8Array,DataView,atob,btoa,crypto,console,
     Image:Image||HeaderImage,FileReader,
@@ -364,23 +364,61 @@ function gateway(initial=project(),{put,Image,FileReader}={}){
     HMAssetStore:{put:async(key,value)=>{state.writes.push(clone(value));if(put)await put(key,value,state);state.stored=clone(value);}},
     HMComposeClient:{reflowAllCamChains(){},detachCamChain(){}},
   });
+  if(confirm!==undefined)context.window.confirm=confirm;
   vm.runInContext(fs.readFileSync('public/ui/project-media.js','utf8').split('/* Import selected images')[0],context);
   const source=appSource.slice(0,appSource.indexOf('  function captionOverlays'))+
     section('  function renderMedia()', '  function beatTickMarkup')+
     section('  async function importImages(', '  function download(')+
     section('  async function compile()', '  function activeAtFor(')+`
     const realCompile=compile;
-    update=()=>{testState.updates++;};pause=()=>{};
+    function update(){testState.updates++;}function pause(){testState.pauses++;}
     compile=async()=>{testState.compiles++;};
     globalThis.G={initialize(p){project=copy(p);history=[copy(p)];historyIndex=0;},
       snapshot:()=>copy({project,history,historyIndex,selected,time,projectRevision,loadRequest}),
-      destinationToken,commitCandidate,edit,restore,load,openProject,persist,writeSnapshot,
+      destinationToken,commitCandidate,edit,restore,load,openProject,confirmReplaceOpenProject,persist,writeSnapshot,
       importImages,addMedia,validate,realCompile,get live(){return project;},get locked(){return snapshotCommit;}};
   })();`;
   context.testState=state;vm.runInContext(source,context,{filename:'public/ui/app.js (gateway)'});
   context.G.initialize(initial);
   return {G:context.G,state,workspace,controls,el,context};
 }
+
+test('SG01 cancelled open preserves project, history, request and storage without pausing',async()=>{
+  const messages=[],g=gateway(project(),{confirm:message=>{messages.push(message);return false;}});
+  g.G.edit(()=>{g.G.live.show.title='Session work';});await new Promise(setImmediate);
+  const before=g.G.snapshot(),state=clone(g.state);
+  const next={...project(),show:{...project().show,show_id:'replacement'}};
+  assert.equal(await g.G.openProject(Promise.resolve(next)),false);
+  assert.deepEqual(g.G.snapshot(),before);assert.deepEqual(g.state,state);
+  assert.equal(g.el('status').textContent,'Kept the open project.');
+  assert.deepEqual(messages,['Open project? This will replace the currently open project and discard its session work. Use Save project first to keep your work.']);
+});
+
+test('SG01 cancelled new-project confirmation short-circuits load',async()=>{
+  const messages=[],g=gateway(project(),{confirm:message=>{messages.push(message);return false;}});
+  const before=g.G.snapshot(),state=clone(g.state);
+  const create=()=>g.G.confirmReplaceOpenProject('New project')&&g.G.load(project());
+  assert.equal(await create(),false);
+  assert.deepEqual(g.G.snapshot(),before);assert.deepEqual(g.state,state);
+  assert.equal(g.el('status').textContent,'Kept the open project.');
+  assert.match(messages[0],/^New project\? /);assert.equal(messages.length,1);
+});
+
+test('SG01 accepted open replaces and persists the project after one confirmation',async()=>{
+  let calls=0;const g=gateway(project(),{confirm:()=>{calls++;return true;}});
+  const next={...project(),show:{...project().show,show_id:'replacement'}};
+  assert.equal(await g.G.openProject(Promise.resolve(next)),true);
+  assert.equal(calls,1);assert.deepEqual(g.G.snapshot().project,next);
+  assert.deepEqual(g.G.snapshot().history,[next]);assert.deepEqual(g.state.stored,next);
+  assert.equal(g.state.writes.length,1);
+});
+
+test('SG01 boot confirmation and direct load stay silent',async()=>{
+  const g=gateway(null,{confirm:()=>{throw Error('unexpected confirmation');}});
+  assert.equal(g.G.confirmReplaceOpenProject('Open project'),true);
+  assert.equal(await g.G.openProject(Promise.resolve(project())),true);
+  assert.equal(await g.G.load(project()),true);
+});
 
 test('SG01 quota/abort/mutator errors preserve live, history, selection and stored snapshot',async()=>{
   const staged=await stage();
