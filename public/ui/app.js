@@ -144,6 +144,7 @@
     update(); await compile();if(request!==loadRequest)return false;await persist();if(request!==loadRequest)return false;
     status(project.show.atoms.length?`Ready · ${duration().toFixed(2)}s · All processing stays in your browser`:'Blank project · Add a library image or import images to begin');
     const url=new URL(location.href);url.searchParams.set('show',project.show.show_id);historyReplace(url);
+    if(location.hash==='#timelineJsonPanel')focusStoryboard();
     return true;
     } finally {if(request===loadRequest)loading=false;}
   }
@@ -441,6 +442,7 @@
     nextEl.hidden = !(showGhost && next);
   }
   function update() {
+    productFlowGatePanel?.refresh();
     $('projectTitle').value=project.show.title||project.show.show_id;$('previewTitle').textContent=project.show.title||'Untitled exchange';
     $('mediaCount').textContent=project.media.length+' images';$('timelineCount').textContent=`${project.show.atoms.length} clips · ${duration().toFixed(2)}s`;
     $('emptyStage').hidden=!!project.show.atoms.length;$('stageLabel').hidden=!project.show.atoms.length;
@@ -2245,6 +2247,22 @@
   on('replaceImage',()=>{replacing=!replacing;if(replacing&&project&&HMComposeClient.isPlatePackShow(project.show)){pickerOpen=true;applyPickerChrome();}document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
   on('helpOpen',()=>$('helpDialog').showModal());
   on('timelineJsonOpen',()=>{const panel=$('timelineJsonPanel');if(panel)panel.open=true;renderTimelineJsonPanel();panel?.scrollIntoView({block:'nearest'});});
+  function focusStoryboard() {
+    pause();
+    if ($('shellFocusTimeline')) $('shellFocusTimeline').checked = true;
+    const panel = $('timelineJsonPanel');
+    panel.open = true;
+    renderTimelineJsonPanel();
+    const target = $('timelineClips').querySelector('button.active') || $('timelineClips').querySelector('button') || panel.querySelector('summary');
+    target?.focus();
+    target?.scrollIntoView({block:'nearest'});
+  }
+  const productFlowGatePanel = window.HMProductFlowGate.mountGatePanel($('pf09GatePanel'), {
+    getProject: () => project,
+    beforeDecision: () => { requireEditable(); if (loading) throw new Error('Wait for the show to finish opening.'); },
+    focusStoryboard,
+  });
+  $('pf09OpenStory').addEventListener('click', safe(e => { e.preventDefault(); focusStoryboard(); }));
   on('timelineJsonCopy',()=>copyTimelineJson());
   on('timelineJsonRefresh',()=>{renderTimelineJsonPanel();status('Timeline JSON refreshed');});
   document.addEventListener('keydown',safe(async e=>{
