@@ -6,7 +6,7 @@
 
 1. **One-click sample or file import (no JSON spelunking)**:
    - Click **Open dual-cast costume lock** (`#loadCostumeLock`, or open `/ui/?show=daiyu-wang-costume-lock`) to load [`costume_lock_dual_cast.json`](../../public/presets/costume_lock_dual_cast.json) directly as an editable plate pack.
-   - Or click **Open project** (`#openProject` / `#projectInput`) and select any `costume_lock` JSON emitted by `hm-character-lock` — either referencing local/embedded images or selected together with companion `.png`/`.jpg`/`.webp` costume sheet and pose-ref files.
+   - Or click **Open project** (`#openProject` / `#projectInput`) and select a `costume_lock` JSON emitted by `hm-character-lock` together with companion `.png`/`.jpg`/`.webp` sheets, earlier approved `cast.{L,R}.lock_refs`, and optional pose refs. [HM-PF-03](HM-PF-03-costume-drift.md) now requires a named human drift review before a fresh standalone pack replaces the current project. Missing references and rejected reviews block import visibly.
 2. **Locked costume IDs visible for both cast members**:
    - In the Clip Settings **Characters** panel (`#charHonesty`), `#charNameL` and `#charNameR` show cast names while `#charLockL` and `#charLockR` show the locked `costume_id` badges for screen-left (`L`) and screen-right (`R`), plus sheet/pose-ref counts (`#charLockMeta`).
    - Existing shows without costume locks keep `#charLockRowL`, `#charLockRowR`, and `#charLockMeta` hidden with zero visual or DOM text regression.
@@ -29,12 +29,14 @@
     "L": {
       "name": "Lin Daiyu",
       "costume_id": "daiyu_celadon_tank_v1",
+      "lock_refs": [{ "label": "Earlier Daiyu lock reference", "src": "assets/daiyu-wang-eight/P01.png" }],
       "sheets": [{ "id": "L_SHEET_01", "label": "Daiyu · celadon tank sheet", "src": "assets/daiyu-wang-continuation/P09.png" }],
       "pose_refs": [{ "id": "L_POSE_01", "label": "Opening guard · L ref", "src": "assets/daiyu-wang-eight/P01.png", "duration_s": 0.625 }]
     },
     "R": {
       "name": "Wang Xifeng",
       "costume_id": "wang_crimson_jacket_v1",
+      "lock_refs": [{ "label": "Earlier Wang lock reference", "src": "assets/daiyu-wang-eight/P02.png" }],
       "sheets": [{ "id": "R_SHEET_01", "label": "Wang · crimson jacket sheet", "src": "assets/daiyu-wang-continuation/P10.png" }],
       "pose_refs": [{ "id": "R_POSE_01", "label": "Slip & press · R ref", "src": "assets/daiyu-wang-eight/P02.png", "duration_s": 0.625 }]
     }

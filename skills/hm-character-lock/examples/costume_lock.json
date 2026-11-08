@@ -8,6 +8,7 @@
     "L": {
       "name": "Lin Daiyu",
       "costume_id": "daiyu_celadon_tank_v1",
+      "lock_refs": [{ "src": "L-guard.png", "label": "Earlier Daiyu costume reference" }],
       "sheets": [
         { "id": "L_SHEET_01", "label": "Daiyu · celadon tank sheet", "src": "L-sheet.png" }
       ],
@@ -18,6 +19,7 @@
     "R": {
       "name": "Wang Xifeng",
       "costume_id": "wang_crimson_jacket_v1",
+      "lock_refs": [{ "src": "R-guard.png", "label": "Earlier Wang costume reference" }],
       "sheets": [
         { "id": "R_SHEET_01", "label": "Wang · crimson jacket sheet", "src": "R-sheet.png" }
       ],

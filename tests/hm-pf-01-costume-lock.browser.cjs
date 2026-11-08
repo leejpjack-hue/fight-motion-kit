@@ -183,12 +183,14 @@ async function ensureServer(urlStr) {
         L: {
           name: 'Ah Lung',
           costume_id: 'ah_lung_vest_lock_v1',
+          lock_refs: [{ src: 'lung_ref.png', label: 'Earlier Lung lock reference' }],
           sheets: [{ id: 'L_SHEET', label: 'Lung turnaround sheet', src: 'sheets/lung_sheet.png' }],
           pose_refs: [{ id: 'L_POSE_01', label: 'Lung guard stance', src: 'poses/lung_pose_01.png', duration_s: 0.5 }],
         },
         R: {
           name: 'Siu Mei',
           costume_id: 'siu_mei_coat_lock_v1',
+          lock_refs: [{ src: 'mei_ref.png', label: 'Earlier Mei lock reference' }],
           sheets: [{ id: 'R_SHEET', label: 'Mei turnaround sheet', src: 'sheets/mei_sheet.png' }],
           pose_refs: [{ id: 'R_POSE_01', label: 'Mei roundhouse ref', src: 'poses/mei_pose_01.png', duration_s: 0.5 }],
         },
@@ -201,7 +203,14 @@ async function ensureServer(urlStr) {
       { name: 'mei_sheet.png', mimeType: 'image/png', buffer: ONE_BY_ONE_PNG },
       { name: 'lung_pose_01.png', mimeType: 'image/png', buffer: ONE_BY_ONE_PNG },
       { name: 'mei_pose_01.png', mimeType: 'image/png', buffer: ONE_BY_ONE_PNG },
+      { name: 'lung_ref.png', mimeType: 'image/png', buffer: fs.readFileSync('public/assets/daiyu-wang-eight/P01.png') },
+      { name: 'mei_ref.png', mimeType: 'image/png', buffer: fs.readFileSync('public/assets/daiyu-wang-eight/P02.png') },
     ]);
+    await page.waitForSelector('#costumeDriftDialog[open]');
+    await page.fill('#costumeDriftDialog .reviewer', 'Browser test operator');
+    for (const checkbox of await page.locator('#costumeDriftDialog input[type="checkbox"]').all()) await checkbox.check();
+    await page.waitForFunction(() => !document.querySelector('#costumeDriftDialog .approve').disabled);
+    await page.click('#costumeDriftDialog .approve');
     await page.waitForFunction(() => HMStudio.project?.show?.show_id === 'ah-lung-vs-siu-mei-lock');
     await settle();
 

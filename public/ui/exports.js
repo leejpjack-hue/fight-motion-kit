@@ -57,7 +57,8 @@
   $('projectInput').onchange=safe(async e=>{
     const files=[...(e.target.files||[])];if(!files.length)return;
     try{
-      const opened=await S.openProject((async()=>{
+      const destination=S.destinationToken();
+      const next=await (async()=>{
       const jsonFile=files.find(file=>/\.json$/i.test(file.name||'')||file.type==='application/json')||files[0];
       if(jsonFile.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
       const localFiles={};
@@ -65,10 +66,14 @@
         if(imgFile===jsonFile)continue;
         if(!['image/png','image/jpeg','image/webp'].includes(imgFile.type)&&!/\.(png|jpe?g|webp)$/i.test(imgFile.name||''))continue;
         if(imgFile.size>20*1024*1024)throw new Error(imgFile.name+' is larger than 20 MB.');
+        if(Object.hasOwn(localFiles,imgFile.name))throw new Error('Duplicate image filename: '+imgFile.name+'. Use distinct filenames for sheets and locked references.');
         localFiles[imgFile.name]=await dataUrl(imgFile);
       }
       const parsed=JSON.parse(await jsonFile.text());
+      const isLockPack=window.HMComposeClient?.isCostumeLockPackInput?.(parsed);
+      const review=isLockPack?await HMCostumeDrift.review(parsed,localFiles):null;
       let p=(window.HMMotionSot&&HMMotionSot.asPortableProject(parsed,{localFiles}))||(window.HMComposeClient&&HMComposeClient.isCostumeLockPackInput?.(parsed)?HMComposeClient.normalizeCostumeLockPack(parsed,{localFiles}):parsed);
+      if(review)HMCostumeDrift.attach(p,review.plan,review.report);
       if(!p.show&&p.show_id){
         // Existing show JSON is supported when its layouts are shipped with this host.
         const layouts={};for(const key of new Set(p.atoms.map(a=>a.hero?.layout_source).filter(Boolean))){if(!/^assets\/[a-zA-Z0-9_./-]+\.json$/.test(key)||key.includes('..'))throw new Error('Open a portable .motion.json project to include local images.');const r=await fetch('/'+key);if(!r.ok)throw new Error('Missing layout; use a portable project JSON.');layouts[key]=await r.json();}
@@ -76,7 +81,10 @@
         p={version:1,show:p,layouts,media};
       }
       return p;
-      })());if(opened)report('Project opened.');
+      })();
+      const current=S.destinationToken();
+      if(current.revision!==destination.revision||current.request!==destination.request)throw new Error('The open project changed during import review. Select the pack again.');
+      const opened=await S.openProject(Promise.resolve(next));if(opened)report('Project opened.');
     }finally{e.target.value='';}
   });
   function selectedPreset() {return HMXExport.presetById($('exportPreset').value)||HMXExport.presets[0];}
