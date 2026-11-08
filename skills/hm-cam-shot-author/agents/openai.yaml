@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Camera Shot Author"
+  short_description: "Map camera grammar to shipped presets and clauses"
+  default_prompt: "Use $hm-cam-shot-author to map my scene grammar to the current kit's camera presets, then let me fine tune the shots in HTML Motion."

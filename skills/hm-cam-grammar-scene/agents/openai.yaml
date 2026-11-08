@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Scene Camera Grammar"
+  short_description: "Plan approved camera triplets and Wide coverage"
+  default_prompt: "Use $hm-cam-grammar-scene with my approved board and camera intent, then hand the editable sheet to HTML Motion."

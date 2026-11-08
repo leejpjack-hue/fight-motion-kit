@@ -52,6 +52,8 @@ use the single [`hm-rhythm-pacing`](skills/hm-rhythm-pacing/SKILL.md) skill to
 produce exact duration maps or selected-beat hold stamps. Clip Settings → Rhythm
 shows the editable target, live impact budget/time, and signed timing delta.
 
+For scene cameras, use [`hm-cam-grammar-scene`](skills/hm-cam-grammar-scene/SKILL.md) and [`hm-cam-shot-author`](skills/hm-cam-shot-author/SKILL.md) with an approved board. [The camera authoring guide](docs/product-flow/CAMERA-AUTHORING.md) covers editable triplets/Wide coverage, catalog-backed `Camera:` clauses, manual preset overrides, and continuous chains with snap zoom.
+
 For character creation before composing, use [`hm-character-lock`](skills/hm-character-lock/SKILL.md) to turn a dual-cast brief into local costume-lock JSON and sheets. It reuses `prompt-sheets` and `json-pose-from-image` outside the frontend, then hands off to **Open project** with the JSON and companion images selected together. A [local example and contract check](skills/hm-character-lock/references/pack-contract.md) reuse shipped assets without generation or provider login.
 
 Fresh costume packs require earlier approved `lock_refs` for both cast members and a [human drift review](docs/product-flow/HM-PF-03-costume-drift.md) before import. Missing evidence or a rejected checklist preserves the current edit; re-run sheet preparation outside HM and re-import the replacement pack.

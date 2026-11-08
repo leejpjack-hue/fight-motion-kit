@@ -162,3 +162,11 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 
 /* HM-PF-12/14: one editable rhythm summary in Beat focus. */
 .rhythm-panel{margin:12px 0;padding:10px;border:1px solid var(--border);border-radius:7px}.rhythm-panel meter{width:100%;height:14px;margin-top:8px}.rhythm-panel .field-hint{overflow-wrap:anywhere}.rhythm-panel[data-budget-state=warn] #impactWarning,.rhythm-panel [data-state=drift],.rhythm-panel [data-state=invalid]{color:var(--warn,#ffbe68)}.rhythm-actions{display:flex;flex-wrap:wrap;gap:8px}.rhythm-actions button{font-size:10px}.flow-sample-link{display:block;font-size:11px;margin:8px 0;color:var(--accent)}
+/* Scene grammar remains a compact, keyboard-accessible inspector disclosure. */
+.camera-grammar{margin-top:14px;border-top:1px solid var(--border,#343a43);padding-top:12px;min-width:0}
+.camera-grammar summary{cursor:pointer;font-weight:600}
+.camera-grammar label{display:block;font-size:11px;margin:9px 0;min-width:0}
+.camera-grammar input,.camera-grammar select,.camera-grammar textarea{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:4px}
+.camera-grammar textarea{resize:vertical;font:11px/1.5 monospace}
+.camera-grammar .field-hint,.camera-chain-author .field-hint{overflow-wrap:anywhere}
+.camera-chain-author{border-top:1px solid var(--border,#343a43);margin-top:10px;padding-top:4px}

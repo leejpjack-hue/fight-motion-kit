@@ -11,6 +11,7 @@
   "fx_profile": {"type": "string", "enum": ["comic", "full"], "description": "Comic/ink hides photographic fire, light, and dust chips. Full chips shows them. Rejected photo fire/light overlays are never inserted."},
   "duration_target_s": {"type": "number", "minimum": 0.1, "maximum": 120},
   "rhythm": {"type": "object", "properties": {"impact_budget": {"type": "integer", "minimum": 0, "maximum": 300}, "source": {"type": "string"}, "mode": {"enum": ["plan", "stamp"]}}},
+  "camera_authoring": {"type": "object", "description": "Optional scene grammar provenance: approved PF-08 board, its step-2 GO record, fight_meta and source_template. Per-beat planning fields live on camera_grammar; rendered camera stays authoritative.", "required": ["board", "approval"], "properties": {"board": {"type": "object"}, "approval": {"type": "object"}, "fight_meta": {"type": "object"}, "source_template": {"type": "object"}}},
   "draft": {"type": "boolean", "description": "QA/smoke only: downgrade 30-60 s duration error to a warning"},
   "grounded": {"const": true},
   "parity_mode": {"type": "boolean"},
