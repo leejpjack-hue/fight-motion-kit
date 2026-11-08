@@ -34,6 +34,7 @@ async function ensureServer(urlStr){
   const srv=await ensureServer(base);
   const browser=await chromium.launch({headless:true,chromiumSandbox:true,channel:process.env.BROWSER_CHANNEL||undefined,env:process.env,args:['--disable-dev-shm-usage','--disable-gpu']});
   const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
+  context.on('page',page=>page.on('dialog',d=>d.accept()));
   const p=await context.newPage(), errors=[], failed=[], checks=[];
   p.on('pageerror',e=>errors.push(e.message));p.on('response',r=>{if(r.status()>=400)failed.push(r.status()+' '+r.url());});
   const state=()=>p.evaluate(()=>({duration:HMStudio.duration,project:HMStudio.project,composed:HMStudio.composed,time:HMStudio.time,playing:HMStudio.playing,onion:HMStudio.onion,copiedCam:HMStudio.copiedCam}));

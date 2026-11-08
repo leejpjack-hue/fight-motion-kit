@@ -69,7 +69,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 
 ## Constraints that stay in force
 
-- **FE-only.** Workers UI, IndexedDB, and `.motion.json`. See [`docs/FRONTEND-ONLY-2026-10-23.md`](../FRONTEND-ONLY-2026-10-23.md).
+- **FE-only.** Workers UI, IndexedDB, localStorage draft, and `.motion.json`. See [`docs/FRONTEND-ONLY-2026-10-23.md`](../FRONTEND-ONLY-2026-10-23.md) and [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) (HM-PF-44).
 - **Forge.** Composer and show land on this repo. Wave 1 FX vendor authorship lands on pixelfx (`patch-gg/pixelfx` is App pull-only; the writable build fork is `leejpjack-hue/pixelfx`). Checklist: [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) (HM-PF-52).
 - **Cap.** At most 3 SIGNED HTML Motion stories per weekday.
 - **Voice / #41.** HOLD. This approval does not SIGN SFX or audio.
@@ -80,6 +80,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | Path | Role |
 |---|---|
 | [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md) | n8n, HTML Motion UI, and skills Owns / Must-not-own contract (HM-PF-50) |
+| [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) | Any-step edit loop: one `.motion.json`, localStorage draft plus file reopen (HM-PF-44) |
 | [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) | FE-only forge checklist: composer/show on this kit, Wave 1 FX vendor on pixelfx (HM-PF-52) |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |

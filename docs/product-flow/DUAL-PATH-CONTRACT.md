@@ -50,7 +50,7 @@ Same limits as [`PRODUCT-FLOW.md`](PRODUCT-FLOW.md#constraints-that-stay-in-forc
 
 ## Resume, still with no compose API
 
-HTML Motion is browser-local. Jack can resume a paused gate from the n8n execution panel, from the resume form URL on the gate, or later from the resume webhook. A future Slack send-and-wait (HM-PF-53) can offer the same Approve or Rework choice. None of those paths write `.motion.json` or call a compose backend. Rework returns to the same step. It does not, by itself, wipe lock packs. The HTML Motion UI keeps the artifact.
+HTML Motion is browser-local. Jack can resume a paused gate from the n8n execution panel, from the resume form URL on the gate, or later from the resume webhook. A future Slack send-and-wait (HM-PF-53) can offer the same Approve or Rework choice. None of those paths write `.motion.json` or call a compose backend. Rework returns to the same step. It does not, by itself, wipe lock packs. The HTML Motion UI keeps the artifact. Any step's edit is on that same `.motion.json`, so a paused gate resumes from the file the composer saved. See [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) (HM-PF-44).
 
 ## HM-PF-49 spike
 
