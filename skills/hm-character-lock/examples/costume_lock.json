@@ -1,0 +1,29 @@
+{
+  "kind": "costume_lock",
+  "version": 1,
+  "pack_id": "daiyu-wang-skill-example",
+  "title": "Daiyu vs Wang · Character lock skill example",
+  "venue": "street",
+  "cast": {
+    "L": {
+      "name": "Lin Daiyu",
+      "costume_id": "daiyu_celadon_tank_v1",
+      "sheets": [
+        { "id": "L_SHEET_01", "label": "Daiyu · celadon tank sheet", "src": "L-sheet.png" }
+      ],
+      "pose_refs": [
+        { "id": "L_POSE_01", "label": "Opening guard · L ref", "src": "L-guard.png", "duration_s": 0.625 }
+      ]
+    },
+    "R": {
+      "name": "Wang Xifeng",
+      "costume_id": "wang_crimson_jacket_v1",
+      "sheets": [
+        { "id": "R_SHEET_01", "label": "Wang · crimson jacket sheet", "src": "R-sheet.png" }
+      ],
+      "pose_refs": [
+        { "id": "R_POSE_01", "label": "Slip & press · R ref", "src": "R-guard.png", "duration_s": 0.625 }
+      ]
+    }
+  }
+}
