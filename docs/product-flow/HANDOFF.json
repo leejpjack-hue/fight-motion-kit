@@ -1,0 +1,55 @@
+{
+  "pick": "n8n",
+  "runner_up": "Dify",
+  "one_line_why": "n8n gives Jack a mature visual canvas he can edit himself, with Wait/Slack/form human gates and HTTP wrappers for skills, without replacing the FE-only HM composer.",
+  "jack_can_visual_edit": true,
+  "self_host": true,
+  "self_host_note": "Docker Community (Sustainable Use License \u2014 internal use). Cloud optional (~EUR20+/mo).",
+  "plugin_available": "73065872",
+  "plugin_installed": false,
+  "risks": [
+    "FE-only HM needs an explicit resume/approve bridge to n8n Wait (manual/Slack/form) without inventing a compose backend",
+    "Sustainable Use License: fine for Jack internal use; not for multi-tenant white-label hosting of n8n",
+    "Must not absorb plate/cam/compose into n8n \u2014 keep dual-path HM UI + skills",
+    "DiagramTool boards vs n8n runtime can drift unless 1..10 list has one SoT",
+    "Cursor n8n plugin listed but not installed \u2014 install only after Jack APPROVE"
+  ],
+  "next_steps": [
+    "IF APPROVE: stand up n8n self-host (or evaluate Cloud) as spike only",
+    "Model locked steps 1..10 as workflow nodes with Wait/approval gates; mark step 10 Voice HOLD/disabled",
+    "Define gate UX: Slack or form Approve/Rework + deep-link/instruction to HM UI surface",
+    "Stub HTTP nodes to skill/webhook placeholders (no product compose API)",
+    "Write one-page control-vs-HM-vs-skills contract for Approval Page; keep #41 HOLD"
+  ],
+  "brief_path": "/workspace/hr/briefs/hm-flow-orchestrator-choice-2026-11-08.md",
+  "anti_fits": [
+    "LangGraph-only / LangSmith Studio as primary Jack editor",
+    "Flowise (EOL 2026-08-31)"
+  ],
+  "sources": [
+    "https://github.com/n8n-io/n8n",
+    "https://docs.n8n.io/build/integrate-ai/ai-examples/human-in-the-loop-for-tools",
+    "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait",
+    "https://n8n.io/pricing/",
+    "https://docs.n8n.io/n8n-community-license",
+    "https://dify.ai/",
+    "https://docs.dify.ai/en/self-host/use-dify/nodes/human-input",
+    "https://docs.dify.ai/en/self-host/use-dify/build/workflow-chatflow",
+    "https://github.com/langflow-ai/langflow/",
+    "https://docs.langflow.org/security",
+    "https://docs.langchain.com/oss/python/langgraph/studio",
+    "https://docs.langchain.com/langsmith/fleet",
+    "https://www.langchain.com/blog/langsmith-agent-builder",
+    "https://flowiseai.com/sunset",
+    "https://wz-it.com/en/blog/dify-flowise-langflow-n8n-comparison/",
+    "https://vdf.ai/blog/dify-vs-n8n-vs-flowise-vs-langflow/"
+  ],
+  "no_actions_taken": [
+    "no SendToUser",
+    "no canvas edit",
+    "no plugin install",
+    "no SIGN",
+    "no product code"
+  ],
+  "created_at_asia_tokyo": "2026-11-08T12:19:00+09:00"
+}

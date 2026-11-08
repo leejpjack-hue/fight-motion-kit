@@ -1,0 +1,125 @@
+# HTML Motion product flow (APPROVED)
+
+**Status:** APPROVED  
+**Approver:** Jack Lee JP  
+**Date:** 8 Nov 2026 (Asia/Tokyo)  
+**Jack refs:** t2471u (revise: visual editable flow) · t2473u (go-ahead, and land these docs in the repo)  
+**Approval Page:** https://cursor.com/canvas/store-4b196c92-d1a3-4894-af76-47a03d56f6ce/8cd93fd2-5ce0-4640-817c-8882fb7d0599
+
+t2471u asked for a product flow Jack can see and edit. t2473u approved that design and asked for every diagram and design doc from the pack to live in this repository.
+
+This folder is that landing. DiagramTool boards are the design source of truth. The HTML Motion frontend composer remains the place artifacts are shown and edited. Skills assist create/edit. n8n, when it is stood up later, is flow control and gates only.
+
+The copied orchestrator brief and [`HANDOFF.json`](HANDOFF.json) still say research-and-recommendation and "IF Jack APPROVE". They were written before t2473u. This page records the approval that follows them. This landing does not install n8n, publish a skill, change the composer or schemas, or SIGN a story.
+
+## Locked steps (1..10)
+
+Every step is a process card on [`workflow.board.json`](workflow.board.json). The HTML Motion UI shows and edits the artifact. An AI skill sits beside that edit.
+
+| # | Step | Dual path on the workflow board |
+|---|---|---|
+| 1 | Character creation | HM UI plate and character edit, with a character/OpenPose skill beside it |
+| 2 | Story | HM UI atoms and the timeline JSON inspector, with a storyboard skill beside it |
+| 3 | Rhythm | HM UI duration, frame peek, scrub, and beat blocks, with a rhythm and frame-QA skill beside it |
+| 4 | Scene cam-shot design | HM UI camera-grammar templates and cut blocks, with a triplet-planner skill beside it |
+| 5 | Per-scene cam shots | HM UI per-atom camera presets, with a preset-tuning skill beside it |
+| 6 | Sprite gen | HM UI staged strip picker. External sprite-gen stays outside HTML Motion |
+| 7 | Background scene | HM UI background plates (crop, pan, span, parallax), with a framing skill beside it |
+| 8 | Foreground | HM UI cutouts and IMPACT / COMPOSER-FX, with a cutout and FX skill beside it |
+| 9 | HTML Motion cam-shot compose | HM UI compose and the 1280×720 canvas, with `html-motion-composer` scripts beside it |
+| 10 | Voice — HOLD / #41 | Dialogue-hold design step on the board. Wave 1 has no SFX or audio. Keep the node as a disabled HOLD until a later approval lifts it |
+
+Order source: the workflow board sticky note "EXACT JACK 1..10 ORDER", plus [`workflow.dsl`](workflow.dsl).
+
+Sprite-gen (`6a3f4c47`) stays an external CLI. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
+
+## Ownership lanes
+
+Six swimlanes on [`architecture.board.json`](architecture.board.json). These are design-ownership bands.
+
+| Lane | Board label | Owns |
+|---|---|---|
+| 1 | PO — product / ~50 stories | Backlog of about 50 stories, camera-grammar and storyboard specs, sprite-gen and IMPACT scope gates |
+| 2 | Cursor overall architecture | Frontend-only contract, show / atom / pose schemas, IndexedDB and portable `.motion.json` |
+| 3 | Codex — UI | Studio shell and inspector, scrub / peek / catalog, SG-01 staged picker |
+| 4 | ZCode — effect / cam move / impact logic | Camera move logic, IMPACT / COMPOSER-FX runtime, rhythm beat blocks and cuts |
+| 5 | Antigravity — overflow | character/OpenPose prep, external sprite-gen prep, SG-02/03 and frame QA |
+| 6 | HTML Motion bot — compose / bake | Compose pipeline, shared canvas renderer, local HTML / PNG / video bake |
+
+Research surfaces named on the architecture board: `camera-grammar`, `sprite-gen`, `IMPACT / COMPOSER-FX`, `character/OpenPose`.
+
+## Flow control
+
+| Role | Choice | Why it is in the approved pack |
+|---|---|---|
+| Primary | **n8n** (self-host Community first) | Visual canvas Jack can open and edit. Wait, Slack, and form gates between the 10 steps. HTTP nodes wrap skills and local scripts |
+| Runner-up | **Dify** (self-host Community) | Strong in-canvas Human Input forms. Heavier stack, and those forms can start to compete with the HTML Motion UI |
+| Fails the visual-edit bar | **LangGraph / LangSmith Studio** | Studio visualizes and debugs graphs written in code. It is not the Jack drag-edit canvas for this flow |
+| Do not start here | **Flowise** | End of life 2026-08-31 |
+
+[`HANDOFF.json`](HANDOFF.json) records the same pick: `"pick": "n8n"`, `"runner_up": "Dify"`, `"jack_can_visual_edit": true`. Cursor catalog plugin id `73065872` is listed there and is not installed.
+
+The brief's later spike (stand up n8n, model steps 1..10 with Wait gates, mark step 10 HOLD, stub skill HTTP, write the one-page control contract onto the Approval Page) stays future work.
+
+## Separation
+
+| Layer | Owns |
+|---|---|
+| n8n | Flow control and gates: step order, triggers, Wait / approve, calling skills, notifying Jack |
+| HTML Motion FE composer | Artifact show and edit (`.motion.json`): plates, camera, rhythm, compose, and bake in the browser |
+| Skills | Create/edit assist beside the human edit |
+| DiagramTool boards | Design source of truth for the swimlanes and the 1..10 flow. Not the live runtime |
+
+n8n sequences the dual path and pauses for Jack. Plate and camera editing stay in the frontend composer. `.motion.json` stays the artifact. Skills do not replace the human edit and do not add a product compose backend.
+
+## Constraints that stay in force
+
+- **FE-only.** Workers UI, IndexedDB, and `.motion.json`. See [`docs/FRONTEND-ONLY-2026-10-23.md`](../FRONTEND-ONLY-2026-10-23.md).
+- **Cap.** At most 3 SIGNED HTML Motion stories per weekday.
+- **Voice / #41.** HOLD. This approval does not SIGN SFX or audio.
+- **Jack bar.** Open a fight, tweak, and compose within 60 seconds. The 5.00s eight-plate demo (`daiyu-wang-five-seconds`) stays intact.
+
+## Files in this folder
+
+| Path | Role |
+|---|---|
+| [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
+| [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
+| [`architecture.product.png`](architecture.product.png) | Product PNG export of the architecture board |
+| [`architecture.canvas.png`](architecture.canvas.png) | Canvas PNG of the same architecture board |
+| [`workflow.board.json`](workflow.board.json) | DiagramTool v3.0 flow board, steps 1..10 (design SoT) |
+| [`workflow.dsl`](workflow.dsl) | Native DSL for that board |
+| [`workflow.product.png`](workflow.product.png) | Product PNG export of the workflow board |
+| [`workflow.canvas.png`](workflow.canvas.png) | Canvas PNG of the same workflow board |
+| [`companion-notes.md`](companion-notes.md) | Board companion notes (2026-11-08) |
+| [`evidence.md`](evidence.md) | Local parser and MCP validation evidence |
+| [`validation-receipt.json`](validation-receipt.json) | Structural counts and SHA-256 of the board sources |
+| [`hm-flow-orchestrator-choice-2026-11-08.md`](hm-flow-orchestrator-choice-2026-11-08.md) | Orchestrator comparison; n8n primary, Dify runner-up |
+| [`HANDOFF.json`](HANDOFF.json) | Machine-readable pick, risks, and next steps |
+
+[`validation-receipt.json`](validation-receipt.json) is a local DiagramTool parser receipt (Node v22.20.0 against diagram-tool `3dd1658e`), not a live browser export. Both boards passed `validatePortableDocument` with `layoutDeltaPx` 0 and no watermark. Digests recorded there, and matched by the copies in this folder:
+
+| File | SHA-256 |
+|---|---|
+| `architecture.dsl` | `73da7377056d489a9e2c42152f861ab88efc38278f99959cc99910d4bde5d6ad` |
+| `architecture.board.json` | `daa8dad6cec71bb299f7895470c40cd3c9ff581959de01d0ba393d798e8de246` |
+| `workflow.dsl` | `c7c86c04089e50477ac056876d358c22e81e513be51540e3761013a5627640dc` |
+| `workflow.board.json` | `a3a09a792207dac392bb240f9873ffd111568badad7478841cea41b2c3552e37` |
+| `companion-notes.md` | `8f7fe91971cf971eb45f96bb4e158bdf3f59676eac46946f7a153063ed9369cb` |
+| `evidence.md` | `e4d0c635661cef2ebed43180112300f4bc516429dfc16989bed4d0db97d72c2a` |
+
+Companion notes, evidence, and the orchestrator brief keep their original `/workspace/...` paths. Those paths are the evidence trail from 2026-11-08. The table above is where the same files live in this repo.
+
+## Diagrams
+
+### Architecture — six ownership lanes
+
+![Architecture product export: six HTML Motion ownership swimlanes](architecture.product.png)
+
+Canvas capture of the same board: [`architecture.canvas.png`](architecture.canvas.png).
+
+### Workflow — steps 1..10
+
+![Workflow product export: locked steps 1 through 10](workflow.product.png)
+
+Canvas capture of the same board: [`workflow.canvas.png`](workflow.canvas.png).
