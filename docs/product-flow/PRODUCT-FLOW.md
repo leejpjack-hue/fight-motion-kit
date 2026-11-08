@@ -59,18 +59,13 @@ Research surfaces named on the architecture board: `camera-grammar`, `sprite-gen
 
 [`HANDOFF.json`](HANDOFF.json) records the same pick: `"pick": "n8n"`, `"runner_up": "Dify"`, `"jack_can_visual_edit": true`. Cursor catalog plugin id `73065872` is listed there and is not installed.
 
-The brief's later spike (stand up n8n, model steps 1..10 with Wait gates, mark step 10 HOLD, stub skill HTTP, write the one-page control contract onto the Approval Page) stays future work.
+The one-page control contract is [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md). Standing up n8n is still a spike. HM-PF-49 left the spike plan, a Docker compose file, workflow JSON, and gate notes outside this kit. Docker runtime smoke is Jack-side and does not block the contract. This landing still does not install n8n or plugin `73065872`.
 
 ## Separation
 
-| Layer | Owns |
-|---|---|
-| n8n | Flow control and gates: step order, triggers, Wait / approve, calling skills, notifying Jack |
-| HTML Motion FE composer | Artifact show and edit (`.motion.json`): plates, camera, rhythm, compose, and bake in the browser |
-| Skills | Create/edit assist beside the human edit |
-| DiagramTool boards | Design source of truth for the swimlanes and the 1..10 flow. Not the live runtime |
+Owns and must-not-own for n8n, the HTML Motion UI, skills, and the DiagramTool boards are in [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md).
 
-n8n sequences the dual path and pauses for Jack. Plate and camera editing stay in the frontend composer. `.motion.json` stays the artifact. Skills do not replace the human edit and do not add a product compose backend.
+n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay in the frontend composer. `.motion.json` stays the artifact. Skills do not replace the human edit and do not add a product compose backend.
 
 ## Constraints that stay in force
 
@@ -83,6 +78,7 @@ n8n sequences the dual path and pauses for Jack. Plate and camera editing stay i
 
 | Path | Role |
 |---|---|
+| [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md) | n8n, HTML Motion UI, and skills Owns / Must-not-own contract (HM-PF-50) |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
 | [`architecture.product.png`](architecture.product.png) | Product PNG export of the architecture board |
