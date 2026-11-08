@@ -1,0 +1,5 @@
+Wave1 catalog: /workspace/repos/fight-motion-kit-hm-pf-41/public/presets/pixelfx_wave1.json
+Stamp fx: impacts/hit-spark [Action] Hit spark
+  beat-02: added impacts/hit-spark (t_rel 0.08, pixelfx, params x/y/scale 0/0/1)
+Stamped 1 atom(s): 1 added, 0 already present.
+Wrote: /tmp/hm-pf-41-fixture-after.json (backup: /tmp/hm-pf-41-fixture-after.json.bak)
