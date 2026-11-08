@@ -12,12 +12,23 @@
   "duration_target_s": {"type": "number", "minimum": 30, "maximum": 60},
   "draft": {"type": "boolean", "description": "QA/smoke only: downgrade 30-60 s duration error to a warning"},
   "grounded": {"const": true},
+  "parity_mode": {"type": "boolean"},
+  "compose_mode": {"type": "string"},
+  "plate_pack": {"type": "boolean"},
   "floor_y": {"type": "number", "default": 684},
   "char_screen_scale": {"type": "number", "default": 1.0},
   "chars": {
    "type": "object", "required": ["L", "R"],
    "properties": {"L": {"$ref": "#/$defs/char"}, "R": {"$ref": "#/$defs/char"}}
   },
+  "costume_lock": {
+   "oneOf": [
+    {"type": "string"},
+    {"$ref": "#/$defs/costumeLockPack"}
+   ]
+  },
+  "lock_pack": {"type": "object"},
+  "meta": {"type": "object"},
   "bg": {
    "type": "object", "required": ["base"],
    "properties": {
@@ -54,9 +65,54 @@
     "name": {"type": "string"},
     "pose_library": {"type": "string", "description": "path to pose_library.json (library atoms)"},
     "image": {"type": "string", "description": "character key image (hero-plate generation input)"},
-    "costume_lock": {"type": "string"},
+    "costume_id": {"type": "string", "minLength": 1, "description": "locked costume identifier for this cast member"},
+    "costume_lock": {
+     "oneOf": [
+      {"type": "string"},
+      {"$ref": "#/$defs/charCostumeLock"}
+     ]
+    },
     "transform": {"$ref": "#/$defs/transform"}
   }},
+  "costumeRefItem": {
+   "oneOf": [
+    {"type": "string", "minLength": 1},
+    {
+     "type": "object",
+     "required": ["src"],
+     "properties": {
+      "id": {"type": "string"},
+      "label": {"type": "string"},
+      "src": {"type": "string", "minLength": 1},
+      "role": {"type": "string", "enum": ["sheet", "pose_ref"]},
+      "side": {"type": "string", "enum": ["L", "R", "duo"]},
+      "duration_s": {"type": "number", "minimum": 0.1}
+     }
+    }
+   ]
+  },
+  "charCostumeLock": {
+   "type": "object",
+   "properties": {
+    "name": {"type": "string"},
+    "costume_id": {"type": "string", "minLength": 1},
+    "id": {"type": "string", "minLength": 1},
+    "sheets": {"type": "array", "items": {"$ref": "#/$defs/costumeRefItem"}},
+    "pose_refs": {"type": "array", "items": {"$ref": "#/$defs/costumeRefItem"}}
+   }
+  },
+  "costumeLockPack": {
+   "type": "object",
+   "properties": {
+    "kind": {"type": "string"},
+    "pack_id": {"type": "string"},
+    "version": {"type": "integer"},
+    "L": {"$ref": "#/$defs/charCostumeLock"},
+    "R": {"$ref": "#/$defs/charCostumeLock"},
+    "sheets": {"type": "array", "items": {"$ref": "#/$defs/costumeRefItem"}},
+    "pose_refs": {"type": "array", "items": {"$ref": "#/$defs/costumeRefItem"}}
+   }
+  },
   "overlayStyle": {
    "type": "object",
    "properties": {

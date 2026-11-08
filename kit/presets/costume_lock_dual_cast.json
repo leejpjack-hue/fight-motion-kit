@@ -1,0 +1,94 @@
+{
+  "kind": "costume_lock",
+  "version": 1,
+  "pack_id": "daiyu-wang-costume-lock",
+  "title": "Daiyu vs Wang · Dual-cast costume lock",
+  "venue": "street",
+  "bg": {
+    "base": "assets/daiyu-wang-continuation/rooftop-dusk.png"
+  },
+  "cast": {
+    "L": {
+      "name": "Lin Daiyu",
+      "costume_id": "daiyu_celadon_tank_v1",
+      "sheets": [
+        {
+          "id": "L_SHEET_01",
+          "label": "Daiyu · celadon tank sheet",
+          "src": "assets/daiyu-wang-continuation/P09.png"
+        }
+      ],
+      "pose_refs": [
+        {
+          "id": "L_POSE_01",
+          "label": "Opening guard · L ref",
+          "src": "assets/daiyu-wang-eight/P01.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "low_rise" }
+        },
+        {
+          "id": "L_POSE_02",
+          "label": "Inside feint · L ref",
+          "src": "assets/daiyu-wang-eight/P03.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "eye_push" }
+        },
+        {
+          "id": "L_POSE_03",
+          "label": "Low pivot · L ref",
+          "src": "assets/daiyu-wang-eight/P05.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "upward_inside" }
+        },
+        {
+          "id": "L_POSE_04",
+          "label": "Counter palm · L ref",
+          "src": "assets/daiyu-wang-eight/P07.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "dutch_snap" }
+        }
+      ]
+    },
+    "R": {
+      "name": "Wang Xifeng",
+      "costume_id": "wang_crimson_jacket_v1",
+      "sheets": [
+        {
+          "id": "R_SHEET_01",
+          "label": "Wang · crimson jacket sheet",
+          "src": "assets/daiyu-wang-continuation/P10.png"
+        }
+      ],
+      "pose_refs": [
+        {
+          "id": "R_POSE_01",
+          "label": "Slip & press · R ref",
+          "src": "assets/daiyu-wang-eight/P02.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "ots_L_hold" }
+        },
+        {
+          "id": "R_POSE_02",
+          "label": "Heavy cross · R ref",
+          "src": "assets/daiyu-wang-eight/P04.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "ecu_fist_lens" }
+        },
+        {
+          "id": "R_POSE_03",
+          "label": "Whip sweep · R ref",
+          "src": "assets/daiyu-wang-eight/P06.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "whip_A_to_B" }
+        },
+        {
+          "id": "R_POSE_04",
+          "label": "Aftermath · R ref",
+          "src": "assets/daiyu-wang-eight/P08.png",
+          "duration_s": 0.625,
+          "camera": { "preset": "pull_aftermath" }
+        }
+      ]
+    }
+  }
+}
