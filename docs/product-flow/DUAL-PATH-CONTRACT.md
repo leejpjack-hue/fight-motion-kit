@@ -43,6 +43,7 @@ Step 10 is a disabled HOLD node only. This contract does not SIGN SFX or audio. 
 Same limits as [`PRODUCT-FLOW.md`](PRODUCT-FLOW.md#constraints-that-stay-in-force).
 
 - **FE-only.** Workers UI, IndexedDB, and `.motion.json`. See [`docs/FRONTEND-ONLY-2026-10-23.md`](../FRONTEND-ONLY-2026-10-23.md).
+- **Forge.** Composer and show land on fight-motion-kit. Wave 1 FX vendor authorship lands on pixelfx. Checklist: [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) (HM-PF-52).
 - **Cap.** At most 3 SIGNED HTML Motion stories per weekday.
 - **Jack bar.** Open a fight, tweak, and compose within 60 seconds. The 5.00s eight-plate demo (`daiyu-wang-five-seconds`) stays intact.
 - **n8n is gates and control only.** It sequences steps, calls skill stubs, and pauses. It does not generate the show.

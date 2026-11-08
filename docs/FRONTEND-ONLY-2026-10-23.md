@@ -2,7 +2,8 @@
 
 **Decision encoded:** Jack via CoS, 2026-10-23 ~00:19 JST — **drop the backend API; product is frontend-only.**  
 **Owner:** Product Owner. **Build:** Development. **User-test:** HTML Motion.  
-**Does not count** toward SI / Ma Wan / DT daily caps.
+**Does not count** toward SI / Ma Wan / DT daily caps.  
+**Forge checklist (HM-PF-52):** composer and show stay on this kit. Wave 1 FX vendor authorship goes to pixelfx. See [`docs/product-flow/FORGE-BOUNDARY.md`](product-flow/FORGE-BOUNDARY.md).
 
 ## Why
 - Workers deploy (`https://html-motion-composer.leejpjack.workers.dev/ui/`) already serves UI + lean catalog, but compose/save/upload are **501 stubs**.
