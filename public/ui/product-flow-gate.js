@@ -62,6 +62,9 @@
   }
   function applyApprove(project, notes = '', resumeFormUrlHint = '', storage = global.localStorage) {
     const payload = buildGatePayload({ decision: 'Approve', notes, show_id: showOf(project).show_id, resume_form_url: resumeFormUrlHint });
+    if (global.HMComposeClient?.rhythmBoardFromShow) {
+      payload.story_snapshot = global.HMComposeClient.rhythmBoardSnapshot(global.HMComposeClient.rhythmBoardFromShow(showOf(project)));
+    }
     recordDecision(payload.show_id, payload, storage);
     return { ...payload, resume_instruction: resumeInstruction(payload) };
   }

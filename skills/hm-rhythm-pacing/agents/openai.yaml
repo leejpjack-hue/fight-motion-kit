@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Rhythm Pacing"
+  short_description: "Plan approved beat timing and impact budgets"
+  default_prompt: "Use $hm-rhythm-pacing with my approved board and target duration, then hand the local rhythm plan to HTML Motion for editing."

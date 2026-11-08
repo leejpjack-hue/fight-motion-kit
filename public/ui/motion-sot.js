@@ -53,6 +53,8 @@
     };
     if (show.costume_lock !== undefined) fp.costume_lock = clone(show.costume_lock);
     if (show.lock_pack !== undefined) fp.lock_pack = clone(show.lock_pack);
+    if (show.duration_target_s !== undefined) fp.duration_target_s = show.duration_target_s;
+    if (show.rhythm !== undefined) fp.rhythm = clone(show.rhythm);
     return fp;
   }
 

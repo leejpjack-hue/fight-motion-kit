@@ -2053,10 +2053,12 @@
       'empty_cam_preset',
       'bad_fx_t_rel',
       'unsafe_duration',
+      'duration_target_invalid',
     ]),
     rhythmCodes: Object.freeze([
       'adjacent_same_cam',
       'duration_outlier',
+      'duration_target_mismatch',
     ]),
     bridgeCodes: Object.freeze([
       'beat_id_conflict',
@@ -2523,6 +2525,16 @@
       );
     });
 
+    const timing = rhythmTiming(show);
+    if (!timing.durations_valid) pushFinding('unsafe_duration',
+      'Rhythm total is unknown: missing or invalid duration on ' + timing.invalid_beats.join(', '),
+      'Set every clip duration_s to a finite number of at least 0.10 seconds before bake.', undefined, undefined, 'structural');
+    if (!timing.target_valid) pushFinding('duration_target_invalid', 'Rhythm target must be a finite number between 0.1 and 120 seconds.',
+      'Set duration_target_s to a valid target or clear the optional target.', undefined, undefined, 'structural');
+    if (timing.state === 'drift') pushFinding('duration_target_mismatch',
+      'Rhythm total ' + timing.total_s.toFixed(4) + 's vs target ' + timing.target_s.toFixed(4) + 's; delta ' + (timing.delta_s > 0 ? '+' : '') + timing.delta_s.toFixed(4) + 's.',
+      'Edit clip durations or regenerate the rhythm plan to match the target.', undefined, undefined, 'rhythm');
+
     const byCode = {};
     findings.forEach((f) => {
       byCode[f.code] = (byCode[f.code] || 0) + 1;
@@ -2535,7 +2547,8 @@
       clean: findings.length === 0,
       blocksBake: false,
       median_duration_s: medianDur,
-      total_duration_s: totalDur,
+      total_duration_s: timing.total_s,
+      rhythm_timing: timing,
       by_code: byCode,
       findings,
     };
@@ -2655,6 +2668,197 @@
         if (!impact) flurry += 1;
       }
     }
+    return next;
+  }
+
+  // HM-PF-11..14. One rhythm contract, shared by the local skill and composer.
+  function rhythmTiming(show) {
+    const atoms = Array.isArray(show?.atoms) ? show.atoms : [];
+    const invalid = Array.isArray(show?.atoms) ? atoms.filter(a => !a || typeof a.duration_s !== 'number' || !Number.isFinite(a.duration_s) || a.duration_s < 0.1 || a.duration_s > 120) : [null];
+    const valid = invalid.length === 0;
+    const total = valid ? round4(atoms.reduce((sum, a) => sum + a.duration_s, 0)) : null;
+    const raw = show?.duration_target_s;
+    const targetValid = raw === undefined || (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0.1 && raw <= 120);
+    const target = raw === undefined || !targetValid ? null : raw;
+    const delta = valid && target !== null ? round4(total - target) : null;
+    return { durations_valid: valid, target_valid: targetValid, total_s: total, target_s: target, delta_s: delta,
+      state: !valid || !targetValid ? 'invalid' : target === null ? 'unset' : delta === 0 ? 'match' : 'drift',
+      invalid_beats: invalid.map(a => a?.id || '(missing clip)') };
+  }
+
+  function rhythmPacks(doc) {
+    const packs = doc?.packs;
+    if (!Array.isArray(packs)) throw new Error('Load the shipped timing_hold_packs.json.');
+    for (const id of ['dialogue_film_slow', 'micro_cut_flurry']) {
+      if (packs.filter(p => p.id === id).length !== 1) throw new Error('Missing or duplicate shipped timing pack: ' + id);
+    }
+    return packs;
+  }
+
+  function impactBudget(show, timingPacks) {
+    const micro = rhythmPacks(timingPacks).find(p => p.id === 'micro_cut_flurry');
+    const impacts = (show?.atoms || []).filter(a => isFightImpact(a, micro) || a?.timing_hold?.kind === 'impact_hold' ||
+      (a?.fx_hooks || []).some(h => /^impacts\//.test(typeof h === 'string' ? h : h?.type || '')));
+    const budget = show?.rhythm?.impact_budget;
+    const configured = Number.isInteger(budget) && budget >= 0 && budget <= 300;
+    const timeValid = impacts.every(a => typeof a.duration_s === 'number' && Number.isFinite(a.duration_s) && a.duration_s >= 0.1);
+    return { slots_used: impacts.length, budget: configured ? budget : null,
+      remaining: configured ? budget - impacts.length : null, over_budget: configured && impacts.length > budget,
+      impact_time_s: timeValid ? round4(impacts.reduce((sum, a) => sum + a.duration_s, 0)) : null };
+  }
+
+  function rhythmBoardFromShow(show) {
+    const derived = boardFromShow(show);
+    if (!derived.ok) throw new Error('Fix storyboard beat IDs before exporting rhythm input.');
+    const board = derived.board;
+    board.beats.forEach((beat, i) => {
+      const atom = show.atoms[i];
+      beat.duration_s = atom.duration_s;
+      beat.motion = atom.motion ? deepClone(atom.motion) : null;
+      beat.fx_hooks = deepClone(atom.fx_hooks || []);
+      if (atom.timing_hold?.pack) {
+        beat.timing_pack = atom.timing_hold.pack;
+        beat.soft_cam = atom.timing_hold.soft_cam === true;
+      }
+    });
+    return board;
+  }
+
+  function rhythmBoardSnapshot(board) {
+    const sorted = value => Array.isArray(value) ? value.map(sorted) : value && typeof value === 'object'
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, sorted(value[key])])) : value;
+    return JSON.stringify(sorted(board));
+  }
+
+  function requireRhythmApproval(board, approval) {
+    if (approval?.Decision !== 'Approve' || approval.show_id !== board.show_id || approval.step !== 2 || approval.step_id !== 'story' ||
+        approval.story_snapshot !== rhythmBoardSnapshot(board)) {
+      throw new Error('Jack GO required: supply the step 2 Approve record bound to this exact board.');
+    }
+  }
+
+  function rhythmBeatIds(board) {
+    if (!board || typeof board.show_id !== 'string' || !/^[a-z0-9][a-z0-9_-]*$/.test(board.show_id) || !Array.isArray(board.beats) || !board.beats.length || board.beats.length > 300) throw new Error('Rhythm needs a board with show_id and 1–300 beats.');
+    const ids = board.beats.map(b => b?.beat_id || b?.id);
+    if (ids.some((id, i) => typeof id !== 'string' || !validBeatId(id) || (board.beats[i].id && board.beats[i].beat_id && board.beats[i].id !== id)) || new Set(ids).size !== ids.length) {
+      throw new Error('Board beat IDs must be valid, unique, and consistent.');
+    }
+    return ids;
+  }
+
+  function validateRhythmTarget(target) {
+    if (typeof target !== 'number' || !Number.isFinite(target) || target < 0.1 || target > 120 || Math.abs(target - round4(target)) > 1e-8) {
+      throw new Error('Target must be 0.1–120 seconds, with at most four decimal places.');
+    }
+  }
+
+  function rhythmMatchesShow(board, show, ids) {
+    return show?.show_id === board.show_id && Array.isArray(show.atoms) && show.atoms.length === ids.length && show.atoms.every((atom, i) => {
+      const beat = board.beats[i];
+      return (atom.beat_id || atom.id) === ids[i] && (beat.label === undefined || (atom.label || '') === beat.label) &&
+        (!Object.hasOwn(beat, 'motion') || rhythmBoardSnapshot(beat.motion) === rhythmBoardSnapshot(atom.motion || null)) &&
+        (!Object.hasOwn(beat, 'fx_hooks') || rhythmBoardSnapshot(beat.fx_hooks) === rhythmBoardSnapshot(atom.fx_hooks || []));
+    });
+  }
+
+  function rhythmStamp(show, entries, packs) {
+    let next = deepClone(show);
+    for (const pack of packs) {
+      for (const softCam of [false, true]) {
+        const selected = entries.filter(e => e.timing_pack === pack.id && !!e.soft_cam === softCam)
+          .map(e => next.atoms.findIndex(a => (a.beat_id || a.id) === e.beat_id));
+        if (selected.length) next = applyTimingPack(next, selected, pack, { softCam });
+      }
+    }
+    return next;
+  }
+
+  function buildRhythmPlan(board, target, opts) {
+    opts = opts || {};
+    const ids = rhythmBeatIds(board), packs = rhythmPacks(opts.timingPacks);
+    requireRhythmApproval(board, opts.approval);
+    validateRhythmTarget(target);
+    const source = opts.show || { show_id: board.show_id, atoms: board.beats.map((b, i) => ({ ...deepClone(b), id: ids[i],
+      duration_s: b.duration_s === undefined ? 0.5 : b.duration_s })) };
+    if (!rhythmMatchesShow(board, source, ids)) {
+      throw new Error('Board and show must have the same ordered beat IDs, story labels, and declared motion/FX.');
+    }
+    if (!rhythmTiming(source).durations_valid) throw new Error('Missing or invalid source durations.');
+    const mode = opts.mode || 'plan';
+    if (!['plan', 'stamp'].includes(mode)) throw new Error('Unknown rhythm mode.');
+    if (mode === 'stamp' && !opts.show) throw new Error('Pack stamping requires the current show/project.');
+    const selected = opts.selectedBeatIds || [];
+    if (selected.length && !opts.packId) throw new Error('Choose a timing pack for selected beats.');
+    if (opts.softCam && packs.find(p => p.id === opts.packId)?.kind !== 'hold') throw new Error('Soft camera requires the dialogue_film_slow pack.');
+    if (opts.packId && (!selected.length || selected.some(id => !ids.includes(id)))) throw new Error('Select valid board beat IDs for the timing pack.');
+    if (mode === 'stamp' && !opts.packId) throw new Error('Choose a shipped timing pack to stamp.');
+    const entries = board.beats.map((beat, i) => ({ beat_id: ids[i],
+      timing_pack: opts.packId && selected.includes(ids[i]) ? opts.packId : mode === 'stamp' ? null : (beat.timing_pack || null),
+      soft_cam: opts.packId && selected.includes(ids[i]) ? !!opts.softCam : !!beat.soft_cam }));
+    for (const entry of entries) {
+      if (entry.timing_pack && !packs.some(p => p.id === entry.timing_pack)) throw new Error('Unknown timing pack: ' + entry.timing_pack);
+      if (entry.soft_cam && packs.find(p => p.id === entry.timing_pack)?.kind !== 'hold') throw new Error('Soft camera requires the dialogue_film_slow pack.');
+    }
+    const stamped = rhythmStamp(source, entries, packs);
+    const durations = stamped.atoms.map(a => a.duration_s);
+    if (mode === 'plan') {
+      const flexible = entries.map((e, i) => e.timing_pack ? -1 : i).filter(i => i >= 0);
+      const fixed = entries.reduce((sum, e, i) => sum + (e.timing_pack ? Math.round(durations[i] * 10000) : 0), 0);
+      const available = Math.round(target * 10000) - fixed;
+      if (durations.some((d, i) => entries[i].timing_pack && d > 3) || available < flexible.length * 1000 || available > flexible.length * 30000) {
+        throw new Error('Target cannot fit the shipped holds and 0.1–3s clip window. Add/split beats or choose another target.');
+      }
+      if (flexible.length) {
+        const share = (i, scale) => Math.max(1000, Math.min(30000, source.atoms[i].duration_s * scale));
+        let low = 0, high = available / Math.min(...flexible.map(i => source.atoms[i].duration_s));
+        for (let pass = 0; pass < 60; pass++) {
+          const mid = (low + high) / 2;
+          if (flexible.reduce((sum, i) => sum + share(i, mid), 0) <= available) low = mid; else high = mid;
+        }
+        flexible.forEach(i => { durations[i] = Math.floor(share(i, low)); });
+        let remaining = available - flexible.reduce((sum, i) => sum + durations[i], 0);
+        const order = flexible.slice().sort((a, b) => (share(b, low) - durations[b]) - (share(a, low) - durations[a]) || a - b);
+        while (remaining) for (const i of order) {
+          if (!remaining) break;
+          if (durations[i] < 30000) { durations[i]++; remaining--; }
+        }
+      }
+      flexible.forEach(i => { durations[i] = durations[i] / 10000; });
+    }
+    const budget = opts.impactBudget ?? source.rhythm?.impact_budget ?? impactBudget(stamped, opts.timingPacks).slots_used;
+    if (!Number.isInteger(budget) || budget < 0 || budget > 300) throw new Error('Impact budget must be an integer between 0 and 300.');
+    return { kind: 'hm-rhythm-plan', version: 1, show_id: board.show_id, mode, target_s: target, impact_budget: budget,
+      board: deepClone(board), approval: deepClone(opts.approval),
+      duration_map: entries.filter(e => mode === 'plan' || e.timing_pack).map(e => ({ ...e, duration_s: durations[ids.indexOf(e.beat_id)] })) };
+  }
+
+  function applyRhythmPlan(show, plan, opts) {
+    opts = opts || {};
+    if (plan?.kind !== 'hm-rhythm-plan' || plan.version !== 1 || !['plan', 'stamp'].includes(plan.mode) || plan.show_id !== show?.show_id) throw new Error('Choose a rhythm plan for the open show.');
+    const ids = rhythmBeatIds(plan.board);
+    requireRhythmApproval(plan.board, plan.approval);
+    validateRhythmTarget(plan.target_s);
+    const packs = rhythmPacks(opts.timingPacks), map = plan.duration_map;
+    if (!Array.isArray(map) || !map.length || !map.every(e => e && typeof e === 'object' && !Array.isArray(e)) || new Set(map.map(e => e.beat_id)).size !== map.length ||
+        !rhythmMatchesShow(plan.board, show, ids)) throw new Error('Rhythm plan beat IDs or story labels/motion/FX do not match the open timeline.');
+    if (!rhythmTiming(show).durations_valid) throw new Error('Fix missing or invalid source durations before applying rhythm.');
+    if (!Number.isInteger(plan.impact_budget) || plan.impact_budget < 0 || plan.impact_budget > 300) throw new Error('Invalid impact budget.');
+    if (map.some(e => !e || !ids.includes(e.beat_id) || typeof e.duration_s !== 'number' || !Number.isFinite(e.duration_s) || e.duration_s < 0.1 || e.duration_s > 3 ||
+        (e.timing_pack !== null && e.timing_pack !== undefined && !packs.some(p => p.id === e.timing_pack)) ||
+        (e.soft_cam !== undefined && typeof e.soft_cam !== 'boolean') || (e.soft_cam && packs.find(p => p.id === e.timing_pack)?.kind !== 'hold') ||
+        (plan.mode === 'stamp' && !e.timing_pack))) throw new Error('Invalid rhythm duration or timing pack.');
+    if (plan.mode === 'plan' && (map.length !== ids.length || round4(map.reduce((sum, e) => sum + e.duration_s, 0)) !== plan.target_s)) throw new Error('Duration map must cover every beat and equal the target.');
+    const next = rhythmStamp(show, map, packs);
+    for (const entry of map) {
+      const i = ids.indexOf(entry.beat_id), atom = next.atoms[i];
+      if (entry.timing_pack && Math.abs(atom.duration_s - entry.duration_s) > 0.00005) throw new Error('Timing pack no longer matches beat ' + entry.beat_id + '. Regenerate from the current project.');
+      atom.duration_s = entry.duration_s;
+      if (!entry.timing_pack) delete atom.timing_hold;
+      syncSegmentDurations(atom.camera, atom.duration_s);
+    }
+    reflowAllCamChains(next.atoms);
+    next.duration_target_s = plan.target_s;
+    next.rhythm = { ...(next.rhythm || {}), impact_budget: plan.impact_budget, source: 'hm-rhythm-pacing', mode: plan.mode };
     return next;
   }
 
@@ -3195,6 +3399,13 @@
     cutPresetTable,
     normalizeAtomCut,
     applyTimingPack,
+    rhythmTiming,
+    impactBudget,
+    rhythmBoardFromShow,
+    rhythmBoardSnapshot,
+    requireRhythmApproval,
+    buildRhythmPlan,
+    applyRhythmPlan,
     applyCutPack,
     isFightImpact,
     frameSequenceDump,

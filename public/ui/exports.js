@@ -9,9 +9,12 @@
   }
   function applyExportGate() {
     const list = exportChecklist();
-    const blocked = !!checklistBlockMessage(list);
+    const timing = HMComposeClient.rhythmTiming(S.project?.show);
+    const timingError = !timing.durations_valid || !timing.target_valid;
+    const blocked = !!checklistBlockMessage(list) || timingError;
+    if (timingError) report('Rhythm validation failed: fix missing durations or an invalid target before bake.', true);
     const warn = !blocked && list?.active && list.warns?.length ? 'Checklist warning · ' + list.warns.map(row => row.text).join(' · ') : '';
-    if (blocked) report(checklistBlockMessage(list), true);
+    if (blocked && !timingError) report(checklistBlockMessage(list), true);
     else if (warn) report(warn, false);
     if ($('exportHtml')) $('exportHtml').disabled = blocked;
     if ($('exportFrame')) $('exportFrame').disabled = blocked;
@@ -21,6 +24,8 @@
     return !blocked;
   }
   function assertExportAllowed() {
+    const timing = HMComposeClient.rhythmTiming(S.project?.show);
+    if (!timing.durations_valid || !timing.target_valid) throw new Error('Rhythm validation failed: fix missing durations or an invalid target before bake.');
     const message = checklistBlockMessage(exportChecklist());
     if (message) throw new Error(message);
   }
