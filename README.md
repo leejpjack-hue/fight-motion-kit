@@ -45,6 +45,13 @@ This is animation of existing plates with cuts, camera motion and effects. It do
 
 ## AI skill and ten-second continuation
 
+Open the [product-flow cold-open guide](public/product-flow.html) or choose
+**Open camera-grammar cold open** in the composer for the existing 11-second
+three-triplet sample. [Approved rhythm plans](docs/product-flow/RHYTHM-PACING.md)
+use the single [`hm-rhythm-pacing`](skills/hm-rhythm-pacing/SKILL.md) skill to
+produce exact duration maps or selected-beat hold stamps. Clip Settings → Rhythm
+shows the editable target, live impact budget/time, and signed timing delta.
+
 For character creation before composing, use [`hm-character-lock`](skills/hm-character-lock/SKILL.md) to turn a dual-cast brief into local costume-lock JSON and sheets. It reuses `prompt-sheets` and `json-pose-from-image` outside the frontend, then hands off to **Open project** with the JSON and companion images selected together. A [local example and contract check](skills/hm-character-lock/references/pack-contract.md) reuse shipped assets without generation or provider login.
 
 Fresh costume packs require earlier approved `lock_refs` for both cast members and a [human drift review](docs/product-flow/HM-PF-03-costume-drift.md) before import. Missing evidence or a rejected checklist preserves the current edit; re-run sheet preparation outside HM and re-import the replacement pack.

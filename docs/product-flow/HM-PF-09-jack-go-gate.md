@@ -33,6 +33,12 @@ and optional `show_id` (included for the open show). Context carries `step: 2`,
 `step_id: "story"`, `step_label: "2 Story"`, and `hm_ui_instruction`.
 An optional `resume_form_url` is a local handoff hint, not a required form field.
 
+HM-PF-11 adds a local `story_snapshot` to Approve records when the rhythm
+helpers are present. **Export approved rhythm input** binds the exact current
+PF-08 board to this approval; changed content or Rework disables that export.
+It does not add a Wait-form field, send a network request, or auto-resume n8n.
+See [RHYTHM-PACING.md](RHYTHM-PACING.md).
+
 The dual path remains: **n8n = control + Wait gates; HM UI = show/edit;
 skills = assist; boards = design source of truth**. There is no compose API,
 automatic resume request, or n8n write to `.motion.json` in this story.

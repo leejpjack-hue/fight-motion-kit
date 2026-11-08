@@ -50,6 +50,13 @@ Research surfaces named on the architecture board: `camera-grammar`, `sprite-gen
 
 ## Flow control
 
+The [camera cold-open guide](HM-PF-17-cold-open.md) documents the live
+`fight-cam-grammar-starter` sample and its three I→A→R triplets plus Wide
+re-establish. The frontend guide is served at `/product-flow.html`.
+For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
+`hm-rhythm-pacing` skill, human GO input, editable pack stamps, the impact meter,
+and target-duration lint in the same portable project.
+
 | Role | Choice | Why it is in the approved pack |
 |---|---|---|
 | Primary | **n8n** (self-host Community first) | Visual canvas Jack can open and edit. Wait, Slack, and form gates between the 10 steps. HTTP nodes wrap skills and local scripts |

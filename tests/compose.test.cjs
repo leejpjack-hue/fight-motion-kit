@@ -1266,8 +1266,8 @@ test('HM-HF-03-SHOW-JSON-LINT: structural + rhythm (#39) + Fix copy (HF-13) lint
   assert.equal(contract.id,'HM-HF-03-SHOW-JSON-LINT');
   assert.deepEqual(contract.absorbs,['HM-RHYTHM-LINT','HM-HF-13']);
   assert.equal(contract.blocksBake,false);
-  assert.deepEqual(contract.structuralCodes,['missing_plate','atom_overrun','empty_cam_preset','bad_fx_t_rel','unsafe_duration']);
-  assert.deepEqual(contract.rhythmCodes,['adjacent_same_cam','duration_outlier']);
+  assert.deepEqual(contract.structuralCodes,['missing_plate','atom_overrun','empty_cam_preset','bad_fx_t_rel','unsafe_duration','duration_target_invalid']);
+  assert.deepEqual(contract.rhythmCodes,['adjacent_same_cam','duration_outlier','duration_target_mismatch']);
 
   // Gold 5s demo and 5s street sample are clean
   const cleanDemo=HMComposeClient.lintShow(projectFromShow(demo()),{cameraPresets,fxPresets});
