@@ -56,6 +56,9 @@ re-establish. The frontend guide is served at `/product-flow.html`.
 For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
 `hm-rhythm-pacing` skill, human GO input, editable pack stamps, the impact meter,
 and target-duration lint in the same portable project.
+For steps 4–5, [scene camera authoring](CAMERA-AUTHORING.md) covers the template
+beat sheet, strict preset maps, reusable `Camera:` clauses, human overrides,
+and the existing chain engine with visible snap-zoom controls.
 
 | Role | Choice | Why it is in the approved pack |
 |---|---|---|

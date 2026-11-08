@@ -13,6 +13,74 @@
   "pose_mode"
  ],
  "properties": {
+  "camera_grammar": {
+   "type": "object",
+   "description": "Optional editable camera planning fields. Does not define curves or rendered FX; camera.preset/segments stay authoritative. Derived clauses are regenerated from the current preset catalog.",
+   "properties": {
+    "scene_id": {
+     "type": "string"
+    },
+    "triplet": {
+     "type": "string"
+    },
+    "beat_action": {
+     "type": "string"
+    },
+    "lens_mm": {
+     "type": "string"
+    },
+    "direction": {
+     "type": "string"
+    },
+    "speed": {
+     "type": "string"
+    },
+    "purpose": {
+     "type": "string"
+    },
+    "authored_preset_id": {
+     "type": "string"
+    },
+    "role": {
+     "enum": [
+      "Intent",
+      "Action",
+      "Reaction",
+      "Wide"
+     ]
+    },
+    "shot_size": {
+     "enum": [
+      "EWS",
+      "WS",
+      "MWS",
+      "MS",
+      "MCU",
+      "CU",
+      "OTS",
+      "ECU",
+      "INS",
+      "POV",
+      "RXN",
+      "CUT"
+     ]
+    },
+    "fx": {
+     "enum": [
+      "none",
+      "hitstop",
+      "full"
+     ]
+    },
+    "t_s": {
+     "type": "number",
+     "minimum": 0
+    },
+    "beat_id": {
+     "type": "string"
+    }
+   }
+  },
   "id": {
    "type": "string",
    "minLength": 1

@@ -682,6 +682,8 @@
   },
   {
    "id": "static_hold",
+   "angle": "eye",
+   "move": "hold",
    "label": "Hold frame",
    "curves": {
     "x": {
@@ -704,6 +706,8 @@
   },
   {
    "id": "slow_push",
+   "angle": "eye",
+   "move": "push_in",
    "label": "Slow push in",
    "curves": {
     "x": {
@@ -727,6 +731,8 @@
   },
   {
    "id": "slow_pull",
+   "angle": "eye",
+   "move": "pull_out",
    "label": "Slow pull out",
    "curves": {
     "x": {
@@ -750,6 +756,9 @@
   },
   {
    "id": "slide_left",
+   "angle": "eye",
+   "move": "lateral",
+   "direction": "left",
    "label": "Pan left",
    "curves": {
     "x": {
@@ -773,6 +782,9 @@
   },
   {
    "id": "slide_right",
+   "angle": "eye",
+   "move": "lateral",
+   "direction": "right",
    "label": "Pan right",
    "curves": {
     "x": {
@@ -796,6 +808,8 @@
   },
   {
    "id": "gentle_orbit",
+   "angle": "eye",
+   "move": "orbit",
    "label": "Gentle tilt",
    "curves": {
     "x": {
