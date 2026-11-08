@@ -35,7 +35,7 @@
   function fingerprint(input) {
     var show = showOf(input);
     if (!show) throw new Error('No show.');
-    return {
+    var fp = {
       show_id: show.show_id || '',
       chars: clone(show.chars || {}),
       atoms: (show.atoms || []).map(function (atom) {
@@ -51,6 +51,9 @@
         };
       }),
     };
+    if (show.costume_lock !== undefined) fp.costume_lock = clone(show.costume_lock);
+    if (show.lock_pack !== undefined) fp.lock_pack = clone(show.lock_pack);
+    return fp;
   }
 
   function sameSot(a, b) {
@@ -101,8 +104,11 @@
     return JSON.stringify(project);
   }
 
-  function asPortableProject(parsed) {
+  function asPortableProject(parsed, opts) {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (global.HMComposeClient && typeof global.HMComposeClient.isCostumeLockPackInput === 'function' && global.HMComposeClient.isCostumeLockPackInput(parsed)) {
+      return global.HMComposeClient.normalizeCostumeLockPack(parsed, opts);
+    }
     if (!parsed.show || typeof parsed.show !== 'object' || !parsed.show.show_id) return null;
     return clone(parsed);
   }
