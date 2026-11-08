@@ -162,6 +162,48 @@
     if(raw.subsampled||raw.cycle_frames>frames)warnings.push('Subsampled export: retained cells only; missing source cells are not reconstructed.');
     return {adapter,version:1,status:'pending',geometry:{frames,w,h,body_h},cadence:{secondsPerCell,timingSource},policy:{kind:returns?'once-return':repeat?'repeat':'once',loop:repeat,returns,holdLast,endFrame:frames-1},metadata,warnings};
   }
+  // HM-PF-30 QA panel model. Pure view-model over a NORMALIZED descriptor: it reports
+  // cadence secondsPerCell and policy exactly as normalize computed them; it never
+  // retimes or rewrites a strip. Malformed descriptors fail closed to {ok:false}.
+  const rate=(n)=>Number(n.toFixed(3));
+  function buildStripQaPanel(descriptor,raw){
+    const fail=error=>({ok:false,error,fields:[],warnings:[],summary:'not staged'});
+    if(!descriptor||typeof descriptor!=='object'||Array.isArray(descriptor))return fail('No staged strip descriptor.');
+    const g=descriptor.geometry,c=descriptor.cadence,p=descriptor.policy,meta=descriptor.metadata||{};
+    if(descriptor.adapter!==adapter||descriptor.version!==1||!g||!c||!p
+      ||![g.frames,g.w,g.h,g.body_h].every(n=>Number.isSafeInteger(n)&&n>0)
+      ||typeof c.secondsPerCell!=='number'||!Number.isFinite(c.secondsPerCell)||c.secondsPerCell<=0
+      ||typeof c.timingSource!=='string'||!['repeat','once','once-return'].includes(p.kind))
+      return fail('Staged descriptor is not a valid normalized body strip.');
+    if(raw===undefined&&typeof descriptor.originalJsonBase64==='string'){
+      try{raw=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(originalBytes(descriptor.originalJsonBase64,limits.json)));}catch{raw=null;}
+    }
+    const near=(a,b)=>Math.abs(a-b)<=.001*Math.max(a,b);
+    const fields=[
+      {key:'frames',label:'Frames',value:g.frames+' exported cells'},
+      {key:'delayMs',label:'Cell delay',value:raw&&raw.delay_ms!==undefined
+        ?raw.delay_ms+' ms (raw'+(raw.fps!==undefined?' · sidecar fps '+raw.fps+')':')')
+        :'\u2248'+rate(1000*c.secondsPerCell)+' ms (derived from '+c.timingSource+')'},
+      {key:'bodyH',label:'body_h',value:g.body_h+' px standing \u00b7 cell h '+g.h+' px'},
+      {key:'policy',label:'Loop policy',value:p.kind+' \u00b7 loop '+p.loop+' \u00b7 returns '+p.returns+' \u00b7 hold-last '+p.holdLast+' \u00b7 end frame '+p.endFrame},
+      {key:'timingSource',label:'Timing source',value:c.timingSource},
+      {key:'duration',label:'Strip duration',value:rate(c.secondsPerCell*g.frames)+' s ('+g.frames+' \u00d7 '+rate(c.secondsPerCell)+' s/cell)'}
+    ];
+    if(meta.source_fps!==undefined)fields.push({key:'sourceFps',label:'Source rate',value:'source_fps '+meta.source_fps+(raw&&raw.fps!==undefined?' \u00b7 export fps '+raw.fps:'')});
+    const warnings=(raw&&Array.isArray(raw.warnings)?raw.warnings:[]).map(text=>({source:'producer',text}));
+    warnings.push(...descriptor.warnings.slice(warnings.length).map(text=>({source:'adapter',text})));
+    if(raw&&raw.fps!==undefined&&meta.source_fps!==undefined&&!near(raw.fps,meta.source_fps))
+      warnings.push({source:'qa',text:'Export fps '+raw.fps+' differs from source_fps '+meta.source_fps+'; cells do not play at the source clip rate. Playback uses '+c.timingSource+'.'});
+    if(raw&&raw.fps!==undefined&&raw.delay_ms!==undefined&&!near(raw.fps,1000/raw.delay_ms))
+      warnings.push({source:'qa',text:'delay_ms '+raw.delay_ms+' implies \u2248'+rate(1000/raw.delay_ms)+' fps, disagreeing with fps '+raw.fps+'. Playback uses '+c.timingSource+'.'});
+    const report=[['subsampled','subsampled'],['cycle_frames','cycle_frames'],['cell_cap','cell_cap'],['body_ref','body_ref']].filter(([k])=>meta[k]!==undefined)
+      .map(([k])=>({source:'metadata',text:k+' '+meta[k]}));
+    if(Array.isArray(meta.sample_indices))report.push({source:'metadata',text:'sample_indices: '+meta.sample_indices.length+' retained source samples'});
+    const count=warnings.filter(w=>w.source!=='metadata').length;
+    const notes=report.length?report.length+' source-report note'+(report.length>1?'s':''):'';
+    return {ok:true,error:null,fields,warnings:[...warnings,...report],
+      summary:count?count+' warning'+(count>1?'s':'')+(notes?' \u00b7 '+notes:''):(notes||'no warnings')};
+  }
   function pngHeader(bytes){
     if(bytes.length<33||![137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n))throw Error('Missing or corrupt PNG signature.');
     const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
@@ -256,7 +298,7 @@
       if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded pending PNG dimensions disagree with the descriptor.');
     }
   }
-  root.HMStripAdapter={limits,normalize,pngHeader,stage,append,validateProject,decodeProject};
+  root.HMStripAdapter={limits,normalize,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject};
   if(typeof module!=='undefined')module.exports=root.HMStripAdapter;
 })(globalThis);
 
@@ -354,25 +396,54 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
   // A separate pair picker stages without touching the destination or its history.
   let stripRequest=0,stagedStrip=null,stripDestination=null,stripCommitting=false;
   const stripNotice=(message,error=false)=>{$('stripStatus').textContent=message;$('stripStatus').classList.toggle('error',error);};
+  // Structured HM-PF-30 QA rows. Render-only: panel model comes from HMStripAdapter.buildStripQaPanel.
+  function renderStripQa(panel){
+    const box=$('stripQaPanel');box.hidden=false;
+    const fields=$('stripQaFields'),list=$('stripQaWarnings'),errorNote=$('stripQaError');
+    fields.replaceChildren();list.replaceChildren();list.hidden=true;errorNote.hidden=true;errorNote.textContent='';
+    if(!panel||!panel.ok){
+      $('stripQaSummary').textContent='failed · commit disabled';
+      errorNote.hidden=false;errorNote.textContent=(panel&&panel.error)||'Strip did not stage; nothing will be saved.';
+      return;
+    }
+    $('stripQaSummary').textContent=panel.summary;
+    for(const f of panel.fields){
+      const row=document.createElement('div');row.className='strip-qa-row';
+      const dt=document.createElement('dt');dt.textContent=f.label;
+      const dd=document.createElement('dd');dd.textContent=f.value;
+      row.append(dt,dd);fields.append(row);
+    }
+    list.hidden=!panel.warnings.length;
+    for(const w of panel.warnings){
+      const li=document.createElement('li');li.setAttribute('data-source',w.source);
+      const badge=document.createElement('span');badge.className='strip-qa-source';badge.textContent=w.source==='metadata'?'SOURCE REPORT':w.source.toUpperCase();
+      li.append(badge,document.createTextNode(w.text));list.append(li);
+    }
+  }
+  function hideStripQa(){
+    $('stripQaPanel').hidden=true;$('stripQaFields').replaceChildren();$('stripQaWarnings').replaceChildren();
+    $('stripQaWarnings').hidden=true;$('stripQaError').hidden=true;$('stripQaSummary').textContent='not staged';
+  }
   on('importStrip',()=>{
     if(stripCommitting)return;
     stripRequest++;stagedStrip=null;stripDestination=S.destinationToken();
-    $('stripInput').value='';$('commitStrip').disabled=true;
+    $('stripInput').value='';$('commitStrip').disabled=true;hideStripQa();
     stripNotice('One PNG ≤33554432 bytes + JSON ≤262144 bytes; ≤32000000 pixels, ≤1024 cells. Body strips only. Unsupported metadata is rejected.');
     $('stripDialog').showModal();
   });
   $('stripDialog').addEventListener('cancel',e=>{if(stripCommitting)e.preventDefault();});
-  $('stripDialog').addEventListener('close',()=>{stripRequest++;stagedStrip=null;});
+  $('stripDialog').addEventListener('close',()=>{stripRequest++;stagedStrip=null;hideStripQa();});
   $('stripInput').onchange=async e=>{
     if(stripCommitting)return;
-    const version=++stripRequest;stagedStrip=null;$('commitStrip').disabled=true;stripNotice('Validating local pair…');
+    const version=++stripRequest;stagedStrip=null;$('commitStrip').disabled=true;hideStripQa();stripNotice('Validating local pair…');
     try{
       const next=await HMStripAdapter.stage(e.target.files,{cancelled:()=>version!==stripRequest});
       if(version!==stripRequest)return;
       stagedStrip=next;const d=next.pendingMotion,g=d.geometry;
+      const panel=HMStripAdapter.buildStripQaPanel(d);renderStripQa(panel);
       stripNotice(next.name+' · '+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' PENDING, NOT PLAYABLE until SG02. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.');
-      $('commitStrip').disabled=false;
-    }catch(e){if(version===stripRequest)stripNotice(e.message,true);}
+      $('commitStrip').disabled=!panel.ok;
+    }catch(e){if(version===stripRequest){stripNotice(e.message,true);renderStripQa({ok:false,error:e.message});}}
   };
   on('commitStrip',async()=>{
     if(!stagedStrip||stripCommitting)return;
