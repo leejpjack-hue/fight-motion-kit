@@ -1,6 +1,6 @@
 ---
 name: hm-compose-fx-impact
-description: Stamp Wave1 pixelfx impact FX hooks (impacts/hit-spark and 11 other shipped ids) onto the atoms of a fight-motion-kit show (.motion.json / show JSON) from the command line, add-if-missing, then hand off to the HTML Motion Composer inspector for FX location/size tweaks. Use when asked to add impact hits, Wave1 FX, or pixelfx hooks to a show in bulk or by script; not for authoring new FX JS, voice/SFX, or any compose HTTP backend.
+description: Stamp Wave1 pixelfx impact FX hooks (impacts/hit-spark and 11 other shipped ids) onto the atoms of a fight-motion-kit show (.motion.json / show JSON) from the command line, add-if-missing, then hand off to the HTML Motion Composer inspector for FX location/size tweaks. Also stamps the HF-08 gold cut-transition pack (freeze_hold / white_flash / whip_cut) onto entering clips as show.atoms[i].cut. Use when asked to add impact hits, Wave1 FX, pixelfx hooks, or a cut-transition pack to a show in bulk or by script; not for authoring new FX JS, voice/SFX, or any compose HTTP backend.
 ---
 
 # hm-compose-fx-impact — stamp Wave1 impact FX onto a show
@@ -65,6 +65,40 @@ The entry written is exactly:
 ```json
 { "type": "impacts/hit-spark", "t_rel": 0.08, "source": "pixelfx", "params": { "x": 0, "y": 0, "scale": 1 } }
 ```
+
+## Cut pack (HM-PF-43) — stamp HF-08 cut transitions in bulk
+
+The same skill also stamps the gold HF-08 cut-transition pack
+(`public/presets/cut_transitions.json`, mirror `kit/presets/…`) onto a show as
+`show.atoms[i].cut`. The per-clip Cut-in inspector
+(`#cutTransitionGroup` in `public/ui/index.html`) and the composer's rhythm-flow
+**Apply cut pack to selection** button (`#applyCutPack` / `HMComposeClient.applyCutPack`)
+write the same field — the stamp is the bulk path.
+
+```sh
+node skills/hm-compose-fx-impact/scripts/stamp-cut-pack.cjs \
+  --show public/shows/my-show.json --all
+```
+
+- `--pack cycle` (default): cycle `freeze_hold` → `white_flash` → `whip_cut`
+  across the selected atoms, using catalog defaults per preset.
+- `--preset <id>`: stamp one gold preset onto all selected atoms.
+- Targets: `--atoms beat-02,beat-04` (ids) or `--atoms 1,3` (0-based indices),
+  or `--all` for every atom `i >= 1`. Atom `0` never gets a cut — no incoming
+  boundary — it is skipped and reported.
+- `--out <file>` writes elsewhere; default overwrites in place and saves
+  `<show>.bak` once (first backup wins).
+- Exits non-zero on an unknown preset id, a missing show, or zero targets
+  (e.g. only atom 0 selected). Cuts add no time (HM-HF-08).
+
+The entry written is exactly the gold defaults, e.g.:
+
+```json
+{ "preset": "freeze_hold", "dur_s": 0.12, "hold_s": 0.12, "dir": 1 }
+```
+
+Preview scrub and export draw these through the existing HM-HF-08 module
+(`public/ui/cut-transitions.js`) — no new renderer.
 
 ## FE handoff — where loc/size gets tweaked
 
