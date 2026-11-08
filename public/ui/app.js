@@ -1531,7 +1531,7 @@
     else if (hold.kind === 'micro_cut') status(`Micro-cut · ${a.duration_s.toFixed(2)}s ${hold.preset} on ${a.label || a.id}`);
     else status(`Film-slow hold · ${a.duration_s.toFixed(2)}s on ${a.label || a.id}${softCam ? ' · soft camera' : ''}`);
   }
-  function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
+  function duplicate() {if(!atom())return;edit(()=>{const a=HMComposeClient.assignCopiedBeatId(atom(),uid());a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=selected<0?0:startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   async function importImages(files) {
     requireEditable();if(!files.length)return;
