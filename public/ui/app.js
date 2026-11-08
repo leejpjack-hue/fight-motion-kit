@@ -2258,12 +2258,6 @@
     target?.focus();
     target?.scrollIntoView({block:'nearest'});
   }
-  const productFlowNotifyPanel = window.HMProductFlowNotify.mountNotifyPanel($('pf53NotifyPanel'), {
-    getProject: () => project,
-    getNotes: () => $('pf09GateNotes')?.value || '',
-    getResumeHint: () => $('pf09ResumeHint')?.value || '',
-    origin: '',
-  });
   const productFlowGatePanel = window.HMProductFlowGate.mountGatePanel($('pf09GatePanel'), {
     getProject: () => project,
     beforeDecision: () => { requireEditable(); if (loading) throw new Error('Wait for the show to finish opening.'); },
@@ -2271,6 +2265,12 @@
   });
   $('pf09OpenStory').addEventListener('click', safe(e => { e.preventDefault(); focusStoryboard(); }));
   on('timelineJsonCopy',()=>copyTimelineJson());
+  const productFlowNotifyPanel = window.HMProductFlowNotify.mountNotifyPanel($('pf53NotifyPanel'), {
+    getProject: () => project,
+    getNotes: () => $('pf09GateNotes')?.value || '',
+    getResumeHint: () => $('pf09ResumeHint')?.value || '',
+    origin: '',
+  });
   on('timelineJsonRefresh',()=>{renderTimelineJsonPanel();status('Timeline JSON refreshed');});
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
