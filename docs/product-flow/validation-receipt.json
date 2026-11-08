@@ -1,0 +1,320 @@
+{
+  "receiptKind": "local-product-parser-and-mcp-adapter-validation",
+  "note": "Validated locally via Node v22.20.0 --experimental-strip-types against /workspace/repos/diagram-tool (3dd1658e8fa0aaab9501f661f85b38271509eddd). exportedAt on board files is local generator metadata, NOT a live browser GUI export receipt. No live browser proof is claimed.",
+  "generatedAt": "2026-11-08T00:00:00.000Z",
+  "nodeVersion": "v22.20.0",
+  "modelPin": "opencode-go/gemini-4-argon",
+  "pinnedRevisions": {
+    "diagramToolRepo": "3dd1658e8fa0aaab9501f661f85b38271509eddd",
+    "diagramToolAlias": "7bdad92465868f770183deff07716896a5e99b99",
+    "htmlMotionAuthoritativeMainPin": "8219598c2749daeeb3719840087964422ba46fa2",
+    "htmlMotionSg01BranchPin": "a066fb9ed3b22e8e5732fcf1e8220506696762e8",
+    "htmlMotionLocalCheckoutDrift": "97428ee5882034f548e14a71a93692f2c503f191",
+    "spriteGenAuthoritativePin": "6a3f4c47d7f8745853cc06fe66b252636976a442",
+    "pixelfxForkPin": "679844a6e45b7dbdc4b3d1f76f2dd0fdcc2bc892"
+  },
+  "boards": {
+    "architecture.board.json": {
+      "exportedAtMetadata": "2026-11-08T00:00:00.000Z",
+      "mode": "architecture",
+      "totalNodes": 21,
+      "architectureParts": 18,
+      "serviceNodes": 17,
+      "databaseNodes": 1,
+      "annotationStickyNotes": 3,
+      "totalEdges": 17,
+      "swimlaneGroups": [
+        {
+          "id": "lane1poproduct",
+          "label": "SWIMLANE 1: PO — product / ~50 stories [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 130,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "po_product_backlog_and_50_stories",
+            "po_camera_grammar_and_storyboard_specs",
+            "po_sprite_gen_and_impact_scope_gates"
+          ]
+        },
+        {
+          "id": "lane2cursorarchitecture",
+          "label": "SWIMLANE 2: Cursor  overall architecture [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 320,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "cursor_overall_architecture_contract",
+            "cursor_show_atom_and_pose_schemas",
+            "cursor_indexeddb_and_portable__motion_json"
+          ]
+        },
+        {
+          "id": "lane3codexui",
+          "label": "SWIMLANE 3: Codex — UI [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 510,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "codex_ui_studio_shell_and_inspector",
+            "codex_ui_scrub_peek_and_catalog_controls",
+            "codex_ui_sprite_gen_sg_01_staged_picker"
+          ]
+        },
+        {
+          "id": "lane4zcodelogic",
+          "label": "SWIMLANE 4: ZCode — effect / cam move / impact logic [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 700,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "zcode_camera_grammar_and_cam_move_logic",
+            "zcode_impact___composer_fx_runtime",
+            "zcode_rhythm_beat_blocks_and_cut_logic"
+          ]
+        },
+        {
+          "id": "lane5antigravityoverflow",
+          "label": "SWIMLANE 5: Antigravity — overflow [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 890,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "antigravity_overflow_character_openpose_prep",
+            "antigravity_external_sprite_gen_prep",
+            "antigravity_overflow_sg_02_03_and_frame_qa"
+          ]
+        },
+        {
+          "id": "lane6hmbotcomposebake",
+          "label": "SWIMLANE 6: HTML Motion bot — compose / bake [APPROVAL / Design Ownership]",
+          "x": 50,
+          "y": 1080,
+          "width": 1260,
+          "height": 165,
+          "members": [
+            "html_motion_bot_compose_pipeline",
+            "html_motion_shared_canvas_renderer",
+            "html_motion_local_bake_html_png_video"
+          ]
+        }
+      ],
+      "reusedResearchSurfaces": [
+        "camera-grammar",
+        "sprite-gen",
+        "IMPACT / COMPOSER-FX",
+        "character/OpenPose"
+      ],
+      "walkThroughNumberedHops": 6,
+      "checks": {
+        "validatePortableDocument": {
+          "ok": true,
+          "errors": []
+        },
+        "containsWatermark": false,
+        "interpretOpenedFileFormat": "board-json",
+        "parsePortableImportBoards": 1,
+        "parsePortableImportSkipped": 0,
+        "layoutDeltaPx": 0,
+        "mcpGetBoardNodes": 21,
+        "mcpGetBoardEdges": 17
+      }
+    },
+    "workflow.board.json": {
+      "exportedAtMetadata": "2026-11-08T00:00:00.000Z",
+      "mode": "flow",
+      "showStepNumbers": true,
+      "totalNodes": 13,
+      "flowGraphNodes": 10,
+      "processNodes": 10,
+      "decisionNodes": 0,
+      "startNodes": 1,
+      "endNodes": 1,
+      "annotationStickyNotes": 3,
+      "totalEdges": 9,
+      "walkThroughSteps": 10,
+      "numberedFlowNodes": 10,
+      "orderedSteps": [
+        {
+          "stepNumber": 1,
+          "id": "step1charactercreation",
+          "label": "1 Character creation",
+          "nodeType": "process",
+          "pin": {
+            "x": 100,
+            "y": 160
+          },
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 2,
+          "id": "step2story",
+          "label": "2 Story",
+          "nodeType": "process",
+          "pin": {
+            "x": 100,
+            "y": 320
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 3,
+          "id": "step3rhythm",
+          "label": "3 Rhythm",
+          "nodeType": "process",
+          "pin": {
+            "x": 100,
+            "y": 480
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 4,
+          "id": "step4scenecamshotdesign",
+          "label": "4 Scene cam-shot design",
+          "nodeType": "process",
+          "pin": {
+            "x": 100,
+            "y": 640
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 5,
+          "id": "step5perscenecamshots",
+          "label": "5 Per-scene cam shots",
+          "nodeType": "process",
+          "pin": {
+            "x": 100,
+            "y": 800
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 6,
+          "id": "step6spritegen",
+          "label": "6 Sprite gen",
+          "nodeType": "process",
+          "pin": {
+            "x": 680,
+            "y": 160
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 7,
+          "id": "step7backgroundscene",
+          "label": "7 Background scene",
+          "nodeType": "process",
+          "pin": {
+            "x": 680,
+            "y": 320
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 8,
+          "id": "step8foreground",
+          "label": "8 Foreground",
+          "nodeType": "process",
+          "pin": {
+            "x": 680,
+            "y": 480
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 9,
+          "id": "step9hmcompose",
+          "label": "9 HTML Motion cam-shot compose",
+          "nodeType": "process",
+          "pin": {
+            "x": 680,
+            "y": 640
+          },
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "stepNumber": 10,
+          "id": "step10voice",
+          "label": "10 Voice",
+          "nodeType": "process",
+          "pin": {
+            "x": 680,
+            "y": 800
+          },
+          "isStart": false,
+          "isEnd": true
+        }
+      ],
+      "checks": {
+        "validatePortableDocument": {
+          "ok": true,
+          "errors": []
+        },
+        "containsWatermark": false,
+        "interpretOpenedFileFormat": "board-json",
+        "parsePortableImportBoards": 1,
+        "parsePortableImportSkipped": 0,
+        "layoutDeltaPx": 0,
+        "mcpGetBoardNodes": 13,
+        "mcpGetBoardEdges": 9
+      }
+    }
+  },
+  "mcpListBoards": [
+    {
+      "filename": "architecture.board.json",
+      "mode": "architecture",
+      "title": "HTML Motion Product-Design APPROVAL Architecture — 6 Locked Role Swimlanes (Design Ownership, Not All Shipped)"
+    },
+    {
+      "filename": "workflow.board.json",
+      "mode": "flow",
+      "title": "HTML Motion End-to-End Product-Design APPROVAL Workflow (Steps 1..10: HM UI Human Edit + Beside AI-Agent Skills)"
+    }
+  ],
+  "files": {
+    "architecture.dsl": {
+      "bytes": 13717,
+      "sha256": "73da7377056d489a9e2c42152f861ab88efc38278f99959cc99910d4bde5d6ad"
+    },
+    "architecture.board.json": {
+      "bytes": 42752,
+      "sha256": "daa8dad6cec71bb299f7895470c40cd3c9ff581959de01d0ba393d798e8de246"
+    },
+    "workflow.dsl": {
+      "bytes": 7513,
+      "sha256": "c7c86c04089e50477ac056876d358c22e81e513be51540e3761013a5627640dc"
+    },
+    "workflow.board.json": {
+      "bytes": 23326,
+      "sha256": "a3a09a792207dac392bb240f9873ffd111568badad7478841cea41b2c3552e37"
+    },
+    "generate-and-verify.mjs": {
+      "bytes": 15192,
+      "sha256": "480b480d23d76d2ec482e222082cf9f260f608db6d10e2f811d346d8e99d6de0"
+    },
+    "companion-notes.md": {
+      "bytes": 15563,
+      "sha256": "8f7fe91971cf971eb45f96bb4e158bdf3f59676eac46946f7a153063ed9369cb"
+    },
+    "evidence.md": {
+      "bytes": 7246,
+      "sha256": "e4d0c635661cef2ebed43180112300f4bc516429dfc16989bed4d0db97d72c2a"
+    }
+  }
+}

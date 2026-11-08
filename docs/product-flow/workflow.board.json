@@ -1,0 +1,234 @@
+{
+  "version": "3.0",
+  "kind": "board",
+  "exportedAt": "2026-11-08T00:00:00.000Z",
+  "board": {
+    "id": "hm-approval-workflow-2026-11-08",
+    "title": "HTML Motion End-to-End Product-Design APPROVAL Workflow (Steps 1..10: HM UI Human Edit + Beside AI-Agent Skills)",
+    "description": "HTML Motion product-design APPROVAL Page end-to-end 1..10 creation workflow in exact Jack order (1 Character creation, 2 Story, 3 Rhythm, 4 Scene cam-shot design, 5 Per-scene cam shots, 6 Sprite gen, 7 Background scene, 8 Foreground, 9 HTML Motion cam-shot compose, 10 Voice). Each step shows/edits inside HM UI with AI-agent skills sitting beside human edit as a dual path rather than replacing human editing. exportedAt is local generator metadata, not a live browser GUI export receipt.",
+    "mode": "flow",
+    "dslText": "diagram: flow\ntitle: \"HTML Motion End-to-End Product-Design APPROVAL Workflow (Steps 1..10: HM UI Human Edit + Beside AI-Agent Skills)\"\ndirection: TB\n\n# ============================================================================\n# NODES (1..10 in EXACT Jack order)\n# Declared before edges with explicit `type: process` and `start`/`end` so\n# src/parser/parser.ts preserves start/end flags, ProcessNode cards, and 1..10\n# step badges without decision-diamond coercion.\n# ============================================================================\nstart Step1CharacterCreation\nnode Step1CharacterCreation {\n  type: process\n  label: \"1 Character creation\"\n  system: \"HM UI show/edit + AI skill beside human edit (character/OpenPose)\"\n  role: human\n  color: \"#0284c7\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Reuses character/OpenPose skeleton plates (JOINT-GEOMETRY.md, pose_library.schema.json) and locked costume sheets alongside manual HM UI character/plate inspection.\"\n  at: 100, 160\n}\n\nnode Step2Story {\n  type: process\n  label: \"2 Story\"\n  system: \"HM UI show/edit + AI skill beside human edit (storyboard & show.atoms)\"\n  role: human\n  color: \"#0284c7\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Story beats (10s/30s Cantonese storyboard and show.schema.json atom list) are shown and edited in HM UI (including HM-HF-07 timeline JSON inspector) alongside AI story-drafting skills.\"\n  at: 100, 320\n}\n\nnode Step3Rhythm {\n  type: process\n  label: \"3 Rhythm\"\n  system: \"HM UI show/edit + AI skill beside human edit (beat_blocks, scrub, lint)\"\n  role: check\n  color: \"#2563eb\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Atom duration_s, HM-HF-04 beat_blocks.json, HM-HF-01 frame peek (#46), HM-HF-02 seekable scrub (#47), and #39 rhythm lint work inside HM UI beside AI rhythm/frame-QA skills.\"\n  at: 100, 480\n}\n\nnode Step4SceneCamShotDesign {\n  type: process\n  label: \"4 Scene cam-shot design\"\n  system: \"HM UI show/edit + AI skill beside human edit (camera-grammar triplets)\"\n  role: model\n  color: \"#7c3aed\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Reuses camera-grammar (HM-CAM-GRAMMAR-STARTER fight-cam-grammar-starter.json: Wide open/re-establish + Intent/Action/Reaction triplets and HM-HF-08 cut transitions) in HM UI beside AI scene-blocking skills.\"\n  at: 100, 640\n}\n\nnode Step5PerSceneCamShots {\n  type: process\n  label: \"5 Per-scene cam shots\"\n  system: \"HM UI show/edit + AI skill beside human edit (camera.preset, CAM-10R)\"\n  role: tool\n  color: \"#7c3aed\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Per-scene/per-atom camera.preset (low_rise, ots_L_hold, eye_push, whip_A_to_B, pull_aftermath, eye_orbit), HM-CAM-10R fit chips, and HM-PAN-SPAN-UI are editable in HM UI beside AI cam-tuning skills.\"\n  at: 100, 800\n}\n\nnode Step6SpriteGen {\n  type: process\n  label: \"6 Sprite gen\"\n  system: \"HM UI show/edit + AI skill beside human edit (sprite-gen + SG-01/02/03)\"\n  role: tool\n  color: \"#d97706\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). External sprite-gen (6a3f4c47, optional RIFE) prepares .strip.png+.strip.json or atlas; HM UI stages via SG-01 (SIGNED/pending, gated NOT PLAYABLE until SG-02 is separately signed, implemented, verified & shipped).\"\n  at: 680, 160\n}\n\nnode Step7BackgroundScene {\n  type: process\n  label: \"7 Background scene\"\n  system: \"HM UI show/edit + AI skill beside human edit (BG crop/pan/span/parallax)\"\n  role: tool\n  color: \"#15803d\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Background scene plates, HM-BG-CROP, HM-BG-PAN-CONT, HM-BG-SPAN-UI, and honest parallax defaults (HM-PARALLAX-DEFAULT-HONESTY) are shown and edited in HM UI beside AI background skills.\"\n  at: 680, 320\n}\n\nnode Step8Foreground {\n  type: process\n  label: \"8 Foreground\"\n  system: \"HM UI show/edit + AI skill beside human edit (FG cutouts + IMPACT FX)\"\n  role: tool\n  color: \"#15803d\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Foreground cutouts/plates (HM-COMPOSE-FG, HM-FG-BROKEN-CUTOUT, floor_y/body_h standing-height anchor) and IMPACT / COMPOSER-FX (pixelfx Wave 1 12 impacts on fx_hooks) are edited in HM UI beside AI FX/cutout skills.\"\n  at: 680, 480\n}\n\nnode Step9HMCompose {\n  type: process\n  label: \"9 HTML Motion cam-shot compose\"\n  system: \"HM UI show/edit + AI skill beside human edit (compose-client + renderer)\"\n  role: tool\n  color: \"#0f766e\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Compiles {show,layouts,media,assets} via compose-client.js and motion-renderer.js (1280x720 sampleStageFrameAt) in HM UI beside html-motion-composer skill scripts (build-project.cjs, export-project.cjs, frame-qa.cjs).\"\n  at: 680, 640\n}\n\nend Step10Voice\nnode Step10Voice {\n  type: process\n  label: \"10 Voice\"\n  system: \"HM UI show/edit + AI skill beside human edit (dialogue hold & final bake)\"\n  role: human\n  color: \"#0f766e\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Dialogue hold and voice cue alignment (HM-DIALOGUE-HOLD; APPROVAL design slice — pixelfx Wave 1 has no SFX/audio) plus local HTML/PNG/capability-video bake inside HM UI beside AI voice/timing skills.\"\n  at: 680, 800\n}\n\n# ============================================================================\n# EDGES — Sequential 1..10 Flow Across Two Pinned Columns (x=100 -> x=680)\n# ============================================================================\nStep1CharacterCreation ->|\"1 -> 2: HM UI + AI skill\"| Step2Story\nStep2Story ->|\"2 -> 3: HM UI + AI skill\"| Step3Rhythm\nStep3Rhythm ->|\"3 -> 4: HM UI + AI skill\"| Step4SceneCamShotDesign\nStep4SceneCamShotDesign ->|\"4 -> 5: HM UI + AI skill\"| Step5PerSceneCamShots\nStep5PerSceneCamShots ->|\"5 -> 6: HM UI + AI skill\"| Step6SpriteGen { from: right, to: left }\nStep6SpriteGen ->|\"6 -> 7: HM UI + AI skill\"| Step7BackgroundScene\nStep7BackgroundScene ->|\"7 -> 8: HM UI + AI skill\"| Step8Foreground\nStep8Foreground ->|\"8 -> 9: HM UI + AI skill\"| Step9HMCompose\nStep9HMCompose ->|\"9 -> 10: HM UI + AI skill\"| Step10Voice\n\n# ============================================================================\n# STICKY NOTE CALLOUTS (Dual-Path Rule, 1..10 Order & Approval Caveats)\n# ============================================================================\nnote \"DUAL-PATH RULE ON ALL 10 STEPS: Every step (1..10) is shown and editable inside the HTML Motion UI, while AI-agent skills sit beside human edit as a dual path (never replacing human UI inspection or editing).\" {\n  color: \"#fef08a\"\n  at: 100, 10\n}\n\nnote \"EXACT JACK 1..10 ORDER: (1) Character creation -> (2) Story -> (3) Rhythm -> (4) Scene cam-shot design -> (5) Per-scene cam shots -> (6) Sprite gen -> (7) Background scene -> (8) Foreground -> (9) HTML Motion cam-shot compose -> (10) Voice.\" {\n  color: \"#bae6fd\"\n  at: 520, 10\n}\n\nnote \"APPROVAL & STATUS CAVEATS: Product-design APPROVAL flow, not a claim that every slice is shipped. Step 6 sprite-gen runs externally (6a3f4c47); SG-01 is staged-only and NOT PLAYABLE until SG-02 is separately signed & shipped. Step 10 Voice is an approval/design slice (Wave 1 FX has no audio).\" {\n  color: \"#fed7aa\"\n  at: 940, 10\n}\n",
+    "source": {
+      "kind": "dsl",
+      "text": "diagram: flow\ntitle: \"HTML Motion End-to-End Product-Design APPROVAL Workflow (Steps 1..10: HM UI Human Edit + Beside AI-Agent Skills)\"\ndirection: TB\n\n# ============================================================================\n# NODES (1..10 in EXACT Jack order)\n# Declared before edges with explicit `type: process` and `start`/`end` so\n# src/parser/parser.ts preserves start/end flags, ProcessNode cards, and 1..10\n# step badges without decision-diamond coercion.\n# ============================================================================\nstart Step1CharacterCreation\nnode Step1CharacterCreation {\n  type: process\n  label: \"1 Character creation\"\n  system: \"HM UI show/edit + AI skill beside human edit (character/OpenPose)\"\n  role: human\n  color: \"#0284c7\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Reuses character/OpenPose skeleton plates (JOINT-GEOMETRY.md, pose_library.schema.json) and locked costume sheets alongside manual HM UI character/plate inspection.\"\n  at: 100, 160\n}\n\nnode Step2Story {\n  type: process\n  label: \"2 Story\"\n  system: \"HM UI show/edit + AI skill beside human edit (storyboard & show.atoms)\"\n  role: human\n  color: \"#0284c7\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Story beats (10s/30s Cantonese storyboard and show.schema.json atom list) are shown and edited in HM UI (including HM-HF-07 timeline JSON inspector) alongside AI story-drafting skills.\"\n  at: 100, 320\n}\n\nnode Step3Rhythm {\n  type: process\n  label: \"3 Rhythm\"\n  system: \"HM UI show/edit + AI skill beside human edit (beat_blocks, scrub, lint)\"\n  role: check\n  color: \"#2563eb\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Atom duration_s, HM-HF-04 beat_blocks.json, HM-HF-01 frame peek (#46), HM-HF-02 seekable scrub (#47), and #39 rhythm lint work inside HM UI beside AI rhythm/frame-QA skills.\"\n  at: 100, 480\n}\n\nnode Step4SceneCamShotDesign {\n  type: process\n  label: \"4 Scene cam-shot design\"\n  system: \"HM UI show/edit + AI skill beside human edit (camera-grammar triplets)\"\n  role: model\n  color: \"#7c3aed\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Reuses camera-grammar (HM-CAM-GRAMMAR-STARTER fight-cam-grammar-starter.json: Wide open/re-establish + Intent/Action/Reaction triplets and HM-HF-08 cut transitions) in HM UI beside AI scene-blocking skills.\"\n  at: 100, 640\n}\n\nnode Step5PerSceneCamShots {\n  type: process\n  label: \"5 Per-scene cam shots\"\n  system: \"HM UI show/edit + AI skill beside human edit (camera.preset, CAM-10R)\"\n  role: tool\n  color: \"#7c3aed\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Per-scene/per-atom camera.preset (low_rise, ots_L_hold, eye_push, whip_A_to_B, pull_aftermath, eye_orbit), HM-CAM-10R fit chips, and HM-PAN-SPAN-UI are editable in HM UI beside AI cam-tuning skills.\"\n  at: 100, 800\n}\n\nnode Step6SpriteGen {\n  type: process\n  label: \"6 Sprite gen\"\n  system: \"HM UI show/edit + AI skill beside human edit (sprite-gen + SG-01/02/03)\"\n  role: tool\n  color: \"#d97706\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). External sprite-gen (6a3f4c47, optional RIFE) prepares .strip.png+.strip.json or atlas; HM UI stages via SG-01 (SIGNED/pending, gated NOT PLAYABLE until SG-02 is separately signed, implemented, verified & shipped).\"\n  at: 680, 160\n}\n\nnode Step7BackgroundScene {\n  type: process\n  label: \"7 Background scene\"\n  system: \"HM UI show/edit + AI skill beside human edit (BG crop/pan/span/parallax)\"\n  role: tool\n  color: \"#15803d\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Background scene plates, HM-BG-CROP, HM-BG-PAN-CONT, HM-BG-SPAN-UI, and honest parallax defaults (HM-PARALLAX-DEFAULT-HONESTY) are shown and edited in HM UI beside AI background skills.\"\n  at: 680, 320\n}\n\nnode Step8Foreground {\n  type: process\n  label: \"8 Foreground\"\n  system: \"HM UI show/edit + AI skill beside human edit (FG cutouts + IMPACT FX)\"\n  role: tool\n  color: \"#15803d\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Foreground cutouts/plates (HM-COMPOSE-FG, HM-FG-BROKEN-CUTOUT, floor_y/body_h standing-height anchor) and IMPACT / COMPOSER-FX (pixelfx Wave 1 12 impacts on fx_hooks) are edited in HM UI beside AI FX/cutout skills.\"\n  at: 680, 480\n}\n\nnode Step9HMCompose {\n  type: process\n  label: \"9 HTML Motion cam-shot compose\"\n  system: \"HM UI show/edit + AI skill beside human edit (compose-client + renderer)\"\n  role: tool\n  color: \"#0f766e\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Compiles {show,layouts,media,assets} via compose-client.js and motion-renderer.js (1280x720 sampleStageFrameAt) in HM UI beside html-motion-composer skill scripts (build-project.cjs, export-project.cjs, frame-qa.cjs).\"\n  at: 680, 640\n}\n\nend Step10Voice\nnode Step10Voice {\n  type: process\n  label: \"10 Voice\"\n  system: \"HM UI show/edit + AI skill beside human edit (dialogue hold & final bake)\"\n  role: human\n  color: \"#0f766e\"\n  note: \"Show/edit inside HM UI; AI-agent skills sit beside human edit (dual path, not replace). Dialogue hold and voice cue alignment (HM-DIALOGUE-HOLD; APPROVAL design slice — pixelfx Wave 1 has no SFX/audio) plus local HTML/PNG/capability-video bake inside HM UI beside AI voice/timing skills.\"\n  at: 680, 800\n}\n\n# ============================================================================\n# EDGES — Sequential 1..10 Flow Across Two Pinned Columns (x=100 -> x=680)\n# ============================================================================\nStep1CharacterCreation ->|\"1 -> 2: HM UI + AI skill\"| Step2Story\nStep2Story ->|\"2 -> 3: HM UI + AI skill\"| Step3Rhythm\nStep3Rhythm ->|\"3 -> 4: HM UI + AI skill\"| Step4SceneCamShotDesign\nStep4SceneCamShotDesign ->|\"4 -> 5: HM UI + AI skill\"| Step5PerSceneCamShots\nStep5PerSceneCamShots ->|\"5 -> 6: HM UI + AI skill\"| Step6SpriteGen { from: right, to: left }\nStep6SpriteGen ->|\"6 -> 7: HM UI + AI skill\"| Step7BackgroundScene\nStep7BackgroundScene ->|\"7 -> 8: HM UI + AI skill\"| Step8Foreground\nStep8Foreground ->|\"8 -> 9: HM UI + AI skill\"| Step9HMCompose\nStep9HMCompose ->|\"9 -> 10: HM UI + AI skill\"| Step10Voice\n\n# ============================================================================\n# STICKY NOTE CALLOUTS (Dual-Path Rule, 1..10 Order & Approval Caveats)\n# ============================================================================\nnote \"DUAL-PATH RULE ON ALL 10 STEPS: Every step (1..10) is shown and editable inside the HTML Motion UI, while AI-agent skills sit beside human edit as a dual path (never replacing human UI inspection or editing).\" {\n  color: \"#fef08a\"\n  at: 100, 10\n}\n\nnote \"EXACT JACK 1..10 ORDER: (1) Character creation -> (2) Story -> (3) Rhythm -> (4) Scene cam-shot design -> (5) Per-scene cam shots -> (6) Sprite gen -> (7) Background scene -> (8) Foreground -> (9) HTML Motion cam-shot compose -> (10) Voice.\" {\n  color: \"#bae6fd\"\n  at: 520, 10\n}\n\nnote \"APPROVAL & STATUS CAVEATS: Product-design APPROVAL flow, not a claim that every slice is shipped. Step 6 sprite-gen runs externally (6a3f4c47); SG-01 is staged-only and NOT PLAYABLE until SG-02 is separately signed & shipped. Step 10 Voice is an approval/design slice (Wave 1 FX has no audio).\" {\n  color: \"#fed7aa\"\n  at: 940, 10\n}\n"
+    },
+    "nodes": [
+      {
+        "id": "step1charactercreation",
+        "name": "Step1CharacterCreation",
+        "type": "flow",
+        "x": 100,
+        "y": 160
+      },
+      {
+        "id": "step2story",
+        "name": "Step2Story",
+        "type": "flow",
+        "x": 100,
+        "y": 320
+      },
+      {
+        "id": "step3rhythm",
+        "name": "Step3Rhythm",
+        "type": "flow",
+        "x": 100,
+        "y": 480
+      },
+      {
+        "id": "step4scenecamshotdesign",
+        "name": "Step4SceneCamShotDesign",
+        "type": "flow",
+        "x": 100,
+        "y": 640
+      },
+      {
+        "id": "step5perscenecamshots",
+        "name": "Step5PerSceneCamShots",
+        "type": "flow",
+        "x": 100,
+        "y": 800
+      },
+      {
+        "id": "step6spritegen",
+        "name": "Step6SpriteGen",
+        "type": "flow",
+        "x": 680,
+        "y": 160
+      },
+      {
+        "id": "step7backgroundscene",
+        "name": "Step7BackgroundScene",
+        "type": "flow",
+        "x": 680,
+        "y": 320
+      },
+      {
+        "id": "step8foreground",
+        "name": "Step8Foreground",
+        "type": "flow",
+        "x": 680,
+        "y": 480
+      },
+      {
+        "id": "step9hmcompose",
+        "name": "Step9HMCompose",
+        "type": "flow",
+        "x": 680,
+        "y": 640
+      },
+      {
+        "id": "step10voice",
+        "name": "Step10Voice",
+        "type": "flow",
+        "x": 680,
+        "y": 800
+      },
+      {
+        "id": "dual_path_rule_on_all_10_steps_every_step_1_10_is_shown_and_editable_inside_the_html_motion_ui_while_ai_agent_skills_sit_beside_human_edit_as_a_dual_path_never_replacing_human_ui_inspection_or_editing",
+        "name": "dual_path_rule_on_all_10_steps_every_step_1_10_is_shown_and_editable_inside_the_html_motion_ui_while_ai_agent_skills_sit_beside_human_edit_as_a_dual_path_never_replacing_human_ui_inspection_or_editing",
+        "type": "annotation",
+        "x": 450,
+        "y": 100
+      },
+      {
+        "id": "exact_jack_1_10_order_1_character_creation_2_story_3_rhythm_4_scene_cam_shot_design_5_per_scene_cam_shots_6_sprite_gen_7_background_scene_8_foreground_9_html_motion_cam_shot_compose_10_voice",
+        "name": "exact_jack_1_10_order_1_character_creation_2_story_3_rhythm_4_scene_cam_shot_design_5_per_scene_cam_shots_6_sprite_gen_7_background_scene_8_foreground_9_html_motion_cam_shot_compose_10_voice",
+        "type": "annotation",
+        "x": 800,
+        "y": 100
+      },
+      {
+        "id": "approval_status_caveats_product_design_approval_flow_not_a_claim_that_every_slice_is_shipped_step_6_sprite_gen_runs_externally_6a3f4c47_sg_01_is_staged_only_and_not_playable_until_sg_02_is_separately_signed_shipped_step_10_voice_is_an_approval_design_slice_wave_1_fx_has_no_audio",
+        "name": "approval_status_caveats_product_design_approval_flow_not_a_claim_that_every_slice_is_shipped_step_6_sprite_gen_runs_externally_6a3f4c47_sg_01_is_staged_only_and_not_playable_until_sg_02_is_separately_signed_shipped_step_10_voice_is_an_approval_design_slice_wave_1_fx_has_no_audio",
+        "type": "annotation",
+        "x": 1150,
+        "y": 100
+      }
+    ],
+    "edges": [
+      {
+        "id": "step1charactercreation_to_step2story_0",
+        "from": "step1charactercreation",
+        "to": "step2story",
+        "label": "1 -> 2: HM UI + AI skill"
+      },
+      {
+        "id": "step2story_to_step3rhythm_1",
+        "from": "step2story",
+        "to": "step3rhythm",
+        "label": "2 -> 3: HM UI + AI skill"
+      },
+      {
+        "id": "step3rhythm_to_step4scenecamshotdesign_2",
+        "from": "step3rhythm",
+        "to": "step4scenecamshotdesign",
+        "label": "3 -> 4: HM UI + AI skill"
+      },
+      {
+        "id": "step4scenecamshotdesign_to_step5perscenecamshots_3",
+        "from": "step4scenecamshotdesign",
+        "to": "step5perscenecamshots",
+        "label": "4 -> 5: HM UI + AI skill"
+      },
+      {
+        "id": "step5perscenecamshots_to_step6spritegen_4",
+        "from": "step5perscenecamshots",
+        "to": "step6spritegen",
+        "label": "5 -> 6: HM UI + AI skill"
+      },
+      {
+        "id": "step6spritegen_to_step7backgroundscene_5",
+        "from": "step6spritegen",
+        "to": "step7backgroundscene",
+        "label": "6 -> 7: HM UI + AI skill"
+      },
+      {
+        "id": "step7backgroundscene_to_step8foreground_6",
+        "from": "step7backgroundscene",
+        "to": "step8foreground",
+        "label": "7 -> 8: HM UI + AI skill"
+      },
+      {
+        "id": "step8foreground_to_step9hmcompose_7",
+        "from": "step8foreground",
+        "to": "step9hmcompose",
+        "label": "8 -> 9: HM UI + AI skill"
+      },
+      {
+        "id": "step9hmcompose_to_step10voice_8",
+        "from": "step9hmcompose",
+        "to": "step10voice",
+        "label": "9 -> 10: HM UI + AI skill"
+      }
+    ],
+    "frames": [],
+    "comments": [],
+    "layout": {
+      "pins": {
+        "step1charactercreation": {
+          "x": 100,
+          "y": 160
+        },
+        "step2story": {
+          "x": 100,
+          "y": 320
+        },
+        "step3rhythm": {
+          "x": 100,
+          "y": 480
+        },
+        "step4scenecamshotdesign": {
+          "x": 100,
+          "y": 640
+        },
+        "step5perscenecamshots": {
+          "x": 100,
+          "y": 800
+        },
+        "step6spritegen": {
+          "x": 680,
+          "y": 160
+        },
+        "step7backgroundscene": {
+          "x": 680,
+          "y": 320
+        },
+        "step8foreground": {
+          "x": 680,
+          "y": 480
+        },
+        "step9hmcompose": {
+          "x": 680,
+          "y": 640
+        },
+        "step10voice": {
+          "x": 680,
+          "y": 800
+        },
+        "dual_path_rule_on_all_10_steps_every_step_1_10_is_shown_and_editable_inside_the_html_motion_ui_while_ai_agent_skills_sit_beside_human_edit_as_a_dual_path_never_replacing_human_ui_inspection_or_editing": {
+          "x": 450,
+          "y": 100
+        },
+        "exact_jack_1_10_order_1_character_creation_2_story_3_rhythm_4_scene_cam_shot_design_5_per_scene_cam_shots_6_sprite_gen_7_background_scene_8_foreground_9_html_motion_cam_shot_compose_10_voice": {
+          "x": 800,
+          "y": 100
+        },
+        "approval_status_caveats_product_design_approval_flow_not_a_claim_that_every_slice_is_shipped_step_6_sprite_gen_runs_externally_6a3f4c47_sg_01_is_staged_only_and_not_playable_until_sg_02_is_separately_signed_shipped_step_10_voice_is_an_approval_design_slice_wave_1_fx_has_no_audio": {
+          "x": 1150,
+          "y": 100
+        }
+      }
+    },
+    "tags": [
+      "html-motion",
+      "approval-page",
+      "workflow",
+      "dual-path",
+      "steps-1-to-10"
+    ],
+    "createdAt": "2026-11-08T00:00:00.000Z",
+    "updatedAt": "2026-11-08T00:00:00.000Z",
+    "schemaVersion": 2,
+    "showStepNumbers": true
+  }
+}
