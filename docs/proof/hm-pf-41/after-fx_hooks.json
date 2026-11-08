@@ -1,0 +1,15 @@
+{
+  "beat-01": null,
+  "beat-02": [
+    {
+      "type": "impacts/hit-spark",
+      "t_rel": 0.08,
+      "source": "pixelfx",
+      "params": {
+        "x": 0,
+        "y": 0,
+        "scale": 1
+      }
+    }
+  ]
+}

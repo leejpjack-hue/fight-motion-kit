@@ -1,0 +1,32 @@
+{
+  "show_id": "hm-pf-41-fixture",
+  "title": "HM-PF-41 stamp fixture",
+  "duration_target_s": 1,
+  "floor_y": 684,
+  "grounded": true,
+  "chars": { "L": { "name": "Left" }, "R": { "name": "Right" } },
+  "bg": {},
+  "overlays": [],
+  "atoms": [
+    {
+      "id": "beat-01",
+      "label": "Clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": { "family": "fight", "beat_class": "clash" },
+      "camera": { "preset": "static_hold" }
+    },
+    {
+      "id": "beat-02",
+      "label": "Recover",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": { "family": "fight", "beat_class": "guard_recover" },
+      "camera": { "preset": "static_hold" }
+    }
+  ]
+}
