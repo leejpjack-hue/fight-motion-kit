@@ -52,14 +52,15 @@
     exportIds.forEach(id=>$(id).disabled=true);
     try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','newProject','importImages','changeBackground'].forEach(id=>$(id).disabled=false);applyExportGate();}
   }
-  on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();download(project.show.show_id+'.motion.json',new Blob([JSON.stringify(project)],{type:'application/json'}));try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
+  on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
   on('openProject',()=>$('projectInput').click());
   $('projectInput').onchange=safe(async e=>{
     const f=e.target.files[0];if(!f)return;
     try{
       const opened=await S.openProject((async()=>{
       if(f.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
-      const parsed=JSON.parse(await f.text());let p=parsed;
+      const parsed=JSON.parse(await f.text());
+      let p=(window.HMMotionSot&&HMMotionSot.asPortableProject(parsed))||parsed;
       if(!p.show&&p.show_id){
         // Existing show JSON is supported when its layouts are shipped with this host.
         const layouts={};for(const key of new Set(p.atoms.map(a=>a.hero?.layout_source).filter(Boolean))){if(!/^assets\/[a-zA-Z0-9_./-]+\.json$/.test(key)||key.includes('..'))throw new Error('Open a portable .motion.json project to include local images.');const r=await fetch('/'+key);if(!r.ok)throw new Error('Missing layout; use a portable project JSON.');layouts[key]=await r.json();}
