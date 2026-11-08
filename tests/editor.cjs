@@ -1512,6 +1512,40 @@ print(doc['show_id'])
     assert.equal((await state()).duration,5);
     assert.equal((await state()).project.show.atoms[0].duration_s,0.5);
     check('HM-DIALOGUE-HOLD: selected clip film-slow hold and micro-cut preview match, undo restores the 5.00s fight, and unselected impacts stay put');
+    // HM-PF-43: HF-08 cut pack apply from the rhythm/compose flow — cycle across a shift-range selection, gold presets unchanged, undo restores.
+    const cutPackProof=path.resolve('docs/proof/hm-pf-43');
+    fs.mkdirSync(cutPackProof,{recursive:true});
+    await p.click('.timeline-clip[data-index="1"]');await settle();
+    await p.click('.timeline-clip[data-index="3"]',{modifiers:['Shift']});await settle();
+    await p.selectOption('#cutPackMode','cycle');
+    assert.match(await p.locator('#cutPackHint').textContent(),/freeze hold → white flash → whip cut/);
+    // The apply/refusal status lands synchronously; the async compile then rewrites #status,
+    // so click and read it in the same JS task (mirrors tests/hm-pf-43-cut-pack.browser.cjs).
+    const cutPackStatus=await p.evaluate(()=>{document.getElementById('applyCutPack').click();return document.getElementById('status').textContent;});
+    await settle();
+    let cutPackAtoms=(await state()).project.show.atoms;
+    assert.equal('cut' in cutPackAtoms[0],false);
+    assert.deepEqual(cutPackAtoms[1].cut,{preset:'freeze_hold',dur_s:0.12,hold_s:0.12,dir:1});
+    assert.deepEqual(cutPackAtoms[2].cut,{preset:'white_flash',dur_s:0.08,hold_s:0,dir:1});
+    assert.deepEqual(cutPackAtoms[3].cut,{preset:'whip_cut',dur_s:0.10,hold_s:0,dir:1});
+    let cutPackState=await state();
+    assert.equal(cutPackState.duration,5);assert.equal(cutPackState.composed.duration_s,5);assert.equal(cutPackState.composed.timeline.plates.length,8);
+    assert.deepEqual(cutPackState.composed.timeline.cuts.map(c=>[c.preset,c.index]),[['freeze_hold',1],['white_flash',2],['whip_cut',3]]);
+    assert.match(cutPackStatus,/Cut pack · freeze_hold → white_flash → whip_cut on 3 clips · Undo restores/);
+    await p.screenshot({path:path.join(cutPackProof,'ui-apply-cut-pack.png'),fullPage:true});
+    // The per-clip Cut-in form refreshes to the stamped cut.
+    await p.click('.timeline-clip[data-index="2"]');await settle();
+    assert.equal(await p.locator('#cutPreset').inputValue(),'white_flash');
+    await click('undo');
+    cutPackAtoms=(await state()).project.show.atoms;
+    assert.equal(cutPackAtoms.some(a=>a.cut),false);
+    assert.equal((await state()).duration,5);
+    // Honest failure: a selection of only the first clip has no entering boundary.
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    const cutPackRefusal=await p.evaluate(()=>{document.getElementById('applyCutPack').click();return document.getElementById('status').textContent;});
+    assert.match(cutPackRefusal,/entering clips \(i >= 1\)/);
+    assert.equal((await state()).project.show.atoms.some(a=>a.cut),false);
+    check('HM-PF-43: Apply cut pack cycles the HF-08 gold pack over a shift-range selection, Cut-in form refreshes, undo restores, first-clip-only is refused honestly');
     // HM-FX-PATH-EDIT: add/move/reset path points; preview, playback render, record render, and playable HTML share that path.
     const pathProof=path.resolve('work/qa/hm-fx-path-edit');
     fs.mkdirSync(pathProof,{recursive:true});

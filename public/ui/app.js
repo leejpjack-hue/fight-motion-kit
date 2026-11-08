@@ -1447,6 +1447,30 @@
       sel.append(o);
     }
   }
+  function populateCutPackModes() {
+    const sel = $('cutPackMode');
+    if (!sel) return;
+    const packs = cutPresets?.presets?.length ? cutPresets.presets : DEFAULT_CUT_PRESETS.presets;
+    sel.replaceChildren();
+    const cycle = document.createElement('option');
+    cycle.value = 'cycle';
+    cycle.textContent = 'Cycle HF-08 pack';
+    sel.append(cycle);
+    for (const p of packs) {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.label || p.id;
+      sel.append(o);
+    }
+    refreshCutPackHint();
+  }
+  function refreshCutPackHint() {
+    const sel = $('cutPackMode'), hint = $('cutPackHint');
+    if (!sel || !hint) return;
+    hint.textContent = sel.value === 'cycle'
+      ? 'Cycles freeze hold → white flash → whip cut across the selected entering clips (i ≥ 1). Gold presets unchanged. Undo restores.'
+      : `Stamps ${(cutPresetById(sel.value)?.label || sel.value)} on every selected entering clip (i ≥ 1). Gold presets unchanged. Undo restores.`;
+  }
   function syncCutInspector() {
     const preset = $('cutPreset'), dur = $('cutDur'), dir = $('cutDir'), hint = $('cutHint');
     if (!preset || !dur || !dir || !hint) return;
@@ -1532,6 +1556,16 @@
     if (hold.kind === 'impact_hold') status(`Impact hold · ${a.duration_s.toFixed(2)}s on ${a.label || a.id}`);
     else if (hold.kind === 'micro_cut') status(`Micro-cut · ${a.duration_s.toFixed(2)}s ${hold.preset} on ${a.label || a.id}`);
     else status(`Film-slow hold · ${a.duration_s.toFixed(2)}s on ${a.label || a.id}${softCam ? ' · soft camera' : ''}`);
+  }
+  function applySelectedCutPack() {
+    const mode = $('cutPackMode')?.value || 'cycle';
+    const indices = selectedRun().length ? selectedRun() : [selected];
+    edit(() => {
+      const next = HMComposeClient.applyCutPack(project.show, indices, { preset: mode, cutPresets });
+      project.show.atoms = next.atoms;
+    });
+    const stamped = indices.filter(i => i >= 1 && project.show.atoms[i]?.cut).map(i => project.show.atoms[i].cut.preset);
+    status(`Cut pack · ${stamped.join(' → ')} on ${stamped.length} clip${stamped.length === 1 ? '' : 's'} · Undo restores`);
   }
   function duplicate() {if(!atom())return;edit(()=>{const a=copy(atom());a.id=uid();a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=selected<0?0:startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
@@ -1705,6 +1739,7 @@
     ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
     populateCutPresets();
+    populateCutPackModes();
     await loadBeatBlocks();
     catalogIndex = HMCatalogQuery.buildIndex({
       cameras: presets,
@@ -1775,6 +1810,8 @@
   $('cutPreset')?.addEventListener('change', safe(() => writeCutFromForm(true)));
   $('cutDur')?.addEventListener('change', safe(() => writeCutFromForm(false)));
   $('cutDir')?.addEventListener('change', safe(() => writeCutFromForm(false)));
+  on('applyCutPack', applySelectedCutPack);
+  $('cutPackMode')?.addEventListener('change', () => refreshCutPackHint());
   on('newProject',()=>{
     if(!confirmReplaceOpenProject('New project'))return false;
     return load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})});

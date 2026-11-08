@@ -1,0 +1,109 @@
+{
+  "show_id": "hm-hf-08-cuts",
+  "title": "Cut transitions · freeze, flash, whip",
+  "duration_target_s": 2,
+  "floor_y": 684,
+  "grounded": true,
+  "parity_mode": true,
+  "compose_mode": "parity",
+  "chars": {
+    "L": {
+      "name": "Lin Daiyu"
+    },
+    "R": {
+      "name": "Wang Xifeng"
+    }
+  },
+  "bg": {},
+  "overlays": [],
+  "atoms": [
+    {
+      "id": "beat-01",
+      "label": "Open",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P01"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold"
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-02",
+      "label": "Freeze hold",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P02"
+        ]
+      },
+      "camera": {
+        "preset": "slow_push"
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-03",
+      "label": "White flash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P03"
+        ]
+      },
+      "camera": {
+        "preset": "slide_left"
+      },
+      "fx_hooks": []
+    },
+    {
+      "id": "beat-04",
+      "label": "Whip cut",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-eight/layout.json",
+        "plates": [
+          "P04"
+        ]
+      },
+      "camera": {
+        "preset": "slow_pull"
+      },
+      "fx_hooks": []
+    }
+  ]
+}
