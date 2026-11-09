@@ -33,7 +33,7 @@ Order source: the workflow board sticky note "EXACT JACK 1..10 ORDER", plus [`wo
 
 Skill files for that order are indexed in [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) (HM-PF-51). A name that already has a skill stays as it is. A name with no file yet is a contract stub. Step 10 `hm-voice-track` is DESIGNED-HOLD only. This index does not SIGN voice or #41.
 
-Sprite-gen (`6a3f4c47`) stays an external CLI. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
+Sprite-gen (`6a3f4c47`) stays an external CLI. Step 6 handoff is [`HM-PF-25-spritegen-handoff.md`](HM-PF-25-spritegen-handoff.md): generation stays outside the FE, and Jack imports one strip PNG and one strip JSON through the File API. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
 
 Sprite Forge is absent from the HTML Motion frontend and is out of scope (OOS) for HM FE. The operator generates outside, QAs, then hands off local PNG + JSON. There is no in-FE GenerateImage product path. Checklist: [HM-PF-05](HM-PF-05-sprite-forge-absence.md). CoS brief: `/workspace/hr/briefs/sprite-gen-html-motion-2026-11-07.md`. Adapt Page: https://sprite-gen-html-motion-urak.pages.grok.bot/
 
