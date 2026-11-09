@@ -18,6 +18,11 @@
     <p id="grammarPreset" class="field-hint"></p>
     <label>Camera clause (draft)<textarea id="grammarClause" rows="5" readonly></textarea></label>
     <p class="field-hint">Planned shot size, lens and FX describe the prompt; inspect actual plate framing. Existing curves cannot create a wide plate or change the rendered FX.</p>
+    <div id="grammarUpgrade" class="grammar-upgrade" hidden>
+      <p id="grammarUpgradeFlag" class="field-hint" role="status"></p>
+      <div class="rhythm-actions"><button id="downloadGrammarBackup" type="button">Download original backup</button><button id="suggestGrammarUpgrade" type="button">Suggest grammar remap</button></div>
+      <p id="grammarUpgradePreview" class="field-hint"></p>
+    </div>
     <div class="rhythm-actions"><button id="exportCameraInput" type="button">Export approved camera input</button><button id="importCameraPlan" type="button">Apply grammar / camera map…</button><button id="exportCameraGrammar" type="button">Export grammar JSON</button><button id="exportCameraSheet" type="button">Export editable beat sheet</button><button id="exportCameraClauses" type="button">Export Camera: clauses</button><button id="exportCameraClausesJson" type="button">Export Camera: clauses JSON</button></div>
     <p id="cameraGrammarValidation" class="field-hint" role="status"></p>
     <p id="cameraPlanStatus" class="field-hint" role="status" aria-live="polite"></p>
@@ -42,8 +47,24 @@
     const indices = S.selectedIndices;
     return indices.length > 1 ? indices : S.show.atoms[S.selectedIndex + 1] ? [S.selectedIndex, S.selectedIndex + 1] : [];
   }
+  function paintUpgrade(show) {
+    const box = $('grammarUpgrade');
+    if (!box) return;
+    let gap = { flagged: false, findings: [], suggestion: null };
+    try { if (show?.atoms?.length && S.cameraPresets) gap = A.grammarGap(show, S.cameraPresets); }
+    catch (_) { gap = { flagged: false, findings: [], suggestion: null }; }
+    box.hidden = !gap.flagged;
+    if (!gap.flagged) return;
+    $('grammarUpgradeFlag').textContent = gap.findings.filter(item => item.code !== 'legacy_remap_unfit').map(item => item.message).join(' ');
+    const unfit = gap.findings.find(item => item.code === 'legacy_remap_unfit');
+    $('grammarUpgradePreview').textContent = gap.suggestion ? gap.suggestion.summary : (unfit ? unfit.fix : '');
+    $('suggestGrammarUpgrade').disabled = !gap.suggestion || S.recording || S.loading;
+    $('downloadGrammarBackup').disabled = S.recording || S.loading;
+  }
   function refresh() {
-    const show = S.show, atom = show?.atoms[S.selectedIndex]; if (!atom) return;
+    const show = S.show, atom = show?.atoms[S.selectedIndex];
+    paintUpgrade(show);
+    if (!atom) return;
     const picker = $('widePresetPicker');
     if (picker && !picker.options.length && S.cameraPresets?.presets?.length) {
       for (const id of A.wideEstablishPresets(S.cameraPresets)) {
@@ -120,6 +141,26 @@
     const result = A.markWideBeat(S.show, S.selectedIndex, S.cameraPresets, { preset_id });
     S.editProject(project => { project.show = result.show; });
     $('cameraPlanStatus').textContent = 'Marked ' + result.atom.id + ' as Wide (' + result.preset_id + '). Undo restores the previous beat.';
+  });
+  on('downloadGrammarBackup', () => {
+    available();
+    download('.grammar-upgrade-backup.json', A.grammarUpgradeBackup(S.show));
+    $('cameraPlanStatus').textContent = 'Original show downloaded as a grammar backup. The open show is unchanged.';
+  });
+  on('suggestGrammarUpgrade', () => {
+    available();
+    const show = S.show;
+    const gap = A.grammarGap(show, S.cameraPresets);
+    if (!gap.flagged || !gap.suggestion) throw Error(gap.findings.find(item => item.code === 'legacy_remap_unfit')?.fix || 'No grammar remap is available for this show.');
+    const summary = gap.suggestion.rows.map(row => (row.index + 1) + ' ' + row.role + ' → ' + row.preset_id).join('\n');
+    if (!window.confirm('Remap this show to Intent → Action → Reaction and Wide using existing camera presets?\n\n' + summary + '\n\nPlates, timing and FX stay. Camera params on these beats are replaced. A backup of the original downloads first. Cancel keeps the current cameras.')) {
+      $('cameraPlanStatus').textContent = 'Kept the current cameras.';
+      return;
+    }
+    download('.grammar-upgrade-backup.json', A.grammarUpgradeBackup(show));
+    const result = A.applyGrammarUpgrade(show, S.cameraPresets, { confirm: true });
+    S.editProject(project => { project.show = result.show; });
+    $('cameraPlanStatus').textContent = 'Grammar remap applied with ' + result.suggestion.rows.length + ' existing presets. Undo restores the previous cameras. The backup file is the original show.';
   });
   on('exportCameraInput', () => { available(); download('.camera-input.json', input()); $('cameraPlanStatus').textContent = 'Approved board and GO downloaded. Run hm-cam-grammar-scene locally.'; });
   on('exportCameraGrammar', () => { available(); download('.grammar.json', sheet()); });

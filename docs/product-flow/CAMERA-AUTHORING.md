@@ -80,6 +80,10 @@ role overrides keyed by the existing beat IDs; missing roles fail. The helpers
 never add plates/beats or overwrite output files. The local output is a proposal
 for human review, not an automatic n8n resume or an image-generation request.
 
+## Legacy medium and tight shows
+
+Open a show whose cameras are only medium or tight presets and that has no Wide beat and no Intent → Action → Reaction run. **Scene camera grammar** shows that gap. **Download original backup** saves the current show as `.grammar-upgrade-backup.json` and leaves the timeline alone. **Suggest grammar remap** lists a beat map that uses presets already in `camera_presets.json` (`low_rise`, `eye_hold`, `eye_push`, `pull_aftermath`, `eye_orbit`). Confirm downloads that backup, then replaces camera presets and grammar roles. Cancel keeps the current cameras. Plates, timing and FX stay. Undo restores the previous cameras. The remap does not run by itself, and it does not add preset ids.
+
 ## Join cameras across cuts
 
 Shift-click adjacent timeline clips. The visible selection summary names the run;

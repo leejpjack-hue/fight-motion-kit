@@ -17,6 +17,8 @@
     open: Object.freeze(['low_rise', 'eye_orbit', 'pull_aftermath', 'static_hold']),
     reestablish: Object.freeze(['eye_orbit', 'low_rise', 'pull_aftermath', 'static_hold']),
   });
+  const LEGACY_NEUTRAL_PRESETS = Object.freeze(['static_hold']);
+  const WIDE_SIZES = Object.freeze(['EWS', 'WS', 'MWS']);
   const DEFAULTS = Object.freeze({
     Wide: { preset_id: 'eye_orbit', shot_size: 'WS', lens_mm: '28mm', purpose: 're-establish both fighters and the geography' },
     Intent: { preset_id: 'eye_hold', shot_size: 'MCU', lens_mm: '50mm', purpose: 'show the attacker finding an opening' },
@@ -386,6 +388,124 @@
     const findings = C.lintCameraGrammar ? C.lintCameraGrammar(show) : [];
     return { clean: findings.length === 0, count: findings.length, findings };
   }
+  function wideContrastPreset(id) {
+    return (WIDE_PRESETS.open.includes(id) || WIDE_PRESETS.reestablish.includes(id)) && !LEGACY_NEUTRAL_PRESETS.includes(id);
+  }
+  function usedPreset(atom) {
+    const segments = atom?.camera?.segments;
+    if (Array.isArray(segments) && segments.length) return typeof segments[0]?.preset === 'string' ? segments[0].preset : '';
+    return typeof atom?.camera?.preset === 'string' ? atom.camera.preset : '';
+  }
+  function roleOf(atom) {
+    return (atom && (atom.camera_grammar?.role || atom.grammar_role || atom.motion?.grammar_role)) || '';
+  }
+  function legacyRolePattern(count) {
+    if (!Number.isInteger(count) || count < 4) return null;
+    const cycle = ['Intent', 'Action', 'Reaction'];
+    const roles = [];
+    if ((count - 2) % 3 === 0) {
+      roles.push('Wide');
+      for (let i = 0; i < count - 2; i++) roles.push(cycle[i % 3]);
+      roles.push('Wide');
+      return roles;
+    }
+    if ((count - 1) % 3 === 0) {
+      for (let i = 0; i < count - 1; i++) roles.push(cycle[i % 3]);
+      roles.push('Wide');
+      return roles;
+    }
+    return null;
+  }
+  function grammarGap(show, catalog) {
+    const atoms = Array.isArray(show?.atoms) ? show.atoms : [];
+    const empty = { kind: 'hm-grammar-gap', version: 1, show_id: show?.show_id || '', flagged: false, medium_tight_only: false, lacks_wide: false, lacks_iar: false, findings: [], suggestion: null };
+    if (!atoms.length) return empty;
+    const map = registry(catalog);
+    const presets = atoms.map(usedPreset);
+    const mediumTightOnly = presets.every(id => id && map.has(id) && !wideContrastPreset(id));
+    const roles = atoms.map(roleOf);
+    const lacksWide = !roles.includes('Wide') && !atoms.some(atom => WIDE_SIZES.includes(atom?.camera_grammar?.shot_size));
+    let lacksIar = true;
+    for (let i = 0; i < roles.length - 2; i++) {
+      if (roles[i] === 'Intent' && roles[i + 1] === 'Action' && roles[i + 2] === 'Reaction') lacksIar = false;
+    }
+    const flagged = mediumTightOnly && lacksWide && lacksIar;
+    if (!flagged) return { ...empty, medium_tight_only: mediumTightOnly, lacks_wide: lacksWide, lacks_iar: lacksIar };
+    const showId = show.show_id || 'untitled';
+    const findings = [
+      { code: 'legacy_missing_wide', message: 'Show "' + showId + '" has no Wide beat. Every camera preset is medium or tight.', fix: 'Fix: Download the original backup, then confirm Suggest grammar remap. It uses only presets already in camera_presets.json.' },
+      { code: 'legacy_missing_iar', message: 'Show "' + showId + '" has no Intent → Action → Reaction contrast.', fix: 'Fix: Download the original backup, then confirm Suggest grammar remap. It uses only presets already in camera_presets.json.' },
+    ];
+    const pattern = legacyRolePattern(atoms.length);
+    if (!pattern) {
+      findings.push({ code: 'legacy_remap_unfit', message: 'Show "' + showId + '" cannot hold Intent → Action → Reaction plus Wide on its current beats.', fix: 'Fix: Download the original backup. Add a beat, then insert a Wide re-establish with an existing preset.' });
+      return { kind: 'hm-grammar-gap', version: 1, show_id: show.show_id || '', flagged: true, medium_tight_only: true, lacks_wide: true, lacks_iar: true, findings, suggestion: null };
+    }
+    let triplet = 1;
+    const rows = pattern.map((role, index) => {
+      const atom = atoms[index];
+      const presetId = role === 'Wide' ? widePresetFor(catalog, { mode: index === 0 ? 'open' : 'reestablish' }) : DEFAULTS[role].preset_id;
+      if (/^wide_/i.test(presetId)) throw Error('Missing camera preset: ' + presetId + '. Do not invent wide_* curves; choose an ID in the current camera_presets.json.');
+      presetFor(presetId, catalog);
+      const row = {
+        index,
+        beat_id: atom.beat_id || atom.id,
+        role,
+        preset_id: presetId,
+        shot_size: DEFAULTS[role].shot_size,
+        triplet: role === 'Wide' ? 'W' + (index + 1) : 'T' + triplet,
+      };
+      if (role === 'Reaction') triplet += 1;
+      return row;
+    });
+    const suggestion = {
+      kind: 'hm-grammar-upgrade-suggestion',
+      version: 1,
+      show_id: show.show_id || '',
+      summary: rows.map(row => (row.index + 1) + ' ' + row.role + ' ' + row.preset_id).join(' · '),
+      rows,
+    };
+    return { kind: 'hm-grammar-gap', version: 1, show_id: show.show_id || '', flagged: true, medium_tight_only: true, lacks_wide: true, lacks_iar: true, findings, suggestion };
+  }
+  function grammarUpgradeBackup(show) {
+    if (!show || !Array.isArray(show.atoms)) throw Error('Open a show before downloading a grammar backup.');
+    return { kind: 'hm-grammar-upgrade-backup', version: 1, show_id: show.show_id || '', show: clone(show) };
+  }
+  function applyGrammarUpgrade(show, catalog, options = {}) {
+    if (options.confirm !== true) throw Error('Jack confirm required before a grammar upgrade remap.');
+    const before = clone(show);
+    const gap = grammarGap(show, catalog);
+    if (!gap.flagged) throw Error('This show already has Wide coverage and an Intent → Action → Reaction run.');
+    if (!gap.suggestion) throw Error(gap.findings.find(item => item.code === 'legacy_remap_unfit')?.fix || 'This show cannot be remapped on its current beats.');
+    const next = clone(show);
+    const byBeat = new Map(gap.suggestion.rows.map(row => [row.beat_id, row]));
+    next.atoms.forEach((atom, index) => {
+      const row = byBeat.get(atom.beat_id || atom.id);
+      if (!row || row.index !== index) throw Error('Suggestion missed ' + (atom.beat_id || atom.id || index) + '.');
+      const preset = presetFor(row.preset_id, catalog), move = MOVES[preset.move], def = DEFAULTS[row.role];
+      atom.camera = { preset: row.preset_id };
+      delete atom.timing_hold;
+      atom.grammar_role = row.role;
+      atom.motion = { ...(atom.motion || { family: 'fight', beat_class: 'guard_recover' }), grammar_role: row.role };
+      atom.camera_grammar = {
+        beat_id: row.beat_id,
+        scene_id: 'scene-01',
+        triplet: row.triplet,
+        role: row.role,
+        shot_size: def.shot_size,
+        beat_action: atom.label || atom.id,
+        fx: 'none',
+        lens_mm: def.lens_mm,
+        direction: preset.direction || move[1],
+        speed: move[2],
+        purpose: row.role === 'Wide' && index === 0 ? 'establish both fighters and the geography' : def.purpose,
+        authored_preset_id: row.preset_id,
+      };
+    });
+    if (C.reflowAllCamChains) C.reflowAllCamChains(next.atoms);
+    if (JSON.stringify(show) !== JSON.stringify(before)) throw Error('Upgrade mutated the open show.');
+    return { show: next, backup: grammarUpgradeBackup(before), suggestion: gap.suggestion };
+  }
   function markWideBeat(show, index, catalog, options = {}) {
     if (!show || !Array.isArray(show.atoms) || !show.atoms[index]) throw Error('Select a clip to mark as a Wide beat.');
     const mode = options.mode || (index === 0 && options.preset_id === 'low_rise' ? 'open' : 'reestablish');
@@ -491,5 +611,6 @@
     clause, parseClause, parseClausesInput, clausesText, clauseMap,
     rowFor, validate, build, fromShow, author, apply, markdown,
     chainFromFirst, lintGrammar, markWideBeat, insertWideBeat,
+    grammarGap, grammarUpgradeBackup, applyGrammarUpgrade,
   });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
