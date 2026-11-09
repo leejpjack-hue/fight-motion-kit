@@ -2539,6 +2539,14 @@
   "label": "Fight cam grammar starter",
   "description": "Fight Camera Grammar sample: three Intent → Action → Reaction triplets plus a Wide re-establish. Existing camera presets only.",
   "seed_show": "shows/fight-cam-grammar-starter.json"
+ },
+ {
+  "id": "fight-daiyu-baochai-classroom-dense",
+  "path": "templates/fight-daiyu-baochai-classroom-dense.json",
+  "kind": "show_template",
+  "label": "Classroom dense multi-BG",
+  "description": "Classroom dense golden show. Four background plates, a 70% by 90% crop at 15%, 5%, and pan_right at 0.70 across the show. Plate bitmaps stay in the pack.",
+  "seed_show": "shows/fight-daiyu-baochai-classroom-dense.json"
  }
  ],
  "beat_blocks": {
