@@ -50,6 +50,14 @@
     "swap_t": {"type": "number", "minimum": 0}
    }
   },
+  "fg": {
+   "type": "object",
+   "description": "HM-COMPOSE-FG foreground prop layer. cam is this layer's own camera and does not follow background crop-pan or the clip camera. Human edits land in the Compose FOREGROUND panel.",
+   "properties": {
+    "cam": {"$ref": "#/$defs/fgCam"},
+    "props": {"type": "array", "items": {"$ref": "#/$defs/fgProp"}}
+   }
+  },
   "overlays": {
    "type": "array",
    "description": "Wording / title / impact overlays (screen-space, above chars, below pink cut). Prefer kind=text (runtime artificial wording) over legacy PNG src.",
@@ -64,6 +72,63 @@
   }
  },
  "$defs": {
+  "fgCam": {
+   "type": "object",
+   "description": "Foreground camera. Presets match the Compose FG panel. parallax amount defaults to 0.45 in the panel and the stamp skill.",
+   "properties": {
+    "preset": {"type": "string", "enum": ["static", "nudge", "parallax", "pan_left", "pan_right", "pan_up", "pan_down", "push_in", "pull_out"]},
+    "amount": {"type": "number", "minimum": 0, "maximum": 1},
+    "nudge": {
+     "type": "object",
+     "properties": {
+      "x": {"type": "number"},
+      "y": {"type": "number"},
+      "s": {"type": "number"}
+     }
+    },
+    "clock": {"type": "string", "enum": ["show", "per_atom", "legacy", "span"]},
+    "span": {},
+    "t0": {"type": "number"},
+    "t1": {"type": "number"}
+   }
+  },
+  "fgEffect": {
+   "type": "object",
+   "description": "Break timing on a foreground prop. broken_src is an optional local PNG, WebP, or JPG. No voice or #41 SFX.",
+   "required": ["type", "t"],
+   "properties": {
+    "type": {"const": "break"},
+    "t": {"type": "number", "minimum": 0},
+    "broken_src": {"type": "string", "minLength": 1}
+   }
+  },
+  "fgKeyframe": {
+   "type": "object",
+   "required": ["t"],
+   "properties": {
+    "t": {"type": "number"},
+    "x": {"type": "number"},
+    "y": {"type": "number"},
+    "scale": {"type": "number", "minimum": 0.05, "maximum": 8}
+   }
+  },
+  "fgProp": {
+   "type": "object",
+   "required": ["id", "src"],
+   "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "src": {"type": "string", "minLength": 1, "description": "Local prop image path"},
+    "x": {"type": "number"},
+    "y": {"type": "number"},
+    "scale": {"type": "number", "minimum": 0.05, "maximum": 8, "default": 1},
+    "z": {"type": "number"},
+    "t_start": {"type": "number", "minimum": 0},
+    "t_end": {"type": "number", "minimum": 0},
+    "slot": {"type": "string", "enum": ["prop", "overlay"], "description": "overlay art shows between t_start and t_end and does not break"},
+    "kf": {"type": "array", "items": {"$ref": "#/$defs/fgKeyframe"}},
+    "effect": {"$ref": "#/$defs/fgEffect"}
+   }
+  },
   "transform": {
    "type": "object",
    "description": "Offset/scale applied after grounded placement. Scale pivots on the foot so feet stay on the floor when y=0. Setting y != 0 breaks floor grounding.",
