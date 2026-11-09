@@ -10,12 +10,14 @@
   const CONTINUATION = 'daiyu-wang-ten-seconds';
   const STREET = 'street-old-city';
   const GRAMMAR = 'fight-cam-grammar-starter';
+  const CLASSROOM = 'fight-daiyu-baochai-classroom-dense';
   const GRAMMAR_ALIASES = ['fight-daiyu-wang-rooftop-camera-grammar-2026-11-01', 'rooftop-camera-grammar'];
+  const CLASSROOM_ALIASES = ['fight-daiyu-baochai-classroom-dense-2026-10-24', 'classroom-dense', 'hm-class-dense-bg'];
   const VOID = 'baijia-elfmage-void-array';
   const VOID_ALIASES = ['fight-baijia-elfmage-void-array-2026-11-06'];
-  const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR, VOID];
+  const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR, VOID, CLASSROOM];
   const BUILTIN = [...GOLD, STREET];
-  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : VOID_ALIASES.includes(id) ? VOID : id;
+  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : VOID_ALIASES.includes(id) ? VOID : CLASSROOM_ALIASES.includes(id) ? CLASSROOM : id;
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_CUT_PRESETS = {version:'hm-hf-08',presets:[
     {id:'freeze_hold',label:'Freeze hold',defaults:{dur_s:0.12,hold_s:0.12,dir:1}},
@@ -1815,17 +1817,20 @@
     const sid=resolveBuiltInId(new URLSearchParams(location.search).get('show'));
     const goldDefault=GOLD.includes(sid)?sid:DEMO;
     const defaultGold=await builtIn(goldDefault);
-    await loadB(defaultGold,'gold',goldDefault);
-    if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
-    else if(sid===STREET){await load(await builtIn(STREET));}
-    else if(sid===GRAMMAR){await load(await builtIn(GRAMMAR));}
-    else if(sid===VOID){await load(await builtIn(VOID));}
-    else if(sid&&!GOLD.includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
-    else await load(copy(defaultGold));
+    const missingBitmap=e=>/Image could not load|Missing plate/.test(String(e&&e.message));
+    const bootShow=async task=>{try{return await task;}catch(e){if(!missingBitmap(e))throw e;status('Preview unavailable: '+e.message,true);return false;}};
+    await bootShow(loadB(defaultGold,'gold',goldDefault));
+    if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await bootShow(load(copy(defaultGold)));}}
+    else if(sid===STREET){await bootShow(load(await builtIn(STREET)));}
+    else if(sid===GRAMMAR){await bootShow(load(await builtIn(GRAMMAR)));}
+    else if(sid===VOID){await bootShow(load(await builtIn(VOID)));}
+    else if(sid&&!GOLD.includes(sid)){await bootShow(load(copy(defaultGold)));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else await bootShow(load(copy(defaultGold)));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
   on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));on('loadStreet',()=>openProject(builtIn(STREET)));
   on('loadVoidArray',()=>openProject(builtIn(VOID)));
+  on('loadClassroomDense',()=>openProject(builtIn(CLASSROOM)));
   async function openTemplates(){
     const dlg=$('templateDialog'), list=$('templateList'), note=$('templateStatus');
     list.replaceChildren();
