@@ -55,6 +55,15 @@
    "description": "Wording / title / impact overlays (screen-space, above chars, below pink cut). Prefer kind=text (runtime artificial wording) over legacy PNG src.",
    "items": {"$ref": "#/$defs/overlay"}
   },
+  "fg": {
+   "type": "object",
+   "description": "Foreground props in front of plates, with their own camera. A breakable prop swaps to an optional broken PNG or WebP at effect.t, or splits on a crack when that cutout is unset. An overlay prop is speed-line or depth art and does not break.",
+   "properties": {
+    "cam": {"$ref": "#/$defs/fgCam"},
+    "props": {"type": "array", "items": {"$ref": "#/$defs/fgProp"}}
+   },
+   "additionalProperties": false
+  },
   "atoms": {
    "type": "array", "minItems": 1,
    "items": {"oneOf": [
@@ -178,6 +187,72 @@
     "scale": {"type": "number", "minimum": 0.05, "maximum": 8, "default": 1},
     "opacity": {"type": "number", "minimum": 0, "maximum": 1, "default": 1},
     "z": {"type": "number", "default": 10, "description": "sort among overlays only"}
+   },
+   "additionalProperties": false
+  },
+  "fgCam": {
+   "type": "object",
+   "properties": {
+    "preset": {"type": "string", "enum": ["static", "nudge", "parallax", "pan_left", "pan_right", "pan_up", "pan_down", "push_in", "pull_out"]},
+    "amount": {"type": "number", "minimum": 0, "maximum": 1},
+    "nudge": {
+     "type": "object",
+     "properties": {
+      "x": {"type": "number"},
+      "y": {"type": "number"},
+      "s": {"type": "number"}
+     },
+     "additionalProperties": false
+    },
+    "clock": {"type": "string", "enum": ["show", "per_atom", "legacy", "span"]},
+    "span": {},
+    "t0": {"type": "number"},
+    "t1": {"type": "number"}
+   },
+   "additionalProperties": false
+  },
+  "fgProp": {
+   "type": "object",
+   "required": ["id", "src"],
+   "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "src": {"type": "string", "minLength": 1},
+    "slot": {"type": "string", "enum": ["prop", "overlay"], "description": "overlay is speed-line or depth art. It shows between t_start and t_end and does not break."},
+    "x": {"type": "number"},
+    "y": {"type": "number"},
+    "scale": {"type": "number", "minimum": 0.05, "maximum": 8},
+    "z": {"type": "number"},
+    "t_start": {"type": "number", "minimum": 0},
+    "t_end": {"type": "number", "minimum": 0},
+    "kf": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": ["t"],
+      "properties": {
+       "t": {"type": "number"},
+       "x": {"type": "number"},
+       "y": {"type": "number"},
+       "scale": {"type": "number", "minimum": 0.05, "maximum": 8}
+      },
+      "additionalProperties": false
+     }
+    },
+    "effect": {"$ref": "#/$defs/fgBreak"}
+   },
+   "additionalProperties": false
+  },
+  "fgBreak": {
+   "type": "object",
+   "required": ["type"],
+   "properties": {
+    "type": {"const": "break"},
+    "t": {"type": "number", "minimum": 0},
+    "broken_src": {
+     "type": "string",
+     "pattern": "\\.(png|webp|PNG|WEBP)$",
+     "description": "Optional broken cutout. PNG or WebP. When omitted, the prop splits on a crack at t."
+    }
    },
    "additionalProperties": false
   }

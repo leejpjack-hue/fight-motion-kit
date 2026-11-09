@@ -146,13 +146,21 @@ function fgPropPose(prop, t) {
   const a = kfs[i - 1], b = kfs[i], u = (time - a.t) / (b.t - a.t);
   return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, scale: a.scale + (b.scale - a.scale) * u };
 }
+function fgBrokenCutoutSrc(src) {
+  if (typeof src !== 'string') return '';
+  const path = src.trim();
+  if (!path) return '';
+  const file = path.split(/[?#]/, 1)[0];
+  return /\.(png|webp)$/i.test(file) ? path : '';
+}
 function fgBreakState(prop, t) {
   const src = prop && prop.src;
   const effect = prop && prop.effect;
   if (prop && prop.slot === 'overlay') return { broken: false, src, age: 0, procedural: false };
   if (!effect || effect.type !== 'break' || !(+t >= +effect.t)) return { broken: false, src, age: 0, procedural: false };
   const age = +t - +effect.t;
-  return { broken: true, src: effect.broken_src || src, age, procedural: !effect.broken_src };
+  const cutout = fgBrokenCutoutSrc(effect.broken_src);
+  return { broken: true, src: cutout || src, age, procedural: !cutout };
 }
 // Parametric punch / leg FX and the warm crush. Paths are 1280×720 screen points.
 const FX_FIST_PATH = [[430, 390], [610, 300], [760, 250]];
@@ -463,12 +471,14 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function drawFgBreak(im, age) {
     const w = im.width, h = im.height, mid = Math.max(1, Math.floor(w / 2));
-    const gap = 10 + Math.min(16, Math.max(0, age) * 70);
-    const drop = Math.min(10, Math.max(0, age) * 28);
+    const grown = Math.max(0, age);
+    const gap = 14 + Math.min(22, grown * 80);
+    const drop = Math.min(14, grown * 36);
     ctx.drawImage(im, 0, 0, mid, h, -w / 2 - gap, -h / 2, mid, h);
     ctx.drawImage(im, mid, 0, w - mid, h, -w / 2 + mid + gap, -h / 2 + drop, w - mid, h);
+    const seam = 22 + Math.min(10, grown * 20);
     ctx.fillStyle = '#140c08';
-    ctx.fillRect(-5, -h / 2, 10, h);
+    ctx.fillRect(-seam / 2, -h / 2, seam, h);
   }
   function drawForeground(t) {
     const fg = timeline.fg;
@@ -927,6 +937,7 @@ hmRoot.FG_DEFAULT_PARALLAX = FG_DEFAULT_PARALLAX;
 hmRoot.FG_PARALLAX_PRESETS = FG_PARALLAX_PRESETS;
 hmRoot.fgCameraFrame = fgCameraFrame;
 hmRoot.fgPropPose = fgPropPose;
+hmRoot.fgBrokenCutoutSrc = fgBrokenCutoutSrc;
 hmRoot.fgBreakState = fgBreakState;
 hmRoot.FX_FIST_PATH = FX_FIST_PATH;
 hmRoot.FX_LEG_PATH = FX_LEG_PATH;

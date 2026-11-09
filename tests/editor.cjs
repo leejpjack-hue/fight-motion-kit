@@ -814,7 +814,21 @@ print(doc['show_id'])
     assert.match(fightBreak.plate,/Forearm block/);
     assert.ok(fightBreak.px[0]<50&&fightBreak.px[1]<40&&fightBreak.px[2]<30,'break crack is causal on the fight beat: '+fightBreak.px+' vs '+runBeat.px);
     assert.notDeepEqual(fightBreak.px,runBeat.px);
+    const seam=await p.evaluate(()=>{
+      const tl=HMStudio.composed.timeline,prop=tl.fg.props[0],t=2.35;
+      const cam=fgCameraFrame(tl.fg.cam,t,{duration:tl.duration_s,atomT0:0,atomT1:tl.duration_s});
+      const pose=fgPropPose(prop,t);
+      const x=Math.round((pose.x-640)*cam.s+640+cam.x),y=Math.round((pose.y-360)*cam.s+360+cam.y);
+      HMStudio.renderAt(t);
+      const px=document.getElementById('stage').getContext('2d').getImageData(x+8,y,1,1).data;
+      return Array.from(px);
+    });
+    assert.ok(seam[0]<50&&seam[1]<40&&seam[2]<30,'fallback crack seam stays dark beside the center: '+seam);
     await p.locator('#paneA').screenshot({path:path.join(out,'fg-fight-break.png')});
+    const jpeg=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=8;c.height=8;c.getContext('2d').fillRect(0,0,8,8);return c.toDataURL('image/jpeg').split(',')[1];});
+    await p.setInputFiles('#fgBrokenInput',{name:'chair-broken.jpg',mimeType:'image/jpeg',buffer:Buffer.from(jpeg,'base64')});
+    await p.waitForFunction(()=>/PNG or WebP/.test(document.getElementById('status').textContent));
+    assert.equal((await state()).project.show.fg.props[0].effect.broken_src,undefined);
     const beforeKf=(await state()).project.show.atoms.map(a=>a.camera);
     const beforeBg=(await state()).project.show.bg;
     await p.fill('#scrub','0.4');await p.locator('#scrub').dispatchEvent('input');await change('fgX',900);await click('fgAddKf');
