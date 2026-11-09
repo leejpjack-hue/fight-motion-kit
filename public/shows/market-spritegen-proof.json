@@ -1,0 +1,21 @@
+{
+  "story": "HM-PF-29",
+  "step": 6,
+  "showId": "fight-baijia-elfmage-market-spritegen-2026-11-06",
+  "packRoot": "/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06",
+  "status": "BLOCKED_RUNTIME",
+  "missing": [
+    "/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06",
+    "/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06/BUILD_STATUS.md",
+    "/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06/assets"
+  ],
+  "unresolvedNames": [
+    "*.motion.json",
+    "html"
+  ],
+  "providerCalls": 0,
+  "replaceProject": false,
+  "handoff": "Import pending strip · PNG + JSON",
+  "bake": "blocked",
+  "artInvented": false
+}

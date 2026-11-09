@@ -62,6 +62,11 @@ template beat sheet, one-click Wide re-establish beat picker and zero-Wide lint,
 strict preset maps, local text/JSON `Camera:` clause exports that round-trip into
 skill inputs, human overrides, the existing chain engine with visible snap-zoom
 controls, and FE-only bake.
+For step 6, the [market spritegen proof](HM-PF-29-market-spritegen-proof.md)
+is the import proof film. The Workers UI reads a local receipt. This checkout
+records `BLOCKED_RUNTIME` because
+`fight-baijia-elfmage-market-spritegen-2026-11-06` is not on disk. The page
+does not call a provider and does not invent plates.
 
 | Role | Choice | Why it is in the approved pack |
 |---|---|---|

@@ -9,4 +9,26 @@
 <h2>Author the scene cameras</h2>
 <p>Approve the story in the <strong>2 Story · Jack GO gate</strong>. In <strong>Clip Settings → Camera motion → Scene camera grammar</strong>, use the 1-click <strong>Wide establish preset</strong> picker (<strong>＋ Insert Wide re-establish</strong> or <strong>Mark beat as Wide</strong>) with shipped <code>eye_orbit</code> / <code>low_rise</code> presets—no <code>wide_*</code> curves are invented, and Show JSON Lint warns if a scene has zero Wide beats. Export approved camera input for the scene grammar and shot-author skills, apply the local grammar/map, then edit shot fields or override any camera preset. Export the beat sheet or <code>Camera:</code> clauses (<code>.camera-clauses.txt</code> or <code>.camera-clauses.json</code> matching fight-prompting REPORT conventions, round-tripping into skill inputs) and Save project or Export playable HTML.</p>
 <p>For continuous movement across cuts, Shift-click adjacent clips and choose <strong>Chain from first camera</strong> or <strong>Chain + snap zoom</strong>. Both copy the first camera’s move and framing across the selection. Preview the cuts; Undo restores the previous cameras.</p>
+<h2>Step 6 proof film</h2>
+<p>The market spritegen film is the step 6 import proof. The composer opens the local receipt and leaves the 5.00s demo in place when the pack is missing. This page does not call a provider.</p>
+<p><a class="open" href="/ui/?show=fight-baijia-elfmage-market-spritegen-2026-11-06">Open step 6 market spritegen proof</a></p>
+<p id="pf29Status">Checking the local receipt…</p>
+<ul id="pf29Missing"></ul>
+<script>
+fetch('/shows/market-spritegen-proof.json').then(function (r) { return r.json(); }).then(function (doc) {
+  var status = document.getElementById('pf29Status');
+  var list = document.getElementById('pf29Missing');
+  status.textContent = doc.status + ' · ' + doc.showId + ' · provider calls ' + doc.providerCalls;
+  (doc.missing || []).forEach(function (p) {
+    var li = document.createElement('li');
+    li.textContent = p;
+    list.append(li);
+  });
+  (doc.unresolvedNames || []).forEach(function (name) {
+    var li = document.createElement('li');
+    li.textContent = doc.packRoot + '/' + name + ' (name unresolved because the pack directory is missing)';
+    list.append(li);
+  });
+});
+</script>
 <p><a href="/ui/">Back to composer</a></p></main></body></html>

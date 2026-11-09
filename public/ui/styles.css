@@ -187,3 +187,5 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 .strip-qa-warnings li[data-source="adapter"] .strip-qa-source{border-color:var(--warn);color:var(--warn)}
 .strip-qa-warnings li[data-source="metadata"]{color:var(--muted)}
 #stripQaError{margin:8px 0 0;color:var(--danger)}
+#marketSpritegenMissing{margin:12px 0;padding-left:18px;font:12px/1.45 ui-monospace,monospace;overflow-wrap:anywhere}
+#marketSpritegenStatus{font-weight:700}

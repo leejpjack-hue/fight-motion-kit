@@ -1808,7 +1808,10 @@
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
     else if(sid===STREET){await load(await builtIn(STREET));}
     else if(sid===GRAMMAR){await load(await builtIn(GRAMMAR));}
-    else if(sid&&!GOLD.includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else if(sid&&!GOLD.includes(sid)){
+      await load(copy(defaultGold));
+      if(!(window.HMMarketSpritegenProof&&HMMarketSpritegenProof.matchesShow(sid)))status('Requested project is not stored here. Open its saved project JSON.',true);
+    }
     else await load(copy(defaultGold));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
