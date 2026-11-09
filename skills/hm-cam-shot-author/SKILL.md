@@ -7,8 +7,10 @@ description: Map an approved scene grammar sheet to existing camera_presets.json
 
 Consume the JSON from [hm-cam-grammar-scene](../hm-cam-grammar-scene/SKILL.md).
 Its approved PF-08 story, complete triplets and per-scene Wide re-establish are
-required. Reuse the [Fight Camera Grammar Template](https://app.notion.com/p/40b9565776c68154a978edfd92c62652)
-fields and four-part camera clause, with angle/move from the current checkout.
+required. Field names and template pointers come from the
+[HM-PF-24 sync note](../../docs/product-flow/HM-PF-24-cam-grammar-sync.md),
+the same source of truth as `hm-cam-grammar-scene`. Reuse that note's fields
+and four-part camera clause, with angle/move from the current checkout.
 Never substitute an absent preset or create historical `wide_*` curve IDs.
 
 ```sh
