@@ -63,6 +63,8 @@ template beat sheet, one-click Wide re-establish beat picker and zero-Wide lint,
 strict preset maps, local text/JSON `Camera:` clause exports that round-trip into
 skill inputs, human overrides, the existing chain engine with visible snap-zoom
 controls, and FE-only bake.
+For steps 7 and 9, the [classroom dense golden show](HM-PF-34-classroom-dense-golden-show.md)
+opens the four-background classroom film, with the pack crop and pan on the existing background controls.
 
 | Role | Choice | Why it is in the approved pack |
 |---|---|---|

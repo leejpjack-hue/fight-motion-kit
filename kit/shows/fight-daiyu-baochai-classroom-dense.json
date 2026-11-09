@@ -1,0 +1,2440 @@
+{
+ "show_id": "fight-daiyu-baochai-classroom-dense",
+ "title": "林黛玉×薛寶釵 課室 · dense 2026-10-24",
+ "duration_target_s": 21.825,
+ "venue": "classroom",
+ "floor_y": 684,
+ "grounded": true,
+ "parity_mode": true,
+ "compose_mode": "parity",
+ "chars": {
+  "L": {
+   "name": "林黛玉"
+  },
+  "R": {
+   "name": "薛寶釵"
+  }
+ },
+ "bg": {
+  "base": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+  "swap": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+  "swap_t": 13.6,
+  "key_white": false,
+  "crops": {
+   "base": {
+    "x": 0.15,
+    "y": 0.05,
+    "w": 0.7,
+    "h": 0.9
+   },
+   "swap": {
+    "x": 0.15,
+    "y": 0.05,
+    "w": 0.7,
+    "h": 0.9
+   }
+  },
+  "motion": {
+   "preset": "pan_right",
+   "amount": 0.7,
+   "clock": "show"
+  }
+ },
+ "overlays": [],
+ "atoms": [
+  {
+   "id": "codex_01_low_rise__p0",
+   "label": "codex_01_low_rise__p0",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P01"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_01_low_rise__p1",
+   "label": "codex_01_low_rise__p1",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P02"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_02_eye_orbit__p0",
+   "label": "codex_02_eye_orbit__p0",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P03"
+    ]
+   },
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_02_eye_orbit__p1",
+   "label": "codex_02_eye_orbit__p1",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P04"
+    ]
+   },
+   "camera": {
+    "preset": "eye_orbit"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_03_eye_push__p0",
+   "label": "codex_03_eye_push__p0",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P05"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_03_eye_push__p1",
+   "label": "codex_03_eye_push__p1",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P06"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_05_ecu_jitter__p0",
+   "label": "codex_05_ecu_jitter__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P09"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_04_ecu_fist_lens__p0",
+   "label": "codex_04_ecu_fist_lens__p0",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P07"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_fist_lens"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_04_ecu_fist_lens__p1",
+   "label": "codex_04_ecu_fist_lens__p1",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P08"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_fist_lens"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_05_ecu_jitter__p1",
+   "label": "codex_05_ecu_jitter__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P10"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_05_ecu_jitter__p2",
+   "label": "codex_05_ecu_jitter__p2",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P11"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_14_ecu_jitter_y__p0",
+   "label": "codex_14_ecu_jitter_y__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P29"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "b": 1.12
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.5
+     }
+    },
+    "nudge": {
+     "s": 0.5,
+     "y": 200
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_14_ecu_jitter_y__p1",
+   "label": "codex_14_ecu_jitter_y__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P30"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "b": 1.12
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.5
+     }
+    },
+    "nudge": {
+     "s": 0.5,
+     "y": 200
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_20_ecu_jitter_s__p0",
+   "label": "codex_20_ecu_jitter_s__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P43"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "x": {
+      "type": "const",
+      "v": 0
+     }
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_20_ecu_jitter_s__p1",
+   "label": "codex_20_ecu_jitter_s__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P44"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "x": {
+      "type": "const",
+      "v": 0
+     }
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_08_eye_lateral__p0",
+   "label": "codex_08_eye_lateral__p0",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P17"
+    ]
+   },
+   "camera": {
+    "preset": "eye_lateral"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_08_eye_lateral__p1",
+   "label": "codex_08_eye_lateral__p1",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P18"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_snap"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_07_ots_R_hold__p0",
+   "label": "codex_07_ots_R_hold__p0",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P15"
+    ]
+   },
+   "camera": {
+    "preset": "ots_R_hold"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_07_ots_R_hold__p1",
+   "label": "codex_07_ots_R_hold__p1",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P16"
+    ]
+   },
+   "camera": {
+    "preset": "ots_R_hold"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_06_dive_then_inside__p0",
+   "label": "codex_06_dive_then_inside__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P12"
+    ]
+   },
+   "camera": {
+    "segments": [
+     {
+      "preset": "low_dive_under",
+      "dur_s": 0.5
+     },
+     {
+      "preset": "upward_inside",
+      "dur_s": 1
+     }
+    ]
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_06_dive_then_inside__p1",
+   "label": "codex_06_dive_then_inside__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P13"
+    ]
+   },
+   "camera": {
+    "segments": [
+     {
+      "preset": "low_dive_under",
+      "dur_s": 0.5
+     },
+     {
+      "preset": "upward_inside",
+      "dur_s": 1
+     }
+    ]
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_06_dive_then_inside__p2",
+   "label": "codex_06_dive_then_inside__p2",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P14"
+    ]
+   },
+   "camera": {
+    "segments": [
+     {
+      "preset": "low_dive_under",
+      "dur_s": 0.5
+     },
+     {
+      "preset": "upward_inside",
+      "dur_s": 1
+     }
+    ]
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_09_waist_ots_chase__p0",
+   "label": "codex_09_waist_ots_chase__p0",
+   "kind": "duo",
+   "duration_s": 0.45,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P19"
+    ]
+   },
+   "camera": {
+    "preset": "slide_right",
+    "nudge": {
+     "s": 0.31
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_09_waist_ots_chase__p1",
+   "label": "codex_09_waist_ots_chase__p1",
+   "kind": "duo",
+   "duration_s": 0.45,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P20"
+    ]
+   },
+   "camera": {
+    "preset": "slide_right",
+    "nudge": {
+     "s": 0.31
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_10_fence_sweep_roll__p0",
+   "label": "codex_10_fence_sweep_roll__p0",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P21"
+    ]
+   },
+   "camera": {
+    "preset": "fence_sweep_roll"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_10_fence_sweep_roll__p1",
+   "label": "codex_10_fence_sweep_roll__p1",
+   "kind": "duo",
+   "duration_s": 0.15,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P22"
+    ]
+   },
+   "camera": {
+    "preset": "fence_sweep_roll"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_15_floor_race__p0",
+   "label": "codex_15_floor_race__p0",
+   "kind": "duo",
+   "duration_s": 0.375,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P31"
+    ]
+   },
+   "camera": {
+    "preset": "floor_race",
+    "nudge": {
+     "s": 0.44,
+     "y": -50,
+     "x": 100
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "ib_ib01_punch_windup",
+   "label": "ib_ib01_punch_windup",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "IB01"
+    ]
+   },
+   "camera": {
+    "preset": "floor_race",
+    "nudge": {
+     "s": 0.44,
+     "y": -50,
+     "x": 100
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_15_floor_race__p1",
+   "label": "codex_15_floor_race__p1",
+   "kind": "duo",
+   "duration_s": 0.375,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P32"
+    ]
+   },
+   "camera": {
+    "preset": "floor_race",
+    "nudge": {
+     "s": 0.44,
+     "y": -50,
+     "x": 100
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_11_floor_hold__p0",
+   "label": "codex_11_floor_hold__p0",
+   "kind": "duo",
+   "duration_s": 0.4,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P23"
+    ]
+   },
+   "camera": {
+    "preset": "floor_hold",
+    "intensity": 0.5,
+    "nudge": {
+     "s": 0.45
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_11_floor_hold__p1",
+   "label": "codex_11_floor_hold__p1",
+   "kind": "duo",
+   "duration_s": 0.4,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P24"
+    ]
+   },
+   "camera": {
+    "preset": "floor_hold",
+    "intensity": 0.5,
+    "nudge": {
+     "s": 0.45
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_12_eye_lateral_rev__p0",
+   "label": "codex_12_eye_lateral_rev__p0",
+   "kind": "duo",
+   "duration_s": 0.1,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P25"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "nudge": {
+     "x": -200,
+     "s": 0.34
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_12_eye_lateral_rev__p1",
+   "label": "codex_12_eye_lateral_rev__p1",
+   "kind": "duo",
+   "duration_s": 0.1,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P26"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "nudge": {
+     "x": -200,
+     "s": 0.34
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_13_eye_hold__p0",
+   "label": "codex_13_eye_hold__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P27"
+    ]
+   },
+   "camera": {
+    "preset": "eye_hold"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_13_eye_hold__p1",
+   "label": "codex_13_eye_hold__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P28"
+    ]
+   },
+   "camera": {
+    "preset": "eye_hold"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_16_whip_A_to_B__p0",
+   "label": "codex_16_whip_A_to_B__p0",
+   "kind": "duo",
+   "duration_s": 0.375,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P33"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "ib_ib02_kick_chamber",
+   "label": "ib_ib02_kick_chamber",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "IB02"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_16_whip_A_to_B__p1",
+   "label": "codex_16_whip_A_to_B__p1",
+   "kind": "duo",
+   "duration_s": 0.375,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P34"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_snap"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_19_whip_A_to_B_wide__p0",
+   "label": "codex_19_whip_A_to_B_wide__p0",
+   "kind": "duo",
+   "duration_s": 0.225,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P39"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_19_whip_A_to_B_wide__p1",
+   "label": "codex_19_whip_A_to_B_wide__p1",
+   "kind": "duo",
+   "duration_s": 0.225,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P40"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_19_whip_A_to_B_wide__p2",
+   "label": "codex_19_whip_A_to_B_wide__p2",
+   "kind": "duo",
+   "duration_s": 0.225,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P41"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_19_whip_A_to_B_wide__p3",
+   "label": "codex_19_whip_A_to_B_wide__p3",
+   "kind": "duo",
+   "duration_s": 0.1,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P42"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_snap"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "ib_ib03_land_recovery",
+   "label": "ib_ib03_land_recovery",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "IB03"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "ib_ib04_impact_bridge",
+   "label": "ib_ib04_impact_bridge",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "IB04"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_17_high_dive__p0",
+   "label": "codex_17_high_dive__p0",
+   "kind": "duo",
+   "duration_s": 0.25,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P35"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_17_high_dive__p1",
+   "label": "codex_17_high_dive__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P36"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_18_box_side_pan__p0",
+   "label": "codex_18_box_side_pan__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P37"
+    ]
+   },
+   "camera": {
+    "preset": "box_side_pan"
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_18_box_side_pan__p1",
+   "label": "codex_18_box_side_pan__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P38"
+    ]
+   },
+   "camera": {
+    "preset": "box_side_pan",
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_21_face_whip__p0",
+   "label": "codex_21_face_whip__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P45"
+    ]
+   },
+   "camera": {
+    "preset": "face_whip",
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_21_face_whip__p1",
+   "label": "codex_21_face_whip__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P46"
+    ]
+   },
+   "camera": {
+    "preset": "face_whip",
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_22_pass_between_a__p0",
+   "label": "codex_22_pass_between_a__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P47"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0,
+     0.6666666666666666
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_22_pass_between_a__p1",
+   "label": "codex_22_pass_between_a__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P48"
+    ]
+   },
+   "camera": {
+    "preset": "face_whip",
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_22_pass_between_a__p2",
+   "label": "codex_22_pass_between_a__p2",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P49"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0,
+     0.6666666666666666
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_22_pass_between_a__p3",
+   "label": "codex_22_pass_between_a__p3",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P50"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0,
+     0.6666666666666666
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_23_pass_between_b__p0",
+   "label": "codex_23_pass_between_b__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P51"
+    ]
+   },
+   "camera": {
+    "preset": "face_whip",
+    "nudge": {
+     "y": 214.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_23_pass_between_b__p1",
+   "label": "codex_23_pass_between_b__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P52"
+    ]
+   },
+   "camera": {
+    "preset": "pass_between",
+    "u_range": [
+     0.6666666666666666,
+     1
+    ],
+    "nudge": {
+     "y": 214.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_24_dutch_spiral_a__p0",
+   "label": "codex_24_dutch_spiral_a__p0",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P53"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0.0,
+     0.25
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_24_dutch_spiral_a__p1",
+   "label": "codex_24_dutch_spiral_a__p1",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P54"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0.25,
+     0.5
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_24_dutch_spiral_a__p2",
+   "label": "codex_24_dutch_spiral_a__p2",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P55"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0.5,
+     0.75
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  },
+  {
+   "id": "codex_24_dutch_spiral_a__p3",
+   "label": "codex_24_dutch_spiral_a__p3",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight"
+   },
+   "hero": {
+    "layout_source": "assets/daiyu-baochai-classroom-dense/layout.json",
+    "plates": [
+     "P56"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_spiral",
+    "u_range": [
+     0.75,
+     1.0
+    ],
+    "nudge": {
+     "y": 144.0
+    }
+   },
+   "background": {
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "crop": {
+     "x": 0.15,
+     "y": 0.05,
+     "w": 0.7,
+     "h": 0.9
+    },
+    "motion": {
+     "preset": "pan_right",
+     "amount": 0.7,
+     "clock": "show"
+    }
+   },
+   "fx_hooks": []
+  }
+ ],
+ "meta": {
+  "pack": "fight-daiyu-baochai-classroom-dense-2026-10-24",
+  "reuse": "HM-CLASS-DENSE-BG",
+  "source_motion": "daiyu-baochai-classroom-dense-ib.motion.json",
+  "camcont": "2026-10-25",
+  "fg_proof": {
+   "id": "CLASS-DENSE-FG",
+   "copied": false,
+   "parallax": 0.45,
+   "breaks_s": [
+    12.18,
+    13.6
+   ],
+   "tung_sha256": "3f9e52f2d252cd6a30a38e7dd41e4a3b9ce40ac02ed4fde81f7d9d03e2ff29e1",
+   "reason": "The pack keeps the existing TUNG foreground props. Those prop bytes and show.fg were not in the attached metadata, so this registration does not add foreground art."
+  },
+  "bg_windows": [
+   {
+    "t0": 0.0,
+    "t1": 5.1,
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg"
+   },
+   {
+    "t0": 5.1,
+    "t1": 10.2,
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg"
+   },
+   {
+    "t0": 10.2,
+    "t1": 15.1,
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg"
+   },
+   {
+    "t0": 15.1,
+    "t1": null,
+    "src": "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg"
+   }
+  ],
+  "missing_assets": {
+   "known_paths_absent_from_kit": [
+    "assets/daiyu-baochai-classroom/bg/bg_classroom.jpg",
+    "assets/daiyu-baochai-classroom/bg/bg_classroom_side_low.jpg",
+    "assets/daiyu-baochai-classroom/bg/bg_classroom_mid_mess.jpg",
+    "assets/daiyu-baochai-classroom/bg/bg_classroom_mess.jpg",
+    "assets/daiyu-baochai-nightarcade/plates/IB01.png",
+    "assets/daiyu-baochai-nightarcade/plates/IB02.png",
+    "assets/daiyu-baochai-nightarcade/plates/IB03.png",
+    "assets/daiyu-baochai-nightarcade/plates/IB04.png"
+   ],
+   "unknown_plate_files": [
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P09",
+    "P07",
+    "P08",
+    "P10",
+    "P11",
+    "P29",
+    "P30",
+    "P43",
+    "P44",
+    "P17",
+    "P18",
+    "P15",
+    "P16",
+    "P12",
+    "P13",
+    "P14",
+    "P19",
+    "P20",
+    "P21",
+    "P22",
+    "P31",
+    "P32",
+    "P23",
+    "P24",
+    "P25",
+    "P26",
+    "P27",
+    "P28",
+    "P33",
+    "P34",
+    "P39",
+    "P40",
+    "P41",
+    "P42",
+    "P35",
+    "P36",
+    "P37",
+    "P38",
+    "P45",
+    "P46",
+    "P47",
+    "P48",
+    "P49",
+    "P50",
+    "P51",
+    "P52",
+    "P53",
+    "P54",
+    "P55",
+    "P56"
+   ]
+  }
+ }
+}
