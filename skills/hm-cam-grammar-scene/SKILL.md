@@ -5,12 +5,13 @@ description: Design editable Intent/Action/Reaction triplets and a Wide re-estab
 
 # HM scene camera grammar · Step 4
 
-Use the [Fight Camera Grammar Template](https://app.notion.com/p/40b9565776c68154a978edfd92c62652)
-as the planning contract. Its source was read on 2026-11-08; last edited
-2026-11-01T11:46:06.416Z; Notion verification state was **unverified**.
-The related [camera grammar audit](https://app.notion.com/p/40b9565776c681e78bc0f8240988daba)
-provides context. The checkout's actual `public/presets/camera_presets.json`
-wins whenever historical source examples mention absent IDs.
+Field names, Notion URLs, and the box template path have one source of truth:
+the [HM-PF-24 sync note](../../docs/product-flow/HM-PF-24-cam-grammar-sync.md)
+([skill README](README.md)). Read it before writing a scene sheet. Do not add
+a fight-meta label, beat column, shot-size code, or clause token that the note
+does not list. If the box file is still **UNKNOWN**, do not invent its body.
+The checkout's actual `public/presets/camera_presets.json` wins whenever a
+historical example mentions an absent preset ID.
 
 ## Required input
 
