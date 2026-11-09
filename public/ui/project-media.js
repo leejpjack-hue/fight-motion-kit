@@ -328,7 +328,9 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
       seen.add(src);result.push({src,name:String(name||'Image '+(result.length+1)).slice(0,100),url:imageData.test(data)?data:'/'+data.replace(/^\//,'')});
     }
     p.media.forEach(m=>add(m.src,m.name));
-    for(const key of ['base','swap'])add(p.show.bg?.[key],key==='base'?'Project background':'Alternate background');
+    const showBg=p.show.bg||{};
+    if(Object.prototype.hasOwnProperty.call(showBg,'locations')&&Array.isArray(showBg.locations))showBg.locations.forEach((row,i)=>add(row&&row.src,'Location '+(i+1)));
+    else for(const key of ['base','swap'])add(showBg[key],key==='base'?'Project background':'Alternate background');
     (p.show.atoms||[]).forEach((a,i)=>add(a.background?.src,'Clip '+(i+1)+' background'));
     for(const key of Object.keys(p.assets||{}))add(key,key.split('/').pop());
     if(!result.length)throw Error('No images found in this project.');

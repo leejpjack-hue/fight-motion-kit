@@ -388,6 +388,82 @@ function cameraPoseOnSegment(seg, t) {
   if (seg.snap_zoom) camera.s += 0.18 * cameraEase('snap', u0 + (u1 - u0) * local);
   return camera;
 }
+function backgroundLocationsBundle() {
+  function locationAt(locations, t) {
+    if (!Array.isArray(locations)) return null;
+    const time = +t || 0;
+    for (let i = 0; i < locations.length; i++) {
+      const row = locations[i];
+      if (row && time >= +row.t0 && time < +row.t1) return row;
+    }
+    return null;
+  }
+  function overlappingLocationId(locations) {
+    if (!Array.isArray(locations)) return null;
+    for (let i = 0; i < locations.length; i++) {
+      const row = locations[i];
+      if (!row || !Number.isFinite(+row.t0) || !Number.isFinite(+row.t1)) continue;
+      for (let j = 0; j < i; j++) {
+        const prev = locations[j];
+        if (!prev || !Number.isFinite(+prev.t0) || !Number.isFinite(+prev.t1)) continue;
+        if (+row.t0 < +prev.t1 && +prev.t0 < +row.t1) return String(row.id || i);
+      }
+    }
+    return null;
+  }
+  function backgroundAt(entry, timelineBg, t) {
+    const own = (entry && entry.background) || {};
+    const global = timelineBg && typeof timelineBg === 'object' ? timelineBg : {};
+    const ownsSrc = Object.prototype.hasOwnProperty.call(own, 'src');
+    let layerSrc;
+    let layerMotion;
+    let layerCrop;
+    if (Array.isArray(global.locations)) {
+      const loc = locationAt(global.locations, t);
+      layerSrc = loc ? loc.src : null;
+      layerMotion = loc && loc.motion;
+      layerCrop = loc && loc.crop;
+    } else {
+      const key = (entry && entry.bg) || 'base';
+      layerSrc = global[key];
+      layerMotion = global.motion;
+      layerCrop = global.crops && global.crops[key];
+    }
+    return {
+      src: ownsSrc ? own.src : layerSrc,
+      key_white: own.key_white ?? global.key_white,
+      motion: own.motion ?? layerMotion,
+      crop: own.crop ?? (ownsSrc ? null : layerCrop) ?? null,
+    };
+  }
+  function backgroundImageRefs(bg) {
+    const box = bg && typeof bg === 'object' ? bg : {};
+    const out = [];
+    if (Array.isArray(box.locations)) {
+      for (let i = 0; i < box.locations.length; i++) {
+        const src = box.locations[i] && box.locations[i].src;
+        if (typeof src === 'string' && src) out.push(src);
+      }
+      return out;
+    }
+    if (typeof box.base === 'string' && box.base) out.push(box.base);
+    if (typeof box.swap === 'string' && box.swap) out.push(box.swap);
+    return out;
+  }
+  var root = typeof globalThis !== 'undefined' ? globalThis : this;
+  root.locationAt = locationAt;
+  root.overlappingLocationId = overlappingLocationId;
+  root.backgroundAt = backgroundAt;
+  root.backgroundImageRefs = backgroundImageRefs;
+  root.backgroundLocationsBundle = backgroundLocationsBundle;
+  return {
+    locationAt: locationAt,
+    overlappingLocationId: overlappingLocationId,
+    backgroundAt: backgroundAt,
+    backgroundImageRefs: backgroundImageRefs,
+  };
+}
+backgroundLocationsBundle();
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
@@ -406,7 +482,7 @@ function createMotionRenderer(canvas, assets = {}) {
     timeline = data.timeline; layout = data.layout;
     const paths = new Set();
     Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
-    Object.values(timeline.bg || {}).filter(p => typeof p === 'string').forEach(p => paths.add(p));
+    backgroundImageRefs(timeline.bg).forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
     (timeline.fg?.props || []).forEach(p => { if (p.src) paths.add(p.src); if (p.effect?.broken_src) paths.add(p.effect.broken_src); });
     const imgCache = (typeof window !== 'undefined' && (window.__hmImageCache ||= new Map())) || null;
@@ -421,7 +497,7 @@ function createMotionRenderer(canvas, assets = {}) {
       if (imgCache) { if (imgCache.size > 200) imgCache.clear(); imgCache.set(resolved, im); }
       images.set(path, im);
     }));
-    for(const l of Object.values(layout)){const b=backgroundFor(l);if(b.src&&b.key_white&&l.full&&!keyedImages.has(l.full)){const im=images.get(l.full);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}}
+    for(const l of Object.values(layout)){const b=backgroundAt(l,timeline.bg,l.t||0);const owns=!!(l.background&&Object.hasOwn(l.background,'src'));const anyLoc=!owns&&Array.isArray(timeline.bg?.locations)&&timeline.bg.locations.some(row=>row&&row.src);if((b.src||anyLoc)&&b.key_white&&l.full&&!keyedImages.has(l.full)){const im=images.get(l.full);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}}
   }
   // Flood only edge-connected neutral whites, preserving enclosed white clothing/highlights.
   function removeWhiteBackdrop(im) {
@@ -441,15 +517,11 @@ function createMotionRenderer(canvas, assets = {}) {
     if (contain) { const s = Math.min(w / im.width, h / im.height); x += (w - im.width * s) / 2; y += (h - im.height * s) / 2; w = im.width * s; h = im.height * s; }
     ctx.save(); if (flip) {ctx.translate(x + w, y); ctx.scale(-1, 1); x = 0; y = 0;} ctx.drawImage(im, x, y, w, h); ctx.restore();
   }
-  function backgroundFor(l) {
-    const own=l.background||{},global=timeline.bg||{};
-    return {src:Object.hasOwn(own,'src')?own.src:global[l.bg||'base'],key_white:own.key_white??global.key_white,motion:own.motion??global.motion,crop:own.crop??(Object.hasOwn(own,'src')?null:global.crops?.[l.bg||'base'])??null};
-  }
   function paintBackground(path, crop, x, y, s) {
     ctx.save(); ctx.translate(640 + x, 360 + y); ctx.scale(s, s); ctx.translate(-640, -360); backgroundImage(path, crop); ctx.restore();
   }
   function drawBackground(l, t) {
-    const b=backgroundFor(l);if(!b.src)return;
+    const b=backgroundAt(l,timeline.bg,t);if(!b.src)return;
     const a=timeline.atoms.find(a=>a.id===l.atom),m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
     const u=backgroundMotionProgress(m,t,a?{duration:timeline.duration_s,atomT0:a.t0,atomT1:a.t1}:{duration:timeline.duration_s,atomT0:t,atomT1:t});
     const frame=backgroundMotionFrame(b.crop,preset,amount,u);
@@ -494,8 +566,8 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.restore();
   }
-  function drawScene(l) {
-    const b=backgroundFor(l);
+  function drawScene(l, sampleT) {
+    const b=backgroundAt(l,timeline.bg,sampleT);
     if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
     else {
       (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
@@ -634,16 +706,16 @@ function createMotionRenderer(canvas, assets = {}) {
     let amp = 0;
     (fx.shake || []).forEach(([h, a, d]) => { if (t >= h && t < h + d) amp = Math.max(amp, a * (1 - (t - h) / d)); });
     (fx.hits || []).forEach(([h]) => { if (t >= h && t < h + .28) amp = Math.max(amp, 9 * (1 - (t - h) / .28)); });
-    const bgMotion=backgroundFor(l).motion,independent=bgMotion&&bgMotion.preset!=='follow_camera';
+    const bgMotion=backgroundAt(l,timeline.bg,t).motion,independent=bgMotion&&bgMotion.preset!=='follow_camera';
     if(independent)drawBackground(l,t);
     ctx.save(); ctx.translate(640 + camera.x + Math.sin(t * 157) * amp, 360 + camera.y + Math.cos(t * 131) * amp * .6); ctx.rotate(camera.r * Math.PI / 180); ctx.scale(camera.s, camera.s); ctx.translate(-640, -360);
     if(!independent)drawBackground(l,t);
-    drawScene(l);
+    drawScene(l,t);
     if (opts.onion) {
       const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
       ctx.save(); ctx.globalAlpha = 0.25;
-      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id]);
-      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id]);
+      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id], t);
+      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id], t);
       ctx.restore();
     }
     ctx.restore();

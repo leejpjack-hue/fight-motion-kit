@@ -342,16 +342,32 @@
 
     var bg = {};
     if (input.bg && typeof input.bg === 'object') {
-      if (typeof input.bg.base === 'string' && input.bg.base.trim()) {
-        var bgResolved = resolveLocalFileSrc(input.bg.base, options.localFiles, assets);
-        bg.base = assertLocalLockAssetPath(bgResolved, 'bg.base', assets);
-      }
-      if (typeof input.bg.swap === 'string' && input.bg.swap.trim()) {
-        var swapResolved = resolveLocalFileSrc(input.bg.swap, options.localFiles, assets);
-        bg.swap = assertLocalLockAssetPath(swapResolved, 'bg.swap', assets);
-      }
-      if (input.bg.swap_t != null && Number.isFinite(+input.bg.swap_t) && bg.swap) {
-        bg.swap_t = +input.bg.swap_t;
+      if (Object.prototype.hasOwnProperty.call(input.bg, 'locations')) {
+        if (!Array.isArray(input.bg.locations)) throw new Error('Costume lock bg.locations must be a list.');
+        bg.locations = input.bg.locations.map(function (row, idx) {
+          if (!row || typeof row !== 'object') throw new Error('Costume lock bg.locations[' + idx + '] is invalid.');
+          var next = { id: row.id, src: null, t0: +row.t0, t1: +row.t1 };
+          if (row.src != null) {
+            var resolved = resolveLocalFileSrc(row.src, options.localFiles, assets);
+            next.src = assertLocalLockAssetPath(resolved, 'bg.locations', assets);
+          }
+          if (row.crop && typeof row.crop === 'object') next.crop = row.crop;
+          if (row.motion && typeof row.motion === 'object') next.motion = row.motion;
+          return next;
+        });
+        if (typeof input.bg.key_white === 'boolean') bg.key_white = input.bg.key_white;
+      } else {
+        if (typeof input.bg.base === 'string' && input.bg.base.trim()) {
+          var bgResolved = resolveLocalFileSrc(input.bg.base, options.localFiles, assets);
+          bg.base = assertLocalLockAssetPath(bgResolved, 'bg.base', assets);
+        }
+        if (typeof input.bg.swap === 'string' && input.bg.swap.trim()) {
+          var swapResolved = resolveLocalFileSrc(input.bg.swap, options.localFiles, assets);
+          bg.swap = assertLocalLockAssetPath(swapResolved, 'bg.swap', assets);
+        }
+        if (input.bg.swap_t != null && Number.isFinite(+input.bg.swap_t) && bg.swap) {
+          bg.swap_t = +input.bg.swap_t;
+        }
       }
     }
 

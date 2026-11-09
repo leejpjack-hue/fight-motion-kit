@@ -173,6 +173,216 @@
   function isFullBackgroundCrop(c) {
     return !c || (Math.abs(c.x) < 1e-4 && Math.abs(c.y) < 1e-4 && Math.abs(c.w - 1) < 1e-4 && Math.abs(c.h - 1) < 1e-4);
   }
+  const BACKGROUND_MOVES = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out'];
+  function validBackgroundMotion(m) {
+    if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
+    if (!BACKGROUND_MOVES.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1) return false;
+    if (m.clock !== undefined && !['show','per_atom','legacy','span'].includes(m.clock)) return false;
+    const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
+    if (m.span !== undefined) {
+      const span = m.span;
+      const t0 = Array.isArray(span) ? span[0] : span && span.t0;
+      const t1 = Array.isArray(span) ? span[1] : span && span.t1;
+      if (!pairOk(t0, t1)) return false;
+    }
+    if ((m.t0 !== undefined || m.t1 !== undefined) && !pairOk(m.t0, m.t1)) return false;
+    if (m.clock === 'span' && m.span === undefined && m.t0 === undefined) return false;
+    return true;
+  }
+  function lintBackgroundLocations(locations) {
+    if (!Array.isArray(locations)) return 'background locations must be a list';
+    if (!locations.length) return 'background locations are empty';
+    const ids = new Set();
+    for (let i = 0; i < locations.length; i++) {
+      const row = locations[i];
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return 'invalid background location';
+      if (typeof row.id !== 'string' || !row.id) return 'background location needs an id';
+      if (ids.has(row.id)) return 'duplicate background location';
+      ids.add(row.id);
+      if (!(row.src === null || (typeof row.src === 'string' && row.src))) return 'background image must be a path or null';
+      if (!Number.isFinite(+row.t0) || +row.t0 < 0) return 'background location starts before 0';
+      if (!Number.isFinite(+row.t1) || !(+row.t1 > +row.t0)) return 'background window would be empty';
+      if (row.crop !== undefined && !validBackgroundCrop(row.crop)) return 'invalid background crop';
+      if (row.motion !== undefined && !validBackgroundMotion(row.motion)) return 'invalid background motion';
+    }
+    if (globalThis.overlappingLocationId(locations)) return 'background locations overlap';
+    return '';
+  }
+  function backgroundShowDuration(show) {
+    return round4(((show && show.atoms) || []).reduce((sum, atom) => sum + (+atom.duration_s || 0), 0));
+  }
+  function backgroundFileStem(src) {
+    if (!src || /^data:/.test(src)) return '';
+    return stem(src);
+  }
+  function clearPairCrop(bg, key) {
+    if (!bg.crops) return;
+    delete bg.crops[key];
+    if (!Object.keys(bg.crops).length) delete bg.crops;
+  }
+  function locationRow(id, src, t0, t1, crop, motion) {
+    const row = { id: id, src: src == null || src === '' ? null : src, t0: round4(t0), t1: round4(t1) };
+    if (!(row.t1 > row.t0)) throw new Error('Background window would be empty.');
+    if (crop && !isFullBackgroundCrop(crop)) row.crop = deepClone(crop);
+    if (motion) row.motion = deepClone(motion);
+    return row;
+  }
+  function nextLocationId(rows) {
+    let n = 0;
+    (rows || []).forEach((row) => {
+      const match = /^loc-(\d+)$/.exec((row && row.id) || '');
+      if (match) n = Math.max(n, +match[1]);
+    });
+    return 'loc-' + (n + 1);
+  }
+  function seedLocationRows(bg, duration) {
+    const swapSrc = typeof bg.swap === 'string' && bg.swap ? bg.swap : '';
+    const swapT = Number.isFinite(+bg.swap_t) ? +bg.swap_t : null;
+    const motion = bg.motion;
+    const crops = bg.crops || {};
+    const baseSrc = typeof bg.base === 'string' && bg.base ? bg.base : null;
+    if (swapSrc && swapT != null && swapT <= 1e-6) return [locationRow('loc-1', swapSrc, 0, duration, crops.swap, motion)];
+    if (swapSrc && swapT != null && swapT > 1e-6 && swapT < duration) {
+      return [
+        locationRow('loc-1', baseSrc, 0, swapT, crops.base, motion),
+        locationRow('loc-2', swapSrc, swapT, duration, crops.swap, motion),
+      ];
+    }
+    return [locationRow('loc-1', baseSrc, 0, duration, crops.base, motion)];
+  }
+  function splitLocationRows(rows, playhead, duration) {
+    const time = round4(+playhead);
+    if (!Number.isFinite(time) || time < 0 || time >= duration) throw new Error('Background window would be empty.');
+    const next = rows.map((row) => deepClone(row));
+    const idx = next.findIndex((row) => time >= +row.t0 && time < +row.t1);
+    if (idx >= 0) {
+      const row = next[idx];
+      const cut = time <= +row.t0 ? round4(+row.t0 + (+row.t1 - +row.t0) / 2) : time;
+      const rightId = nextLocationId(next);
+      const left = locationRow(row.id, row.src, row.t0, cut, row.crop, row.motion);
+      const right = locationRow(rightId, row.src, cut, row.t1, row.crop, row.motion);
+      next.splice(idx, 1, left, right);
+      return next;
+    }
+    let end = duration;
+    for (let i = 0; i < next.length; i++) {
+      const t0 = +next[i].t0;
+      if (t0 > time && t0 < end) end = t0;
+    }
+    const white = locationRow(nextLocationId(next), null, time, end, null, null);
+    const at = next.findIndex((row) => +row.t0 > time);
+    if (at < 0) next.push(white);
+    else next.splice(at, 0, white);
+    return next;
+  }
+  function dropPairBackgroundKeys(bg) {
+    delete bg.base;
+    delete bg.swap;
+    delete bg.swap_t;
+    delete bg.crops;
+    delete bg.motion;
+    delete bg.aliases;
+  }
+  function assertPairSlot(bg, key) {
+    if (Object.prototype.hasOwnProperty.call(bg, 'locations')) throw new Error('Background locations replace the base and swap images.');
+    if (key !== 'base' && key !== 'swap') throw new Error('Background layer must be base or swap.');
+  }
+  function applyBackgroundEdit(show, command) {
+    if (!show || typeof show !== 'object') throw new Error('Choose a project before editing the background.');
+    const op = command && command.op;
+    const bg = show.bg && typeof show.bg === 'object' && !Array.isArray(show.bg) ? show.bg : {};
+    const next = deepClone(bg);
+    const hadLocations = Object.prototype.hasOwnProperty.call(bg, 'locations');
+    if (op === 'insert-location') {
+      const duration = command.duration != null ? round4(+command.duration) : backgroundShowDuration(show);
+      if (!(duration > 0)) throw new Error('Background window would be empty.');
+      let rows;
+      if (hadLocations) {
+        const problem = lintBackgroundLocations(next.locations);
+        if (problem) throw new Error(problem);
+        rows = splitLocationRows(next.locations, command.t, duration);
+      } else rows = splitLocationRows(seedLocationRows(next, duration), command.t, duration);
+      const problem = lintBackgroundLocations(rows);
+      if (problem) throw new Error(problem);
+      next.locations = rows;
+      if (!hadLocations) dropPairBackgroundKeys(next);
+    } else if (op === 'update-location') {
+      if (!hadLocations) throw new Error('Add a background location before editing one.');
+      const rows = (next.locations || []).map((row) => deepClone(row));
+      const idx = rows.findIndex((row) => row.id === command.id);
+      if (idx < 0) throw new Error('That background location is gone.');
+      const row = rows[idx];
+      const patch = command.patch || {};
+      if (Object.prototype.hasOwnProperty.call(patch, 'src')) {
+        if (!(patch.src === null || (typeof patch.src === 'string' && patch.src))) throw new Error('Background image must be a path or null.');
+        row.src = patch.src;
+        if (!Object.prototype.hasOwnProperty.call(patch, 'crop')) delete row.crop;
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'crop')) {
+        if (patch.crop == null || isFullBackgroundCrop(patch.crop)) delete row.crop;
+        else if (!validBackgroundCrop(patch.crop)) throw new Error('invalid background crop');
+        else row.crop = deepClone(patch.crop);
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'motion')) {
+        if (patch.motion == null) delete row.motion;
+        else if (!validBackgroundMotion(patch.motion)) throw new Error('invalid background motion');
+        else row.motion = deepClone(patch.motion);
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 't0')) row.t0 = round4(+patch.t0);
+      if (Object.prototype.hasOwnProperty.call(patch, 't1')) row.t1 = round4(+patch.t1);
+      const problem = lintBackgroundLocations(rows);
+      if (problem) throw new Error(problem);
+      next.locations = rows;
+    } else if (op === 'remove-location') {
+      if (!Array.isArray(next.locations)) throw new Error('Add a background location before editing one.');
+      const rows = next.locations.filter((row) => row.id !== command.id);
+      if (rows.length === next.locations.length) throw new Error('That background location is gone.');
+      if (!rows.length) delete next.locations;
+      else {
+        const problem = lintBackgroundLocations(rows);
+        if (problem) throw new Error(problem);
+        next.locations = rows;
+      }
+    } else if (op === 'set-pair-image') {
+      assertPairSlot(next, command.key);
+      if (command.key === 'swap' && !next.swap) throw new Error('The swap image is not on this project.');
+      if (typeof command.src !== 'string' || !command.src) throw new Error('Background image must be a path.');
+      const prevStem = backgroundFileStem(next[command.key]);
+      if (prevStem) {
+        next.aliases = next.aliases || {};
+        const list = Array.isArray(next.aliases[command.key]) ? next.aliases[command.key].slice() : [];
+        if (!list.includes(prevStem)) list.push(prevStem);
+        next.aliases[command.key] = list;
+      }
+      next[command.key] = command.src;
+      clearPairCrop(next, command.key);
+    } else if (op === 'remove-pair-image') {
+      assertPairSlot(next, command.key);
+      delete next[command.key];
+      clearPairCrop(next, command.key);
+      if (!next.base && !next.swap) delete next.key_white;
+    } else if (op === 'set-pair-crop') {
+      assertPairSlot(next, command.key);
+      if (command.key === 'swap' && !next.swap) throw new Error('The swap image is not on this project.');
+      if (command.crop == null || isFullBackgroundCrop(command.crop)) clearPairCrop(next, command.key);
+      else if (!validBackgroundCrop(command.crop)) throw new Error('invalid background crop');
+      else {
+        next.crops = next.crops || {};
+        next.crops[command.key] = deepClone(command.crop);
+      }
+    } else if (op === 'set-pair-motion') {
+      if (hadLocations) throw new Error('Background locations replace the base and swap images.');
+      if (command.motion == null) delete next.motion;
+      else if (!validBackgroundMotion(command.motion)) throw new Error('invalid background motion');
+      else next.motion = deepClone(command.motion);
+    } else if (op === 'set-key-white') {
+      if (typeof command.value !== 'boolean') throw new Error('White-backdrop setting must be true or false.');
+      next.key_white = command.value;
+    } else throw new Error('Unknown background edit.');
+    if (command && command.ensureKeyWhite === true && next.key_white == null) next.key_white = true;
+    show.bg = next;
+    return show.bg;
+  }
   // Fit a rect to the stage aspect (16:9 by default) around its centre, given source image pixel aspect (w/h).
   function lockBackgroundCropAspect(c, imageAspect, stageAspect = 16 / 9, anchor = 'center') {
     const r = clampBackgroundCrop(c), k = (imageAspect || stageAspect) / stageAspect; // normalized h = w * k
@@ -1010,25 +1220,18 @@
 
     const floor = show.floor_y != null ? show.floor_y : 684;
     const bg = show.bg || {};
-    const backgroundMoves = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out'];
-    function validBackgroundMotion(m) {
-      if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
-      if (!backgroundMoves.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1) return false;
-      if (m.clock !== undefined && !['show','per_atom','legacy','span'].includes(m.clock)) return false;
-      const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
-      if (m.span !== undefined) {
-        const span = m.span;
-        const t0 = Array.isArray(span) ? span[0] : span && span.t0;
-        const t1 = Array.isArray(span) ? span[1] : span && span.t1;
-        if (!pairOk(t0, t1)) return false;
-      }
-      if ((m.t0 !== undefined || m.t1 !== undefined) && !pairOk(m.t0, m.t1)) return false;
-      if (m.clock === 'span' && m.span === undefined && m.t0 === undefined) return false;
-      return true;
-    }
-    function validateBackground(value, label) {
+    const hasLocations = Object.prototype.hasOwnProperty.call(bg, 'locations');
+    function validateBackground(value, label, project) {
       if (value == null) return;
       if (typeof value !== 'object' || Array.isArray(value)) { errors.push(label + ': invalid background settings'); return; }
+      if (!project && value.locations !== undefined) errors.push(label + ': a clip background is one image');
+      if (project && Object.prototype.hasOwnProperty.call(value, 'locations')) {
+        const problem = lintBackgroundLocations(value.locations);
+        if (problem) errors.push(label + ': ' + problem);
+        ['base', 'swap', 'swap_t', 'crops', 'motion', 'aliases'].forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(value, key)) errors.push(label + ': locations cannot be combined with ' + key);
+        });
+      }
       if (value.src !== undefined && value.src !== null && (typeof value.src !== 'string' || !value.src)) errors.push(label + ': background image must be a path or null');
       if (value.key_white !== undefined && typeof value.key_white !== 'boolean') errors.push(label + ': white-backdrop setting must be true or false');
       const m = value.motion;
@@ -1039,7 +1242,7 @@
         else for (const [k, c] of Object.entries(value.crops)) if (!['base', 'swap'].includes(k) || !validBackgroundCrop(c)) errors.push(label + ': invalid background crop for ' + k);
       }
     }
-    validateBackground(bg, 'Project');
+    validateBackground(bg, 'Project', true);
     const swapT = bg.swap ? bg.swap_t : null;
     const layout = {};
     const plates = [];
@@ -1135,7 +1338,8 @@
         nPlate += 1;
         const pid = 'S' + String(nPlate).padStart(3, '0');
         const pt0 = t0 + i * plateDuration;
-        const bgkey = swapT != null && pt0 + 1e-6 >= swapT ? 'swap' : 'base';
+        // A location list still stamps base. kit/player throws on any other plate key.
+        const bgkey = hasLocations ? 'base' : (swapT != null && pt0 + 1e-6 >= swapT ? 'swap' : 'base');
         const entry = {
           id: pid, t: pt0, atom: a.id, kind: a.kind, pose_mode: mode, bg: bgkey,
         };
@@ -1180,7 +1384,7 @@
               } else {
                 const ldir = dirname(lsrc);
                 const srcBg = se.bg;
-                if (srcBg) {
+                if (srcBg && !hasLocations) {
                   const mapped = mapLayoutBgToKey(srcBg, bg);
                   if (mapped) entry.bg = mapped;
                   else warns.push(a.id + ': layout bg ' + JSON.stringify(srcBg) + ' not in show.bg; keeping ' + entry.bg);
@@ -1381,7 +1585,10 @@
       fps_plates: plates.every(p => Math.abs(p.t1 - p.t0 - 0.5) < 1e-6) ? FPS_PLATES : null,
       plate_timing: 'explicit',
       floor_y: floor,
-      bg: {
+      bg: hasLocations ? {
+        key_white: bg.key_white === true,
+        locations: deepClone(bg.locations),
+      } : {
         base: bg.base,
         swap: bg.swap || null,
         swap_t: swapT,
@@ -1971,7 +2178,7 @@
         } else {
           pushChecklist(blocks, { kind: 'plate', level: 'block', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid + ' has no image' });
         }
-        if (entry.bg) {
+        if (entry.bg && !Object.prototype.hasOwnProperty.call(show.bg || {}, 'locations')) {
           const mapped = mapLayoutBgToKey(entry.bg, show.bg || {});
           if (!mapped) pushChecklist(warns, { kind: 'bg', level: 'warn', atom_id: atom.id || null, text: 'Broken BG · ' + where + ' · layout bg ' + entry.bg + ' does not match show.bg' });
         }
@@ -1992,8 +2199,17 @@
         pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + key });
       }
     });
-    if (bg.swap_t != null && bg.swap_t !== '' && !bg.swap) {
+    if (bg.swap_t != null && bg.swap_t !== '' && !bg.swap && !Object.prototype.hasOwnProperty.call(bg, 'locations')) {
       pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · swap time without a swap image' });
+    }
+    if (Object.prototype.hasOwnProperty.call(bg, 'locations')) {
+      if (!Array.isArray(bg.locations)) pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · locations' });
+      else bg.locations.forEach((row, i) => {
+        if (!row || row.src == null || row.src === '') return;
+        if (typeof row.src !== 'string' || !row.src.trim() || !assetResolved(project, row.src)) {
+          pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + (row.id || ('location ' + (i + 1))) });
+        }
+      });
     }
     (show.overlays || []).forEach((overlay, i) => {
       if (!overlay || overlay.src == null || overlay.src === '') return;
@@ -3498,6 +3714,7 @@
     BG_CROP_MIN,
     BG_CROP_FULL,
     validBackgroundCrop,
+    applyBackgroundEdit,
     clampBackgroundCrop,
     isFullBackgroundCrop,
     lockBackgroundCropAspect,

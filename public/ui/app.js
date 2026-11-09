@@ -122,7 +122,7 @@
     }
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
     if(p.assets)for(const value of Object.values(p.assets))if(typeof value!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,/.test(value))throw new Error('Embedded assets must be image data, not external URLs.');
-    Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); Object.values(p.show.bg||{}).filter(v=>typeof v==='string').forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);}); if(p.show.fg)pathsSafe(p.show.fg);
+    Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); backgroundImageRefs(p.show.bg).forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);}); if(p.show.fg)pathsSafe(p.show.fg);
     HMStripAdapter.validateProject(p);
   }
   async function builtIn(id) {
@@ -1091,6 +1091,7 @@
     const hasGlobalClockDep=!!(
       bg.swap||
       bg.swap_t!=null||
+      Object.hasOwn(bg,'locations')||
       (bg.motion&&bg.motion.preset&&bg.motion.preset!=='follow_camera'&&bg.motion.preset!=='static'&&bg.motion.clock!=='per_atom'&&bg.motion.clock!=='legacy')||
       (project.show.fg?.props?.length)||
       nonCaptionOverlays.length
