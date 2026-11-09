@@ -3,17 +3,24 @@
   const S=window.HMStudio,{$,on,safe}=S,C=window.HMComposeClient;
   let spanOpenOverride=null,lastSpanScopeKey='',lastSpanAuthored=false;
   const resolve=(p,src)=>p.assets?.[src]||(/^(data:|blob:|\/)/.test(src)?src:'/'+src);
-  const stem=src=>/^data:/.test(src||'')?'':String(src||'').split('/').pop().replace(/\.[^.]+$/,'');
+  let preferPlayhead=false;
+  const locationList=global=>global&&Object.prototype.hasOwnProperty.call(global,'locations')&&Array.isArray(global.locations)?global.locations:null;
+  const rowAtTime=(rows,t)=>(rows||[]).find(row=>t>=row.t0&&t<row.t1)||null;
   const selected=p=>p.show.atoms[S.selectedIndex];
   const entryFor=(p,a)=>a?p.layouts[a.hero.layout_source]?.[a.hero.plates[0]]:null;
-  function context(){const p=S.project;return {projectId:p.show.show_id,scope:$('backgroundScope').value,atomId:selected(p)?.id,key:$('backgroundTarget').value};}
+  function context(){const p=S.project;return {projectId:p.show.show_id,scope:$('backgroundScope').value,atomId:selected(p)?.id,key:$('backgroundTarget').value,locationId:$('backgroundLocation').value};}
   function edit(c,fn){
     S.editProject(p=>{
       if(p.show.show_id!==c.projectId)throw Error('Project changed. Choose the background again.');
-      if(c.scope==='clip'){
-        const a=p.show.atoms.find(a=>a.id===c.atomId);if(!a)throw Error('Select a clip for this background.');
-        a.background||={};fn(a.background,p,'src');if(!Object.keys(a.background).length)delete a.background;
-      }else{p.show.bg||={};fn(p.show.bg,p,c.key);}
+      if(c.scope!=='clip')throw Error('Project background edits go through one writer.');
+      const a=p.show.atoms.find(a=>a.id===c.atomId);if(!a)throw Error('Select a clip for this background.');
+      a.background||={};fn(a.background,p,'src');if(!Object.keys(a.background).length)delete a.background;
+    });
+  }
+  function writeProject(c,command){
+    S.editProject(p=>{
+      if(p.show.show_id!==c.projectId)throw Error('Project changed. Choose the background again.');
+      C.applyBackgroundEdit(p.show,command);
     });
   }
   function projectLayer(p,a){
@@ -21,20 +28,48 @@
     const t=p.show.atoms.slice(0,S.selectedIndex).reduce((sum,a)=>sum+a.duration_s,0);
     return compiled?.bg||(p.show.bg?.swap&&t>=p.show.bg.swap_t?'swap':'base');
   }
-  function projectImage(p,a){return p.show.bg?.[projectLayer(p,a)];}
+  function projectImage(p,a){const rows=locationList(p.show.bg||{});if(rows){const row=rowAtTime(rows,S.time);return row?row.src:null;}return p.show.bg?.[projectLayer(p,a)];}
   // HM-BG-CROP: crop rect for the current scope; null means full frame.
   function currentCrop(p,c){
-    const a=p.show.atoms.find(a=>a.id===c.atomId),global=p.show.bg||{};
-    if(c.scope==='clip'){const own=a?.background||{};return own.crop||(Object.hasOwn(own,'src')?null:global.crops?.[projectLayer(p,a)])||null;}
+    const a=p.show.atoms.find(a=>a.id===c.atomId),global=p.show.bg||{},rows=locationList(global);
+    if(c.scope==='clip'){
+      const own=a?.background||{};
+      if(own.crop)return own.crop;
+      if(Object.hasOwn(own,'src'))return null;
+      if(rows)return rowAtTime(rows,S.time)?.crop||null;
+      return global.crops?.[projectLayer(p,a)]||null;
+    }
+    if(rows){const row=rows.find(r=>r.id===c.locationId)||rows[0];return row?.crop||null;}
     return global.crops?.[c.key]||null;
+  }
+  function fillLocations(rows){
+    const sel=$('backgroundLocation'),prev=sel.value;
+    sel.replaceChildren();
+    rows.forEach(row=>{
+      const name=row.src?'Image':'White';
+      sel.add(new Option(name+' '+Number(row.t0).toFixed(2)+'-'+Number(row.t1).toFixed(2)+'s',row.id));
+    });
+    if(preferPlayhead){
+      preferPlayhead=false;
+      const hit=rowAtTime(rows,S.time);
+      if(hit)sel.value=hit.id;
+    }else if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+    else if(rows[0])sel.value=rows[0].id;
   }
   function refresh(){
     const p=S.project;if(!p)return;
     const a=selected(p),scope=$('backgroundScope');scope.options[0].disabled=!a;if(!a)scope.value='project';
-    const clip=scope.value==='clip',global=p.show.bg||{},settings=clip?(a?.background||{}):global,target=$('backgroundTarget');
-    target.options[1].hidden=!global.swap;target.hidden=clip||!global.swap;
+    const clip=scope.value==='clip',global=p.show.bg||{},rows=locationList(global),schedule=!clip&&!!rows,target=$('backgroundTarget');
+    if(schedule)fillLocations(rows);
+    const loc=schedule?(rows.find(r=>r.id===$('backgroundLocation').value)||rows[0]||null):null;
+    $('backgroundLocation').hidden=!schedule;
+    $('backgroundLocationActions').hidden=clip;
+    $('removeBackgroundLocation').hidden=!schedule;
+    $('backgroundWindow').hidden=!schedule;
+    target.options[1].hidden=!global.swap;target.hidden=clip||schedule||!global.swap;
     if(target.value==='swap'&&!global.swap)target.value='base';
-    const inherited=clip&&!Object.hasOwn(settings,'src'),src=clip?(inherited?projectImage(p,a):settings.src):global[target.value];
+    const settings=clip?(a?.background||{}):(schedule?(loc||{}):global);
+    const inherited=clip&&!Object.hasOwn(settings,'src'),src=clip?(inherited?projectImage(p,a):settings.src):(schedule?(loc?loc.src:null):global[target.value]);
     $('backgroundClipLabel').textContent=clip?'Clip '+(S.selectedIndex+1):'All inheriting clips';
     $('backgroundThumb').hidden=!src;$('backgroundPlaceholder').hidden=!!src;
     if(src){const url=resolve(p,src);if($('backgroundThumb').getAttribute('src')!==url)$('backgroundThumb').src=url;}else $('backgroundThumb').removeAttribute('src');
@@ -44,14 +79,14 @@
     $('inheritBackground').hidden=!clip;$('inheritBackground').disabled=inherited&&settings.key_white===undefined&&!settings.crop;
     const keyWhite=(clip?settings.key_white:undefined)??global.key_white??false;
     $('backgroundKeyWhite').checked=keyWhite;$('backgroundKeyWhite').disabled=!src;
-    const m=settings.motion??(clip?global.motion:undefined),preset=m?.preset||'follow_camera',cropNow=currentCrop(p,context());
+    const m=clip?(settings.motion??(locationList(global)?rowAtTime(locationList(global),S.time)?.motion:global.motion)):(schedule?loc?.motion:settings.motion),preset=m?.preset||'follow_camera',cropNow=currentCrop(p,context());
     const support=backgroundMotionSupport(cropNow),motionSel=$('backgroundMotion');
     for(const opt of motionSel.options)opt.disabled=false;
     motionSel.value=preset;
     for(const opt of motionSel.options){const info=support[opt.value];opt.disabled=!!(info&&!info.ok);opt.title=info&&!info.ok?info.reason:'';}
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
     const blocked=!!(support[preset]&&!support[preset].ok);
-    const cNow=context(),scopeKey=`${cNow.projectId}:${cNow.scope}:${cNow.scope==='clip'?cNow.atomId:cNow.key}`;
+    const cNow=context(),scopeKey=`${cNow.projectId}:${cNow.scope}:${cNow.scope==='clip'?cNow.atomId:(schedule?cNow.locationId:cNow.key)}`;
     const baseSpanUi=C.resolveBackgroundSpanUi(m,showSeconds(p),null);
     if(scopeKey!==lastSpanScopeKey||!baseSpanUi.continuous||baseSpanUi.authored!==lastSpanAuthored){
       spanOpenOverride=null;
@@ -78,13 +113,14 @@
     spanState.dataset.spanOpen=String(spanUi.open);
     spanState.dataset.spanOverrun=String(spanUi.exceedsShow);
     ['backgroundSpanT0','backgroundSpanT1','backgroundSpanT0Range','backgroundSpanT1Range'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i%2?spanUi.t1:spanUi.t0);});
+    if(schedule&&loc)['backgroundT0','backgroundT1'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i?loc.t1:loc.t0);});
     $('backgroundSpanValue').textContent=spanUi.valueLabel;
     $('resetBackgroundSpan').disabled=!spanUi.authored;
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
     const note=motionCopy(cropNow,preset,spanUi.honestyLabel);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
     p.media.forEach(m=>library.add(new Option(m.name,m.id)));
-    const prefix=clip?(inherited?'Using project image. ':'Only clip '+(S.selectedIndex+1)+'. '):'Project default for clips without an override. ';
+    const prefix=clip?(inherited?'Using project image. ':'Only clip '+(S.selectedIndex+1)+'. '):(schedule?'This time window for clips without their own image. ':'Project default for clips without an override. ');
     $('backgroundNotice').textContent=prefix+(!src?'Choose an image or use a library image.':entryFor(p,a)?.full?(keyWhite?'Edge-connected white is removed in previews and exports.':'Opaque plates cover the background. Use transparent PNGs or enable white-backdrop removal for white plates.'):'Background appears behind transparent plates.');
   }
   async function read(file){
@@ -103,11 +139,19 @@
   }
   async function setImage(c,src,data){
     const p=S.project,a=p.show.atoms.find(a=>a.id===c.atomId),autoKey=await hasWhiteBackdrop(p,a);
-    edit(c,(settings,next,key)=>{
-      const previous=settings[key];
-      if(c.scope==='project'&&previous&&stem(previous)){settings.aliases||={};settings.aliases[key]=[...new Set([...(settings.aliases[key]||[]),stem(previous)])];}
-      if(data){next.assets||={};next.assets[src]=data;}settings[key]=src;clearCrop(settings,c,key);
-      if(settings.key_white==null&&autoKey)settings.key_white=true;
+    if(c.scope==='clip'){
+      edit(c,(settings,next)=>{
+        if(data){next.assets||={};next.assets[src]=data;}settings.src=src;delete settings.crop;
+        if(settings.key_white==null&&autoKey)settings.key_white=true;
+      });
+      return;
+    }
+    S.editProject(proj=>{
+      if(proj.show.show_id!==c.projectId)throw Error('Project changed. Choose the background again.');
+      if(data){proj.assets||={};proj.assets[src]=data;}
+      const command=locationList(proj.show.bg||{})?{op:'update-location',id:c.locationId,patch:{src}}:{op:'set-pair-image',key:c.key,src};
+      if(autoKey)command.ensureKeyWhite=true;
+      C.applyBackgroundEdit(proj.show,command);
     });
   }
   on('changeBackground',()=>$('backgroundInput').click());
@@ -117,9 +161,9 @@
     finally{e.target.value='';}
   });
   $('backgroundLibrary').onchange=safe(async e=>{const c=context(),m=S.project.media.find(m=>m.id===e.target.value);if(m)await setImage(c,m.src);});
-  on('removeBackground',()=>{const c=context();edit(c,(s,p,key)=>{clearCrop(s,c,key);if(c.scope==='clip'){s.src=null;delete s.key_white;}else{delete s[key];if(!s.base&&!s.swap)delete s.key_white;}});});
+  on('removeBackground',()=>{const c=context();if(c.scope==='clip')edit(c,s=>{delete s.crop;s.src=null;delete s.key_white;});else if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{src:null}});else writeProject(c,{op:'remove-pair-image',key:c.key});});
   on('inheritBackground',()=>edit(context(),s=>{delete s.src;delete s.key_white;delete s.crop;}));
-  $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked;edit(context(),s=>s.key_white=enabled);});
+  $('backgroundKeyWhite').onchange=safe(()=>{const enabled=$('backgroundKeyWhite').checked,c=context();if(c.scope==='clip')edit(c,s=>s.key_white=enabled);else writeProject(c,{op:'set-key-white',value:enabled});});
   const traveling=preset=>!['follow_camera','static'].includes(preset);
   function showSeconds(p){return Math.round((p.show.atoms||[]).reduce((s,a)=>s+(+a.duration_s||0),0)*10000)/10000;}
   function readSpan(m){
@@ -163,7 +207,10 @@
         else if(clock==='span'){motion.clock='span';motion.span=spanFromFields();}
         else motion.clock='show';
       }
-      edit(context(),s=>s.motion=motion);
+      const c=context();
+      if(c.scope==='clip')edit(c,s=>s.motion=motion);
+      else if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{motion}});
+      else writeProject(c,{op:'set-pair-motion',motion});
     }catch(e){refresh();throw e;}
   }
   function changeSpan(){spanOpenOverride=true;$('backgroundMotionClock').value='span';changeMotion();}
@@ -181,19 +228,20 @@
   $('backgroundSpanT1Range').onchange=safe(()=>commitSpanRange('t1'));
   on('backgroundSpanToggle',()=>{
     const p=S.project;if(!p)return;
-    const c=context(),a=selected(p),clip=c.scope==='clip',global=p.show.bg||{},settings=clip?(a?.background||{}):global;
-    const m=settings.motion??(clip?global.motion:undefined);
+    const c=context(),a=selected(p),clip=c.scope==='clip',global=p.show.bg||{},rows=locationList(global),schedule=!clip&&!!rows;
+    const loc=schedule?(rows.find(r=>r.id===c.locationId)||rows[0]):null;
+    const settings=clip?(a?.background||{}):(schedule?(loc||{}):global);
+    const m=clip?(settings.motion??(rows?rowAtTime(rows,S.time)?.motion:global.motion)):(schedule?loc?.motion:settings.motion);
     const cur=C.resolveBackgroundSpanUi(m,showSeconds(p),spanOpenOverride);
     if(!cur.continuous)return;
     spanOpenOverride=!cur.open;
     refresh();
   });
   on('resetBackgroundSpan',()=>{spanOpenOverride=false;$('backgroundMotionClock').value='show';changeMotion();});
-  on('resetBackgroundMotion',()=>{spanOpenOverride=null;edit(context(),s=>delete s.motion);});
+  on('resetBackgroundMotion',()=>{spanOpenOverride=null;const c=context();if(c.scope==='clip')edit(c,s=>delete s.motion);else if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{motion:null}});else writeProject(c,{op:'set-pair-motion',motion:null});});
   // ---- HM-BG-CROP: editable crop region (drag-rect, corner handles, numeric fields) ----
   const pct=v=>Math.round(v*1000)/10;
   let drag=null;
-  function clearCrop(s,c,key){if(c.scope==='clip')delete s.crop;else if(s.crops){delete s.crops[key];if(!Object.keys(s.crops).length)delete s.crops;}}
   function imageAspect(){const im=$('backgroundThumb');return im.naturalWidth&&im.naturalHeight?im.naturalWidth/im.naturalHeight:16/9;}
   const cropAspectK=()=>imageAspect()/(16/9); // normalized h = w * k for a 16:9 visible region
   function showCrop(c){
@@ -205,12 +253,16 @@
   }
   function commitCrop(rect){
     const c=context(),r=C.clampBackgroundCrop(rect),full=C.isFullBackgroundCrop(r);
-    edit(c,(s,p,key)=>{
-      if(c.scope==='clip'){
-        const a=p.show.atoms.find(a=>a.id===c.atomId),inherited=Object.hasOwn(s,'src')?null:p.show.bg?.crops?.[projectLayer(p,a)];
+    if(c.scope==='clip'){
+      edit(c,(s,p)=>{
+        const a=p.show.atoms.find(a=>a.id===c.atomId),rows=locationList(p.show.bg||{});
+        const inherited=Object.hasOwn(s,'src')?null:(rows?rowAtTime(rows,S.time)?.crop:p.show.bg?.crops?.[projectLayer(p,a)]);
         if(full&&C.isFullBackgroundCrop(inherited))delete s.crop;else s.crop=full?{...C.BG_CROP_FULL}:r;
-      }else if(full)clearCrop(s,c,key);else{s.crops||={};s.crops[key]=r;}
-    });
+      });
+      return;
+    }
+    if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{crop:full?null:r}});
+    else writeProject(c,{op:'set-pair-crop',key:c.key,crop:full?null:r});
   }
   function pointIn(e){const b=$('backgroundThumb').getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/(b.width||1))),y:Math.min(1,Math.max(0,(e.clientY-b.top)/(b.height||1)))};}
   // Rect from a fixed anchor corner to the pointer, optionally locked to the stage aspect.
@@ -251,6 +303,14 @@
   $('backgroundCropLock').onchange=safe(()=>{const r=currentCrop(S.project,context());if($('backgroundCropLock').checked&&r&&!C.isFullBackgroundCrop(r))commitCrop(C.lockBackgroundCropAspect(r,imageAspect()));});
   on('resetBackgroundCrop',()=>commitCrop(C.BG_CROP_FULL));
   $('backgroundThumb').addEventListener('load',()=>{if(!drag)refresh();});
-  $('backgroundScope').onchange=refresh;$('backgroundTarget').onchange=refresh;
+  function commitWindow(){
+    const c=context(),t0=Math.round(Number($('backgroundT0').value)*10000)/10000,t1=Math.round(Number($('backgroundT1').value)*10000)/10000;
+    if(!Number.isFinite(t0)||!Number.isFinite(t1)||t0<0||!(t1>t0))throw Error('Location end must be after its start.');
+    writeProject(c,{op:'update-location',id:c.locationId,patch:{t0,t1}});
+  }
+  $('backgroundT0').onchange=safe(commitWindow);$('backgroundT1').onchange=safe(commitWindow);
+  on('insertBackgroundLocation',()=>{const c=context();if(c.scope!=='project')return;preferPlayhead=true;writeProject(c,{op:'insert-location',t:S.time});});
+  on('removeBackgroundLocation',()=>{const c=context();if(c.scope!=='project')return;writeProject(c,{op:'remove-location',id:c.locationId});});
+  $('backgroundScope').onchange=refresh;$('backgroundTarget').onchange=refresh;$('backgroundLocation').onchange=refresh;
   window.addEventListener('hm:projectchange',refresh);window.ready.then(refresh).catch(()=>{});
 })();

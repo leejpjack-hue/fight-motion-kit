@@ -482,7 +482,7 @@ function createMotionRenderer(canvas, assets = {}) {
     timeline = data.timeline; layout = data.layout;
     const paths = new Set();
     Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
-    Object.values(timeline.bg || {}).filter(p => typeof p === 'string').forEach(p => paths.add(p));
+    backgroundImageRefs(timeline.bg).forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
     (timeline.fg?.props || []).forEach(p => { if (p.src) paths.add(p.src); if (p.effect?.broken_src) paths.add(p.effect.broken_src); });
     const imgCache = (typeof window !== 'undefined' && (window.__hmImageCache ||= new Map())) || null;

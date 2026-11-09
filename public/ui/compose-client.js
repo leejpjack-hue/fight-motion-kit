@@ -2192,7 +2192,7 @@
         } else {
           pushChecklist(blocks, { kind: 'plate', level: 'block', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid + ' has no image' });
         }
-        if (entry.bg) {
+        if (entry.bg && !Object.prototype.hasOwnProperty.call(show.bg || {}, 'locations')) {
           const mapped = mapLayoutBgToKey(entry.bg, show.bg || {});
           if (!mapped) pushChecklist(warns, { kind: 'bg', level: 'warn', atom_id: atom.id || null, text: 'Broken BG · ' + where + ' · layout bg ' + entry.bg + ' does not match show.bg' });
         }
@@ -2213,8 +2213,17 @@
         pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + key });
       }
     });
-    if (bg.swap_t != null && bg.swap_t !== '' && !bg.swap) {
+    if (bg.swap_t != null && bg.swap_t !== '' && !bg.swap && !Object.prototype.hasOwnProperty.call(bg, 'locations')) {
       pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · swap time without a swap image' });
+    }
+    if (Object.prototype.hasOwnProperty.call(bg, 'locations')) {
+      if (!Array.isArray(bg.locations)) pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · locations' });
+      else bg.locations.forEach((row, i) => {
+        if (!row || row.src == null || row.src === '') return;
+        if (typeof row.src !== 'string' || !row.src.trim() || !assetResolved(project, row.src)) {
+          pushChecklist(blocks, { kind: 'bg', level: 'block', text: 'Broken BG · ' + (row.id || ('location ' + (i + 1))) });
+        }
+      });
     }
     (show.overlays || []).forEach((overlay, i) => {
       if (!overlay || overlay.src == null || overlay.src === '') return;

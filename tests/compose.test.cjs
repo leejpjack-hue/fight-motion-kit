@@ -1689,6 +1689,24 @@ test('HM-PF-32: pair background edits keep one shared motion and do not create a
   assert.equal(Object.hasOwn(both.bg, 'base'), false);
 });
 
+test('HM-PF-32: project background paths follow locations when the list is present', () => {
+  assert.deepEqual(backgroundImageRefs({base: 'a.png', swap: 'b.png', key_white: true}), ['a.png', 'b.png']);
+  assert.deepEqual(backgroundImageRefs({base: 'a.png', swap: null}), ['a.png']);
+  assert.deepEqual(backgroundImageRefs({}), []);
+  assert.deepEqual(backgroundImageRefs({key_white: true, locations: [{src: 'a.png'}, {src: null}, {src: 'c.png'}]}), ['a.png', 'c.png']);
+  const show = demo();
+  show.bg = {swap_t: 1};
+  const bare = HMComposeClient.parityDirtyChecklist({version: 1, show, layouts: {}, assets: {}, media: []});
+  assert.equal(bare.blocks.some((row) => row.text.includes('swap time without a swap image')), true);
+  show.bg = {key_white: false, locations: [{id: 'loc-1', src: null, t0: 0, t1: 1}]};
+  const listed = HMComposeClient.parityDirtyChecklist({version: 1, show, layouts: {}, assets: {}, media: []});
+  assert.equal(listed.blocks.some((row) => row.kind === 'bg'), false);
+  const html = fs.readFileSync('public/ui/exports.js', 'utf8');
+  const bundleAt = html.indexOf('${backgroundLocationsBundle.toString()}');
+  const rendererAt = html.indexOf('${createMotionRenderer.toString()}');
+  assert.ok(bundleAt > 0 && bundleAt < rendererAt);
+});
+
 
 
 
