@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Background Scene"
+  short_description: "Stamp a crop and show-clock pan from a scene place"
+  default_prompt: "Use $hm-bg-scene-author to stamp the background crop and pan for my scene place, then I will adjust it in the Background controls."
