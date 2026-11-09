@@ -1487,6 +1487,208 @@ test('wave 1 pixelfx hooks compose beside kit fx and keep plates', async () => {
   assert.equal(lint.findings.filter(item => item.code === 'bad_fx_t_rel').length, 0);
 });
 
+test('HM-PF-32: five-second demo stays 8 plates at 5.00s and does not gain locations', async () => {
+  const show = demo();
+  const before = JSON.parse(JSON.stringify(show.bg));
+  const r = await compose(show);
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.equal(r.duration_s, 5);
+  assert.equal(r.timeline.plates.length, 8);
+  assert.deepEqual(Object.values(r.layout).map((entry) => entry.source_plate), ['P01','P02','P03','P04','P05','P06','P07','P08']);
+  assert.equal(Object.hasOwn(r.timeline.bg, 'locations'), false);
+  assert.deepEqual(show.bg, before);
+});
+
+test('HM-PF-32: four windows on one fight plate switch at the window end', async () => {
+  const show = demo();
+  show.atoms = [show.atoms[0]];
+  show.atoms[0].duration_s = 4;
+  show.atoms[0].plates_needed = 1;
+  const srcs = ['a.png', 'b.png', 'c.png', 'd.png'];
+  show.bg = {
+    key_white: false,
+    locations: srcs.map((src, i) => ({id: 'loc-' + (i + 1), src, t0: i, t1: i + 1, crop: {x: 0.1, y: 0.1, w: 0.4, h: 0.4}})),
+  };
+  const r = await compose(show);
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.equal(r.timeline.plates.length, 1);
+  assert.equal(r.layout.S001.bg, 'base');
+  assert.equal(Object.hasOwn(r.timeline.bg, 'base'), false);
+  assert.equal(Object.hasOwn(r.timeline.bg, 'swap'), false);
+  assert.equal(Object.hasOwn(r.timeline.bg, 'swap_t'), false);
+  assert.equal(r.timeline.bg.locations.length, 4);
+  srcs.forEach((src, i) => {
+    assert.equal(backgroundAt(r.layout.S001, r.timeline.bg, i + 0.25).src, src);
+    if (i < srcs.length - 1) assert.equal(backgroundAt(r.layout.S001, r.timeline.bg, i + 1).src, srcs[i + 1]);
+  });
+  const later = demo();
+  later.atoms = [later.atoms[0]];
+  later.atoms[0].duration_s = 4;
+  later.atoms[0].plates_needed = 1;
+  later.bg = {locations: [
+    {id: 'loc-1', src: 'a.png', t0: 0, t1: 4},
+    {id: 'loc-2', src: 'later.png', t0: 100, t1: 101},
+  ]};
+  const far = await compose(later);
+  assert.equal(far.ok, true, JSON.stringify(far.errors));
+  assert.equal(backgroundAt(far.layout.S001, far.timeline.bg, 0.5).src, 'a.png');
+  assert.equal(backgroundAt(far.layout.S001, far.timeline.bg, 100).src, 'later.png');
+  assert.equal(overlappingLocationId([
+    {id: 'loc-1', t0: 0, t1: 2},
+    {id: 'loc-2', t0: 2, t1: 4},
+  ]), null);
+  assert.equal(overlappingLocationId([
+    {id: 'loc-1', t0: 0, t1: 2},
+    {id: 'loc-2', t0: 1, t1: 3},
+  ]), 'loc-2');
+});
+
+test('HM-PF-32: an overlap or an empty location list fails compose and does not fall through', async () => {
+  const overlap = demo();
+  overlap.bg = {locations: [
+    {id: 'loc-1', src: 'a.png', t0: 0, t1: 2},
+    {id: 'loc-2', src: 'b.png', t0: 1.5, t1: 4},
+  ]};
+  assert.equal((await compose(overlap)).ok, false);
+  const empty = demo();
+  empty.bg = {base: 'backgrounds/keep.png', locations: []};
+  const emptyResult = await compose(empty);
+  assert.equal(emptyResult.ok, false);
+  assert.equal(emptyResult.timeline, undefined);
+  for (const locations of [
+    {id: 'loc-1'},
+    [{id: 'loc-1', src: 'a.png', t0: -1, t1: 1}],
+    [{id: 'loc-1', src: 'a.png', t0: 1, t1: 1}],
+    [{id: 'loc-1', src: 'a.png', t0: 0, t1: 1}, {id: 'loc-1', src: 'b.png', t0: 1, t1: 2}],
+    [{id: 'loc-1', src: 'a.png', t0: 0, t1: 1, crop: {x: 0, y: 0, w: 2, h: 1}}],
+    [{id: 'loc-1', src: '', t0: 0, t1: 1}],
+  ]) {
+    const show = demo();
+    show.bg = {locations};
+    assert.equal((await compose(show)).ok, false, JSON.stringify(locations));
+  }
+  const third = demo();
+  third.bg = {base: 'backgrounds/x.png', crops: {base: {x: 0, y: 0, w: 1, h: 1}, other: {x: 0, y: 0, w: 1, h: 1}}};
+  assert.equal(Object.hasOwn(third.bg, 'locations'), false);
+  assert.equal((await compose(third)).ok, false);
+  const clip = demo();
+  clip.atoms[0].background = {src: 'clip.png', locations: [{id: 'loc-1', src: 'a.png', t0: 0, t1: 1}]};
+  assert.equal((await compose(clip)).ok, false);
+});
+
+test('HM-PF-32: a clip background image covers every sample in that clip', async () => {
+  const show = demo();
+  show.atoms = [show.atoms[0]];
+  show.atoms[0].duration_s = 4;
+  show.atoms[0].plates_needed = 1;
+  show.atoms[0].background = {src: 'clip.png'};
+  show.bg = {locations: [
+    {id: 'loc-1', src: 'a.png', t0: 0, t1: 2, crop: {x: 0.1, y: 0.1, w: 0.4, h: 0.4}, motion: {preset: 'pan_left', amount: 1, clock: 'show'}},
+    {id: 'loc-2', src: 'b.png', t0: 2, t1: 4, motion: {preset: 'pan_right', amount: 0.2, clock: 'show'}},
+  ]};
+  const r = await compose(show);
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  for (const t of [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 3.99]) {
+    assert.equal(backgroundAt(r.layout.S001, r.timeline.bg, t).src, 'clip.png');
+    assert.equal(backgroundAt(r.layout.S001, r.timeline.bg, t).crop, null);
+  }
+  assert.deepEqual(backgroundAt(r.layout.S001, r.timeline.bg, 0.5).motion, {preset: 'pan_left', amount: 1, clock: 'show'});
+  assert.deepEqual(backgroundAt(r.layout.S001, r.timeline.bg, 2).motion, {preset: 'pan_right', amount: 0.2, clock: 'show'});
+  show.atoms[0].background = {src: null};
+  const white = await compose(show);
+  assert.equal(white.ok, true, JSON.stringify(white.errors));
+  for (const t of [0, 1, 2, 3.5]) assert.equal(backgroundAt(white.layout.S001, white.timeline.bg, t).src, null);
+});
+
+test('HM-PF-32: insert-location seeds the pictures the pair bake shows and compose does not', async () => {
+  const show = demo();
+  show.bg = {
+    base: 'backgrounds/base.png',
+    swap: 'backgrounds/swap.png',
+    swap_t: 2,
+    key_white: true,
+    crops: {
+      base: {x: 0.1, y: 0.1, w: 0.5, h: 0.5},
+      swap: {x: 0.2, y: 0.2, w: 0.4, h: 0.4},
+    },
+    motion: {preset: 'pan_right', amount: 0.5, clock: 'show'},
+    aliases: {base: ['old-roof']},
+  };
+  const before = JSON.parse(JSON.stringify(show));
+  const plain = await compose(show);
+  assert.equal(plain.ok, true, JSON.stringify(plain.errors));
+  assert.equal(Object.hasOwn(plain.timeline.bg, 'locations'), false);
+  assert.equal(plain.timeline.bg.base, 'backgrounds/base.png');
+  assert.equal(plain.timeline.bg.swap, 'backgrounds/swap.png');
+  assert.equal(plain.timeline.bg.swap_t, 2);
+  assert.deepEqual(show.bg, before.bg);
+  HMComposeClient.applyBackgroundEdit(show, {op: 'insert-location', t: 3});
+  assert.equal(show.bg.key_white, true);
+  for (const key of ['base', 'swap', 'swap_t', 'crops', 'motion', 'aliases']) assert.equal(Object.hasOwn(show.bg, key), false, key);
+  assert.deepEqual(show.bg.locations.map((row) => [row.id, row.src, row.t0, row.t1]), [
+    ['loc-1', 'backgrounds/base.png', 0, 2],
+    ['loc-2', 'backgrounds/swap.png', 2, 3],
+    ['loc-3', 'backgrounds/swap.png', 3, 5],
+  ]);
+  assert.deepEqual(show.bg.locations[0].crop, {x: 0.1, y: 0.1, w: 0.5, h: 0.5});
+  assert.deepEqual(show.bg.locations[1].crop, {x: 0.2, y: 0.2, w: 0.4, h: 0.4});
+  assert.deepEqual(show.bg.locations[0].motion, {preset: 'pan_right', amount: 0.5, clock: 'show'});
+  show.bg.locations[0].motion.amount = 0;
+  assert.equal(show.bg.locations[1].motion.amount, 0.5);
+  const seeded = await compose(show);
+  assert.equal(seeded.ok, true, JSON.stringify(seeded.errors));
+  assert.equal(seeded.timeline.bg.locations.length, 3);
+  const untouched = JSON.parse(JSON.stringify(before));
+  assert.throws(() => HMComposeClient.applyBackgroundEdit(untouched, {op: 'insert-location', t: 5}));
+  assert.deepEqual(untouched.bg, before.bg);
+  const hidden = demo();
+  hidden.bg = {base: 'backgrounds/base.png', swap: 'backgrounds/swap.png'};
+  HMComposeClient.applyBackgroundEdit(hidden, {op: 'insert-location', t: 1});
+  assert.ok(hidden.bg.locations.every((row) => row.src === 'backgrounds/base.png'));
+  const early = demo();
+  early.bg = {base: 'backgrounds/base.png', swap: 'backgrounds/swap.png', swap_t: 0};
+  HMComposeClient.applyBackgroundEdit(early, {op: 'insert-location', t: 1});
+  assert.deepEqual(early.bg.locations.map((row) => [row.src, row.t0, row.t1]), [
+    ['backgrounds/swap.png', 0, 1],
+    ['backgrounds/swap.png', 1, 5],
+  ]);
+  const opened = demo();
+  opened.bg = {base: 'backgrounds/base.png'};
+  HMComposeClient.applyBackgroundEdit(opened, {op: 'insert-location', t: 0});
+  assert.deepEqual(opened.bg.locations.map((row) => [row.src, row.t0, row.t1]), [
+    ['backgrounds/base.png', 0, 2.5],
+    ['backgrounds/base.png', 2.5, 5],
+  ]);
+});
+
+test('HM-PF-32: pair background edits keep one shared motion and do not create a swap image', () => {
+  const missing = demo();
+  missing.bg = {base: 'backgrounds/old-roof.png', swap_t: 3, crops: {base: {x: 0.1, y: 0.1, w: 0.5, h: 0.5}}};
+  assert.throws(() => HMComposeClient.applyBackgroundEdit(missing, {op: 'set-pair-image', key: 'swap', src: 'backgrounds/swap.png'}));
+  assert.equal(missing.bg.swap, undefined);
+  assert.equal(missing.bg.swap_t, 3);
+  HMComposeClient.applyBackgroundEdit(missing, {op: 'set-pair-image', key: 'base', src: 'backgrounds/new.png'});
+  assert.equal(missing.bg.base, 'backgrounds/new.png');
+  assert.deepEqual(missing.bg.aliases.base, ['old-roof']);
+  assert.equal(missing.bg.crops, undefined);
+  assert.equal(missing.bg.swap_t, 3);
+  HMComposeClient.applyBackgroundEdit(missing, {op: 'set-pair-crop', key: 'base', crop: {x: 0.2, y: 0.1, w: 0.5, h: 0.5}});
+  HMComposeClient.applyBackgroundEdit(missing, {op: 'set-pair-crop', key: 'base', crop: {x: 0, y: 0, w: 1, h: 1}});
+  assert.equal(missing.bg.crops, undefined);
+  const motion = {preset: 'pan_left', amount: 0.4, clock: 'show'};
+  HMComposeClient.applyBackgroundEdit(missing, {op: 'set-pair-motion', motion});
+  assert.deepEqual(missing.bg.motion, motion);
+  const both = demo();
+  both.bg = {base: 'backgrounds/a.png', swap: 'backgrounds/b.png', key_white: true, crops: {swap: {x: 0.2, y: 0.2, w: 0.4, h: 0.4}}};
+  HMComposeClient.applyBackgroundEdit(both, {op: 'remove-pair-image', key: 'swap'});
+  assert.equal(both.bg.swap, undefined);
+  assert.equal(both.bg.crops, undefined);
+  assert.equal(both.bg.key_white, true);
+  HMComposeClient.applyBackgroundEdit(both, {op: 'remove-pair-image', key: 'base'});
+  assert.equal(both.bg.key_white, undefined);
+  assert.equal(Object.hasOwn(both.bg, 'base'), false);
+});
+
 
 
 
