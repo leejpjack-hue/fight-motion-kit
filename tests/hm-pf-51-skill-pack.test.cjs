@@ -34,7 +34,9 @@ test('HM-PF-51 indexes the Approval skill name set once', () => {
 
 test('HM-PF-51 stub files are contracts only', () => {
   const stubs = rows.filter(r => r.kind !== 'shipped');
-  assert.equal(stubs.length, 4);
+  assert.equal(rows.find(row => row.name === 'hm-storyboard-cantonese').kind, 'shipped');
+  assert.equal(rows.find(row => row.name === 'hm-bg-scene-author').kind, 'shipped');
+  assert.equal(stubs.length, 3);
   for (const row of stubs) {
     const text = read(row.file);
     assert.match(text, new RegExp('^---\\nname: ' + row.name + '\\n', 'm'));

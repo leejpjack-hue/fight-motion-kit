@@ -1,45 +1,57 @@
 ---
 name: hm-bg-scene-author
-description: HM-PF-51 contract stub for the Step 7 background framing skill. Read the inputs, outputs, frontend handoff, and anti-jobs. Do not write .motion.json, add background keys, or generate plates.
+description: Stamp a background crop and a show-clock pan into a portable .motion.json from a typed scene place. Reuse the composer crop, motion, and continuous-pan fields. The human then edits those fields with the existing Background controls.
 ---
 
 # hm-bg-scene-author
 
-**Status:** HM-PF-51 contract stub. Step 7 on the Approval Page.
-**Not an implementation.** This file does not author a background and does not write `.motion.json`.
+Author the Step 7 background for one scene place. The skill writes the crop rect and the motion object the composer already saves. Open the file and pan with the existing Background controls.
 
-The field source is the composer project format already documented in [`skills/html-motion-composer/references/project-format.md`](../html-motion-composer/references/project-format.md). Read that file before naming a key. This stub adds none.
+HM-PF-06 still owns the Cantonese storyboard. This skill does not read that board and does not invent a story schema. A typed place plus the open project is enough.
+
+The field names are the ones in [`project-format.md`](../html-motion-composer/references/project-format.md) and the HM-BG-CROP, HM-BG-MOTION, and HM-BG-PAN-CONT helpers in `public/ui/compose-client.js`.
 
 ## Inputs
 
-- A typed scene-place brief from the human (where the fight is, and how the background should read).
-- The open portable project or show JSON, unchanged.
-- Background images already in that project, or local images the human has selected. No remote fetch.
+- `--place`, the scene place in words. Required. It is not stored on the show.
+- `--project`, a portable project or a show JSON that already has `show.bg.base` (or `swap` when `--layer swap`).
+- Optional `--crop x,y,w,h` in fractions of the source. Omit it and the skill writes a 16:9 window with room on the travel side.
+- Optional `--preset` (`pan_right` by default), `--amount` (`0.4` by default), and `--clock` `show` or `per_atom`.
+- Optional `--brief file.json` with those same fields. Flags override the file.
+- `--out` must be a new `*.motion.json`. `--repo` selects another checkout.
 
 ## Outputs
 
-No file is written.
+A portable project file. On `show.bg` the skill sets these fields.
 
-A later implementation may propose only values for keys the composer already persists:
+- `crops.base` or `crops.swap` as `{x,y,w,h}`
+- `motion` as `{preset, amount}` and, for a travel preset, `clock` of `show` or `per_atom`
 
-- `show.bg.base`, `show.bg.swap`, `show.bg.swap_t`
-- `show.bg.motion` and `atom.background.motion` with the presets, `amount`, `clock`, and `span` that the project format already lists
-- `atom.background.src` and `atom.background.key_white` as that format already describes
-- Per-layout `bg` of `base` or `swap`
+Plate timing, cameras, FX, and atoms stay as they were. An existing crop or motion is left untouched and the command fails. The place string is not written.
 
-Crop, pan, and span are those existing motion and swap fields. A new crop object, a new pan channel, or a fourth-and-beyond plate model is a later story (HM-PF-32, HM-PF-33), not this stub.
+## Run
+
+```sh
+node skills/hm-bg-scene-author/scripts/author.cjs \
+  --project public/shows/street-old-city.json \
+  --place "old-city street" \
+  --out work/street.motion.json
+```
+
+The command loads the composer engine and refuses to write when compose rejects the show. An existing `--out` is not replaced.
 
 ## FE handoff
 
-The human edits the background in the composer: **Background → Change background**, **Apply to**, and the motion controls already on that panel. Undo and **Save project** stay the persistence path. IndexedDB and `.motion.json` remain the stores.
+Open the `.motion.json` in the composer. **Background** (`#backgroundMotionDetails`) shows the crop and the motion. Drag the crop, change the preset, or set Travel to Continuous (show) or Per clip. **Save project** writes the same keys. Undo still covers those edits.
 
-This stub does not click those controls and does not import files.
+Span t0-t1 stays on that panel. This skill does not write a span. Set one there after open.
 
 ## Anti-jobs
 
-- Do not add schema keys, a background renderer, or a writer script.
-- Do not generate plates or call a provider.
-- Do not implement multi-background windows of four or more, or a new span control.
-- Do not override character camera curves. Background motion stays independent of the foreground camera except the existing `follow_camera` preset.
+- Do not add background keys, a second pan channel, or a new renderer.
+- Do not generate plates or fetch images.
+- Do not rewrite the span drawer. That residual is HM-PF-33.
+- Do not touch the 5.00s eight-plate demo file. It has no background image, so this command rejects it.
+- Do not move character camera curves. `follow_camera` is the only preset that rides them.
 - Do not add voice, SFX, or a #41 lift.
 - Do not call `api.teqcon.uk`, `:8770`, or a compose / save HTTP API.
