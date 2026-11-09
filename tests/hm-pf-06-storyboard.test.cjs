@@ -90,6 +90,10 @@ test('advance blocks gen and rhythm without Jack GO and writes nothing with GO',
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hm-pf-06-'));
   const out = path.join(dir, 'duel.board.md');
   assert.equal(run(['emit', '--brief', '0–1 開場', '--show-id', 'street-duel', '--out', out], dir).status, 0);
+  const fallback = JSON.parse(fs.readFileSync(path.join(dir, 'duel.board.json'), 'utf8'));
+  assert.deepEqual(fallback.fields, ['秒', 'beat_id', '鏡頭']);
+  assert.equal(fallback.fields_from, 'v1-fallback');
+  assert.equal(fallback.source_path, null);
   const before = fs.readdirSync(dir).sort();
   const blocked = run(['advance', '--to', 'gen', '--board', out], dir);
   assert.equal(blocked.status, 1);

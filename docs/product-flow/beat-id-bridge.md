@@ -21,7 +21,7 @@ Copying a bridged clip assigns the copy a new `beat_id` equal to its new atom id
 
 ## PF-06 seam
 
-`hm-storyboard-cantonese` writes the Cantonese board. Jack edits it as text in `#hmBoardSurface`. This bridge does not turn that text into plates. The PF-08 slice of the board can be:
+`hm-storyboard-cantonese` (HM-PF-06) writes the Cantonese board. Jack edits it as text in `#hmBoardSurface`. This bridge does not turn that text into plates. The PF-08 slice of the board can be:
 
 ```json
 {

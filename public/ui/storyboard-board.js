@@ -5,7 +5,7 @@
   const KIND = 'hm-pf-06-board';
   const SOT_PATH = '/workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md';
   const STORAGE_KEY = 'hm.pf06.board.text';
-  const DEFAULT_FIELDS = Object.freeze(['秒', 'beat_id', '鏡頭', '左', '右', '板']);
+  const DEFAULT_FIELDS = Object.freeze(['秒', 'beat_id', '鏡頭']);
   const UNGENERATED = '未出板';
 
   function han(value) {
