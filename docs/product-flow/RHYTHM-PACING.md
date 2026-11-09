@@ -36,9 +36,9 @@ composer engine. No competing timing implementation or generation backend.
 | Map entry | Stable `beat_id`, numeric `duration_s`, optional shipped `timing_pack`, boolean `soft_cam`. Unknown packs and inconsistent IDs fail before applying. |
 | Project | `show.duration_target_s` and `show.rhythm.impact_budget` (integer 0–300), with `source: hm-rhythm-pacing` and `mode` after plan import. Atom `timing_hold` remains the shipped format. |
 
-HM-PF-06 (#88) remains the upstream storyboard-authoring story. This change
-consumes the already shipped PF-08 contract and existing human gate; it does
-not claim to implement #88 or reproduce unavailable STORYBOARD-zh sources.
+HM-PF-06 (#88) authors the Cantonese board in `hm-storyboard-cantonese`.
+This rhythm page still only consumes an approved PF-08 board after Jack GO.
+It does not reproduce the void-array STORYBOARD-zh file or generate plates.
 An approved external board may supply its GO record with `--go-file`.
 
 ## Timing and pack behavior

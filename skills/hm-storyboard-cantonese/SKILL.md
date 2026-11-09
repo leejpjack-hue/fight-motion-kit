@@ -1,48 +1,72 @@
 ---
 name: hm-storyboard-cantonese
-description: HM-PF-51 contract stub for the Step 2 Cantonese second-by-second storyboard skill. Read the inputs, outputs, frontend handoff, and anti-jobs. Do not write a board file, add a storyboard editor, generate plates, or record Jack GO.
+description: Turn a short fight brief into an editable Cantonese second-by-second storyboard and stop for Jack GO before gen or rhythm. Reuse STORYBOARD-zh table headers without renaming them. No plate generation, voice, sprite import, or n8n resume.
 ---
 
-# hm-storyboard-cantonese
+# HM Cantonese storyboard
 
-**Status:** HM-PF-51 contract stub. Step 2 on the Approval Page.
-**Not an implementation.** This file does not add a storyboard editor and does not write a board.
+Own step 2 story text for HM-PF-06 (#88). The board is editable Cantonese
+text. It is not a plate list, a show, or a rhythm plan.
 
-HM-PF-06 owns Cantonese second-by-second board creation when that story is implemented. The upstream source format is void-array STORYBOARD-zh when that source is in the workspace. This stub does not redefine it. If that source is absent, say it is missing and stop. Do not invent a replacement prose format.
+## Field contract
 
-The id bridge that already shipped is [`docs/product-flow/beat-id-bridge.md`](../../docs/product-flow/beat-id-bridge.md) (HM-PF-08). A future board may use that shape. This stub does not stamp atoms.
+The void-array source of truth is
+`/workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md`.
+When that file or another `--source` STORYBOARD-zh file is readable, its
+markdown table headers are the fields. Copy them in order. Do not rename,
+translate, drop, or replace a header. Extra columns such as `法陣` stay on
+the board under that exact header. They are not copied onto `.motion.json`.
 
-## Inputs
+The PF-08 handoff is only `show_id`, `beat_id`, and the Cantonese `label`.
+`boardFromShow` still rebuilds those three from the show. Cantonese prose
+and every other STORYBOARD-zh column stay on this board.
 
-- A short typed fight premise from the human.
-- Optional archetype words the human already used (cold-open, duel, chase). This stub does not supply the HM-PF-07 catalog.
-- Optional `show_id` of a show already open in the composer.
-- An existing human Approve on the step-2 Jack GO gate, when one is already recorded. Implementation permission is not that Approve.
+If the source file is absent, emit uses the v1 fallback headers
+`秒 | beat_id | 鏡頭 | 左 | 右 | 板` and records `fields_from: v1-fallback`.
+That fallback is not a silent rewrite of the void-array file. Pass `--source`
+pointing at the real STORYBOARD-zh before treating those headers as compatible.
 
-## Outputs
+The 黛玉×寶釵 30s 分鏡 page is a sibling reuse for second marks and Cantonese
+shot labels. It does not replace the void-array header row.
 
-No file is written.
+## Flow — Jack GO before gen or rhythm
 
-The contract a later implementation must meet, and must not widen here:
+1. Emit the board from the typed brief. Stop.
+2. Open that text in the HM board surface (`#hmBoardSurface`, `#hmBoardText`).
+   Jack edits the text there. Editing does not create plates or atoms.
+3. Jack reviews step 2 on the existing **2 Story · Jack GO gate** and clicks
+   **Approve**. Rework stays on the board. Do not manufacture a GO record.
+4. Only that Approve (`Decision: "Approve"`, `step: 2`, `step_id: "story"`)
+   may be treated as permission to consider gen or rhythm.
+5. `board.cjs advance --to gen` and `--to rhythm` refuse to continue without
+   that GO file. With the file, they still do not generate plates and do not
+   run rhythm. The operator then uses the existing HM rhythm export and
+   `hm-rhythm-pacing`, or an outside gen path, as a separate step.
+6. Fight-video gates stay in force: storyboard text requires human review
+   before plate generation. `html-motion-fight-video` is not called from this
+   skill. n8n is a gate only and is not resumed here.
 
-- Editable board text with second marks and beat labels in Cantonese.
-- Stable `beat_id` values that match the HM-PF-08 board shape (`kind: "hm-pf-08-board"`, `show_id`, `beats[]` with `beat_id` and `label`).
-- Cantonese prose stays on the board. `.motion.json` stores the id on the atom, as the bridge already describes.
-- English gloss is out of this stub. HM-PF-07 owns template glosses.
+No auto-gen plates without GO. The plate column, when the source has one,
+is `未出板`. This skill never writes PNG, WebP, or JPG files.
 
-## FE handoff
+```sh
+node skills/hm-storyboard-cantonese/scripts/board.cjs emit \
+  --brief-file work/brief.txt --show-id street-duel \
+  --source /workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md \
+  --out work/street-duel.board.md
 
-The human reviews and edits the board in the HTML Motion UI before any plate or sprite generation. The existing step-2 Jack GO gate (HM-PF-09) is the Approve / Rework control. Rework stays on step 2 and does not wipe a costume lock pack.
+node skills/hm-storyboard-cantonese/scripts/board.cjs check \
+  --board work/street-duel.board.md --source work/storyboard-zh.md
 
-This stub does not open the UI, does not call the gate, and does not import a board. When a board file exists from elsewhere, the human opens the show and uses the controls that HM-PF-08 already shipped.
+node skills/hm-storyboard-cantonese/scripts/board.cjs advance \
+  --to rhythm --board work/street-duel.board.md --go-file work/go.json
+```
 
-## Anti-jobs
+`--source` may be omitted only when the SoT path itself is readable. A missing
+SoT emits the labeled v1 fallback instead of inventing a second header dialect.
 
-- Do not add a storyboard editor, a writer script, or a new board schema.
-- Do not generate plates, call sprite-gen, or advance to rhythm without a human GO.
-- Do not manufacture Jack GO, Approve, or Rework.
-- Do not rename `beat_id` rules or fork the HM-PF-08 bridge.
-- Do not invent void-array fields when the STORYBOARD-zh source is missing.
-- Do not add voice, SFX, or a #41 lift. Step 10 stays DESIGNED-HOLD.
-- Do not call `api.teqcon.uk`, `:8770`, or a compose / save HTTP API.
-- Do not treat n8n as the editor. n8n may later key a gate on `beat_id`. It does not write the show.
+## Holds
+
+Do not implement or lift these: HM-PF-27, HM-PF-28, HM-PF-47, HM-PF-48,
+#41, SG-01, voice invent, 30a. No SFX, no voice track, no atlas, no
+root_motion import, and no 30a strip panel.

@@ -21,7 +21,7 @@ Copying a bridged clip assigns the copy a new `beat_id` equal to its new atom id
 
 ## PF-06 seam
 
-`hm-storyboard-cantonese` is an HM-PF-51 contract stub at `skills/hm-storyboard-cantonese/SKILL.md`. This bridge does not add a storyboard editor. When a later story implements that skill, its board can be:
+`hm-storyboard-cantonese` (HM-PF-06) writes the Cantonese board. Jack edits it as text in `#hmBoardSurface`. This bridge does not turn that text into plates. The PF-08 slice of the board can be:
 
 ```json
 {
@@ -31,7 +31,7 @@ Copying a bridged clip assigns the copy a new `beat_id` equal to its new atom id
 }
 ```
 
-`show.atoms[].id` values that already exist (`beat-01`, or a legacy id such as `lib_eye_push__jab_vs_block__2s`) are the alias until `beat_id` is stamped. Extra beat fields, including Cantonese prose, stay on the PF-06 board. `.motion.json` stores the id on the atom. `boardFromShow` rebuilds `beat_id`, `label`, and `index` from the show.
+`show.atoms[].id` values that already exist (`beat-01`, or a legacy id such as `lib_eye_push__jab_vs_block__2s`) are the alias until `beat_id` is stamped. Extra beat fields, including Cantonese prose and any STORYBOARD-zh column kept under its original header, stay on the PF-06 board. `.motion.json` stores the id on the atom. `boardFromShow` rebuilds `beat_id`, `label`, and `index` from the show. See [HM-PF-06](HM-PF-06-cantonese-board.md).
 
 DiagramTool files in this folder (`architecture.board.json`, `workflow.board.json`) are the design boards for steps 1..10. They are not the storyboard.
 
