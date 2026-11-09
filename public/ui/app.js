@@ -2362,6 +2362,11 @@
     origin: '',
   });
   on('timelineJsonRefresh',()=>{renderTimelineJsonPanel();status('Timeline JSON refreshed');});
+  const storyboardBoard = window.HMStoryboardBoard?.mount?.($('hmBoardSurface'), {
+    gate: $('pf09GatePanel'),
+    storage: localStorage,
+  });
+  if (location.hash === '#hmBoardSurface') storyboardBoard?.focus();
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
     const mod=e.metaKey||e.ctrlKey;

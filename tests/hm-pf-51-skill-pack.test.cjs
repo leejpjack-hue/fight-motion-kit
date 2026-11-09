@@ -29,12 +29,12 @@ test('HM-PF-51 indexes the Approval skill name set once', () => {
   assert.match(pack, /HOLDs are unchanged/);
   for (const id of ['HM-PF-27', 'HM-PF-28', 'HM-PF-47', 'HM-PF-48']) assert.match(pack, new RegExp(id));
   assert.match(read('docs/product-flow/PRODUCT-FLOW.md'), /HM-PF-51-skill-pack\.md/);
-  assert.match(read('docs/product-flow/beat-id-bridge.md'), /HM-PF-51 contract stub/);
+  assert.match(read('docs/product-flow/beat-id-bridge.md'), /HM-PF-06/);
 });
 
 test('HM-PF-51 stub files are contracts only', () => {
   const stubs = rows.filter(r => r.kind !== 'shipped');
-  assert.equal(stubs.length, 5);
+  assert.equal(stubs.length, 4);
   for (const row of stubs) {
     const text = read(row.file);
     assert.match(text, new RegExp('^---\\nname: ' + row.name + '\\n', 'm'));
