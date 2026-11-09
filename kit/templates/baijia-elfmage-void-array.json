@@ -1,0 +1,8 @@
+{
+ "id": "baijia-elfmage-void-array",
+ "kind": "show_template",
+ "label": "Void-array golden story",
+ "description": "30s void-array board. Cantonese board source: /workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md",
+ "seed_show": "shows/baijia-elfmage-void-array.json",
+ "board_source_path": "/workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md"
+}

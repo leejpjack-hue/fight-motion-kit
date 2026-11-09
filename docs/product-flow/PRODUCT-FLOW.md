@@ -58,6 +58,7 @@ The [camera cold-open guide](HM-PF-17-cold-open.md) documents the live
 `fight-cam-grammar-starter` sample and its three I→A→R triplets plus Wide
 re-establish. The frontend guide is served at `/product-flow.html`.
 For step 2, [the Cantonese board](HM-PF-06-cantonese-board.md) is editable text on the HM board surface. Jack GO stays on the existing gate before gen or rhythm. The skill does not generate plates.
+The [void-array golden story](HM-PF-10-void-array-golden.md) loads that board's 47-beat, 30s template in the composer. It does not author the Cantonese skill and does not generate plates or voice.
 For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
 `hm-rhythm-pacing` skill, human GO input, editable pack stamps, the impact meter,
 and target-duration lint in the same portable project.
@@ -107,6 +108,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`HM-PF-05-sprite-forge-absence.md`](HM-PF-05-sprite-forge-absence.md) | Sprite Forge absent / OOS for HM FE; operator path is generate outside, QA, then local PNG + JSON (HM-PF-05) |
 | [`beat-id-bridge.md`](beat-id-bridge.md) | Storyboard `beat_id` shared with `.motion.json` atoms (HM-PF-08). n8n sees the same ids |
 | [`HM-PF-06-cantonese-board.md`](HM-PF-06-cantonese-board.md) | Cantonese second-by-second board, editable HM text, Jack GO before gen or rhythm |
+| [`HM-PF-10-void-array-golden.md`](HM-PF-10-void-array-golden.md) | Void-array 47-beat, 30s board as a golden story template; Cantonese labels and browser bake (HM-PF-10) |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
 | [`architecture.product.png`](architecture.product.png) | Product PNG export of the architecture board |

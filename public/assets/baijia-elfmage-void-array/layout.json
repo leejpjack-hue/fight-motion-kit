@@ -1,0 +1,331 @@
+{
+ "P01": {
+  "id": "P01",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P02": {
+  "id": "P02",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P03": {
+  "id": "P03",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P04": {
+  "id": "P04",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P05": {
+  "id": "P05",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P06": {
+  "id": "P06",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P07": {
+  "id": "P07",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P08": {
+  "id": "P08",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P09": {
+  "id": "P09",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P10": {
+  "id": "P10",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P11": {
+  "id": "P11",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P12": {
+  "id": "P12",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P13": {
+  "id": "P13",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P14": {
+  "id": "P14",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P15": {
+  "id": "P15",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P16": {
+  "id": "P16",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P17": {
+  "id": "P17",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P18": {
+  "id": "P18",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P19": {
+  "id": "P19",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P20": {
+  "id": "P20",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P21": {
+  "id": "P21",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P22": {
+  "id": "P22",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P23": {
+  "id": "P23",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P24": {
+  "id": "P24",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P25": {
+  "id": "P25",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P26": {
+  "id": "P26",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P27": {
+  "id": "P27",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P28": {
+  "id": "P28",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P29": {
+  "id": "P29",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P30": {
+  "id": "P30",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P31": {
+  "id": "P31",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P32": {
+  "id": "P32",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P33": {
+  "id": "P33",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P34": {
+  "id": "P34",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P35": {
+  "id": "P35",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P36": {
+  "id": "P36",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P37": {
+  "id": "P37",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P38": {
+  "id": "P38",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P39": {
+  "id": "P39",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P40": {
+  "id": "P40",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P41": {
+  "id": "P41",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P42": {
+  "id": "P42",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P43": {
+  "id": "P43",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P44": {
+  "id": "P44",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P45": {
+  "id": "P45",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P46": {
+  "id": "P46",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ },
+ "P47": {
+  "id": "P47",
+  "kind": "duo",
+  "bg": "base",
+  "floor": 684,
+  "full": "board-slate.png"
+ }
+}
