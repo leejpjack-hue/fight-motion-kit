@@ -276,3 +276,74 @@ test('HM-PF-22 (#102): Rooftop cam-grammar golden show is documented as step 4-5
   assert.match(doc, /Step 4–5 proof film/);
   assert.match(doc, /fight-daiyu-wang-rooftop-camera-grammar-2026-11-01/);
 });
+
+test('HM-PF-16 (#96): medium/tight shows are flagged, suggested from camera_presets, and unchanged until confirm', async () => {
+  const fx = read('presets/fx_presets.json');
+  const five = read('shows/daiyu-wang-five-seconds.json');
+  const street = read('shows/street-old-city.json');
+  const codex = read('shows/daiyu-wang-codex-import.json');
+  const golden = show();
+  const catalogIds = new Set(catalog.presets.map(preset => preset.id));
+  const projectFrom = source => {
+    const layouts = {};
+    for (const key of new Set(source.atoms.map(atom => atom.hero && atom.hero.layout_source).filter(Boolean))) layouts[key] = read(key);
+    return { version: 1, show: source, layouts, media: [], assets: {} };
+  };
+  const fiveLint = C.lintShow(projectFrom(five), { cameraPresets: catalog, fxPresets: fx });
+  assert.equal(fiveLint.clean, true, 'gold 5s lint stays clean until Jack confirms a remap');
+
+  for (const ready of [golden, codex]) {
+    const gap = A.grammarGap(ready, catalog);
+    assert.equal(gap.flagged, false);
+    assert.equal(gap.suggestion, null);
+  }
+  const legacy = A.grammarGap(five, catalog);
+  assert.equal(legacy.flagged, true);
+  assert.equal(legacy.lacks_wide, true);
+  assert.equal(legacy.lacks_iar, true);
+  assert.ok(legacy.findings.some(item => item.code === 'legacy_missing_wide' && /no Wide beat/.test(item.message)));
+  assert.ok(legacy.findings.some(item => item.code === 'legacy_missing_iar' && /Intent → Action → Reaction/.test(item.message)));
+  assert.deepEqual(legacy.suggestion.rows.map(row => [row.role, row.preset_id]), [
+    ['Wide', 'low_rise'], ['Intent', 'eye_hold'], ['Action', 'eye_push'], ['Reaction', 'pull_aftermath'],
+    ['Intent', 'eye_hold'], ['Action', 'eye_push'], ['Reaction', 'pull_aftermath'], ['Wide', 'eye_orbit'],
+  ]);
+  assert.ok(legacy.suggestion.rows.every(row => catalogIds.has(row.preset_id) && !row.preset_id.startsWith('wide_')));
+  assert.equal(A.grammarGap(street, catalog).flagged, true);
+
+  const unfit = clone(five);
+  unfit.atoms = unfit.atoms.slice(0, 6);
+  const unfitGap = A.grammarGap(unfit, catalog);
+  assert.equal(unfitGap.flagged, true);
+  assert.equal(unfitGap.suggestion, null);
+  assert.ok(unfitGap.findings.some(item => item.code === 'legacy_remap_unfit'));
+
+  const backup = A.grammarUpgradeBackup(five);
+  assert.equal(backup.kind, 'hm-grammar-upgrade-backup');
+  assert.deepEqual(backup.show, five);
+  assert.throws(() => A.applyGrammarUpgrade(five, catalog), /Jack confirm required/);
+  assert.throws(() => A.applyGrammarUpgrade(five, catalog, { confirm: false }), /Jack confirm required/);
+  assert.deepEqual(five, read('shows/daiyu-wang-five-seconds.json'));
+
+  const upgraded = A.applyGrammarUpgrade(five, catalog, { confirm: true });
+  assert.deepEqual(five, read('shows/daiyu-wang-five-seconds.json'));
+  assert.deepEqual(upgraded.backup.show, five);
+  assert.equal(A.grammarGap(upgraded.show, catalog).flagged, false);
+  assert.equal(C.lintCameraGrammar(upgraded.show).length, 0);
+  upgraded.show.atoms.forEach((atom, index) => {
+    assert.equal(atom.duration_s, five.atoms[index].duration_s);
+    assert.deepEqual(atom.hero, five.atoms[index].hero);
+    assert.deepEqual(atom.fx_hooks, five.atoms[index].fx_hooks);
+    assert.equal(atom.label, five.atoms[index].label);
+    assert.ok(catalogIds.has(atom.camera.preset));
+    assert.equal(atom.camera.params, undefined);
+  });
+  assert.equal(upgraded.show.duration_target_s, 5);
+  assert.equal(upgraded.show.atoms[0].grammar_role, 'Wide');
+  assert.equal(upgraded.show.atoms[0].camera.preset, 'low_rise');
+  assert.equal(upgraded.show.atoms[3].grammar_role, 'Reaction');
+  assert.equal(upgraded.show.atoms[7].grammar_role, 'Wide');
+  const composed = await compose(upgraded.show);
+  assert.equal(composed.ok, true);
+  assert.equal(composed.duration_s, 5);
+  assert.throws(() => A.applyGrammarUpgrade(upgraded.show, catalog, { confirm: true }), /already has Wide/);
+});
