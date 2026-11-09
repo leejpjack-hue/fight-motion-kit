@@ -1,0 +1,8 @@
+Scene brief: /agent/repos/fight-motion-kit/skills/hm-fg-layer-author/fixtures/scene-brief.json
+Foreground camera: parallax amount 0.45 nudge 0,0,0 (wrote)
+  desk: added
+  chair: added (break @ 2s, broken props/chair-broken.png)
+Stamped 2 prop(s): 2 added, 0 already present, 0 replaced. Breaks attached: 1.
+Show length stays 5s. Foreground camera does not follow background crop-pan or the clip camera.
+Handoff: open /ui/, import this show, and edit the break in the FOREGROUND panel (#fgEffect / #fgEffectT / #fgCamPreset).
+Wrote: /tmp/hm-pf-36-ui-zSrwJ6/stamped.json

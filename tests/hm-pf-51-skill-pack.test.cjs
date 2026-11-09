@@ -37,7 +37,8 @@ test('HM-PF-51 stub files are contracts only', () => {
   assert.equal(rows.find(row => row.name === 'hm-storyboard-cantonese').kind, 'shipped');
   assert.equal(rows.find(row => row.name === 'hm-bg-scene-author').kind, 'shipped');
   assert.equal(rows.find(row => row.name === 'html-motion-fight-video').kind, 'shipped');
-  assert.equal(stubs.length, 2);
+  assert.equal(rows.find(row => row.name === 'hm-fg-layer-author').kind, 'shipped');
+  assert.equal(stubs.length, 1);
   for (const row of stubs) {
     const text = read(row.file);
     assert.match(text, new RegExp('^---\\nname: ' + row.name + '\\n', 'm'));
