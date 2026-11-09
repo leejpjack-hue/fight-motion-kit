@@ -29,6 +29,17 @@
     {"$ref": "#/$defs/costumeLockPack"}
    ]
   },
+  "pose_ref_pack": {
+   "type": "object",
+   "description": "HM-PF-04 authored map from OpenPose pose ids to camera-ready plate slots. Plate swaps do not rewrite this map.",
+   "properties": {
+    "kind": {"type": "string"},
+    "source": {"type": "string"},
+    "pack_id": {"type": "string"},
+    "art": {"type": "string"},
+    "slots": {"type": "array", "items": {"type": "object"}}
+   }
+  },
   "lock_pack": {"type": "object"},
   "meta": {"type": "object"},
   "bg": {
