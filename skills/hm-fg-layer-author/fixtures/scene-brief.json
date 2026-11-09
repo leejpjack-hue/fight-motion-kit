@@ -1,0 +1,29 @@
+{
+  "cam": {
+    "preset": "parallax",
+    "amount": 0.45,
+    "nudge": { "x": 0, "y": 0, "s": 0 }
+  },
+  "props": [
+    {
+      "id": "desk",
+      "src": "props/desk.png",
+      "x": 400,
+      "y": 500,
+      "scale": 0.5,
+      "z": 5,
+      "t_start": 0
+    },
+    {
+      "id": "chair",
+      "src": "props/chair.png",
+      "x": 200,
+      "y": 160,
+      "scale": 1,
+      "z": 20,
+      "t_start": 0,
+      "t_end": 4,
+      "effect": { "type": "break", "t": 2, "broken_src": "props/chair-broken.png" }
+    }
+  ]
+}
