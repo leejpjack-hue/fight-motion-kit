@@ -1,5 +1,8 @@
-/* Offline catalog index for HM-HF-05.
+/* Offline catalog index for HM-HF-05 and HM-PF-23.
  * Cam and FX come from static presets. Beat blocks are optional.
+ * Camera presets prefer presets/camera_presets.json, then catalog presets.
+ * A missing or empty camera catalog does not invent preset ids.
+ * Show templates are queryable and do not write the current beat.
  * Wave 1 pixelfx rows are extra FX hits (family and source pixelfx).
  * Apply adds an FX hook if it is missing. It does not replace the hook list.
  * A pixelfx hit writes { type, t_rel: 0.08, source: "pixelfx" }.
@@ -9,7 +12,7 @@
 (function (global) {
   'use strict';
 
-  const KINDS = ['cam', 'fx', 'block', 'caption_style'];
+  const KINDS = ['cam', 'fx', 'block', 'caption_style', 'template'];
   const CAPTION_STUBS = [
     {
       id: 'impact_hit',
@@ -82,6 +85,68 @@
     return '';
   }
 
+  function cameraRecords(doc) {
+    if (doc == null || typeof doc !== 'object') return null;
+    const buckets = [];
+    if (Array.isArray(doc)) buckets.push(doc);
+    else {
+      for (const key of ['presets', 'camera_presets']) {
+        if (Array.isArray(doc[key])) buckets.push(doc[key]);
+      }
+    }
+    if (!buckets.length) return null;
+    const records = [];
+    let bare = 0;
+    for (const bucket of buckets) {
+      for (const item of bucket) {
+        if (item && typeof item === 'object' && typeof item.id === 'string' && item.id.trim()) records.push(item);
+        else if (typeof item === 'string' && item.trim()) bare += 1;
+      }
+    }
+    return { present: true, records, bare };
+  }
+
+  function resolveCameraCatalog(src) {
+    const fromFile = cameraRecords(src.cameras);
+    const fromCatalog = cameraRecords(src.catalog);
+    if (fromFile && fromFile.records.length) return { records: fromFile.records, state: 'ok', message: '' };
+    if (fromCatalog && fromCatalog.records.length) return { records: fromCatalog.records, state: 'ok', message: '' };
+    const present = (fromFile && fromFile.present) || (fromCatalog && fromCatalog.present);
+    if (!present) {
+      return { records: [], state: 'missing', message: 'Camera catalog is missing. No presets to apply.' };
+    }
+    const bare = ((fromFile && fromFile.bare) || 0) + ((fromCatalog && fromCatalog.bare) || 0);
+    return {
+      records: [],
+      state: 'empty',
+      message: bare
+        ? 'Camera catalog has no preset records. No presets to apply.'
+        : 'Camera catalog is empty. No presets to apply.'
+    };
+  }
+
+  function templateEntries(src) {
+    const lists = [];
+    if (Array.isArray(src.templates)) lists.push(src.templates);
+    else if (src.templates && typeof src.templates === 'object') {
+      const nested = asList(src.templates, ['templates']);
+      if (nested.length) lists.push(nested);
+    }
+    if (src.catalog && Array.isArray(src.catalog.templates)) lists.push(src.catalog.templates);
+    const out = [];
+    const seen = new Set();
+    for (const list of lists) {
+      for (const item of list) {
+        if (!item || typeof item !== 'object') continue;
+        const id = String(item.id || item.seed_show || '').trim();
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        out.push(item);
+      }
+    }
+    return out;
+  }
+
   function blockFx(block) {
     const raw = block.fx_hooks || block.hooks || block.fx || [];
     const list = Array.isArray(raw) ? raw : [raw];
@@ -98,9 +163,9 @@
 
   function buildIndex(sources) {
     const src = sources || {};
-    const cameras = asList(src.cameras, ['presets']).length
-      ? asList(src.cameras, ['presets'])
-      : asList(src.catalog, ['presets']);
+    const cameraCatalog = resolveCameraCatalog(src);
+    const cameras = cameraCatalog.records;
+    const templates = templateEntries(src);
     const fx = asList(src.fx, ['hooks', 'fx']).length
       ? asList(src.fx, ['hooks', 'fx'])
       : asList(src.catalog, ['fx', 'hooks']);
@@ -204,6 +269,19 @@
       });
     }
 
+    for (const tpl of templates) {
+      const id = String(tpl.id || tpl.seed_show || '').trim();
+      pushHit({
+        kind: 'template',
+        id,
+        label: labelOf(tpl, id),
+        themes: uniq([tpl.theme]),
+        description: tpl.description || tpl.seed_show || tpl.path || '',
+        meta: tpl.seed_show || tpl.kind || 'template',
+        payload: tpl
+      });
+    }
+
     for (const style of styles) {
       if (!style || !style.id) continue;
       const themes = uniq([style.theme, style.family]);
@@ -218,7 +296,7 @@
       });
     }
 
-    const counts = { cam: 0, fx: 0, block: 0, caption_style: 0 };
+    const counts = { cam: 0, fx: 0, block: 0, caption_style: 0, template: 0 };
     hits.forEach(hit => { counts[hit.kind] += 1; });
     const themes = uniq(hits.flatMap(hit => hit.themes)).sort((a, b) => a.localeCompare(b));
     return {
@@ -226,12 +304,15 @@
       themes,
       counts,
       blocks: counts.block,
+      cameraCatalog: cameraCatalog.state,
+      cameraCatalogMessage: cameraCatalog.message,
       stubs: styles === authoredStyles ? false : true,
       sources: {
         cameras: cameras.length,
         fx: fx.length,
         pixelfx: wave.length,
         blocks: blocks.length,
+        templates: templates.length,
         caption_styles: styles.length,
         caption_stubs: !authoredStyles.length
       }
@@ -357,9 +438,51 @@
     return { ok: true, code: 'applied', message: 'Caption style set to ' + hit.id + '.' };
   }
 
+  function applyTemplate(hit) {
+    const tpl = (hit && hit.payload) || {};
+    const id = (hit && hit.id) || tpl.id || 'template';
+    const seed = tpl.seed_show || tpl.path || '';
+    return {
+      ok: false,
+      code: 'template-show',
+      message: 'Template ' + id + ' is a show template' + (seed ? ' (' + seed + ')' : '') + '. It does not change this beat.',
+      template: { id, label: (hit && hit.label) || id, seed_show: tpl.seed_show || '' }
+    };
+  }
+
+  function queryCamPresets(index, opts) {
+    const options = opts || {};
+    const text = options.q || options.text || '';
+    const theme = options.theme || '';
+    const templateHits = index ? query(index, { q: text, theme, kind: 'template' }) : [];
+    const templates = templateHits.map(hit => ({ id: hit.id, label: hit.label }));
+    const state = index && index.cameraCatalog;
+    if (!index || state === 'missing' || !state) {
+      return {
+        ok: false,
+        code: 'missing-catalog',
+        message: (index && index.cameraCatalogMessage) || 'Camera catalog is missing. No presets to apply.',
+        presets: [],
+        templates
+      };
+    }
+    if (state === 'empty') {
+      return {
+        ok: false,
+        code: 'empty-catalog',
+        message: index.cameraCatalogMessage || 'Camera catalog is empty. No presets to apply.',
+        presets: [],
+        templates
+      };
+    }
+    const presets = query(index, { q: text, theme, kind: 'cam' }).map(hit => ({ id: hit.id, label: hit.label }));
+    return { ok: true, code: 'ok', message: '', presets, templates };
+  }
+
   function applyHit(atom, hit) {
-    if (!atom || typeof atom !== 'object') return noSelection();
     if (!hit || !hit.kind) return { ok: false, code: 'empty-hit', message: 'Pick a catalog hit, then Apply.' };
+    if (hit.kind === 'template') return applyTemplate(hit);
+    if (!atom || typeof atom !== 'object') return noSelection();
     if (hit.kind === 'cam') return applyCam(atom, hit.payload || { id: hit.id });
     if (hit.kind === 'fx') return applyFx(atom, hit);
     if (hit.kind === 'block') return applyBlock(atom, hit);
@@ -373,6 +496,7 @@
     blockList,
     buildIndex,
     query,
+    queryCamPresets,
     applyHit
   };
   global.HMCatalogQuery = api;
