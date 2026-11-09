@@ -229,6 +229,104 @@ test('wave 1 pixelfx rows index as fx and Apply adds the hook without wiping the
   assert.match(missing.message, /Select a clip/);
 });
 
+test('HM-PF-23 catalog query returns cam preset ids and short labels and applies the preset to the current beat', () => {
+  const catalog = read('public/catalog.json');
+  const index = HMCatalogQuery.buildIndex({ cameras, catalog, fx, beatBlocks: { blocks: [] } });
+  assert.equal(index.cameraCatalog, 'ok');
+  const all = HMCatalogQuery.queryCamPresets(index, {});
+  assert.equal(all.ok, true);
+  assert.equal(all.code, 'ok');
+  assert.ok(all.presets.length >= 25);
+  for (const row of all.presets) {
+    assert.equal(typeof row.id, 'string');
+    assert.ok(row.id.trim());
+    assert.equal(typeof row.label, 'string');
+    assert.ok(row.label.trim());
+    assert.equal(Object.keys(row).sort().join(','), 'id,label');
+  }
+  assert.equal(all.presets.find(row => row.id === 'static_hold').label, 'Hold frame');
+  assert.equal(all.presets.find(row => row.id === 'eye_orbit').label, 'eye orbit');
+  const orbit = HMCatalogQuery.queryCamPresets(index, { q: 'eye_orbit' });
+  assert.ok(orbit.presets.some(row => row.id === 'eye_orbit' && row.label === 'eye orbit'));
+  assert.ok(orbit.presets.every(row => row.id.includes('eye_orbit') || row.label.toLowerCase().includes('eye_orbit')));
+  const grammar = HMCatalogQuery.queryCamPresets(index, { q: 'grammar' });
+  assert.ok(grammar.templates.some(row => row.id === 'fight-cam-grammar-starter' && row.label === 'Fight cam grammar starter'));
+  assert.ok(grammar.presets.every(row => row.id !== 'fight-cam-grammar-starter'));
+  const clip = atom();
+  const hit = index.hits.find(item => item.kind === 'cam' && item.id === 'eye_orbit');
+  const applied = HMCatalogQuery.applyHit(clip, hit);
+  assert.equal(applied.ok, true);
+  assert.equal(clip.camera.preset, 'eye_orbit');
+  assert.equal(clip.camera.angle, 'eye');
+  assert.equal(clip.duration_s, 0.5);
+  assert.deepEqual(clip.hero.plates, ['P01']);
+  assert.equal(clip.motion.beat_class, 'straight');
+  const tpl = index.hits.find(item => item.kind === 'template' && item.id === 'fight-cam-grammar-starter');
+  const before = JSON.stringify(clip);
+  const denied = HMCatalogQuery.applyHit(clip, tpl);
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, 'template-show');
+  assert.match(denied.message, /does not change this beat/);
+  assert.equal(JSON.stringify(clip), before);
+  const deniedWithoutBeat = HMCatalogQuery.applyHit(null, tpl);
+  assert.equal(deniedWithoutBeat.code, 'template-show');
+  assert.match(deniedWithoutBeat.message, /does not change this beat/);
+});
+
+test('empty or missing camera catalog fails honestly and does not invent presets', () => {
+  const missing = HMCatalogQuery.buildIndex({ fx, catalog: null, cameras: null });
+  const missingQuery = HMCatalogQuery.queryCamPresets(missing, { q: 'static_hold' });
+  assert.equal(missing.cameraCatalog, 'missing');
+  assert.equal(missingQuery.ok, false);
+  assert.equal(missingQuery.code, 'missing-catalog');
+  assert.deepEqual(missingQuery.presets, []);
+  assert.match(missingQuery.message, /Camera catalog is missing/);
+  assert.equal(missing.hits.some(hit => hit.kind === 'cam'), false);
+  assert.ok(missing.counts.fx >= 15);
+
+  const empty = HMCatalogQuery.buildIndex({
+    cameras: { presets: [] },
+    catalog: {
+      presets: [],
+      templates: [{ id: 'fight-cam-grammar-starter', label: 'Fight cam grammar starter', seed_show: 'shows/fight-cam-grammar-starter.json' }]
+    },
+    fx
+  });
+  const emptyQuery = HMCatalogQuery.queryCamPresets(empty, { q: 'hold' });
+  assert.equal(empty.cameraCatalog, 'empty');
+  assert.equal(emptyQuery.ok, false);
+  assert.equal(emptyQuery.code, 'empty-catalog');
+  assert.deepEqual(emptyQuery.presets, []);
+  assert.match(emptyQuery.message, /Camera catalog is empty/);
+  assert.equal(empty.hits.some(hit => hit.kind === 'cam'), false);
+  const named = HMCatalogQuery.queryCamPresets(empty, { q: 'grammar' });
+  assert.deepEqual(named.presets, []);
+  assert.deepEqual(named.templates, [{ id: 'fight-cam-grammar-starter', label: 'Fight cam grammar starter' }]);
+
+  const bare = HMCatalogQuery.buildIndex({
+    catalog: { camera_presets: ['low_rise', 'eye_orbit'], presets: [] }
+  });
+  const bareQuery = HMCatalogQuery.queryCamPresets(bare, { q: 'low_rise' });
+  assert.equal(bare.cameraCatalog, 'empty');
+  assert.equal(bareQuery.ok, false);
+  assert.match(bareQuery.message, /no preset records/);
+  assert.deepEqual(bareQuery.presets, []);
+
+  const fallback = HMCatalogQuery.buildIndex({
+    cameras: null,
+    catalog: { presets: [{ id: 'eye_orbit', angle: 'eye', move: 'orbit' }] }
+  });
+  const fallbackQuery = HMCatalogQuery.queryCamPresets(fallback, { q: 'orbit' });
+  assert.equal(fallback.cameraCatalog, 'ok');
+  assert.deepEqual(fallbackQuery.presets, [{ id: 'eye_orbit', label: 'eye orbit' }]);
+  const clip = atom();
+  const applied = HMCatalogQuery.applyHit(clip, fallback.hits.find(hit => hit.kind === 'cam' && hit.id === 'eye_orbit'));
+  assert.equal(applied.ok, true);
+  assert.equal(clip.camera.preset, 'eye_orbit');
+  assert.equal(clip.duration_s, 0.5);
+  assert.deepEqual(clip.hero.plates, ['P01']);
+});
+
 test('caption stub sets caption_style and leaves an existing caption', () => {
   const index = HMCatalogQuery.buildIndex({ cameras, fx, beatBlocks: { blocks: [] } });
   const stub = index.hits.find(hit => hit.id === 'impact_hit');

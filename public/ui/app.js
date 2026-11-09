@@ -1597,9 +1597,10 @@
   function download(name,blob) {const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}
   function populateCameraSelect(sel) {
     sel.replaceChildren();
+    const list = Array.isArray(presets?.presets) ? presets.presets : [];
     for(const simple of [true,false]){
       const group=document.createElement('optgroup');group.label=simple?'Simple moves':'Original fight cameras';
-      for(const p of presets.presets.filter(p=>!!p.label===simple)){
+      for(const p of list.filter(p=>!!p.label===simple)){
         const o=document.createElement('option');o.value=p.id;o.textContent=p.label||p.id.replaceAll('_',' ');group.append(o);
       }
       sel.append(group);
@@ -1617,6 +1618,17 @@
     const blockBtn = document.querySelector('#catalogKinds [data-catalog-kind="block"]');
     if (blockBtn) blockBtn.hidden = !(catalogIndex && catalogIndex.counts.block);
     if (catalogKind === 'block' && blockBtn && blockBtn.hidden) catalogKind = '';
+    const templateBtn = document.querySelector('#catalogKinds [data-catalog-kind="template"]');
+    if (templateBtn) templateBtn.hidden = !(catalogIndex && catalogIndex.counts.template);
+    if (catalogKind === 'template' && templateBtn && templateBtn.hidden) catalogKind = '';
+    const camQuery = catalogIndex && window.HMCatalogQuery.queryCamPresets
+      ? HMCatalogQuery.queryCamPresets(catalogIndex, {
+        q: $('catalogQueryInput') ? $('catalogQueryInput').value : '',
+        theme: $('catalogTheme') ? $('catalogTheme').value : ''
+      })
+      : { ok: false, code: 'missing-catalog', message: 'Camera catalog is missing. No presets to apply.' };
+    const catalogSection = $('catalogQuery');
+    if (catalogSection) catalogSection.dataset.cameraCatalog = camQuery.ok ? 'ok' : camQuery.code;
     document.querySelectorAll('#catalogKinds [data-catalog-kind]').forEach(btn => {
       const on = (btn.dataset.catalogKind || '') === catalogKind;
       btn.setAttribute('aria-pressed', String(on));
@@ -1642,12 +1654,24 @@
     catalogHitsView = hits;
     list.replaceChildren();
     const shown = hits.slice(0, 60);
-    if (!shown.length) {
+    const cameraHonest = !camQuery.ok && (catalogKind === '' || catalogKind === 'cam');
+    if (cameraHonest) {
+      const honest = document.createElement('li');
+      honest.className = 'catalog-empty';
+      honest.dataset.catalogState = camQuery.code;
+      honest.textContent = camQuery.message;
+      list.append(honest);
+    }
+    if (!shown.length && !cameraHonest) {
       const empty = document.createElement('li');
       empty.className = 'catalog-empty';
       empty.textContent = catalogKind === 'block'
         ? 'No blocks in this registry. Cam and FX still apply.'
-        : 'No matches.';
+        : catalogKind === 'cam'
+          ? 'No camera presets match.'
+          : catalogKind === 'template'
+            ? 'No templates in the catalog.'
+            : 'No matches.';
       list.append(empty);
     }
     if (catalogFocusId && !shown.some(hit => hit.kind + ':' + hit.id === catalogFocusId)) catalogFocusId = shown[0] ? shown[0].kind + ':' + shown[0].id : '';
@@ -1667,7 +1691,11 @@
       kind.textContent = hit.kind;
       const idLine = document.createElement('span');
       idLine.className = 'catalog-hit-id';
-      idLine.textContent = hit.label && hit.label !== hit.id.replace(/_/g, ' ') ? hit.label + ' · ' + hit.id : hit.id;
+      idLine.textContent = hit.kind === 'cam' || hit.kind === 'template'
+        ? hit.label + ' · ' + hit.id
+        : (hit.label && hit.label !== hit.id.replace(/_/g, ' ') ? hit.label + ' · ' + hit.id : hit.id);
+      btn.dataset.catalogId = hit.id;
+      btn.dataset.catalogLabel = hit.label || '';
       const meta = document.createElement('span');
       meta.className = 'catalog-hit-meta';
       meta.textContent = hit.meta || '';
@@ -1685,7 +1713,8 @@
     const meta = $('catalogQueryMeta');
     if (meta && catalogIndex) {
       const counts = catalogIndex.counts;
-      meta.textContent = counts.cam + ' cam · ' + counts.fx + ' fx' + (counts.block ? ' · ' + counts.block + ' block' : '');
+      const camLabel = camQuery.ok ? counts.cam + ' cam' : (camQuery.code === 'missing-catalog' ? 'cam catalog missing' : 'cam catalog empty');
+      meta.textContent = camLabel + ' · ' + counts.fx + ' fx' + (counts.block ? ' · ' + counts.block + ' block' : '') + (counts.template ? ' · ' + counts.template + ' template' : '');
     }
     if (hits.length > shown.length) {
       const more = document.createElement('li');
@@ -1698,8 +1727,18 @@
     const hit = catalogHitsView.find(item => item.kind + ':' + item.id === catalogFocusId) || catalogHitsView[0];
     const note = $('catalogQueryStatus');
     if (!hit) {
-      if (note) { note.dataset.bad = 'true'; note.textContent = 'No catalog hit to apply.'; }
-      status('No catalog hit to apply.', true);
+      const failed = $('catalogQuery') && $('catalogQuery').dataset.cameraCatalog && $('catalogQuery').dataset.cameraCatalog !== 'ok';
+      const message = failed && (catalogKind === '' || catalogKind === 'cam')
+        ? ((catalogIndex && catalogIndex.cameraCatalogMessage) || 'Camera catalog is missing. No presets to apply.')
+        : 'No catalog hit to apply.';
+      if (note) { note.dataset.bad = 'true'; note.textContent = message; }
+      status(message, true);
+      return;
+    }
+    if (hit.kind === 'template') {
+      const result = HMCatalogQuery.applyHit(null, hit);
+      if (note) { note.dataset.bad = 'true'; note.textContent = result.message; }
+      status(result.message, true);
       return;
     }
     const target = atom();
@@ -1728,33 +1767,38 @@
     }
     let result;
     edit(() => { result = HMCatalogQuery.applyHit(atom(), hit); });
-    if (note) { note.dataset.bad = 'false'; note.textContent = result.message; }
-    status(result.message, false);
+    if (note) { note.dataset.bad = result.ok ? 'false' : 'true'; note.textContent = result.message; }
+    status(result.message, !result.ok);
   }
   async function boot() {
-    [presets,effects,fightPacks,timingPacks,cutPresets]=await Promise.all([
-      json('/presets/camera_presets.json'),
+    let cameraFile = null, catalogDoc = null;
+    [effects,fightPacks,timingPacks,cutPresets,cameraFile,catalogDoc]=await Promise.all([
       json('/presets/fx_presets.json'),
       json('/presets/fight_cam_packs.json').catch(()=>({packs:[{id:'fight_8pack',presets:DEFAULT_FIGHT_PACK}]})),
       json('/presets/timing_hold_packs.json').catch(()=>copy(DEFAULT_TIMING_PACKS)),
-      json('/presets/cut_transitions.json').catch(()=>copy(DEFAULT_CUT_PRESETS))
+      json('/presets/cut_transitions.json').catch(()=>copy(DEFAULT_CUT_PRESETS)),
+      json('/presets/camera_presets.json').catch(()=>null),
+      json('/catalog.json').catch(()=>null)
     ]);
     let pixelfxWave1=[];
     try{
       const waveDoc=await json('/presets/pixelfx_wave1.json');
       pixelfxWave1=Array.isArray(waveDoc)?waveDoc:(waveDoc&&(waveDoc.hooks||waveDoc.effects))||[];
     }catch(_){pixelfxWave1=[];}
-    ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     populateTimingPacks();
     populateCutPresets();
     populateCutPackModes();
     await loadBeatBlocks();
     catalogIndex = HMCatalogQuery.buildIndex({
-      cameras: presets,
+      cameras: cameraFile,
+      catalog: catalogDoc,
       fx: effects,
       pixelfx: pixelfxWave1,
       beatBlocks: { blocks: beatBlockList() }
     });
+    const camPayloads = catalogIndex.hits.filter(hit => hit.kind === 'cam').map(hit => hit.payload);
+    presets = Object.assign({}, cameraFile && typeof cameraFile === 'object' && !Array.isArray(cameraFile) ? cameraFile : {}, { presets: camPayloads });
+    ['camera','segAPreset','segBPreset'].forEach(id=>{if($(id))populateCameraSelect($(id));});
     renderCatalogQuery();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
     const sid=resolveBuiltInId(new URLSearchParams(location.search).get('show'));
@@ -1774,13 +1818,15 @@
     list.replaceChildren();
     note.textContent='Loading templates…';
     dlg.showModal();
-    let tpls=[];
+    let tpls=[], missingCatalog=false;
     try{
       const cat=await json('/catalog.json');
       tpls=(cat.templates||[]).filter(t=>t&&(t.id||t.seed_show));
     }catch(e){
-      tpls=[{id:GRAMMAR,label:'Fight cam grammar starter',description:'Fight Camera Grammar sample flow.',seed_show:'shows/'+GRAMMAR+'.json',kind:'show_template'}];
+      missingCatalog=true;
+      tpls=[];
     }
+    if(missingCatalog){note.textContent='Catalog is missing. No templates to open.';return;}
     if(!tpls.length){note.textContent='No templates in the catalog.';return;}
     note.textContent='Pick a template to load its seed show. No server setup.';
     for(const t of tpls){

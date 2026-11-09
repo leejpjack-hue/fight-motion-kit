@@ -2732,13 +2732,15 @@ async function initCatalogQuery(){
   const cameras=[...((CAT&&CAT.presets)||[]), ...((fileCam&&fileCam.presets)||[])];
   const fx=[...((CAT&&CAT.fx)||[]), ...((fileFx&&(fileFx.hooks||fileFx.fx))||[])];
   const blocks=(CAT&&CAT.beat_blocks&&Array.isArray(CAT.beat_blocks.blocks))?CAT.beat_blocks.blocks:[];
-  CQ_INDEX=HMCatalogQuery.buildIndex({cameras, fx, beatBlocks:{blocks}});
+  const cameraSource=(!fileCam && !CAT) ? null : { presets: cameras };
+  CQ_INDEX=HMCatalogQuery.buildIndex({cameras:cameraSource, catalog:CAT, fx, beatBlocks:{blocks}});
   renderCatalogQuery();
 }
 function renderCatalogQuery(){
   if(!CQ_INDEX||!$('cqResults')) return;
   if(CQ_KIND==='block'&&!CQ_INDEX.counts.block) CQ_KIND='';
   const kinds=[{id:'',label:'All'},{id:'cam',label:'Cam'},{id:'fx',label:'FX'},{id:'block',label:'Block'},{id:'caption_style',label:'Caption'}];
+  if(CQ_INDEX.counts.template) kinds.push({id:'template',label:'Template'});
   if($('cqKinds')){
     $('cqKinds').innerHTML=kinds.filter(k=>k.id!=='block'||CQ_INDEX.counts.block).map(k=>`<button type="button" class="chip ${CQ_KIND===k.id?'on':''}" data-cqkind="${k.id}">${k.label}</button>`).join('');
     $('cqKinds').querySelectorAll('[data-cqkind]').forEach(btn=>btn.onclick=()=>{ CQ_KIND=btn.dataset.cqkind||''; renderCatalogQuery(); });
@@ -2751,14 +2753,18 @@ function renderCatalogQuery(){
   }
   const q=$('cqInput')?$('cqInput').value:'';
   const theme=themeSel?themeSel.value:'';
+  const camQuery=HMCatalogQuery.queryCamPresets?HMCatalogQuery.queryCamPresets(CQ_INDEX,{q,theme}):{ok:true,message:'',code:'ok'};
   CQ_HITS=HMCatalogQuery.query(CQ_INDEX,{q,kind:CQ_KIND,theme}).slice(0,60);
   if(CQ_FOCUS&&!CQ_HITS.some(h=>h.kind+':'+h.id===CQ_FOCUS)) CQ_FOCUS=CQ_HITS[0]?CQ_HITS[0].kind+':'+CQ_HITS[0].id:'';
   if(!CQ_FOCUS&&CQ_HITS[0]) CQ_FOCUS=CQ_HITS[0].kind+':'+CQ_HITS[0].id;
-  $('cqResults').innerHTML=CQ_HITS.length?CQ_HITS.map(hit=>{
+  const cameraHonest=!camQuery.ok && (CQ_KIND===''||CQ_KIND==='cam');
+  const honest=cameraHonest?`<div class="cqMeta" data-catalog-state="${cqEsc(camQuery.code)}" style="padding:8px">${cqEsc(camQuery.message)}</div>`:'';
+  const emptyText=CQ_KIND==='block'?'No blocks in this registry. Cam and FX still apply.':CQ_KIND==='cam'?'No camera presets match.':CQ_KIND==='template'?'No templates in the catalog.':'No matches.';
+  $('cqResults').innerHTML=honest+(CQ_HITS.length?CQ_HITS.map(hit=>{
     const key=hit.kind+':'+hit.id;
-    const title=hit.label&&hit.label!==hit.id.replace(/_/g,' ')?hit.label+' · '+hit.id:hit.id;
-    return `<button type="button" class="cqHit" data-cqkey="${cqEsc(key)}" aria-selected="${key===CQ_FOCUS?'true':'false'}" title="${cqEsc(hit.description||'')}"><span class="cqKind">${cqEsc(hit.kind)}</span><span>${cqEsc(title)}</span><span class="cqMeta">${cqEsc(hit.meta||'')}</span></button>`;
-  }).join(''):`<div class="cqMeta" style="padding:8px">${CQ_KIND==='block'?'No blocks in this registry. Cam and FX still apply.':'No matches.'}</div>`;
+    const title=(hit.kind==='cam'||hit.kind==='template')?hit.label+' · '+hit.id:(hit.label&&hit.label!==hit.id.replace(/_/g,' ')?hit.label+' · '+hit.id:hit.id);
+    return `<button type="button" class="cqHit" data-cqkey="${cqEsc(key)}" data-catalog-id="${cqEsc(hit.id)}" data-catalog-label="${cqEsc(hit.label||'')}" aria-selected="${key===CQ_FOCUS?'true':'false'}" title="${cqEsc(hit.description||'')}"><span class="cqKind">${cqEsc(hit.kind)}</span><span>${cqEsc(title)}</span><span class="cqMeta">${cqEsc(hit.meta||'')}</span></button>`;
+  }).join(''):(honest?'':`<div class="cqMeta" style="padding:8px">${emptyText}</div>`));
   $('cqResults').querySelectorAll('[data-cqkey]').forEach(btn=>{
     btn.onclick=()=>{
       CQ_FOCUS=btn.dataset.cqkey;
@@ -2770,7 +2776,17 @@ function renderCatalogQuery(){
 function applyCatalogHit(){
   const hit=CQ_HITS.find(item=>item.kind+':'+item.id===CQ_FOCUS)||CQ_HITS[0];
   const note=$('cqStatus');
-  if(!hit){ if(note){note.dataset.bad='true';note.textContent='No catalog hit to apply.';} status('No catalog hit to apply.',true); return; }
+  if(!hit){
+    const catalogState=CQ_INDEX&&CQ_INDEX.cameraCatalog;
+    const message=catalogState&&catalogState!=='ok'&&(CQ_KIND===''||CQ_KIND==='cam')?((CQ_INDEX.cameraCatalogMessage)||'Camera catalog is missing. No presets to apply.'):'No catalog hit to apply.';
+    if(note){note.dataset.bad='true';note.textContent=message;} status(message,true); return;
+  }
+  if(hit.kind==='template'){
+    const result=HMCatalogQuery.applyHit(null, hit);
+    if(note){note.dataset.bad='true';note.textContent=result.message;}
+    status(result.message,true);
+    return;
+  }
   const atom=SHOW&&SHOW.atoms&&SEL>=0?SHOW.atoms[SEL]:null;
   if(hit.kind==='block' && window.HMComposeClient && HMComposeClient.applyBeatBlock){
     if(!atom){ if(note){note.dataset.bad='true';note.textContent='Select a clip, then Apply.';} status('Select a clip, then Apply.',true); return; }
