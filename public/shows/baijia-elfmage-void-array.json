@@ -1,0 +1,3302 @@
+{
+ "show_id": "baijia-elfmage-void-array",
+ "title": "白甲槍士 × 精靈法師 · 虛空法陣 30s",
+ "duration_target_s": 30.0,
+ "floor_y": 684,
+ "grounded": true,
+ "parity_mode": true,
+ "compose_mode": "parity",
+ "chars": {
+  "L": {
+   "name": "白甲槍士"
+  },
+  "R": {
+   "name": "精靈法師"
+  }
+ },
+ "bg": {
+  "base": "assets/baijia-elfmage-void-array/bg/bg_void_white.png",
+  "swap": "assets/baijia-elfmage-void-array/bg/bg_void_white.png",
+  "swap_t": 99,
+  "motion": {
+   "preset": "pan_right",
+   "amount": 0,
+   "clock": "show"
+  }
+ },
+ "overlays": [],
+ "atoms": [
+  {
+   "id": "va_p01",
+   "beat_id": "va_p01",
+   "label": "P01 廣角建立",
+   "kind": "duo",
+   "duration_s": 1.0,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P01"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.02,
+      "b": 1.06,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "const",
+      "v": 8
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P01"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p02",
+   "beat_id": "va_p02",
+   "label": "P02 魔力初現",
+   "kind": "duo",
+   "duration_s": 1.0,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P02"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.06,
+      "b": 1.1,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "const",
+      "v": 10
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P02"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p03",
+   "beat_id": "va_p03",
+   "label": "P03 槍士蓄力",
+   "kind": "duo",
+   "duration_s": 0.7,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P03"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.1,
+      "b": 1.2,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": 0,
+      "b": -20,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 16
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "s1_f00",
+    "s1_f01",
+    "s1_f02",
+    "s1_f03",
+    "s1_f04",
+    "s1_f05",
+    "s1_f06",
+    "s1_f07",
+    "s1_f08"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p04",
+   "beat_id": "va_p04",
+   "label": "P04 繞行＋掌心爆光",
+   "kind": "duo",
+   "duration_s": 0.9,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P04"
+    ]
+   },
+   "camera": {
+    "preset": "eye_orbit",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.18,
+      "b": 1.28,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -20,
+      "b": 40,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 18
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "speed_lines",
+     "t_rel": 0.4,
+     "params": {
+      "dir": 1
+     }
+    }
+   ],
+   "source_refs": [
+    "s1_f09",
+    "s1_f10",
+    "s1_f11",
+    "s1_f12",
+    "s1_f13",
+    "s1_f14",
+    "s1_f15",
+    "s1_f16",
+    "s1_f17",
+    "s1_f18",
+    "s1_f19"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p05",
+   "beat_id": "va_p05",
+   "label": "P05 首撞接觸",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P05"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.55,
+      "b": 1.7,
+      "period_s": 0.18
+     },
+     "x": {
+      "type": "saw",
+      "a": -12,
+      "b": 12,
+      "period_s": 0.18
+     },
+     "y": {
+      "type": "const",
+      "v": 40
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "hit_orange",
+     "t_rel": 0.95,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.95,
+     "params": {
+      "amp": 14
+     }
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.95,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s1_f20",
+    "s1_f21",
+    "s1_f22",
+    "s1_f23",
+    "s1_f24",
+    "s1_f25"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p06",
+   "beat_id": "va_p06",
+   "label": "P06 橙撞反應",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P06"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.35,
+      "b": 1.48,
+      "period_s": 0.22
+     },
+     "x": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.22
+     },
+     "y": {
+      "type": "lerp",
+      "a": 36,
+      "b": 20,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.15,
+     "params": {}
+    },
+    {
+     "type": "dust",
+     "t_rel": 0.3,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.1,
+     "params": {
+      "amp": 8
+     }
+    }
+   ],
+   "source_refs": [
+    "s1_f26",
+    "s1_f27",
+    "s1_f28",
+    "s1_f29",
+    "s1_f30",
+    "s1_f31",
+    "s1_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p07",
+   "beat_id": "va_p07",
+   "label": "P07 第二次突刺",
+   "kind": "duo",
+   "duration_s": 0.9,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P07"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.22,
+      "b": 1.42,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -10,
+      "b": 10,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 18
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "smear_trail",
+     "t_rel": 0.45,
+     "params": {
+      "dir": 1
+     }
+    }
+   ],
+   "source_refs": [
+    "s2_f00",
+    "s2_f01",
+    "s2_f02",
+    "s2_f03",
+    "s2_f04",
+    "s2_f05",
+    "s2_f06",
+    "s2_f07",
+    "s2_f08",
+    "s2_f09",
+    "s2_f10"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p08",
+   "beat_id": "va_p08",
+   "label": "P08 偏手格杆",
+   "kind": "duo",
+   "duration_s": 0.7,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P08"
+    ]
+   },
+   "camera": {
+    "preset": "eye_lateral",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.3
+     },
+     "x": {
+      "type": "lerp",
+      "a": 10,
+      "b": -24,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 16
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s2_f11",
+    "s2_f12",
+    "s2_f13",
+    "s2_f14",
+    "s2_f15",
+    "s2_f16",
+    "s2_f17",
+    "s2_f18",
+    "s2_f19"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p09",
+   "beat_id": "va_p09",
+   "label": "P09 震跳開",
+   "kind": "duo",
+   "duration_s": 1.0,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P09"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_snap",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.28,
+      "b": 1.18,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -20,
+      "b": -8,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "lerp",
+      "a": 10,
+      "b": -6,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.35,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.2,
+     "params": {
+      "amp": 10
+     }
+    }
+   ],
+   "source_refs": [
+    "s2_f20",
+    "s2_f21",
+    "s2_f22",
+    "s2_f23",
+    "s2_f24",
+    "s2_f25",
+    "s2_f26",
+    "s2_f27",
+    "s2_f28",
+    "s2_f29",
+    "s2_f30",
+    "s2_f31",
+    "s2_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p10",
+   "beat_id": "va_p10",
+   "label": "P10 落地重整",
+   "kind": "duo",
+   "duration_s": 1.2,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P10"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.12,
+      "b": 1.08,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": -8,
+      "b": 6,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.15,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "P10"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p11",
+   "beat_id": "va_p11",
+   "label": "P11 廣角拉開",
+   "kind": "duo",
+   "duration_s": 1.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P11"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.08,
+      "b": 1.0,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "const",
+      "v": 4
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P11"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p12",
+   "beat_id": "va_p12",
+   "label": "P12 法師肘擊",
+   "kind": "duo",
+   "duration_s": 0.55,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P12"
+    ]
+   },
+   "camera": {
+    "preset": "whip_A_to_B",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.15,
+      "b": 1.38,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -30,
+      "b": 36,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 20
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "smear_trail",
+     "t_rel": 0.4,
+     "params": {
+      "dir": -1
+     }
+    }
+   ],
+   "source_refs": [
+    "s3_f00",
+    "s3_f01",
+    "s3_f02",
+    "s3_f03",
+    "s3_f04",
+    "s3_f05",
+    "s3_f06",
+    "s3_f07"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p13",
+   "beat_id": "va_p13",
+   "label": "P13 直拳被拍",
+   "kind": "duo",
+   "duration_s": 0.55,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P13"
+    ]
+   },
+   "camera": {
+    "preset": "eye_lateral",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.32
+     },
+     "x": {
+      "type": "lerp",
+      "a": 30,
+      "b": -16,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 18
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.45,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s3_f08",
+    "s3_f09",
+    "s3_f10",
+    "s3_f11",
+    "s3_f12",
+    "s3_f13",
+    "s3_f14",
+    "s3_f15"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p14",
+   "beat_id": "va_p14",
+   "label": "P14 俯閃上刺",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P14"
+    ]
+   },
+   "camera": {
+    "preset": "upward_inside",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.28,
+      "b": 1.46,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": 10,
+      "b": 40,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "smear_trail",
+     "t_rel": 0.5,
+     "params": {
+      "dir": 1
+     }
+    }
+   ],
+   "source_refs": [
+    "s3_f16",
+    "s3_f17",
+    "s3_f18",
+    "s3_f19",
+    "s3_f20",
+    "s3_f21",
+    "s3_f22",
+    "s3_f23"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p15",
+   "beat_id": "va_p15",
+   "label": "P15 前臂鎖槍",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P15"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.7,
+      "b": 1.85,
+      "period_s": 0.2
+     },
+     "x": {
+      "type": "saw",
+      "a": -8,
+      "b": 8,
+      "period_s": 0.2
+     },
+     "y": {
+      "type": "const",
+      "v": 70
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s3_f24",
+    "s3_f25",
+    "s3_f26",
+    "s3_f27",
+    "s3_f28",
+    "s3_f29",
+    "s3_f30",
+    "s3_f31",
+    "s3_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p16",
+   "beat_id": "va_p16",
+   "label": "P16 抽杆轉肩",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P16"
+    ]
+   },
+   "camera": {
+    "preset": "dutch_snap",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.5,
+      "b": 1.35,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": 12,
+      "b": -28,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 30
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "s4_f00",
+    "s4_f01",
+    "s4_f02",
+    "s4_f03",
+    "s4_f04",
+    "s4_f05",
+    "s4_f06",
+    "s4_f07",
+    "s4_f08",
+    "s4_f09",
+    "s4_f10"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p17",
+   "beat_id": "va_p17",
+   "label": "P17 翻滾撑起",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P17"
+    ]
+   },
+   "camera": {
+    "preset": "floor_hold",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.25,
+      "b": 1.2,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -16,
+      "b": 16,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": -20
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.35,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s4_f11",
+    "s4_f12",
+    "s4_f13",
+    "s4_f14",
+    "s4_f15",
+    "s4_f16",
+    "s4_f17",
+    "s4_f18",
+    "s4_f19",
+    "s4_f20"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p18",
+   "beat_id": "va_p18",
+   "label": "P18 斜撞橙閃",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P18"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.55,
+      "b": 1.78,
+      "period_s": 0.16
+     },
+     "x": {
+      "type": "saw",
+      "a": -18,
+      "b": 18,
+      "period_s": 0.16
+     },
+     "y": {
+      "type": "const",
+      "v": 30
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "hit_orange",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.08,
+     "params": {
+      "amp": 16
+     }
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "dust",
+     "t_rel": 0.2,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s4_f21",
+    "s4_f22",
+    "s4_f23",
+    "s4_f24",
+    "s4_f25",
+    "s4_f26",
+    "s4_f27",
+    "s4_f28",
+    "s4_f29",
+    "s4_f30",
+    "s4_f31",
+    "s4_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p19",
+   "beat_id": "va_p19",
+   "label": "P19 拉開",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P19"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.35,
+      "b": 1.12,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": 20,
+      "b": 8,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P19"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p20",
+   "beat_id": "va_p20",
+   "label": "P20 快刺",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P20"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.18,
+      "b": 1.48,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -8,
+      "b": 8,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 16
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "smear_trail",
+     "t_rel": 0.4,
+     "params": {
+      "dir": 1
+     }
+    },
+    {
+     "type": "speed_lines",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s5_f00",
+    "s5_f01",
+    "s5_f02",
+    "s5_f03",
+    "s5_f04",
+    "s5_f05",
+    "s5_f06",
+    "s5_f07",
+    "s5_f08",
+    "s5_f09",
+    "s5_f10",
+    "s5_f11",
+    "s5_f12",
+    "s5_f13",
+    "s5_f14",
+    "s5_f15",
+    "s5_f16"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p21",
+   "beat_id": "va_p21",
+   "label": "P21 魔力入杆粉閃",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P21"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.65,
+      "b": 1.82,
+      "period_s": 0.18
+     },
+     "x": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.18
+     },
+     "y": {
+      "type": "const",
+      "v": 50
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "hit_pink",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.08,
+     "params": {
+      "amp": 12
+     }
+    }
+   ],
+   "source_refs": [
+    "s5_f17",
+    "s5_f18",
+    "s5_f19",
+    "s5_f20",
+    "s5_f21",
+    "s5_f22",
+    "s5_f23",
+    "s5_f24",
+    "s5_f25",
+    "s5_f26",
+    "s5_f27",
+    "s5_f28",
+    "s5_f29",
+    "s5_f30",
+    "s5_f31",
+    "s5_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p22",
+   "beat_id": "va_p22",
+   "label": "P22 貼身反攻鎖槍",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P22"
+    ]
+   },
+   "camera": {
+    "preset": "eye_lateral",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.4
+     },
+     "x": {
+      "type": "lerp",
+      "a": -28,
+      "b": 28,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 24
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s6_f00",
+    "s6_f01",
+    "s6_f02",
+    "s6_f03",
+    "s6_f04",
+    "s6_f05",
+    "s6_f06",
+    "s6_f07"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p23",
+   "beat_id": "va_p23",
+   "label": "P23 抽尾轉肩起跳",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P23"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.3,
+      "b": 1.48,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": 10,
+      "b": -30,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.5,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s6_f08",
+    "s6_f09",
+    "s6_f10",
+    "s6_f11",
+    "s6_f12",
+    "s6_f13",
+    "s6_f14"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p24",
+   "beat_id": "va_p24",
+   "label": "P24 半空粉撞",
+   "kind": "duo",
+   "duration_s": 0.7,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P24"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.55,
+      "b": 1.72,
+      "period_s": 0.16
+     },
+     "x": {
+      "type": "saw",
+      "a": -12,
+      "b": 12,
+      "period_s": 0.16
+     },
+     "y": {
+      "type": "const",
+      "v": -40
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "hit_pink",
+     "t_rel": 0.12,
+     "params": {}
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.12,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.12,
+     "params": {
+      "amp": 14
+     }
+    }
+   ],
+   "source_refs": [
+    "s6_f15",
+    "s6_f16",
+    "s6_f17",
+    "s6_f18",
+    "s6_f19",
+    "s6_f20",
+    "s6_f21",
+    "s6_f22",
+    "s6_f23"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p25",
+   "beat_id": "va_p25",
+   "label": "P25 雙落地塵環",
+   "kind": "duo",
+   "duration_s": 0.7,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P25"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.35,
+      "b": 1.15,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": -30,
+      "b": 8,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.2,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s6_f24",
+    "s6_f25",
+    "s6_f26",
+    "s6_f27",
+    "s6_f28",
+    "s6_f29",
+    "s6_f30",
+    "s6_f31",
+    "s6_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p26",
+   "beat_id": "va_p26",
+   "label": "P26 甩槍跟鏡",
+   "kind": "duo",
+   "duration_s": 0.8,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P26"
+    ]
+   },
+   "camera": {
+    "preset": "box_side_pan",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.22
+     },
+     "x": {
+      "type": "lerp",
+      "a": -40,
+      "b": 48,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": -12
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "s7_f00",
+    "s7_f01",
+    "s7_f02",
+    "s7_f03",
+    "s7_f04",
+    "s7_f05",
+    "s7_f06",
+    "s7_f07",
+    "s7_f08",
+    "s7_f09",
+    "s7_f10",
+    "s7_f11",
+    "s7_f12"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p27",
+   "beat_id": "va_p27",
+   "label": "P27 赤手近身",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P27"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.25,
+      "b": 1.45,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 8
+     },
+     "y": {
+      "type": "lerp",
+      "a": -16,
+      "b": 24,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "s7_f13",
+    "s7_f14",
+    "s7_f15",
+    "s7_f16",
+    "s7_f17",
+    "s7_f18",
+    "s7_f19",
+    "s7_f20",
+    "s7_f21",
+    "s7_f22"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p28",
+   "beat_id": "va_p28",
+   "label": "P28 喉前拍偏",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P28"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.85,
+      "b": 2.05,
+      "period_s": 0.16
+     },
+     "x": {
+      "type": "saw",
+      "a": -10,
+      "b": 10,
+      "period_s": 0.16
+     },
+     "y": {
+      "type": "const",
+      "v": 80
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.45,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.45,
+     "params": {
+      "amp": 6
+     }
+    }
+   ],
+   "source_refs": [
+    "s7_f23",
+    "s7_f24",
+    "s7_f25",
+    "s7_f26",
+    "s7_f27",
+    "s7_f28",
+    "s7_f29",
+    "s7_f30",
+    "s7_f31",
+    "s7_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p29",
+   "beat_id": "va_p29",
+   "label": "P29 青藍爆發螺旋",
+   "kind": "duo",
+   "duration_s": 0.9,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P29"
+    ]
+   },
+   "camera": {
+    "preset": "eye_orbit",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.4,
+      "b": 1.7,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -40,
+      "b": 50,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "lerp",
+      "a": 20,
+      "b": -20,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "tornado_spiral",
+     "t_rel": 0.25,
+     "t_rel_end": 0.95,
+     "params": {}
+    },
+    {
+     "type": "speed_lines",
+     "t_rel": 0.3,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.35,
+     "params": {
+      "amp": 10
+     }
+    }
+   ],
+   "source_refs": [
+    "s8_f00",
+    "s8_f01",
+    "s8_f02",
+    "s8_f03",
+    "s8_f04",
+    "s8_f05",
+    "s8_f06",
+    "s8_f07",
+    "s8_f08",
+    "s8_f09",
+    "s8_f10",
+    "s8_f11",
+    "s8_f12",
+    "s8_f13",
+    "s8_f14",
+    "s8_f15",
+    "s8_f16",
+    "s8_f17",
+    "s8_f18",
+    "s8_f19",
+    "s8_f20",
+    "s8_f21",
+    "s8_f22",
+    "s8_f23",
+    "s8_f24",
+    "s8_f25",
+    "s8_f26",
+    "s8_f27",
+    "s8_f28",
+    "s8_f29",
+    "s8_f30",
+    "s8_f31",
+    "s8_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p30",
+   "beat_id": "va_p30",
+   "label": "P30 俯視雙人",
+   "kind": "duo",
+   "duration_s": 0.4,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P30"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.15,
+      "b": 1.05,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": -50,
+      "b": -30,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P30"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p31",
+   "beat_id": "va_p31",
+   "label": "P31 退緣撿槍＋廣角",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P31"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.08,
+      "b": 1.0,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": -20,
+      "b": 0,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P31"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p32",
+   "beat_id": "va_p32",
+   "label": "P32 曼陀羅＋光隧道起",
+   "kind": "duo",
+   "duration_s": 0.45,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P32"
+    ]
+   },
+   "camera": {
+    "preset": "high_dive",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.05,
+      "b": 1.25,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": -40,
+      "b": -10,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "speed_lines",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "P32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p33",
+   "beat_id": "va_p33",
+   "label": "P33 陣心白閃",
+   "kind": "duo",
+   "duration_s": 0.55,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P33"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.6,
+      "b": 1.9,
+      "period_s": 0.14
+     },
+     "x": {
+      "type": "saw",
+      "a": -16,
+      "b": 16,
+      "period_s": 0.14
+     },
+     "y": {
+      "type": "const",
+      "v": 20
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "impact_white",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.08,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.08,
+     "params": {
+      "amp": 18
+     }
+    }
+   ],
+   "source_refs": [
+    "s9_f00",
+    "s9_f01",
+    "s9_f02",
+    "s9_f03",
+    "s9_f04",
+    "s9_f05",
+    "s9_f06",
+    "s9_f07",
+    "s9_f08",
+    "s9_f09",
+    "s9_f10",
+    "s9_f11",
+    "s9_f12",
+    "s9_f13",
+    "s9_f14",
+    "s9_f15",
+    "s9_f16"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p34",
+   "beat_id": "va_p34",
+   "label": "P34 單膝裂袖",
+   "kind": "duo",
+   "duration_s": 0.55,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P34"
+    ]
+   },
+   "camera": {
+    "preset": "floor_hold",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.35,
+      "b": 1.22,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 10
+     },
+     "y": {
+      "type": "const",
+      "v": -24
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "dust",
+     "t_rel": 0.2,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s9_f17",
+    "s9_f18",
+    "s9_f19",
+    "s9_f20",
+    "s9_f21",
+    "s9_f22",
+    "s9_f23",
+    "s9_f24",
+    "s9_f25",
+    "s9_f26",
+    "s9_f27",
+    "s9_f28",
+    "s9_f29",
+    "s9_f30",
+    "s9_f31",
+    "s9_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p35",
+   "beat_id": "va_p35",
+   "label": "P35 對視停",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P35"
+    ]
+   },
+   "camera": {
+    "preset": "face_whip",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.4,
+      "b": 1.55,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -30,
+      "b": 20,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 70
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P35"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p36",
+   "beat_id": "va_p36",
+   "label": "P36 同步起身",
+   "kind": "duo",
+   "duration_s": 0.45,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P36"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.3,
+      "b": 1.15,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": 40,
+      "b": 10,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P36"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p37",
+   "beat_id": "va_p37",
+   "label": "P37 同步上步",
+   "kind": "duo",
+   "duration_s": 0.35,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P37"
+    ]
+   },
+   "camera": {
+    "preset": "box_side_pan",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.2
+     },
+     "x": {
+      "type": "lerp",
+      "a": -16,
+      "b": 16,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "const",
+      "v": 8
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "s10_f00",
+    "s10_f01",
+    "s10_f02",
+    "s10_f03",
+    "s10_f04",
+    "s10_f05"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p38",
+   "beat_id": "va_p38",
+   "label": "P38 格擋一",
+   "kind": "duo",
+   "duration_s": 0.3,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P38"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.6,
+      "b": 1.72,
+      "period_s": 0.15
+     },
+     "x": {
+      "type": "saw",
+      "a": -8,
+      "b": 8,
+      "period_s": 0.15
+     },
+     "y": {
+      "type": "const",
+      "v": 40
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.4,
+     "params": {
+      "amp": 6
+     }
+    }
+   ],
+   "source_refs": [
+    "s10_f06",
+    "s10_f07",
+    "s10_f08",
+    "s10_f09",
+    "s10_f10"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p39",
+   "beat_id": "va_p39",
+   "label": "P39 格擋二",
+   "kind": "duo",
+   "duration_s": 0.3,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P39"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.62,
+      "b": 1.74,
+      "period_s": 0.15
+     },
+     "x": {
+      "type": "saw",
+      "a": -8,
+      "b": 8,
+      "period_s": 0.15
+     },
+     "y": {
+      "type": "const",
+      "v": 42
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.4,
+     "params": {
+      "amp": 6
+     }
+    }
+   ],
+   "source_refs": [
+    "s10_f11",
+    "s10_f12",
+    "s10_f13",
+    "s10_f14",
+    "s10_f15"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p40",
+   "beat_id": "va_p40",
+   "label": "P40 絞轉一",
+   "kind": "duo",
+   "duration_s": 0.3,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P40"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.68,
+      "b": 1.8,
+      "period_s": 0.14
+     },
+     "x": {
+      "type": "saw",
+      "a": -6,
+      "b": 6,
+      "period_s": 0.14
+     },
+     "y": {
+      "type": "const",
+      "v": 48
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s10_f16",
+    "s10_f17",
+    "s10_f18",
+    "s10_f19",
+    "s10_f20"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p41",
+   "beat_id": "va_p41",
+   "label": "P41 絞轉二",
+   "kind": "duo",
+   "duration_s": 0.3,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P41"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.7,
+      "b": 1.84,
+      "period_s": 0.14
+     },
+     "x": {
+      "type": "saw",
+      "a": -6,
+      "b": 6,
+      "period_s": 0.14
+     },
+     "y": {
+      "type": "const",
+      "v": 50
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.4,
+     "params": {}
+    }
+   ],
+   "source_refs": [
+    "s10_f21",
+    "s10_f22",
+    "s10_f23",
+    "s10_f24",
+    "s10_f25"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p42",
+   "beat_id": "va_p42",
+   "label": "P42 刺對掌白閃",
+   "kind": "duo",
+   "duration_s": 0.45,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "action"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P42"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.75,
+      "b": 2.05,
+      "period_s": 0.12
+     },
+     "x": {
+      "type": "saw",
+      "a": -14,
+      "b": 14,
+      "period_s": 0.12
+     },
+     "y": {
+      "type": "const",
+      "v": 46
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "impact_white",
+     "t_rel": 0.1,
+     "params": {}
+    },
+    {
+     "type": "sparks",
+     "t_rel": 0.1,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.1,
+     "params": {
+      "amp": 18
+     }
+    }
+   ],
+   "source_refs": [
+    "s10_f26",
+    "s10_f27",
+    "s10_f28",
+    "s10_f29",
+    "s10_f30",
+    "s10_f31",
+    "s10_f32"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p43",
+   "beat_id": "va_p43",
+   "label": "P43 寸止定格",
+   "kind": "duo",
+   "duration_s": 1.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P43"
+    ]
+   },
+   "camera": {
+    "preset": "ecu_jitter",
+    "params": {
+     "s": {
+      "type": "saw",
+      "a": 1.72,
+      "b": 1.78,
+      "period_s": 0.35
+     },
+     "x": {
+      "type": "saw",
+      "a": -4,
+      "b": 4,
+      "period_s": 0.35
+     },
+     "y": {
+      "type": "const",
+      "v": 48
+     }
+    }
+   },
+   "fx_hooks": [
+    {
+     "type": "sparks",
+     "t_rel": 0.05,
+     "t_rel_end": 0.95,
+     "params": {}
+    },
+    {
+     "type": "shake",
+     "t_rel": 0.0,
+     "params": {
+      "amp": 3
+     }
+    }
+   ],
+   "source_refs": [
+    "P43"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p44",
+   "beat_id": "va_p44",
+   "label": "P44 分開熄光",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P44"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.5,
+      "b": 1.18,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "lerp",
+      "a": 30,
+      "b": 8,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P44"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p45",
+   "beat_id": "va_p45",
+   "label": "P45 對峙＋推近眼睛",
+   "kind": "duo",
+   "duration_s": 0.6,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P45"
+    ]
+   },
+   "camera": {
+    "preset": "eye_push",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.25,
+      "b": 1.85,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": -20,
+      "b": 40,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "lerp",
+      "a": 20,
+      "b": 80,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P45"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p46",
+   "beat_id": "va_p46",
+   "label": "P46 低廣角收尾",
+   "kind": "duo",
+   "duration_s": 0.4,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P46"
+    ]
+   },
+   "camera": {
+    "preset": "low_rise",
+    "params": {
+     "s": {
+      "type": "lerp",
+      "a": 1.4,
+      "b": 1.08,
+      "ease": "smooth"
+     },
+     "x": {
+      "type": "lerp",
+      "a": 20,
+      "b": 0,
+      "ease": "smooth"
+     },
+     "y": {
+      "type": "lerp",
+      "a": 40,
+      "b": -16,
+      "ease": "smooth"
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P46"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  },
+  {
+   "id": "va_p47",
+   "beat_id": "va_p47",
+   "label": "P47 停推漸黑",
+   "kind": "duo",
+   "duration_s": 0.5,
+   "plates_needed": 1,
+   "pose_mode": "hero",
+   "motion": {
+    "family": "fight",
+    "beat_class": "hold"
+   },
+   "hero": {
+    "layout_source": "assets/baijia-elfmage-void-array/layout.json",
+    "plates": [
+     "P47"
+    ]
+   },
+   "camera": {
+    "preset": "pull_aftermath",
+    "params": {
+     "s": {
+      "type": "const",
+      "v": 1.04
+     },
+     "x": {
+      "type": "const",
+      "v": 0
+     },
+     "y": {
+      "type": "const",
+      "v": -8
+     }
+    }
+   },
+   "fx_hooks": [],
+   "source_refs": [
+    "P47"
+   ],
+   "background": {
+    "src": "assets/baijia-elfmage-void-array/bg/bg_void_white.png"
+   }
+  }
+ ],
+ "board": {
+  "kind": "hm-pf-08-board",
+  "show_id": "baijia-elfmage-void-array",
+  "language": "yue",
+  "source_label": "Cantonese board",
+  "source_path": "/workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md",
+  "beats": [
+   {
+    "beat_id": "va_p01",
+    "id": "va_p01",
+    "label": "P01 廣角建立",
+    "index": 0,
+    "duration_s": 1.0,
+    "camera_preset": "eye_push",
+    "plate": "P01"
+   },
+   {
+    "beat_id": "va_p02",
+    "id": "va_p02",
+    "label": "P02 魔力初現",
+    "index": 1,
+    "duration_s": 1.0,
+    "camera_preset": "eye_push",
+    "plate": "P02"
+   },
+   {
+    "beat_id": "va_p03",
+    "id": "va_p03",
+    "label": "P03 槍士蓄力",
+    "index": 2,
+    "duration_s": 0.7,
+    "camera_preset": "eye_push",
+    "plate": "P03"
+   },
+   {
+    "beat_id": "va_p04",
+    "id": "va_p04",
+    "label": "P04 繞行＋掌心爆光",
+    "index": 3,
+    "duration_s": 0.9,
+    "camera_preset": "eye_orbit",
+    "plate": "P04"
+   },
+   {
+    "beat_id": "va_p05",
+    "id": "va_p05",
+    "label": "P05 首撞接觸",
+    "index": 4,
+    "duration_s": 0.5,
+    "camera_preset": "ecu_jitter",
+    "plate": "P05"
+   },
+   {
+    "beat_id": "va_p06",
+    "id": "va_p06",
+    "label": "P06 橙撞反應",
+    "index": 5,
+    "duration_s": 0.6,
+    "camera_preset": "ecu_jitter",
+    "plate": "P06"
+   },
+   {
+    "beat_id": "va_p07",
+    "id": "va_p07",
+    "label": "P07 第二次突刺",
+    "index": 6,
+    "duration_s": 0.9,
+    "camera_preset": "eye_push",
+    "plate": "P07"
+   },
+   {
+    "beat_id": "va_p08",
+    "id": "va_p08",
+    "label": "P08 偏手格杆",
+    "index": 7,
+    "duration_s": 0.7,
+    "camera_preset": "eye_lateral",
+    "plate": "P08"
+   },
+   {
+    "beat_id": "va_p09",
+    "id": "va_p09",
+    "label": "P09 震跳開",
+    "index": 8,
+    "duration_s": 1.0,
+    "camera_preset": "dutch_snap",
+    "plate": "P09"
+   },
+   {
+    "beat_id": "va_p10",
+    "id": "va_p10",
+    "label": "P10 落地重整",
+    "index": 9,
+    "duration_s": 1.2,
+    "camera_preset": "low_rise",
+    "plate": "P10"
+   },
+   {
+    "beat_id": "va_p11",
+    "id": "va_p11",
+    "label": "P11 廣角拉開",
+    "index": 10,
+    "duration_s": 1.5,
+    "camera_preset": "pull_aftermath",
+    "plate": "P11"
+   },
+   {
+    "beat_id": "va_p12",
+    "id": "va_p12",
+    "label": "P12 法師肘擊",
+    "index": 11,
+    "duration_s": 0.55,
+    "camera_preset": "whip_A_to_B",
+    "plate": "P12"
+   },
+   {
+    "beat_id": "va_p13",
+    "id": "va_p13",
+    "label": "P13 直拳被拍",
+    "index": 12,
+    "duration_s": 0.55,
+    "camera_preset": "eye_lateral",
+    "plate": "P13"
+   },
+   {
+    "beat_id": "va_p14",
+    "id": "va_p14",
+    "label": "P14 俯閃上刺",
+    "index": 13,
+    "duration_s": 0.6,
+    "camera_preset": "upward_inside",
+    "plate": "P14"
+   },
+   {
+    "beat_id": "va_p15",
+    "id": "va_p15",
+    "label": "P15 前臂鎖槍",
+    "index": 14,
+    "duration_s": 0.6,
+    "camera_preset": "ecu_jitter",
+    "plate": "P15"
+   },
+   {
+    "beat_id": "va_p16",
+    "id": "va_p16",
+    "label": "P16 抽杆轉肩",
+    "index": 15,
+    "duration_s": 0.6,
+    "camera_preset": "dutch_snap",
+    "plate": "P16"
+   },
+   {
+    "beat_id": "va_p17",
+    "id": "va_p17",
+    "label": "P17 翻滾撑起",
+    "index": 16,
+    "duration_s": 0.5,
+    "camera_preset": "floor_hold",
+    "plate": "P17"
+   },
+   {
+    "beat_id": "va_p18",
+    "id": "va_p18",
+    "label": "P18 斜撞橙閃",
+    "index": 17,
+    "duration_s": 0.6,
+    "camera_preset": "ecu_jitter",
+    "plate": "P18"
+   },
+   {
+    "beat_id": "va_p19",
+    "id": "va_p19",
+    "label": "P19 拉開",
+    "index": 18,
+    "duration_s": 0.5,
+    "camera_preset": "pull_aftermath",
+    "plate": "P19"
+   },
+   {
+    "beat_id": "va_p20",
+    "id": "va_p20",
+    "label": "P20 快刺",
+    "index": 19,
+    "duration_s": 0.6,
+    "camera_preset": "eye_push",
+    "plate": "P20"
+   },
+   {
+    "beat_id": "va_p21",
+    "id": "va_p21",
+    "label": "P21 魔力入杆粉閃",
+    "index": 20,
+    "duration_s": 0.6,
+    "camera_preset": "ecu_jitter",
+    "plate": "P21"
+   },
+   {
+    "beat_id": "va_p22",
+    "id": "va_p22",
+    "label": "P22 貼身反攻鎖槍",
+    "index": 21,
+    "duration_s": 0.6,
+    "camera_preset": "eye_lateral",
+    "plate": "P22"
+   },
+   {
+    "beat_id": "va_p23",
+    "id": "va_p23",
+    "label": "P23 抽尾轉肩起跳",
+    "index": 22,
+    "duration_s": 0.5,
+    "camera_preset": "high_dive",
+    "plate": "P23"
+   },
+   {
+    "beat_id": "va_p24",
+    "id": "va_p24",
+    "label": "P24 半空粉撞",
+    "index": 23,
+    "duration_s": 0.7,
+    "camera_preset": "high_dive",
+    "plate": "P24"
+   },
+   {
+    "beat_id": "va_p25",
+    "id": "va_p25",
+    "label": "P25 雙落地塵環",
+    "index": 24,
+    "duration_s": 0.7,
+    "camera_preset": "low_rise",
+    "plate": "P25"
+   },
+   {
+    "beat_id": "va_p26",
+    "id": "va_p26",
+    "label": "P26 甩槍跟鏡",
+    "index": 25,
+    "duration_s": 0.8,
+    "camera_preset": "box_side_pan",
+    "plate": "P26"
+   },
+   {
+    "beat_id": "va_p27",
+    "id": "va_p27",
+    "label": "P27 赤手近身",
+    "index": 26,
+    "duration_s": 0.6,
+    "camera_preset": "low_rise",
+    "plate": "P27"
+   },
+   {
+    "beat_id": "va_p28",
+    "id": "va_p28",
+    "label": "P28 喉前拍偏",
+    "index": 27,
+    "duration_s": 0.6,
+    "camera_preset": "ecu_jitter",
+    "plate": "P28"
+   },
+   {
+    "beat_id": "va_p29",
+    "id": "va_p29",
+    "label": "P29 青藍爆發螺旋",
+    "index": 28,
+    "duration_s": 0.9,
+    "camera_preset": "eye_orbit",
+    "plate": "P29"
+   },
+   {
+    "beat_id": "va_p30",
+    "id": "va_p30",
+    "label": "P30 俯視雙人",
+    "index": 29,
+    "duration_s": 0.4,
+    "camera_preset": "high_dive",
+    "plate": "P30"
+   },
+   {
+    "beat_id": "va_p31",
+    "id": "va_p31",
+    "label": "P31 退緣撿槍＋廣角",
+    "index": 30,
+    "duration_s": 0.5,
+    "camera_preset": "pull_aftermath",
+    "plate": "P31"
+   },
+   {
+    "beat_id": "va_p32",
+    "id": "va_p32",
+    "label": "P32 曼陀羅＋光隧道起",
+    "index": 31,
+    "duration_s": 0.45,
+    "camera_preset": "high_dive",
+    "plate": "P32"
+   },
+   {
+    "beat_id": "va_p33",
+    "id": "va_p33",
+    "label": "P33 陣心白閃",
+    "index": 32,
+    "duration_s": 0.55,
+    "camera_preset": "ecu_jitter",
+    "plate": "P33"
+   },
+   {
+    "beat_id": "va_p34",
+    "id": "va_p34",
+    "label": "P34 單膝裂袖",
+    "index": 33,
+    "duration_s": 0.55,
+    "camera_preset": "floor_hold",
+    "plate": "P34"
+   },
+   {
+    "beat_id": "va_p35",
+    "id": "va_p35",
+    "label": "P35 對視停",
+    "index": 34,
+    "duration_s": 0.5,
+    "camera_preset": "face_whip",
+    "plate": "P35"
+   },
+   {
+    "beat_id": "va_p36",
+    "id": "va_p36",
+    "label": "P36 同步起身",
+    "index": 35,
+    "duration_s": 0.45,
+    "camera_preset": "low_rise",
+    "plate": "P36"
+   },
+   {
+    "beat_id": "va_p37",
+    "id": "va_p37",
+    "label": "P37 同步上步",
+    "index": 36,
+    "duration_s": 0.35,
+    "camera_preset": "box_side_pan",
+    "plate": "P37"
+   },
+   {
+    "beat_id": "va_p38",
+    "id": "va_p38",
+    "label": "P38 格擋一",
+    "index": 37,
+    "duration_s": 0.3,
+    "camera_preset": "ecu_jitter",
+    "plate": "P38"
+   },
+   {
+    "beat_id": "va_p39",
+    "id": "va_p39",
+    "label": "P39 格擋二",
+    "index": 38,
+    "duration_s": 0.3,
+    "camera_preset": "ecu_jitter",
+    "plate": "P39"
+   },
+   {
+    "beat_id": "va_p40",
+    "id": "va_p40",
+    "label": "P40 絞轉一",
+    "index": 39,
+    "duration_s": 0.3,
+    "camera_preset": "ecu_jitter",
+    "plate": "P40"
+   },
+   {
+    "beat_id": "va_p41",
+    "id": "va_p41",
+    "label": "P41 絞轉二",
+    "index": 40,
+    "duration_s": 0.3,
+    "camera_preset": "ecu_jitter",
+    "plate": "P41"
+   },
+   {
+    "beat_id": "va_p42",
+    "id": "va_p42",
+    "label": "P42 刺對掌白閃",
+    "index": 41,
+    "duration_s": 0.45,
+    "camera_preset": "ecu_jitter",
+    "plate": "P42"
+   },
+   {
+    "beat_id": "va_p43",
+    "id": "va_p43",
+    "label": "P43 寸止定格",
+    "index": 42,
+    "duration_s": 1.5,
+    "camera_preset": "ecu_jitter",
+    "plate": "P43"
+   },
+   {
+    "beat_id": "va_p44",
+    "id": "va_p44",
+    "label": "P44 分開熄光",
+    "index": 43,
+    "duration_s": 0.5,
+    "camera_preset": "pull_aftermath",
+    "plate": "P44"
+   },
+   {
+    "beat_id": "va_p45",
+    "id": "va_p45",
+    "label": "P45 對峙＋推近眼睛",
+    "index": 44,
+    "duration_s": 0.6,
+    "camera_preset": "eye_push",
+    "plate": "P45"
+   },
+   {
+    "beat_id": "va_p46",
+    "id": "va_p46",
+    "label": "P46 低廣角收尾",
+    "index": 45,
+    "duration_s": 0.4,
+    "camera_preset": "low_rise",
+    "plate": "P46"
+   },
+   {
+    "beat_id": "va_p47",
+    "id": "va_p47",
+    "label": "P47 停推漸黑",
+    "index": 46,
+    "duration_s": 0.5,
+    "camera_preset": "pull_aftermath",
+    "plate": "P47"
+   }
+  ]
+ },
+ "meta": {
+  "craft": "html-motion",
+  "date": "2026-11-06",
+  "template_id": "baijia-elfmage-void-array",
+  "duration_sum_s": 30.0,
+  "plate_count": 47,
+  "timeline_plates": 345,
+  "cast": "LEFT 白甲槍士 / RIGHT 精靈法師",
+  "pack": "fight-baijia-elfmage-void-array-2026-11-06",
+  "cantonese_board_source": "/workspace/deliverables/fight-baijia-elfmage-void-array-2026-11-06/STORYBOARD-zh.md",
+  "assets_note": "Proven cutouts stay in the void-array deliverable. This template loads the 47-beat timing and Cantonese labels. The local board slate lets the demo bake play in the browser."
+ }
+}
