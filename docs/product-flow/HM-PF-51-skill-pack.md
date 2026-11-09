@@ -21,14 +21,14 @@ HOLDs are unchanged. HM-PF-27, HM-PF-28, HM-PF-47, and HM-PF-48 stay DESIGNED-HO
 | 5 | `hm-cam-shot-author` | `skills/hm-cam-shot-author/SKILL.md` | shipped |
 | 6 | `hm-spritegen-handoff` | `skills/hm-spritegen-handoff/SKILL.md` | shipped |
 | 7 | `hm-bg-scene-author` | `skills/hm-bg-scene-author/SKILL.md` | shipped |
-| 8 | `hm-fg-layer-author` | `skills/hm-fg-layer-author/SKILL.md` | stub |
+| 8 | `hm-fg-layer-author` | `skills/hm-fg-layer-author/SKILL.md` | shipped |
 | 9 | `html-motion-fight-video` | `skills/html-motion-fight-video/SKILL.md` | stub |
 | 9 | `hm-compose-fx-impact` | `skills/hm-compose-fx-impact/SKILL.md` | shipped |
 | 10 | `hm-voice-track` | `skills/hm-voice-track/SKILL.md` | designed-hold |
 
 `shipped` means the skill is the implementation agents should run. `stub` and `designed-hold` are contract files only. Each of those files has Inputs, Outputs, FE handoff, and Anti-jobs. None of them contains a script. HM-PF-06 implements `hm-storyboard-cantonese`, so that row is shipped and its helper may write the board text.
 
-HM-PF-51 left `hm-bg-scene-author` as a stub. HM-PF-31 ships it. The other stubs and the voice HOLD are unchanged.
+HM-PF-51 left `hm-bg-scene-author` as a stub. HM-PF-31 ships it. HM-PF-36 ships `hm-fg-layer-author`. The other stubs and the voice HOLD are unchanged.
 
 `skills/html-motion-composer/` stays the compose helper already on `main`. Step 9's agent name on the Approval Page is `html-motion-fight-video`. That stub points at the composer skill. It does not replace it.
 
