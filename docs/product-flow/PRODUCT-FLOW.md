@@ -23,7 +23,7 @@ Every step is a process card on [`workflow.board.json`](workflow.board.json). Th
 | 3 | Rhythm | HM UI duration, frame peek, scrub, and beat blocks, with a rhythm and frame-QA skill beside it |
 | 4 | Scene cam-shot design | HM UI camera-grammar templates and cut blocks, with a triplet-planner skill beside it |
 | 5 | Per-scene cam shots | HM UI per-atom camera presets, with a preset-tuning skill beside it |
-| 6 | Sprite gen | HM UI staged strip picker. External sprite-gen stays outside HTML Motion |
+| 6 | Sprite gen | HM UI staged strip picker. External sprite-gen stays outside HTML Motion. Sprite Forge is absent / OOS for HM FE ([HM-PF-05](HM-PF-05-sprite-forge-absence.md)) |
 | 7 | Background scene | HM UI background plates (crop, pan, span, parallax), with a framing skill beside it |
 | 8 | Foreground | HM UI cutouts and IMPACT / COMPOSER-FX, with a cutout and FX skill beside it |
 | 9 | HTML Motion cam-shot compose | HM UI compose and the 1280×720 canvas, with `html-motion-composer` scripts beside it |
@@ -34,6 +34,8 @@ Order source: the workflow board sticky note "EXACT JACK 1..10 ORDER", plus [`wo
 Skill files for that order are indexed in [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) (HM-PF-51). A name that already has a skill stays as it is. A name with no file yet is a contract stub. Step 10 `hm-voice-track` is DESIGNED-HOLD only. This index does not SIGN voice or #41.
 
 Sprite-gen (`6a3f4c47`) stays an external CLI. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
+
+Sprite Forge is absent from the HTML Motion frontend and is out of scope (OOS) for HM FE. The operator generates outside, QAs, then hands off local PNG + JSON. There is no in-FE GenerateImage product path. Checklist: [HM-PF-05](HM-PF-05-sprite-forge-absence.md). CoS brief: `/workspace/hr/briefs/sprite-gen-html-motion-2026-11-07.md`. Adapt Page: https://sprite-gen-html-motion-urak.pages.grok.bot/
 
 ## Ownership lanes
 
@@ -89,6 +91,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 - **Forge.** Composer and show land on this repo. Wave 1 FX vendor authorship lands on pixelfx (`patch-gg/pixelfx` is App pull-only; the writable build fork is `leejpjack-hue/pixelfx`). Checklist: [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) (HM-PF-52).
 - **Cap.** At most 3 SIGNED HTML Motion stories per weekday.
 - **Voice / #41.** HOLD. This approval does not SIGN SFX or audio.
+- **Sprite Forge.** Absent / OOS for HM FE. Generate outside, QA, then local PNG + JSON. No in-FE GenerateImage product path. [HM-PF-05](HM-PF-05-sprite-forge-absence.md). Brief: `/workspace/hr/briefs/sprite-gen-html-motion-2026-11-07.md`.
 - **Jack bar.** Open a fight, tweak, and compose within 60 seconds. The 5.00s eight-plate demo (`daiyu-wang-five-seconds`) stays intact.
 
 ## Files in this folder
@@ -100,6 +103,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) | FE-only forge checklist: composer/show on this kit, Wave 1 FX vendor on pixelfx (HM-PF-52) |
 | [`HM-PF-24-cam-grammar-sync.md`](HM-PF-24-cam-grammar-sync.md) | Notion ↔ box camera-grammar pointer, locked labels, and drift checklist (HM-PF-24) |
 | [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) | Approval skill name set: shipped skills left in place, contract stubs for the missing names, voice DESIGNED-HOLD (HM-PF-51) |
+| [`HM-PF-05-sprite-forge-absence.md`](HM-PF-05-sprite-forge-absence.md) | Sprite Forge absent / OOS for HM FE; operator path is generate outside, QA, then local PNG + JSON (HM-PF-05) |
 | [`beat-id-bridge.md`](beat-id-bridge.md) | Storyboard `beat_id` shared with `.motion.json` atoms (HM-PF-08). n8n sees the same ids |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
