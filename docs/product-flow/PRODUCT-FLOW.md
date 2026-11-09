@@ -53,6 +53,7 @@ Research surfaces named on the architecture board: `camera-grammar`, `sprite-gen
 The [camera cold-open guide](HM-PF-17-cold-open.md) documents the live
 `fight-cam-grammar-starter` sample and its three I→A→R triplets plus Wide
 re-establish. The frontend guide is served at `/product-flow.html`.
+For step 2, [the Cantonese board](HM-PF-06-cantonese-board.md) is editable text on the HM board surface. Jack GO stays on the existing gate before gen or rhythm. The skill does not generate plates.
 For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
 `hm-rhythm-pacing` skill, human GO input, editable pack stamps, the impact meter,
 and target-duration lint in the same portable project.
@@ -96,6 +97,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) | Any-step edit loop: one `.motion.json`, localStorage draft plus file reopen (HM-PF-44) |
 | [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) | FE-only forge checklist: composer/show on this kit, Wave 1 FX vendor on pixelfx (HM-PF-52) |
 | [`beat-id-bridge.md`](beat-id-bridge.md) | Storyboard `beat_id` shared with `.motion.json` atoms (HM-PF-08). n8n sees the same ids |
+| [`HM-PF-06-cantonese-board.md`](HM-PF-06-cantonese-board.md) | Cantonese second-by-second board, editable HM text, Jack GO before gen or rhythm |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
 | [`architecture.product.png`](architecture.product.png) | Product PNG export of the architecture board |
