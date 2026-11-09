@@ -31,7 +31,7 @@ Every step is a process card on [`workflow.board.json`](workflow.board.json). Th
 
 Order source: the workflow board sticky note "EXACT JACK 1..10 ORDER", plus [`workflow.dsl`](workflow.dsl).
 
-Sprite-gen (`6a3f4c47`) stays an external CLI. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
+Sprite-gen (`6a3f4c47`) stays an external CLI. Step 6 handoff is [`HM-PF-25-spritegen-handoff.md`](HM-PF-25-spritegen-handoff.md): generation stays outside the FE, and Jack imports one strip PNG and one strip JSON through the File API. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
 
 ## Ownership lanes
 

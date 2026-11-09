@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "python3 -m http.server 8765 --bind 127.0.0.1 --directory public",
     "build:demos": "node scripts/build-demos.cjs",
-    "test": "node --test tests/compose.test.cjs tests/x-export.test.cjs tests/catalog-query.test.cjs tests/pixelfx-wave1.test.cjs tests/timeline-json.test.cjs tests/frame-qa-loop.test.cjs tests/cut-transitions.test.cjs tests/stamp-wave1-fx.test.cjs tests/motion-sot.test.cjs tests/beat-id-bridge.test.cjs tests/hm-pf-43-cut-pack.test.cjs tests/hm-pf-09-gate.test.cjs tests/hm-pf-53-notify.test.cjs tests/hm-pf-01-costume-lock.test.cjs tests/hm-pf-03-costume-drift.test.cjs tests/hm-pf-04-pose-ref-pack.test.cjs tests/rhythm-pacing.test.cjs tests/camera-authoring.test.cjs tests/hm-pf-30-strip-qa.test.cjs",
+    "test": "node --test tests/compose.test.cjs tests/x-export.test.cjs tests/catalog-query.test.cjs tests/pixelfx-wave1.test.cjs tests/timeline-json.test.cjs tests/frame-qa-loop.test.cjs tests/cut-transitions.test.cjs tests/stamp-wave1-fx.test.cjs tests/motion-sot.test.cjs tests/beat-id-bridge.test.cjs tests/hm-pf-43-cut-pack.test.cjs tests/hm-pf-09-gate.test.cjs tests/hm-pf-53-notify.test.cjs tests/hm-pf-01-costume-lock.test.cjs tests/hm-pf-03-costume-drift.test.cjs tests/hm-pf-04-pose-ref-pack.test.cjs tests/rhythm-pacing.test.cjs tests/camera-authoring.test.cjs tests/hm-pf-30-strip-qa.test.cjs tests/hm-pf-25-spritegen-handoff.test.cjs",
     "test:browser": "node tests/editor.cjs"
   },
   "devDependencies": {"playwright": "1.62.1"}
