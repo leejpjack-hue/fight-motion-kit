@@ -169,4 +169,6 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 .camera-grammar input,.camera-grammar select,.camera-grammar textarea{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:4px}
 .camera-grammar textarea{resize:vertical;font:11px/1.5 monospace}
 .camera-grammar .field-hint,.camera-chain-author .field-hint{overflow-wrap:anywhere}
+.camera-grammar .wide-picker-row{align-items:end;margin:6px 0}
+.camera-grammar .wide-picker-actions{margin-bottom:2px}
 .camera-chain-author{border-top:1px solid var(--border,#343a43);margin-top:10px;padding-top:4px}
