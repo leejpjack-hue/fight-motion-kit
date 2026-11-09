@@ -8,15 +8,14 @@ checkout's camera catalog and shared frontend authoring logic.
 
 ## Template provenance
 
-The authoritative field contract is the
-[Fight Camera Grammar Template](https://app.notion.com/p/40b9565776c68154a978edfd92c62652),
-read 2026-11-08, last edited 2026-11-01T11:46:06.416Z. Its Notion verification
-state was unverified. The template's ten columns and fight-meta fields are
-retained in the Markdown export; the original URL and field list travel in JSON.
-The [related audit](https://app.notion.com/p/40b9565776c681e78bc0f8240988daba)
-is contextual research. Historical `wide_*` examples absent from this kit are
-rejected. No preset IDs or curves are added. Six existing generic presets gain
-planning angle/move metadata only; rendered curves stay identical.
+Notion URLs, the box template path, fight-meta labels, and the ten beat
+columns have one source of truth: the
+[HM-PF-24 sync note](HM-PF-24-cam-grammar-sync.md).
+Read that note before renaming or adding a grammar field. The Markdown export
+keeps those labels, and `source_template` in the sheet JSON still carries the
+template URL stored by the checkout. Historical `wide_*` examples absent from
+this kit are rejected. No preset IDs or curves are added. Six existing generic
+presets gain planning angle/move metadata only; rendered curves stay identical.
 
 Each scene needs consecutive Intent → Action → Reaction triplets and at least
 one Wide after a triplet. One planned full impact per triplet is the maximum.
