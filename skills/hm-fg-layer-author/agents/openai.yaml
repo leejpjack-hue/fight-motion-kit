@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM FG Layer Author"
+  short_description: "Stamp foreground props, their camera, and break timing"
+  default_prompt: "Use $hm-fg-layer-author to stamp foreground props with their own camera and break timing onto this show, then let me edit the break in the Compose FG panel."
