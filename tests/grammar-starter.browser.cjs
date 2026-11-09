@@ -41,8 +41,23 @@ const out = path.resolve(process.env.HM_PROOF_DIR || 'work/qa/grammar-starter');
     assert.equal(await page.evaluate(() => HMStudio.time), 7);
     assert.ok(Date.now() - started < 60000, 'cold open/template/scrub exceeds Jack bar');
     fs.mkdirSync(out, { recursive: true }); await page.screenshot({ path: path.join(out, 'cold-open.png'), fullPage: true });
+    // HM-PF-22 (#102): Open golden cam show → edit → FE-only bake + approval demo capscreens
+    await page.click('.timeline-clip[data-index="2"]');
+    await page.selectOption('#camera', 'upward_inside');
+    await page.waitForFunction(() => !HMStudio.loading && HMStudio.project.show.atoms[2].camera.preset === 'upward_inside');
+    await page.evaluate(() => HMStudio.compile());
+    await page.screenshot({ path: path.join(out, 'rooftop-golden-edit.png'), fullPage: true });
+    await page.click('#exportOpen');
+    await page.waitForSelector('#exportDialog[open]');
+    assert.equal(await page.locator('#exportHtml').isEnabled(), true);
+    await page.screenshot({ path: path.join(out, 'rooftop-golden-bake.png'), fullPage: true });
+    const [bakedHtml] = await Promise.all([page.waitForEvent('download'), page.click('#exportHtml')]);
+    assert.equal(await bakedHtml.failure(), null);
+    const bakedPath = path.join(out, 'fight-cam-grammar-starter.html');
+    await bakedHtml.saveAs(bakedPath);
+    assert.match(fs.readFileSync(bakedPath, 'utf8'), /HTML Motion · Plate animation · Plays offline/);
     const proof = { base, show_id: before.show_id, triplets: 3, wide: roles.filter(r => r === 'Wide').length,
-      seconds: 11, elapsed_ms: Date.now() - started, forbidden, errors };
+      seconds: 11, baked_html_bytes: fs.statSync(bakedPath).size, elapsed_ms: Date.now() - started, forbidden, errors };
     fs.writeFileSync(path.join(out, 'proof.json'), JSON.stringify(proof, null, 2));
     assert.deepEqual(forbidden, []); assert.deepEqual(errors, []);
     console.log(JSON.stringify(proof));

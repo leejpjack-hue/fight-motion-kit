@@ -56,9 +56,12 @@ re-establish. The frontend guide is served at `/product-flow.html`.
 For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
 `hm-rhythm-pacing` skill, human GO input, editable pack stamps, the impact meter,
 and target-duration lint in the same portable project.
-For steps 4–5, [scene camera authoring](CAMERA-AUTHORING.md) covers the template
-beat sheet, strict preset maps, reusable `Camera:` clauses, human overrides,
-and the existing chain engine with visible snap-zoom controls.
+For steps 4–5, [scene camera authoring](CAMERA-AUTHORING.md) and the
+[rooftop camera-grammar golden show](HM-PF-22-rooftop-golden-show.md) cover the
+template beat sheet, one-click Wide re-establish beat picker and zero-Wide lint,
+strict preset maps, local text/JSON `Camera:` clause exports that round-trip into
+skill inputs, human overrides, the existing chain engine with visible snap-zoom
+controls, and FE-only bake.
 
 | Role | Choice | Why it is in the approved pack |
 |---|---|---|

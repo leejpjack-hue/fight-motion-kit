@@ -14,10 +14,15 @@ Never substitute an absent preset or create historical `wide_*` curve IDs.
 ```sh
 node skills/hm-cam-shot-author/scripts/author.cjs \
   --grammar work/scene.grammar.json --out work/scene.camera-map.json \
-  --clauses work/scene.camera-clauses.txt
+  --clauses work/scene.camera-clauses.txt \
+  --clauses-json work/scene.camera-clauses.json
 ```
 
-`--repo` selects another checkout; `--clauses` is optional. The helper loads the
+`--repo` selects another checkout; `--clauses` (text) and `--clauses-json` (JSON
+`beat → Camera: clause` map matching `fight-prompting-enhancements-2026-11-01`
+REPORT conventions) are optional. `--grammar` accepts either a scene grammar JSON
+or an exported `.camera-clauses.json` package so clauses round-trip cleanly into
+skill inputs and HM's **Apply grammar / camera map** importer. The helper loads the
 actual `public/presets/camera_presets.json` and shared browser authoring logic.
 Missing presets, malformed roles/IDs or stale GO fail before writing output.
 Existing output files are never overwritten. The map contains ordered stable
