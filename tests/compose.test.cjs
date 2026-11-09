@@ -1179,6 +1179,30 @@ test('HM-PAN-SPAN-UI: optional t0–t1 span UI state defaults to hidden on show-
   assert.ok(spanLate>showLate+0.01);
 });
 
+test('HM-PF-33: span honesty names a window past the show and keeps the authored t0 t1',async()=>{
+  const resolveUi=HMComposeClient.resolveBackgroundSpanUi;
+  const inside=resolveUi({preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:3}},4,null);
+  assert.equal(inside.exceedsShow,false);
+  assert.equal(inside.honestyLabel,'');
+  assert.equal(inside.stateLabel,'t0–t1 controls shown · Active 1.00–3.00s');
+  const past=resolveUi({preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:6}},4,null);
+  assert.equal(past.exceedsShow,true);
+  assert.equal(past.t0,1);
+  assert.equal(past.t1,6);
+  assert.equal(past.honestyLabel,'Longer than the 4.00s show');
+  assert.equal(past.valueLabel,'1.00–6.00s');
+  assert.equal(past.stateLabel,'t0–t1 controls shown · Active 1.00–6.00s · Longer than the 4.00s show');
+  const hidden=resolveUi({preset:'pan_right',amount:1,clock:'span',span:{t0:1,t1:6}},4,false);
+  assert.equal(hidden.stateLabel,'t0–t1 controls hidden · Active 1.00–6.00s · Longer than the 4.00s show');
+  const after=resolveUi({preset:'pan_right',amount:1,clock:'span',span:[5,6]},4,null);
+  assert.equal(after.exceedsShow,true);
+  assert.equal(after.honestyLabel,'Starts after the 4.00s show');
+  assert.equal(after.stateLabel,'t0–t1 controls shown · Active 5.00–6.00s · Starts after the 4.00s show');
+  const edge=resolveUi({preset:'pan_right',amount:1,clock:'span',span:{t0:0,t1:4}},4,null);
+  assert.equal(edge.exceedsShow,false);
+  assert.equal(edge.honestyLabel,'');
+});
+
 test('HM-HF-01-FRAME-PEEK: framePeekPlan computes midpoint (+0.0s) and +0.3s samples (clamped to atom end), stays inside each atom on inspectAt, and syncs active peek across scrub',async()=>{
   assert.deepEqual(HMComposeClient.FRAME_PEEK_OFFSETS,[0,0.3]);
   const street=read('shows/street-old-city.json');
