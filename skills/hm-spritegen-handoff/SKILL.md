@@ -9,7 +9,7 @@ Move a finished body strip from the external sprite-gen CLI into HTML Motion. Ge
 
 ## Outside-FE contract (HM-PF-25)
 
-Depends on HM-PF-05 (#87). CoS merges this story only after HM-PF-05 is on `main`. This skill does not write the PF-05 product copy and does not invent Sprite Forge.
+Depends on HM-PF-05 (#87), which is on `main`. Operator honesty is [`docs/product-flow/HM-PF-05-sprite-forge-absence.md`](../../docs/product-flow/HM-PF-05-sprite-forge-absence.md). This skill does not invent Sprite Forge.
 
 1. **Generation stays outside the FE. File API import only.** The external `sprite-gen` CLI produces the strip. HM does not embed that CLI, call a provider, or upload the pair. There is no in-FE Sprite Forge and no in-FE GenerateImage path. The browser reads one local PNG and one local JSON through the existing **Import pending strip · PNG + JSON** picker.
 2. **The first path is strip PNG+JSON.** Accept one `.strip.png` and one `.strip.json` (any one local `.png` plus one local `.json` sidecar passes the same gate). That pair is the path Jack imports. Atlas `manifest.json` stays DESIGNED-HOLD (HM-PF-27).

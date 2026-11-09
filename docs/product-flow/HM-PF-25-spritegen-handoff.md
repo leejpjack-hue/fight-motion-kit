@@ -1,8 +1,8 @@
 # HM-PF-25 — hm-spritegen-handoff outside-FE contract
 
 Issue [#105](https://github.com/leejpjack-hue/fight-motion-kit/issues/105).
-Depends on HM-PF-05 ([#87](https://github.com/leejpjack-hue/fight-motion-kit/issues/87)).
-CoS merges this story only after HM-PF-05 is on `main`. This page does not merge itself.
+Depends on HM-PF-05 ([#87](https://github.com/leejpjack-hue/fight-motion-kit/issues/87)), now on `main`.
+Operator checklist: [`HM-PF-05-sprite-forge-absence.md`](HM-PF-05-sprite-forge-absence.md). This page does not merge itself.
 
 The skill documents and checks a local strip handoff. It does not make HTML Motion a generation backend.
 
