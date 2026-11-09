@@ -105,7 +105,134 @@
     else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
   }
   $('exportPreset').addEventListener('change',paintExportHints);
-  on('exportOpen',()=>{S.pause();report('');paintExportHints();applyExportGate();$('exportDialog').showModal();});
+  const stripImages=new Map();
+  let stripPaintToken=0;
+  function loadStripImage(src){
+    if(stripImages.has(src))return stripImages.get(src);
+    const pending=new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error('Could not read the pending strip.'));
+      image.src=src;
+    });
+    stripImages.set(src,pending);
+    return pending;
+  }
+  function paintBakeQaPeek(snapshot){
+    const box=$('bakeQaPeeks');
+    if(!box)return;
+    box.replaceChildren();
+    const active=snapshot.peek;
+    const atomIndex=active?active.atom_index:0;
+    const pair=(snapshot.peeks||[]).filter(peek=>peek.atom_index===atomIndex);
+    for(const peek of pair){
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='bake-qa-peek';
+      button.dataset.peekIndex=String(peek.index);
+      button.dataset.sampleKind=peek.sample_kind;
+      const tag=peek.sample_kind==='mid'?'mid +0.0s':(peek.clamped?'+0.3s end':'+0.3s');
+      button.textContent=`${peek.source_plate} · ${tag} · ${peek.t_nominal.toFixed(2)}s`;
+      button.title=`Seek to ${peek.source_plate} at ${peek.t_nominal.toFixed(2)}s`;
+      button.setAttribute('aria-pressed',String(!!(active&&active.index===peek.index)));
+      box.append(button);
+    }
+    if($('bakeQaPeekLabel')){
+      if(!active)$('bakeQaPeekLabel').textContent=snapshot.atom_count?'':'Add a clip to peek plates.';
+      else{
+        const tag=active.sample_kind==='mid'?'mid +0.0s':(active.clamped?'+0.3s end':'+0.3s');
+        $('bakeQaPeekLabel').textContent=`${String(active.atom_index+1).padStart(2,'0')} ${active.source_plate} · ${tag} · ${active.t_nominal.toFixed(2)}s`;
+      }
+    }
+    if($('bakeQaPlate'))$('bakeQaPlate').textContent=snapshot.pose_ref?'Plate show · pose pack':snapshot.plate_show?'Plate show':snapshot.atom_count?'Clip show':'No clips';
+  }
+  async function paintBakeQaStrips(snapshot){
+    const host=$('bakeQaStrips');
+    if(!host)return;
+    const token=++stripPaintToken;
+    host.hidden=!snapshot.strips.length;
+    host.replaceChildren();
+    const assets=S.project?.assets||{};
+    for(const strip of snapshot.strips){
+      const row=document.createElement('div');
+      row.className='bake-qa-strip';
+      row.dataset.stripId=strip.id;
+      row.dataset.cellIndex=String(strip.index);
+      const canvas=document.createElement('canvas');
+      canvas.width=160;canvas.height=90;canvas.className='bake-qa-strip-canvas';
+      canvas.setAttribute('aria-label','Imported strip cell peek');
+      const label=document.createElement('output');
+      label.className='bake-qa-strip-label';
+      label.textContent=`${strip.name} · cell ${strip.index+1}/${strip.frames} · ${strip.t.toFixed(2)}s · NOT PLAYABLE`;
+      row.append(canvas,label);
+      host.append(row);
+      const data=assets[strip.src];
+      if(typeof data!=='string'||!data.startsWith('data:image/png'))continue;
+      try{
+        const image=await loadStripImage(data);
+        if(token!==stripPaintToken)return;
+        const g=canvas.getContext('2d');
+        g.imageSmoothingEnabled=false;
+        g.fillStyle='#101315';
+        g.fillRect(0,0,160,90);
+        g.drawImage(image,strip.index*strip.w,0,strip.w,strip.h,0,0,160,90);
+      }catch(e){}
+    }
+  }
+  function paintBakeQa(){
+    if(!window.HMComposeClient||typeof HMComposeClient.bakeQaSnapshot!=='function')return;
+    const snapshot=HMComposeClient.bakeQaSnapshot(S.project,S.composed,S.time);
+    const span=Math.max(snapshot.duration_s,S.duration||0);
+    const scrub=$('bakeQaScrub');
+    if(scrub){scrub.max=String(span||1);scrub.value=String(S.time);}
+    if($('bakeQaTime'))$('bakeQaTime').textContent=`${S.time.toFixed(2)}s / ${(span||0).toFixed(2)}s`;
+    if($('bakeQaClock'))$('bakeQaClock').textContent='Shared clock · renderAt';
+    const stage=$('stage'),preview=$('bakeQaStage');
+    if(stage&&preview){
+      const g=preview.getContext('2d');
+      g.clearRect(0,0,preview.width,preview.height);
+      g.drawImage(stage,0,0,preview.width,preview.height);
+    }
+    paintBakeQaPeek(snapshot);
+    void paintBakeQaStrips(snapshot);
+    return snapshot;
+  }
+  function stepBakeAtom(dir){
+    const plan=S.framePeekPlan;
+    if(!plan?.peeks?.length)return;
+    const snapshot=HMComposeClient.bakeQaSnapshot(S.project,S.composed,S.time);
+    const current=snapshot.peek?snapshot.peek.atom_index:0;
+    const next=Math.min(plan.atom_count-1,Math.max(0,current+dir));
+    const mid=plan.peeks.find(peek=>peek.atom_index===next&&peek.sample_kind==='mid');
+    if(mid)S.seekToPeek(mid.index);
+    paintBakeQa();
+  }
+  function openBakeQa(){
+    S.pause();report('');paintExportHints();applyExportGate();
+    $('exportDialog').showModal();
+    paintBakeQa();
+    $('bakeQaDock')?.scrollIntoView({block:'nearest'});
+    $('bakeQaScrub')?.focus();
+  }
+  $('bakeQaScrub')?.addEventListener('input',()=>{
+    S.renderAt(+$('bakeQaScrub').value,{source:'bake-qa-dock'});
+    paintBakeQa();
+  });
+  $('bakeQaPeeks')?.addEventListener('click',event=>{
+    const button=event.target.closest('[data-peek-index]');
+    if(!button)return;
+    S.seekToPeek(+button.dataset.peekIndex);
+    paintBakeQa();
+  });
+  on('bakeQaPrev',()=>stepBakeAtom(-1));
+  on('bakeQaNext',()=>stepBakeAtom(1));
+  on('bakeQaShowStrip',()=>{
+    $('exportDialog').close();
+    $('framePeekStrip')?.scrollIntoView({block:'nearest'});
+    S.status('Frame peek strip · same plan as bake QA');
+  });
+  on('exportOpen',openBakeQa);
+  on('openBakeQa',openBakeQa);
   on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportTiming',()=>task(async()=>{
     assertExportAllowed();

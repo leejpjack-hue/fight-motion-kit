@@ -25,6 +25,7 @@ In HTML Motion Composer, deterministic time-to-pixel resolution (`time → pixel
 | Frame Peek Strip & PNG/ZIP (`#framePeekStrip`) | `public/ui/app.js` (`renderFramePeekStrip`, `seekToPeek`, `peekCanvasBlob`) | `renderStageAt(peek.t, { standIn: true, onion })` / `HMStudio.renderAt(peek.t)` |
 | Play / Pause Transport (`#play`, `tick(now)`) | `public/ui/app.js` (`tick(now)`) | `tick(now)` advances `nextTime` and calls `renderAt(nextTime, { keepPlaying: true, source: 'transport-play' })` |
 | Current Frame & Frame Sequence Bake | `public/ui/exports.js` (`exportFrame`, `exportFrames`) | `S.sampleStageFrameAt(t, { renderer, standIn: false })` → `renderer.render(t, { viaSoT: true, ... })` |
+| Bake QA compose dock (`#bakeQaDock`) | `public/ui/exports.js` (`#bakeQaScrub`, peek buttons, `#openBakeQa`) | `HMStudio.renderAt(t, { source: 'bake-qa-dock' })` and `HMStudio.seekToPeek` — same plan as Frame Peek. Pending strip cells are a crop at that `t` (`stripCellAt`); no GIF or CSS clock. |
 | Standalone / Exported Player | `public/player/player.js`, `public/ui/exports.js` (`standalonePlayer`) | `window.renderAt(t)` → `renderer.render(t, { viaSoT: true })` |
 
 ## Soft-Warn Guard for Unconstrained rAF / Wall-Clock Preview Pixels
