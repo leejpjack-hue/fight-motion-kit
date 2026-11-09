@@ -189,20 +189,6 @@
     if (m.clock === 'span' && m.span === undefined && m.t0 === undefined) return false;
     return true;
   }
-  // Compose runs in tools that do not load the renderer, so the overlap rule lives here too.
-  function locationOverlapId(locations) {
-    if (!Array.isArray(locations)) return null;
-    for (let i = 0; i < locations.length; i++) {
-      const row = locations[i];
-      if (!row || !Number.isFinite(+row.t0) || !Number.isFinite(+row.t1)) continue;
-      for (let j = 0; j < i; j++) {
-        const prev = locations[j];
-        if (!prev || !Number.isFinite(+prev.t0) || !Number.isFinite(+prev.t1)) continue;
-        if (+row.t0 < +prev.t1 && +prev.t0 < +row.t1) return String(row.id || i);
-      }
-    }
-    return null;
-  }
   function lintBackgroundLocations(locations) {
     if (!Array.isArray(locations)) return 'background locations must be a list';
     if (!locations.length) return 'background locations are empty';
@@ -219,7 +205,7 @@
       if (row.crop !== undefined && !validBackgroundCrop(row.crop)) return 'invalid background crop';
       if (row.motion !== undefined && !validBackgroundMotion(row.motion)) return 'invalid background motion';
     }
-    if (locationOverlapId(locations)) return 'background locations overlap';
+    if (globalThis.overlappingLocationId(locations)) return 'background locations overlap';
     return '';
   }
   function backgroundShowDuration(show) {
