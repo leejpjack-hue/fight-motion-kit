@@ -36,7 +36,8 @@ test('HM-PF-51 stub files are contracts only', () => {
   const stubs = rows.filter(r => r.kind !== 'shipped');
   assert.equal(rows.find(row => row.name === 'hm-storyboard-cantonese').kind, 'shipped');
   assert.equal(rows.find(row => row.name === 'hm-bg-scene-author').kind, 'shipped');
-  assert.equal(stubs.length, 3);
+  assert.equal(rows.find(row => row.name === 'html-motion-fight-video').kind, 'shipped');
+  assert.equal(stubs.length, 2);
   for (const row of stubs) {
     const text = read(row.file);
     assert.match(text, new RegExp('^---\\nname: ' + row.name + '\\n', 'm'));
@@ -70,7 +71,10 @@ test('HM-PF-51 voice stub stays DESIGNED-HOLD', () => {
   assert.match(text, /Do not SIGN/);
   assert.match(text, /Do not enable n8n step 10/);
   const fight = read('skills/html-motion-fight-video/SKILL.md');
-  assert.match(fight, /Voice is not an output/);
-  assert.match(fight, /does not replace that skill/);
-  assert.match(fight, /must not fork them/);
+  assert.match(fight, /Voice stays HOLD/);
+  assert.match(fight, /issue #41/);
+  assert.match(fight, /Skip the step/);
+  assert.match(fight, /html-motion-composer/);
+  assert.match(fight, /DESIGNED-HOLD/);
+  assert.doesNotMatch(fight, /Voice stays SIGNED/);
 });
