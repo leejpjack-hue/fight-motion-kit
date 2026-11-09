@@ -1,0 +1,4 @@
+interface:
+  display_name: "HM Cantonese Storyboard"
+  short_description: "Write an editable Cantonese second-by-second board"
+  default_prompt: "Use $hm-storyboard-cantonese to turn my short fight brief into a Cantonese second-by-second board and open it as editable text. Stop for Jack GO before gen or rhythm. Do not generate plates."

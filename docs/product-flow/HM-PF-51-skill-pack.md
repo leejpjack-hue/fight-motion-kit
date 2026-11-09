@@ -15,7 +15,7 @@ HOLDs are unchanged. HM-PF-27, HM-PF-28, HM-PF-47, and HM-PF-48 stay DESIGNED-HO
 | Step | Skill | Path | Kind |
 |---|---|---|---|
 | 1 | `hm-character-lock` | `skills/hm-character-lock/SKILL.md` | shipped |
-| 2 | `hm-storyboard-cantonese` | `skills/hm-storyboard-cantonese/SKILL.md` | stub |
+| 2 | `hm-storyboard-cantonese` | `skills/hm-storyboard-cantonese/SKILL.md` | shipped |
 | 3 | `hm-rhythm-pacing` | `skills/hm-rhythm-pacing/SKILL.md` | shipped |
 | 4 | `hm-cam-grammar-scene` | `skills/hm-cam-grammar-scene/SKILL.md` | shipped |
 | 5 | `hm-cam-shot-author` | `skills/hm-cam-shot-author/SKILL.md` | shipped |
@@ -26,7 +26,7 @@ HOLDs are unchanged. HM-PF-27, HM-PF-28, HM-PF-47, and HM-PF-48 stay DESIGNED-HO
 | 9 | `hm-compose-fx-impact` | `skills/hm-compose-fx-impact/SKILL.md` | shipped |
 | 10 | `hm-voice-track` | `skills/hm-voice-track/SKILL.md` | designed-hold |
 
-`shipped` means the skill file was already on `main` and this story leaves it in place. `stub` and `designed-hold` are contract files only. Each of those files has Inputs, Outputs, FE handoff, and Anti-jobs. None of them contains a script.
+`shipped` means the skill file was already on `main` and this story leaves it in place. `stub` and `designed-hold` are contract files only. Each of those files has Inputs, Outputs, FE handoff, and Anti-jobs. None of them contains a script. HM-PF-06 implements `hm-storyboard-cantonese`, so that row is shipped and its helper may write the board text.
 
 `skills/html-motion-composer/` stays the compose helper already on `main`. Step 9's agent name on the Approval Page is `html-motion-fight-video`. That stub points at the composer skill. It does not replace it.
 
