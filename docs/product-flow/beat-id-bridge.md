@@ -21,7 +21,7 @@ Copying a bridged clip assigns the copy a new `beat_id` equal to its new atom id
 
 ## PF-06 seam
 
-`hm-storyboard-cantonese` is not in this repo. This bridge does not add a storyboard editor. When that skill lands, its board can be:
+`hm-storyboard-cantonese` is an HM-PF-51 contract stub at `skills/hm-storyboard-cantonese/SKILL.md`. This bridge does not add a storyboard editor. When a later story implements that skill, its board can be:
 
 ```json
 {

@@ -43,10 +43,10 @@ HM-PF-27, HM-PF-28, HM-PF-47, HM-PF-48, #41, SG-01 playback, and voice are uncha
 
 `node --test tests/hm-pf-29-market-spritegen.test.cjs` passed 4.
 
-`npm test` passed 152.
+`npm test` passed 156 after merging `fc6c5b5a3d3927e229a5205f71b75ecea3682fb2`, which added the HM-PF-51 skill-pack tests.
 
 `TEST_BASE_URL=http://127.0.0.1:8765 node tests/hm-pf-29-browser.cjs` passed. The dialog shows `BLOCKED_RUNTIME`, pane A stays `daiyu-wang-five-seconds`, the strip dialog stays not playable, and every request stayed on `127.0.0.1:8765`.
 
 `npm run test:browser` passed, including zero uncaught browser errors.
 
-Base after fetch is `387b7ee44f896e0db5f9d4a6242efc76c35cc4b8`. The requested pin `452b9d65dc8589bb3ede4328d22ef606599fa8c4` is the parent of that tip (`HM-PF-04`). This branch starts at the fetched tip.
+Fetched `origin/main` moved during this cap. The requested pin `452b9d65dc8589bb3ede4328d22ef606599fa8c4` is an ancestor. The branch merges `fc6c5b5a3d3927e229a5205f71b75ecea3682fb2`. Force-push is blocked on this branch, so the update is a merge.
