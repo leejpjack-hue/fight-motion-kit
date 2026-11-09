@@ -11,9 +11,11 @@
   const STREET = 'street-old-city';
   const GRAMMAR = 'fight-cam-grammar-starter';
   const GRAMMAR_ALIASES = ['fight-daiyu-wang-rooftop-camera-grammar-2026-11-01', 'rooftop-camera-grammar'];
-  const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR];
+  const VOID = 'baijia-elfmage-void-array';
+  const VOID_ALIASES = ['fight-baijia-elfmage-void-array-2026-11-06'];
+  const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR, VOID];
   const BUILTIN = [...GOLD, STREET];
-  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : id;
+  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : VOID_ALIASES.includes(id) ? VOID : id;
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_CUT_PRESETS = {version:'hm-hf-08',presets:[
     {id:'freeze_hold',label:'Freeze hold',defaults:{dur_s:0.12,hold_s:0.12,dir:1}},
@@ -459,7 +461,16 @@
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus','applyBeatBlock'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();renderCantoneseBoardSource();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+  }
+  function renderCantoneseBoardSource() {
+    const el = $('cantoneseBoardSource');
+    const pathEl = $('cantoneseBoardPath');
+    if (!el) return;
+    const board = project?.show?.board || {};
+    const path = board.source_path || project?.show?.meta?.cantonese_board_source || '';
+    el.hidden = !path;
+    if (pathEl) pathEl.textContent = path;
   }
   function showHasSidedCutouts(p) {
     for (const clip of p?.show?.atoms || []) {
@@ -1808,11 +1819,13 @@
     if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await load(copy(defaultGold));}}
     else if(sid===STREET){await load(await builtIn(STREET));}
     else if(sid===GRAMMAR){await load(await builtIn(GRAMMAR));}
+    else if(sid===VOID){await load(await builtIn(VOID));}
     else if(sid&&!GOLD.includes(sid)){await load(copy(defaultGold));status('Requested project is not stored here. Open its saved project JSON.',true);}
     else await load(copy(defaultGold));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
   on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));on('loadStreet',()=>openProject(builtIn(STREET)));
+  on('loadVoidArray',()=>openProject(builtIn(VOID)));
   async function openTemplates(){
     const dlg=$('templateDialog'), list=$('templateList'), note=$('templateStatus');
     list.replaceChildren();
