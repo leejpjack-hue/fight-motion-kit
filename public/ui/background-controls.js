@@ -68,6 +68,7 @@
     spanBox.hidden=!spanUi.continuous;
     spanBox.dataset.spanOpen=String(spanUi.open);
     spanBox.dataset.spanMode=spanUi.clock;
+    spanBox.dataset.spanOverrun=String(spanUi.exceedsShow);
     $('backgroundSpanDrawer').hidden=!spanUi.open;
     const spanToggle=$('backgroundSpanToggle');
     spanToggle.textContent=spanUi.toggleLabel;
@@ -75,11 +76,12 @@
     const spanState=$('backgroundSpanState');
     spanState.textContent=spanUi.stateLabel;
     spanState.dataset.spanOpen=String(spanUi.open);
-    ['backgroundSpanT0','backgroundSpanT1'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i?spanUi.t1:spanUi.t0);});
+    spanState.dataset.spanOverrun=String(spanUi.exceedsShow);
+    ['backgroundSpanT0','backgroundSpanT1','backgroundSpanT0Range','backgroundSpanT1Range'].forEach((id,i)=>{const el=$(id);if(document.activeElement!==el)el.value=String(i%2?spanUi.t1:spanUi.t0);});
     $('backgroundSpanValue').textContent=spanUi.valueLabel;
     $('resetBackgroundSpan').disabled=!spanUi.authored;
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
-    const note=motionCopy(cropNow,preset);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
+    const note=motionCopy(cropNow,preset,spanUi.honestyLabel);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
     p.media.forEach(m=>library.add(new Option(m.name,m.id)));
     const prefix=clip?(inherited?'Using project image. ':'Only clip '+(S.selectedIndex+1)+'. '):'Project default for clips without an override. ';
@@ -130,18 +132,22 @@
     if(!Number.isFinite(t0)||!Number.isFinite(t1)||t0<0||!(t1>t0))throw Error('Span end must be after its start.');
     return {t0,t1};
   }
-  function travelNote(){
+  function travelNote(honestyLabel){
     const clock=$('backgroundMotionClock').value;
     if(clock==='per_atom')return ' Per clip: the move restarts at each cut.';
-    if(clock==='span'){const t0=Number($('backgroundSpanT0').value),t1=Number($('backgroundSpanT1').value);return Number.isFinite(t0)&&t1>t0?` Continuous (span): one move from ${t0.toFixed(2)}s to ${t1.toFixed(2)}s.`:' Continuous (span): one move over the authored times.';}
+    if(clock==='span'){
+      const t0=Number($('backgroundSpanT0').value),t1=Number($('backgroundSpanT1').value);
+      const base=Number.isFinite(t0)&&t1>t0?` Continuous (span): one move from ${t0.toFixed(2)}s to ${t1.toFixed(2)}s.`:' Continuous (span): one move over the authored times.';
+      return honestyLabel?base+' '+honestyLabel+'.':base;
+    }
     return ' Continuous (show): one move across the whole show.';
   }
-  function motionCopy(crop,preset){
+  function motionCopy(crop,preset,honestyLabel){
     const info=(backgroundMotionSupport(crop)||{})[preset]||{ok:false,reason:'This background motion is not available.'};
     if(!info.ok)return {blocked:true,text:info.reason};
     if(preset==='follow_camera')return {blocked:false,text:'Follows the clip camera, including shake, inside this crop.'};
     if(preset==='static')return {blocked:false,text:'Holds the crop still while the clip camera and shake move the plates.'};
-    const mode=backgroundMotionFrame(crop,preset,1,1).mode,travel=travelNote();
+    const mode=backgroundMotionFrame(crop,preset,1,1).mode,travel=travelNote(honestyLabel);
     if(mode==='inset')return {blocked:false,text:'This crop fills the source, so the move zooms in slightly and slides that view.'+travel};
     if(String(preset).startsWith('pan_'))return {blocked:false,text:'Slides the crop window across the source. Plates stay put.'+travel};
     if(preset==='push_in')return {blocked:false,text:'Zooms into the crop by tightening the window.'+travel};
@@ -165,6 +171,14 @@
   $('backgroundMotionAmount').onchange=safe(changeMotion);
   $('backgroundMotionClock').onchange=safe(()=>{spanOpenOverride=$('backgroundMotionClock').value==='span'?true:false;changeMotion();});
   $('backgroundSpanT0').onchange=safe(changeSpan);$('backgroundSpanT1').onchange=safe(changeSpan);
+  function commitSpanRange(which){
+    const rangeId=which==='t0'?'backgroundSpanT0Range':'backgroundSpanT1Range';
+    const numId=which==='t0'?'backgroundSpanT0':'backgroundSpanT1';
+    $(numId).value=$(rangeId).value;
+    changeSpan();
+  }
+  $('backgroundSpanT0Range').onchange=safe(()=>commitSpanRange('t0'));
+  $('backgroundSpanT1Range').onchange=safe(()=>commitSpanRange('t1'));
   on('backgroundSpanToggle',()=>{
     const p=S.project;if(!p)return;
     const c=context(),a=selected(p),clip=c.scope==='clip',global=p.show.bg||{},settings=clip?(a?.background||{}):global;

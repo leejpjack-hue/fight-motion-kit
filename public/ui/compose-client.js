@@ -215,11 +215,14 @@
     const t1 = authored ? pair[1] : dur;
     const open = continuous && (openOverride === true ? true : openOverride === false ? false : authored);
     const windowText = Number(t0).toFixed(2) + '–' + Number(t1).toFixed(2) + 's';
+    const exceedsShow = authored && dur > 0 && (t0 > dur + 1e-4 || t1 > dur + 1e-4);
+    const honestyLabel = !exceedsShow ? '' : (t0 > dur + 1e-4 ? 'Starts after the ' + dur.toFixed(2) + 's show' : 'Longer than the ' + dur.toFixed(2) + 's show');
     const valueLabel = authored ? windowText : 'Whole show';
     const toggleLabel = open ? 'Hide t0–t1 span' : 'Show t0–t1 span';
-    const stateLabel = open
+    const stateCore = open
       ? (authored ? 't0–t1 controls shown · Active ' + windowText : 't0–t1 controls shown · Whole show')
       : (authored ? 't0–t1 controls hidden · Active ' + windowText : 'Optional t0–t1 hidden · Whole show');
+    const stateLabel = honestyLabel ? stateCore + ' · ' + honestyLabel : stateCore;
     return {
       preset,
       travel,
@@ -227,6 +230,8 @@
       continuous,
       authored,
       open,
+      exceedsShow,
+      honestyLabel,
       t0,
       t1,
       valueLabel,
