@@ -150,3 +150,129 @@ test('CLI grammar → strict camera map and clauses; invalid input and existing 
     assert.equal(fs.existsSync(noPartial), false);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('HM-PF-20 (#100): Wide re-establish beat picker uses best available establish preset without wide_* curves and grammar lint warns on zero Wide', async () => {
+  assert.deepEqual(A.wideEstablishPresets(catalog), ['eye_orbit', 'low_rise', 'pull_aftermath', 'static_hold']);
+  assert.equal(A.widePresetFor(catalog, { mode: 'reestablish' }), 'eye_orbit');
+  assert.equal(A.widePresetFor(catalog, { mode: 'open' }), 'low_rise');
+  const trimmedCatalog = clone(catalog);
+  trimmedCatalog.presets = trimmedCatalog.presets.filter(p => p.id !== 'eye_orbit');
+  assert.equal(A.widePresetFor(trimmedCatalog, { mode: 'reestablish' }), 'low_rise', 'falls back to next available establish preset');
+  assert.throws(() => A.widePresetFor(catalog, { preset_id: 'wide_establish' }), /Missing camera preset/);
+  assert.throws(() => A.insertWideBeat(show(), 0, catalog, { preset_id: 'wide_reestablish' }), /Missing camera preset/);
+
+  // Scene with zero Wide beats emits soft grammar lint warning and never blocks bake
+  const noWide = show();
+  noWide.atoms.forEach(a => {
+    if (a.grammar_role === 'Wide') {
+      a.grammar_role = 'Reaction';
+      a.motion.grammar_role = 'Reaction';
+    }
+  });
+  const lintZeroWide = C.lintShow(noWide, { cameraPresets: catalog, fxPresets: read('presets/fx_presets.json') });
+  assert.equal(lintZeroWide.blocksBake, false);
+  const wideWarn = lintZeroWide.findings.find(f => f.code === 'scene_missing_wide');
+  assert.ok(wideWarn, 'expected scene_missing_wide finding when scene has zero Wide');
+  assert.match(wideWarn.message, /zero Wide/i);
+  assert.ok(wideWarn.fix.startsWith('Fix: ') && wideWarn.fix.endsWith('.'));
+  assert.equal(A.lintGrammar(noWide).count, 1);
+
+  // One-click markWideBeat restores Wide coverage on selected beat using eye_orbit
+  const marked = A.markWideBeat(noWide, noWide.atoms.length - 1, catalog);
+  assert.equal(marked.preset_id, 'eye_orbit');
+  assert.equal(marked.atom.grammar_role, 'Wide');
+  assert.equal(marked.atom.camera.preset, 'eye_orbit');
+  assert.equal(marked.atom.camera_grammar.role, 'Wide');
+  assert.equal(marked.atom.camera_grammar.shot_size, 'WS');
+  assert.equal(A.lintGrammar(marked.show).clean, true);
+
+  // One-click insertWideBeat inserts a Wide-tagged atom after the triplet using HM-CAM-GRAMMAR-STARTER convention
+  const insertedFromIntent = A.insertWideBeat(noWide, 1, catalog);
+  assert.equal(insertedFromIntent.index, 4, 'inserting from Intent beat places Wide re-establish right after the triplet Reaction');
+  assert.equal(insertedFromIntent.atom.id, 'wide_reestablish_eye_orbit_2');
+  assert.equal(insertedFromIntent.atom.label, 'Wide · eye_orbit');
+  assert.equal(insertedFromIntent.atom.grammar_role, 'Wide');
+  assert.equal(insertedFromIntent.atom.motion.grammar_role, 'Wide');
+  assert.equal(insertedFromIntent.atom.camera.preset, 'eye_orbit');
+  assert.equal(insertedFromIntent.atom.camera.preset.startsWith('wide_'), false);
+  assert.equal(A.lintGrammar(insertedFromIntent.show).clean, true);
+  const composedInserted = await compose(insertedFromIntent.show);
+  assert.equal(composedInserted.ok, true);
+});
+
+test('HM-PF-21 (#101): Camera: clause export in text/JSON matches fight-prompting REPORT conventions and round-trips into skill inputs', () => {
+  const source = show(), sheet = build(source);
+  const pack = A.clauseMap(sheet, catalog);
+  const txt = A.clausesText(sheet, catalog);
+  assert.equal(pack.kind, 'hm-camera-clauses');
+  assert.equal(pack.version, 1);
+  assert.equal(pack.report_convention, 'fight-prompting-enhancements-2026-11-01');
+  assert.equal(Object.keys(pack.clauses).length, 11);
+  for (const row of sheet.rows) {
+    assert.equal(pack.clauses[row.beat_id], row.camera_clause);
+    const parsed = A.parseClause(pack.clauses[row.beat_id]);
+    assert.equal(parsed.shot_size, row.shot_size);
+    assert.equal(parsed.lens_mm, row.lens_mm);
+    assert.equal(parsed.direction, row.direction);
+    assert.equal(parsed.speed, row.speed);
+    assert.equal(parsed.purpose, row.purpose);
+  }
+
+  // Edit a clause purpose & lens in exported JSON and round-trip into build, author, apply, and CLI scripts
+  const editedPack = clone(pack);
+  editedPack.clauses.t1_action_eye_push = editedPack.clauses.t1_action_eye_push
+    .replace('85mm', '50mm')
+    .replace('to follow the committed action.', 'to frame the lead straight for plate prompting.');
+  const rebuilt = A.build(input(source), catalog, { design: editedPack });
+  assert.equal(rebuilt.rows[2].lens_mm, '50mm');
+  assert.equal(rebuilt.rows[2].purpose, 'frame the lead straight for plate prompting');
+  const appliedFromPack = A.apply(source, editedPack, catalog);
+  assert.equal(appliedFromPack.atoms[2].camera_grammar.lens_mm, '50mm');
+  assert.equal(appliedFromPack.atoms[2].camera_grammar.purpose, 'frame the lead straight for plate prompting');
+
+  // Round-trip text clauses into build
+  const editedTxt = txt.replaceAll('to re-establish both fighters and the geography.', 'to re-establish rooftop spacing after the exchange.');
+  const rebuiltFromTxt = A.build(input(source), catalog, { design: editedTxt });
+  assert.equal(rebuiltFromTxt.rows.at(-1).purpose, 're-establish rooftop spacing after the exchange');
+
+  // CLI round-trip with --clauses-json and --design
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hm-clauses-'));
+  try {
+    const boardFile = path.join(dir, 'input.json');
+    const grammar1 = path.join(dir, 'grammar1.json');
+    const map1 = path.join(dir, 'map1.json');
+    const clausesTxtFile = path.join(dir, 'clauses.txt');
+    const clausesJsonFile = path.join(dir, 'clauses.json');
+    const grammar2 = path.join(dir, 'grammar2.json');
+    const map2 = path.join(dir, 'map2.json');
+    fs.writeFileSync(boardFile, JSON.stringify(input(source)));
+    const run = (script, args) => spawnSync(process.execPath, ['skills/' + script, ...args], { encoding: 'utf8' });
+    assert.equal(run('hm-cam-grammar-scene/scripts/grammar.cjs', ['--board', boardFile, '--out', grammar1]).status, 0);
+    assert.equal(run('hm-cam-shot-author/scripts/author.cjs', ['--grammar', grammar1, '--out', map1, '--clauses', clausesTxtFile, '--clauses-json', clausesJsonFile]).status, 0);
+    const onDiskPack = JSON.parse(fs.readFileSync(clausesJsonFile, 'utf8'));
+    assert.equal(onDiskPack.kind, 'hm-camera-clauses');
+    assert.equal(Object.keys(onDiskPack.clauses).length, 11);
+    assert.equal(run('hm-cam-grammar-scene/scripts/grammar.cjs', ['--board', boardFile, '--design', clausesJsonFile, '--out', grammar2]).status, 0);
+    assert.equal(run('hm-cam-shot-author/scripts/author.cjs', ['--grammar', clausesJsonFile, '--out', map2]).status, 0);
+    assert.deepEqual(JSON.parse(fs.readFileSync(map2, 'utf8')).shots, JSON.parse(fs.readFileSync(map1, 'utf8')).shots);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('HM-PF-22 (#102): Rooftop cam-grammar golden show is documented as step 4-5 proof film and composes FE-only with grammar-true presets', async () => {
+  const golden = show();
+  assert.equal(golden.show_id, 'fight-cam-grammar-starter');
+  assert.equal(golden.bg.base, 'assets/daiyu-wang-continuation/rooftop-dusk.png');
+  assert.deepEqual(
+    golden.atoms.map(a => a.camera.preset),
+    ['low_rise', 'ots_L_hold', 'eye_push', 'ots_R_hold', 'eye_lateral', 'whip_A_to_B', 'ecu_jitter', 'eye_hold', 'ecu_fist_lens', 'pull_aftermath', 'eye_orbit']
+  );
+  assert.equal(golden.atoms.some(a => a.camera.preset.startsWith('wide_')), false);
+  const lint = C.lintShow(golden, { cameraPresets: catalog, fxPresets: read('presets/fx_presets.json') });
+  assert.equal(lint.clean, true);
+  const composed = await compose(golden);
+  assert.equal(composed.ok, true);
+  assert.equal(composed.duration_s, 11);
+  const doc = fs.readFileSync('docs/product-flow/HM-PF-22-rooftop-golden-show.md', 'utf8');
+  assert.match(doc, /Step 4–5 proof film/);
+  assert.match(doc, /fight-daiyu-wang-rooftop-camera-grammar-2026-11-01/);
+});

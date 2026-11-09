@@ -8,6 +8,7 @@
   panel.innerHTML = `<summary>Scene camera grammar</summary>
     <p class="field-hint">Edit Intent → Action → Reaction and a Wide re-establish per scene. The camera menu above overrides the preset. Clauses follow the current catalog move.</p>
     <div class="paired-fields"><label>Role<select id="grammarRole"><option value="">Assign role…</option>${A.ROLES.map(role => `<option>${role}</option>`).join('')}</select></label><label>Shot size<select id="grammarSize">${A.SIZES.map(size => `<option>${size}</option>`).join('')}</select></label></div>
+    <div class="paired-fields wide-picker-row"><label>Wide establish preset<select id="widePresetPicker" aria-label="Wide establish preset"></select></label><div class="rhythm-actions wide-picker-actions"><button id="insertWideBeat" type="button">＋ Insert Wide re-establish</button><button id="markWideBeat" type="button">Mark beat as Wide</button></div></div>
     <div class="paired-fields"><label>Scene<input id="grammarScene" maxlength="80"></label><label>Triplet<input id="grammarTriplet" maxlength="80" placeholder="T1 / W1"></label></div>
     <label>Beat / action<input id="grammarAction" maxlength="240"></label>
     <div class="paired-fields"><label>Lens<input id="grammarLens" maxlength="40" placeholder="50mm"></label><label>Planned FX<select id="grammarFx"><option value="none">none</option><option value="hitstop">hitstop</option><option value="full">full</option></select></label></div>
@@ -17,10 +18,10 @@
     <p id="grammarPreset" class="field-hint"></p>
     <label>Camera clause (draft)<textarea id="grammarClause" rows="5" readonly></textarea></label>
     <p class="field-hint">Planned shot size, lens and FX describe the prompt; inspect actual plate framing. Existing curves cannot create a wide plate or change the rendered FX.</p>
-    <div class="rhythm-actions"><button id="exportCameraInput" type="button">Export approved camera input</button><button id="importCameraPlan" type="button">Apply grammar / camera map…</button><button id="exportCameraGrammar" type="button">Export grammar JSON</button><button id="exportCameraSheet" type="button">Export editable beat sheet</button><button id="exportCameraClauses" type="button">Export Camera: clauses</button></div>
+    <div class="rhythm-actions"><button id="exportCameraInput" type="button">Export approved camera input</button><button id="importCameraPlan" type="button">Apply grammar / camera map…</button><button id="exportCameraGrammar" type="button">Export grammar JSON</button><button id="exportCameraSheet" type="button">Export editable beat sheet</button><button id="exportCameraClauses" type="button">Export Camera: clauses</button><button id="exportCameraClausesJson" type="button">Export Camera: clauses JSON</button></div>
     <p id="cameraGrammarValidation" class="field-hint" role="status"></p>
     <p id="cameraPlanStatus" class="field-hint" role="status" aria-live="polite"></p>
-    <input id="cameraPlanInput" type="file" accept=".json,application/json" hidden>`;
+    <input id="cameraPlanInput" type="file" accept=".json,.txt,application/json,text/plain" hidden>`;
   $('camEase').closest('.settings-group').append(panel);
   const chain = document.createElement('div'); chain.className = 'camera-chain-author';
   chain.innerHTML = `<p id="cameraChainSelection" class="field-hint"></p><div class="rhythm-actions"><button id="chainFromFirst" type="button">Chain from first camera</button><button id="chainSnap" type="button">Chain + snap zoom</button></div><p class="field-hint">Shift-click adjacent clips. Both actions replace their moves and framing with the first camera, joined end → start. Snap zoom applies to the whole run. Undo restores all cameras.</p><p id="cameraChainStatus" class="field-hint" role="status"></p>`;
@@ -43,6 +44,17 @@
   }
   function refresh() {
     const show = S.show, atom = show?.atoms[S.selectedIndex]; if (!atom) return;
+    const picker = $('widePresetPicker');
+    if (picker && !picker.options.length && S.cameraPresets?.presets?.length) {
+      for (const id of A.wideEstablishPresets(S.cameraPresets)) {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = id === 'eye_orbit' ? 'eye_orbit · Wide re-establish' : id === 'low_rise' ? 'low_rise · Wide open' : id;
+        picker.append(opt);
+      }
+      picker.value = A.widePresetFor(S.cameraPresets, { mode: 'reestablish' });
+    }
+    $('insertWideBeat').disabled = $('markWideBeat').disabled = !show?.atoms?.length || S.recording;
     let row;
     try { row = A.rowFor(atom, S.selectedIndex, 0, S.cameraPresets); }
     catch (_) {
@@ -53,9 +65,14 @@
     $('grammarPreset').textContent = row.preset_id ? row.preset_id + ' · ' + row.angle + ' · ' + row.function_move : 'Choose a shipped camera preset above.';
     try { input(); $('exportCameraInput').disabled = false; } catch (_) { $('exportCameraInput').disabled = true; }
     let valid = false;
+    const grammarLint = A.lintGrammar(show);
     try { const value = sheet(); valid = true; $('cameraGrammarValidation').textContent = value.rows.length + ' beat(s) · complete triplets and Wide coverage. Ready to export.'; }
-    catch (error) { $('cameraGrammarValidation').textContent = error.message; }
-    for (const id of ['exportCameraGrammar', 'exportCameraSheet', 'exportCameraClauses']) $(id).disabled = !valid;
+    catch (error) {
+      $('cameraGrammarValidation').textContent = grammarLint.findings.length && !error.message.includes('Wide')
+        ? error.message + ' · ' + grammarLint.findings[0].message
+        : error.message;
+    }
+    for (const id of ['exportCameraGrammar', 'exportCameraSheet', 'exportCameraClauses', 'exportCameraClausesJson']) $(id).disabled = !valid;
     const indices = run();
     $('chainFromFirst').disabled = $('chainSnap').disabled = indices.length < 2 || S.recording;
     $('cameraChainSelection').textContent = indices.length ? 'Clips ' + (indices[0] + 1) + '–' + (indices.at(-1) + 1) + ' · ' + indices.length + ' adjacent cameras' : 'Select a clip with a following neighbor, or Shift-click a run.';
@@ -90,10 +107,25 @@
     $('cameraPlanStatus').textContent = 'Grammar updated. Save project retains these fields; Undo restores the previous edit.';
   }));
   const download = (suffix, value, type = 'application/json') => S.download(S.show.show_id + suffix, new Blob([typeof value === 'string' ? value : JSON.stringify(value, null, 2)], { type }));
+  on('insertWideBeat', () => {
+    available();
+    const preset_id = $('widePresetPicker')?.value || undefined;
+    const result = A.insertWideBeat(S.show, S.selectedIndex, S.cameraPresets, { preset_id });
+    S.editProject(project => { project.show = result.show; return result.index; });
+    $('cameraPlanStatus').textContent = 'Inserted Wide re-establish beat (' + result.atom.id + ' · ' + result.preset_id + '). Undo restores the previous timeline.';
+  });
+  on('markWideBeat', () => {
+    available();
+    const preset_id = $('widePresetPicker')?.value || undefined;
+    const result = A.markWideBeat(S.show, S.selectedIndex, S.cameraPresets, { preset_id });
+    S.editProject(project => { project.show = result.show; });
+    $('cameraPlanStatus').textContent = 'Marked ' + result.atom.id + ' as Wide (' + result.preset_id + '). Undo restores the previous beat.';
+  });
   on('exportCameraInput', () => { available(); download('.camera-input.json', input()); $('cameraPlanStatus').textContent = 'Approved board and GO downloaded. Run hm-cam-grammar-scene locally.'; });
   on('exportCameraGrammar', () => { available(); download('.grammar.json', sheet()); });
   on('exportCameraSheet', () => { available(); download('.grammar.md', A.markdown(sheet(), S.cameraPresets), 'text/markdown'); });
-  on('exportCameraClauses', () => { available(); const plan = A.author(sheet(), S.cameraPresets); download('.camera-clauses.txt', plan.shots.map(shot => shot.beat_id + '\n' + shot.camera_clause).join('\n\n') + '\n', 'text/plain'); });
+  on('exportCameraClauses', () => { available(); download('.camera-clauses.txt', A.clausesText(sheet(), S.cameraPresets), 'text/plain'); $('cameraPlanStatus').textContent = 'Camera: clauses text downloaded locally.'; });
+  on('exportCameraClausesJson', () => { available(); download('.camera-clauses.json', A.clauseMap(sheet(), S.cameraPresets)); $('cameraPlanStatus').textContent = 'Camera: clause map JSON downloaded locally.'; });
   on('importCameraPlan', () => { available(); notRework(); $('cameraPlanInput').click(); });
   $('cameraPlanInput').addEventListener('change', safe(async event => {
     const file = event.target.files[0]; if (!file) return;
@@ -101,7 +133,9 @@
     try {
       available(); notRework();
       if (file.size > 1024 * 1024) throw Error('Camera plan exceeds 1 MiB.');
-      const plan = JSON.parse(await file.text()), candidate = A.apply(S.show, plan, S.cameraPresets);
+      const rawText = await file.text();
+      const plan = /^\s*\{/.test(rawText) ? JSON.parse(rawText) : A.build(input(), S.cameraPresets, { design: rawText });
+      const candidate = A.apply(S.show, plan, S.cameraPresets);
       if (!window.confirm('Apply camera grammar to ' + candidate.atoms.length + ' beats? This replaces their camera moves and chains. Timing, plates and rendered FX stay. Undo restores the current cameras.')) { $('cameraPlanStatus').textContent = 'Kept the current cameras.'; return; }
       const current = S.destinationToken(); available(); notRework();
       if (current.revision !== token.revision || current.request !== token.request) throw Error('The project changed. Select the camera plan again.');

@@ -12,6 +12,10 @@ function args(argv, allowed) {
   return result;
 }
 const read = file => JSON.parse(fs.readFileSync(path.resolve(file), 'utf8'));
+function readDesign(file) {
+  const raw = fs.readFileSync(path.resolve(file), 'utf8');
+  return /^\s*\{/.test(raw) ? JSON.parse(raw) : raw;
+}
 function engine(repo) {
   repo = path.resolve(repo || path.join(__dirname, '../../..'));
   require(path.join(repo, 'public/ui/compose-client.js'));
@@ -31,11 +35,11 @@ function main(argv) {
   const { A, catalog } = engine(opt.repo), source = read(opt.board);
   const input = source.board ? source : { board: source };
   if (opt['go-file']) input.approval = read(opt['go-file']);
-  const sheet = A.build(input, catalog, { design: opt.design ? read(opt.design) : undefined, intent: opt.intent });
+  const sheet = A.build(input, catalog, { design: opt.design ? readDesign(opt.design) : undefined, intent: opt.intent });
   const outputs = [[opt.out, JSON.stringify(sheet, null, 2) + '\n']];
   if (opt.markdown) outputs.push([opt.markdown, A.markdown(sheet, catalog)]);
   write(outputs);
   console.log('Wrote scene grammar: ' + sheet.rows.length + ' beats. Review the editable sheet, then use hm-cam-shot-author or Apply grammar / camera map in HM.');
 }
 if (require.main === module) try { main(process.argv.slice(2)); } catch (error) { console.error(error.message); process.exitCode = 1; }
-module.exports = { args, read, engine, write, main };
+module.exports = { args, read, readDesign, engine, write, main };

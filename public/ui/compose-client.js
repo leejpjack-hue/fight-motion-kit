@@ -2063,6 +2063,9 @@
     bridgeCodes: Object.freeze([
       'beat_id_conflict',
     ]),
+    grammarCodes: Object.freeze([
+      'scene_missing_wide',
+    ]),
     rhythmWindow: Object.freeze({
       target_median_s: 0.5,
       max_s: 1.4,
@@ -2525,6 +2528,17 @@
       );
     });
 
+    lintCameraGrammar(show).forEach((g) => {
+      pushFinding(
+        g.code,
+        g.message,
+        g.fix,
+        g.atom_id,
+        g.atom_index,
+        'grammar'
+      );
+    });
+
     const timing = rhythmTiming(show);
     if (!timing.durations_valid) pushFinding('unsafe_duration',
       'Rhythm total is unknown: missing or invalid duration on ' + timing.invalid_beats.join(', '),
@@ -2552,6 +2566,39 @@
       by_code: byCode,
       findings,
     };
+  }
+
+  function lintCameraGrammar(show) {
+    const atoms = Array.isArray(show?.atoms) ? show.atoms : [];
+    const roleOf = (a) => (a && (a.camera_grammar?.role || a.grammar_role || a.motion?.grammar_role)) || '';
+    const hasGrammar = Boolean(
+      show?.camera_authoring ||
+      show?.meta?.grammar === 'Fight Camera Grammar' ||
+      atoms.some((a) => roleOf(a) || a?.camera_grammar?.scene_id)
+    );
+    if (!hasGrammar || !atoms.length) return [];
+    const scenes = new Map();
+    atoms.forEach((atom, index) => {
+      const sceneId = (atom && (atom.camera_grammar?.scene_id || atom.scene_id)) || 'scene-01';
+      if (!scenes.has(sceneId)) scenes.set(sceneId, []);
+      scenes.get(sceneId).push({ atom, index, role: roleOf(atom) });
+    });
+    const out = [];
+    for (const [sceneId, items] of scenes) {
+      if (!items.some((item) => item.role === 'Wide')) {
+        const anchor = items[items.length - 1];
+        out.push({
+          code: 'scene_missing_wide',
+          scene_id: sceneId,
+          message: 'Scene "' + sceneId + '" has zero Wide beats; camera grammar requires a Wide re-establish beat.',
+          fix: 'Fix: Use the Wide re-establish picker in Scene camera grammar to insert or mark a Wide beat with an existing establish preset.',
+          atom_id: anchor?.atom?.id,
+          atom_index: anchor?.index,
+          category: 'grammar',
+        });
+      }
+    }
+    return out;
   }
 
   function requireHoldSeconds(value, label) {
@@ -3442,6 +3489,7 @@
     parityDirtyChecklist,
     SHOW_LINT_CONTRACT,
     lintShow,
+    lintCameraGrammar,
     BG_CROP_MIN,
     BG_CROP_FULL,
     validBackgroundCrop,

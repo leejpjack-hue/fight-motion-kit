@@ -59,8 +59,14 @@ node skills/hm-cam-grammar-scene/scripts/grammar.cjs \
 
 `--repo` selects another checkout. `--design`, `--intent` and `--markdown` are
 optional; approved boards already carrying roles can produce a starter proposal.
+`--design` also accepts an exported `.camera-clauses.json` or `.camera-clauses.txt`
+file to round-trip edited `Camera:` clauses back into scene grammar.
 Outputs never overwrite existing files. Missing GO, stale story IDs, incomplete
 triplets, missing Wide coverage and absent catalog presets stop before output.
+In the HM UI, the **Wide establish preset** picker (**＋ Insert Wide re-establish**
+or **Mark beat as Wide**) inserts or marks a `Wide`-tagged beat using existing
+establish presets (`eye_orbit`, `low_rise`) without inventing `wide_*` curves, and
+Show JSON Lint warns (`scene_missing_wide`) if a grammar scene has zero `Wide` beats.
 
 The sheet retains the template's fight-meta fields and exact ten beat columns:
 `#`, `t (s)`, `Role (Intent/Action/Reaction/Wide)`, `Shot size`, `Angle`,

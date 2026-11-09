@@ -68,6 +68,54 @@ fs.mkdirSync(out, { recursive: true });
     assert.equal(await page.locator('#exportCameraGrammar').isEnabled(), true);
     const exported = await download('exportCameraClauses', 'edited-clauses.txt');
     assert.match(fs.readFileSync(exported, 'utf8'), /camera tracks left.*keep the opening visible/);
+    const exportedJson = await download('exportCameraClausesJson', 'edited-clauses.json');
+    const clausePack = JSON.parse(fs.readFileSync(exportedJson, 'utf8'));
+    assert.equal(clausePack.kind, 'hm-camera-clauses');
+    assert.equal(clausePack.report_convention, 'fight-prompting-enhancements-2026-11-01');
+    assert.match(clausePack.clauses.t1_intent_ots_L_hold, /camera tracks left.*keep the opening visible/);
+    // Round-trip edited JSON clauses through hm-cam-shot-author and directly into #cameraPlanInput
+    clausePack.clauses.t1_intent_ots_L_hold = clausePack.clauses.t1_intent_ots_L_hold.replace('keep the opening visible', 'hold screen-left guard for prompt pack');
+    const roundtripClausesFile = path.join(out, 'roundtrip.camera-clauses.json');
+    const roundtripMapFile = path.join(out, 'roundtrip.map.json');
+    if (fs.existsSync(roundtripMapFile)) fs.unlinkSync(roundtripMapFile);
+    fs.writeFileSync(roundtripClausesFile, JSON.stringify(clausePack, null, 2));
+    run('hm-cam-shot-author/scripts/author.cjs', ['--grammar', roundtripClausesFile, '--out', roundtripMapFile]);
+    await page.setInputFiles('#cameraPlanInput', roundtripClausesFile);
+    await page.waitForFunction(() => document.getElementById('cameraPlanStatus').textContent.startsWith('Camera grammar applied.')); await settle();
+    assert.equal((await state()).atoms[1].camera_grammar.purpose, 'hold screen-left guard for prompt pack');
+    await page.click('#undo'); await settle();
+    assert.equal((await state()).atoms[1].camera_grammar.purpose, 'keep the opening visible');
+
+    // HM-PF-20 (#100): Wide re-establish beat picker and zero-Wide grammar lint warning
+    const beforeWidePicker = await state();
+    await page.click('.timeline-clip[data-index="0"]');
+    await page.selectOption('#grammarRole', 'Intent'); await settle();
+    await page.click('.timeline-clip[data-index="10"]');
+    await page.selectOption('#grammarRole', 'Reaction'); await settle();
+    const zeroWideLint = await page.evaluate(() => HMStudio.showLint);
+    assert.ok(zeroWideLint.findings.some(f => f.code === 'scene_missing_wide'), 'grammar lint warns when scene has zero Wide');
+    assert.match(await page.locator('#cameraGrammarValidation').textContent(), /Wide/);
+    await page.click('#markWideBeat'); await settle();
+    assert.equal((await state()).atoms[10].grammar_role, 'Wide');
+    assert.equal((await state()).atoms[10].camera.preset, 'eye_orbit');
+    await page.click('.timeline-clip[data-index="0"]');
+    await page.selectOption('#widePresetPicker', 'low_rise');
+    await page.click('#markWideBeat'); await settle();
+    assert.equal((await state()).atoms[0].grammar_role, 'Wide');
+    assert.equal((await state()).atoms[0].camera.preset, 'low_rise');
+    assert.equal((await page.evaluate(() => HMStudio.showLint)).findings.some(f => f.code === 'scene_missing_wide'), false);
+    await page.selectOption('#widePresetPicker', 'eye_orbit');
+    await page.click('.timeline-clip[data-index="3"]');
+    await page.click('#insertWideBeat'); await settle();
+    assert.equal((await state()).atoms.length, 12);
+    assert.equal((await state()).atoms[4].grammar_role, 'Wide');
+    assert.equal((await state()).atoms[4].camera.preset, 'eye_orbit');
+    await page.locator('#widePresetPicker').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(out, 'wide-picker.png') });
+    // Undo back to beforeWidePicker so subsequent assertions run on the 11-clip state
+    for (let u = 0; u < 5; u++) { await page.click('#undo'); await settle(); }
+    assert.deepEqual(await state(), beforeWidePicker);
+    await page.click('.timeline-clip[data-index="1"]');
+
     const sheet = await download('exportCameraSheet', 'edited-sheet.md');
     assert.match(fs.readFileSync(sheet, 'utf8'), /\| slide_left \|/);
     await page.locator('#grammarPurpose').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(out, 'grammar-panel.png') });

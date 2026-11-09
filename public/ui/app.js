@@ -10,8 +10,10 @@
   const CONTINUATION = 'daiyu-wang-ten-seconds';
   const STREET = 'street-old-city';
   const GRAMMAR = 'fight-cam-grammar-starter';
-  const GOLD = [DEMO, ORIGINAL, CONTINUATION];
-  const BUILTIN = [...GOLD, STREET, GRAMMAR];
+  const GRAMMAR_ALIASES = ['fight-daiyu-wang-rooftop-camera-grammar-2026-11-01', 'rooftop-camera-grammar'];
+  const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR];
+  const BUILTIN = [...GOLD, STREET];
+  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : id;
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_CUT_PRESETS = {version:'hm-hf-08',presets:[
     {id:'freeze_hold',label:'Freeze hold',defaults:{dur_s:0.12,hold_s:0.12,dir:1}},
@@ -120,6 +122,7 @@
     HMStripAdapter.validateProject(p);
   }
   async function builtIn(id) {
+    id = resolveBuiltInId(id);
     const show = await json('/shows/' + id + '.json'); const layouts = {};
     for (const key of new Set(show.atoms.map(a=>a.hero?.layout_source).filter(Boolean))) {
       const layout = await json('/'+key);
@@ -396,7 +399,7 @@
     const val = String(rawValue || '').trim();
     if (!val) return false;
     abEnabled = true;
-    const cleanGold = val.replace(/^gold:/, '');
+    const cleanGold = resolveBuiltInId(val.replace(/^gold:/, ''));
     if (BUILTIN.includes(cleanGold)) {
       const kind = cleanGold === STREET ? 'sample' : 'gold';
       const ok = await openReferenceB(builtIn(cleanGold), kind, cleanGold);
@@ -1754,7 +1757,7 @@
     });
     renderCatalogQuery();
     let saved;try{saved=await HMAssetStore.get('active');}catch(_){}
-    const sid=new URLSearchParams(location.search).get('show');
+    const sid=resolveBuiltInId(new URLSearchParams(location.search).get('show'));
     const goldDefault=GOLD.includes(sid)?sid:DEMO;
     const defaultGold=await builtIn(goldDefault);
     await loadB(defaultGold,'gold',goldDefault);
@@ -2319,6 +2322,6 @@
     if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
-  window.HMStudio={get project(){return copy(project);},get show(){return project?copy(project.show):null;},get selectedIndex(){return selected;},get selectedIndices(){return selectedRun();},get cameraPresets(){return copy(presets);},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>fn(project));},destinationToken,commitCandidate,get pendingCommit(){return snapshotCommit;},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
+  window.HMStudio={get project(){return copy(project);},get show(){return project?copy(project.show):null;},get selectedIndex(){return selected;},get selectedIndices(){return selectedRun();},get cameraPresets(){return copy(presets);},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},editProject(fn){edit(()=>{const nextSel=fn(project);if(Number.isInteger(nextSel)&&nextSel>=0&&nextSel<project.show.atoms.length){selected=nextSel;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);}});},destinationToken,commitCandidate,get pendingCommit(){return snapshotCommit;},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};
   window.ready=boot().catch(e=>{status('Could not open editor: '+e.message,true);throw e;});
 })();

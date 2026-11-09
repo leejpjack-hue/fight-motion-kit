@@ -1,16 +1,22 @@
-/* HM-PF-15/18/19. Template planning and preset maps; the shipped engine renders. */
+/* HM-PF-15/18/19/20/21/22. Template planning, Wide picker, clause export and preset maps; the shipped engine renders. */
 (function (global) {
   'use strict';
   const C = global.HMComposeClient;
   const clone = value => JSON.parse(JSON.stringify(value));
+  const REPORT_CONVENTION = 'fight-prompting-enhancements-2026-11-01';
   const TEMPLATE = Object.freeze({
     url: 'https://app.notion.com/p/40b9565776c68154a978edfd92c62652',
     title: 'Fight Camera Grammar Template', last_edited_at: '2026-11-01T11:46:06.416Z',
+    report_convention: REPORT_CONVENTION,
     fields: ['#', 't (s)', 'Role (Intent/Action/Reaction/Wide)', 'Shot size', 'Angle', 'Function / move', 'Preset id', 'Beat / action', 'FX (full / hitstop / none)', 'Camera clause (draft)'],
     formula: 'Camera: {angle}, {lens_mm}; camera {move} {direction} at {speed}, {purpose/end composition}.',
   });
   const ROLES = Object.freeze(['Wide', 'Intent', 'Action', 'Reaction']);
   const SIZES = Object.freeze(['EWS', 'WS', 'MWS', 'MS', 'MCU', 'CU', 'OTS', 'ECU', 'INS', 'POV', 'RXN', 'CUT']);
+  const WIDE_PRESETS = Object.freeze({
+    open: Object.freeze(['low_rise', 'eye_orbit', 'pull_aftermath', 'static_hold']),
+    reestablish: Object.freeze(['eye_orbit', 'low_rise', 'pull_aftermath', 'static_hold']),
+  });
   const DEFAULTS = Object.freeze({
     Wide: { preset_id: 'eye_orbit', shot_size: 'WS', lens_mm: '28mm', purpose: 're-establish both fighters and the geography' },
     Intent: { preset_id: 'eye_hold', shot_size: 'MCU', lens_mm: '50mm', purpose: 'show the attacker finding an opening' },
@@ -35,10 +41,43 @@
     return map;
   }
   function presetFor(id, catalog) {
+    if (typeof id === 'string' && /^wide_/i.test(id)) throw Error('Missing camera preset: ' + id + '. Do not invent wide_* curves; choose an ID in the current camera_presets.json.');
     const preset = registry(catalog).get(id);
     if (!preset) throw Error('Missing camera preset: ' + id + '. Choose an ID in the current camera_presets.json.');
     if (!preset.angle || !MOVES[preset.move]) throw Error('Preset lacks planning angle/move metadata: ' + id);
     return preset;
+  }
+  function wideEstablishPresets(catalog) {
+    const map = registry(catalog);
+    const seen = new Set(), out = [];
+    for (const id of [...WIDE_PRESETS.reestablish, ...WIDE_PRESETS.open]) {
+      if (seen.has(id) || /^wide_/i.test(id) || !map.has(id)) continue;
+      const p = map.get(id);
+      if (p?.angle && MOVES[p.move]) { seen.add(id); out.push(id); }
+    }
+    if (!out.length) {
+      for (const [id, p] of map) {
+        if (!/^wide_/i.test(id) && p?.angle && MOVES[p.move]) { out.push(id); break; }
+      }
+    }
+    return out;
+  }
+  function widePresetFor(catalog, options = {}) {
+    if (options.preset_id !== undefined && options.preset_id !== '') {
+      presetFor(options.preset_id, catalog);
+      return options.preset_id;
+    }
+    const map = registry(catalog);
+    const preferred = options.mode === 'open' ? WIDE_PRESETS.open : WIDE_PRESETS.reestablish;
+    for (const id of preferred) {
+      if (!/^wide_/i.test(id) && map.has(id)) {
+        const p = map.get(id);
+        if (p?.angle && MOVES[p.move]) return id;
+      }
+    }
+    const fallback = wideEstablishPresets(catalog)[0];
+    if (!fallback) throw Error('No establish camera preset available in camera_presets.json.');
+    return fallback;
   }
   function text(value, label) {
     if (typeof value !== 'string' || !value.trim() || /[\r\n]/.test(value)) throw Error('Fill a single-line ' + label + '.');
@@ -49,6 +88,76 @@
     const angle = { eye: 'eye level', ecu: 'extreme close-up', floor: 'floor level', waist_ots_L: 'waist OTS-L', waist_ots_R: 'waist OTS-R' }[preset.angle] || preset.angle.replaceAll('_', ' ');
     return 'Camera: ' + text(row.shot_size, 'shot size') + ' framing at ' + angle + ', ' + text(row.lens_mm, 'lens') +
       '; camera ' + move[0] + ' ' + text(row.direction, 'direction') + ' at ' + text(row.speed, 'speed') + ', to ' + text(row.purpose, 'purpose') + '.';
+  }
+  function parseClause(clauseStr) {
+    const raw = text(clauseStr, 'camera clause');
+    const m = /^Camera:\s+([A-Z0-9]+)\s+framing at\s+([^,]+),\s*([^;]+);\s+camera\s+(.+?)\s+at\s+([^,]+),\s+to\s+(.+)\.$/.exec(raw);
+    if (!m || !SIZES.includes(m[1])) throw Error('Camera clause must match fight-prompting REPORT formula: ' + TEMPLATE.formula);
+    const verbList = Object.values(MOVES).map(v => v[0]).sort((a, b) => b.length - a.length);
+    const movePhrase = m[4].trim();
+    const verb = verbList.find(v => movePhrase === v || movePhrase.startsWith(v + ' '));
+    if (!verb) throw Error('Camera clause uses an unknown move verb: ' + movePhrase);
+    const direction = text(movePhrase.slice(verb.length), 'direction');
+    return {
+      shot_size: m[1],
+      angle_label: text(m[2], 'angle'),
+      lens_mm: text(m[3], 'lens'),
+      move_verb: verb,
+      direction,
+      speed: text(m[5], 'speed'),
+      purpose: text(m[6], 'purpose'),
+      camera_clause: raw,
+    };
+  }
+  function parseClausesInput(raw, catalog) {
+    if (typeof raw === 'string') {
+      const blocks = raw.trim().split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+      if (!blocks.length) throw Error('Supply at least one beat_id and Camera: clause.');
+      const rows = blocks.map(block => {
+        const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length !== 2) throw Error('Each clause block must have beat_id on line 1 and Camera: clause on line 2.');
+        const beat_id = text(lines[0], 'beat ID');
+        const parsed = parseClause(lines[1]);
+        return { beat_id, shot_size: parsed.shot_size, lens_mm: parsed.lens_mm, direction: parsed.direction, speed: parsed.speed, purpose: parsed.purpose };
+      });
+      return { rows, clauses: Object.fromEntries(rows.map((r, i) => [r.beat_id, blocks[i].split(/\r?\n/)[1].trim()])) };
+    }
+    if (!raw || typeof raw !== 'object') throw Error('Supply a Camera: clause map or scene design.');
+    if (raw.kind === 'hm-camera-clauses') {
+      if (raw.version !== 1 || !raw.clauses || typeof raw.clauses !== 'object') throw Error('Invalid hm-camera-clauses package.');
+      const baseRows = Array.isArray(raw.rows) ? clone(raw.rows) : Array.isArray(raw.beats) ? clone(raw.beats) : [];
+      const rowMap = new Map(baseRows.map(r => [r.beat_id, r]));
+      const entries = Object.entries(raw.clauses);
+      if (!entries.length) throw Error('Camera clause map cannot be empty.');
+      const rows = entries.map(([beat_id, clauseStr]) => {
+        const parsed = parseClause(clauseStr);
+        const base = rowMap.get(beat_id) || { beat_id };
+        const merged = {
+          ...base,
+          beat_id,
+          shot_size: parsed.shot_size,
+          lens_mm: parsed.lens_mm,
+          direction: parsed.direction,
+          speed: parsed.speed,
+          purpose: parsed.purpose,
+        };
+        if (merged.preset_id && catalog) {
+          merged.camera_clause = clause(merged, catalog);
+          if (merged.camera_clause !== parsed.camera_clause) throw Error('Camera clause angle/move disagrees with preset ' + merged.preset_id + ' at ' + beat_id + '.');
+        }
+        return merged;
+      });
+      return { rows, fight_meta: raw.fight_meta ? clone(raw.fight_meta) : undefined, clauses: clone(raw.clauses) };
+    }
+    if (raw.clauses && typeof raw.clauses === 'object' && !Array.isArray(raw.clauses)) {
+      const rows = Object.entries(raw.clauses).map(([beat_id, clauseStr]) => {
+        const parsed = parseClause(clauseStr);
+        const existing = Array.isArray(raw.rows) ? raw.rows.find(r => r.beat_id === beat_id) : {};
+        return { ...(existing || {}), beat_id, shot_size: parsed.shot_size, lens_mm: parsed.lens_mm, direction: parsed.direction, speed: parsed.speed, purpose: parsed.purpose };
+      });
+      return { rows, fight_meta: raw.fight_meta ? clone(raw.fight_meta) : undefined, clauses: clone(raw.clauses) };
+    }
+    return raw;
   }
   function boardIds(board, approval) {
     if (!board?.show_id || !Array.isArray(board.beats) || !board.beats.length || board.beats.length > 300) throw Error('Supply the approved PF-08 board with 1–300 beats.');
@@ -116,7 +225,10 @@
     const board = input.board || input, approval = input.approval || options.approval, ids = boardIds(board, approval);
     const show = options.show || input.show;
     if (show) matchShow(show, board, ids);
-    const design = options.design || input.design || {};
+    const rawDesign = options.design || input.design || {};
+    const design = (typeof rawDesign === 'string' || rawDesign?.kind === 'hm-camera-clauses' || (rawDesign?.clauses && typeof rawDesign.clauses === 'object'))
+      ? parseClausesInput(rawDesign, catalog)
+      : rawDesign;
     if (design.rows && (!Array.isArray(design.rows) || new Set(design.rows.map(row => row.beat_id)).size !== design.rows.length || design.rows.some(row => !ids.includes(row.beat_id)))) throw Error('Design rows must name unique existing beat IDs.');
     const counters = new Map(); let t = 0;
     const rows = board.beats.map((beat, i) => {
@@ -160,14 +272,75 @@
     return validate(sheet, catalog);
   }
   function author(sheet, catalog) {
+    if (sheet?.kind === 'hm-camera-clauses') {
+      const parsed = parseClausesInput(sheet, catalog);
+      sheet = {
+        kind: 'hm-scene-grammar',
+        version: 1,
+        show_id: sheet.show_id,
+        source_template: clone(sheet.source_template || TEMPLATE),
+        board: clone(sheet.board),
+        approval: clone(sheet.approval),
+        fight_meta: clone(sheet.fight_meta || {}),
+        rows: parsed.rows,
+      };
+    }
     validate(sheet, catalog);
     const grammar = clone(sheet);
     grammar.rows.forEach(row => { const preset = presetFor(row.preset_id, catalog); row.angle = preset.angle; row.function_move = preset.move; row.camera_clause = clause(row, catalog); });
     return { kind: 'hm-camera-map', version: 1, show_id: sheet.show_id, grammar,
       shots: grammar.rows.map(row => ({ beat_id: row.beat_id, camera: { preset: row.preset_id }, camera_clause: clause(row, catalog) })) };
   }
+  function clausesText(sheetOrPlan, catalog) {
+    const plan = sheetOrPlan?.kind === 'hm-camera-map' ? sheetOrPlan : author(sheetOrPlan, catalog);
+    return plan.shots.map(shot => shot.beat_id + '\n' + shot.camera_clause).join('\n\n') + '\n';
+  }
+  function clauseMap(sheetOrPlan, catalog) {
+    const plan = sheetOrPlan?.kind === 'hm-camera-map' ? sheetOrPlan : author(sheetOrPlan, catalog);
+    const sheet = validate(plan.grammar, catalog);
+    const clauses = {};
+    const beats = sheet.rows.map(row => {
+      const preset = presetFor(row.preset_id, catalog);
+      const line = clause(row, catalog);
+      clauses[row.beat_id] = line;
+      return {
+        beat_id: row.beat_id,
+        scene_id: row.scene_id,
+        triplet: row.triplet,
+        t_s: row.t_s,
+        role: row.role,
+        shot_size: row.shot_size,
+        angle: preset.angle,
+        function_move: preset.move,
+        preset_id: row.preset_id,
+        lens_mm: row.lens_mm,
+        direction: row.direction,
+        speed: row.speed,
+        purpose: row.purpose,
+        fx: row.fx,
+        beat_action: row.beat_action,
+        camera: { preset: row.preset_id },
+        camera_clause: line,
+      };
+    });
+    return {
+      kind: 'hm-camera-clauses',
+      version: 1,
+      report_convention: REPORT_CONVENTION,
+      show_id: sheet.show_id,
+      source_template: clone(TEMPLATE),
+      formula: TEMPLATE.formula,
+      fight_meta: clone(sheet.fight_meta),
+      board: clone(sheet.board),
+      approval: clone(sheet.approval),
+      clauses,
+      beats,
+      rows: clone(sheet.rows),
+      shots: clone(plan.shots),
+    };
+  }
   function apply(show, plan, catalog) {
-    if (plan?.kind === 'hm-scene-grammar') plan = author(plan, catalog);
+    if (plan?.kind === 'hm-scene-grammar' || plan?.kind === 'hm-camera-clauses') plan = author(plan, catalog);
     if (plan?.kind !== 'hm-camera-map' || plan.version !== 1 || plan.show_id !== show?.show_id) throw Error('Choose a camera map for the open show.');
     const sheet = validate(plan.grammar, catalog), ids = boardIds(sheet.board, sheet.approval);
     matchShow(show, sheet.board, ids);
@@ -209,5 +382,114 @@
     C.reflowAllCamChains(next.atoms);
     return { show: next, info };
   }
-  global.HMCameraAuthor = Object.freeze({ TEMPLATE, ROLES, SIZES, DEFAULTS, registry, presetFor, clause, rowFor, validate, build, fromShow, author, apply, markdown, chainFromFirst });
+  function lintGrammar(show) {
+    const findings = C.lintCameraGrammar ? C.lintCameraGrammar(show) : [];
+    return { clean: findings.length === 0, count: findings.length, findings };
+  }
+  function markWideBeat(show, index, catalog, options = {}) {
+    if (!show || !Array.isArray(show.atoms) || !show.atoms[index]) throw Error('Select a clip to mark as a Wide beat.');
+    const mode = options.mode || (index === 0 && options.preset_id === 'low_rise' ? 'open' : 'reestablish');
+    const presetId = widePresetFor(catalog, { ...options, mode });
+    const preset = presetFor(presetId, catalog), move = MOVES[preset.move], def = DEFAULTS.Wide;
+    const next = clone(show), target = next.atoms[index], saved = target.camera_grammar || {};
+    const oldCam = target.camera || {}, camera = { preset: presetId };
+    for (const key of ['nudge', 'intensity', 'params', 'ease', 'snap_zoom']) if (oldCam[key] !== undefined) camera[key] = clone(oldCam[key]);
+    target.camera = camera;
+    delete target.timing_hold;
+    target.grammar_role = 'Wide';
+    target.motion = { ...(target.motion || { family: 'fight', beat_class: 'guard_recover' }), grammar_role: 'Wide' };
+    target.camera_grammar = {
+      beat_id: target.beat_id || target.id,
+      scene_id: options.scene_id || saved.scene_id || target.scene_id || 'scene-01',
+      triplet: /^W\d+$/i.test(saved.triplet || '') ? saved.triplet : 'W' + (index + 1),
+      role: 'Wide',
+      shot_size: def.shot_size,
+      beat_action: saved.beat_action || target.label || ('Wide · ' + presetId),
+      fx: 'none',
+      lens_mm: def.lens_mm,
+      direction: preset.direction || move[1],
+      speed: move[2],
+      purpose: mode === 'open' ? 'establish both fighters and the geography' : def.purpose,
+      authored_preset_id: presetId,
+    };
+    if (C.reflowAllCamChains) C.reflowAllCamChains(next.atoms);
+    return { show: next, index, atom: clone(target), preset_id: presetId };
+  }
+  function insertWideBeat(show, index, catalog, options = {}) {
+    if (!show || !Array.isArray(show.atoms) || !show.atoms.length) throw Error('Add at least one clip before inserting a Wide beat.');
+    const sel = Number.isInteger(index) && index >= 0 && index < show.atoms.length ? index : show.atoms.length - 1;
+    const mode = options.mode || (options.preset_id === 'low_rise' ? 'open' : 'reestablish');
+    const presetId = widePresetFor(catalog, { ...options, mode });
+    const preset = presetFor(presetId, catalog), move = MOVES[preset.move], def = DEFAULTS.Wide;
+    const next = clone(show);
+    const roleAt = i => {
+      const a = next.atoms[i];
+      return (a && (a.camera_grammar?.role || a.grammar_role || a.motion?.grammar_role)) || '';
+    };
+    let insertAt = sel + 1;
+    if (mode === 'open' && options.atStart === true) {
+      insertAt = 0;
+    } else if (options.exactIndex !== true) {
+      if (roleAt(sel) === 'Intent' && roleAt(sel + 1) === 'Action' && roleAt(sel + 2) === 'Reaction') insertAt = sel + 3;
+      else if (roleAt(sel) === 'Action' && roleAt(sel + 1) === 'Reaction') insertAt = sel + 2;
+    }
+    const ref = next.atoms[Math.min(sel, next.atoms.length - 1)] || next.atoms[0];
+    const baseId = (mode === 'open' ? 'wide_open_' : 'wide_reestablish_') + presetId;
+    const usedIds = new Set(next.atoms.map(a => a.beat_id || a.id));
+    let id = baseId, suffix = 2;
+    while (usedIds.has(id)) { id = baseId + '_' + suffix; suffix++; }
+    const dur = typeof ref.duration_s === 'number' && Number.isFinite(ref.duration_s) && ref.duration_s >= 0.1 ? ref.duration_s : 1;
+    const platesNeeded = ref.plates_needed || (ref.hero?.plates?.length || 2);
+    const hero = ref.hero ? clone(ref.hero) : { layout_source: 'assets/daiyu-wang-eight/layout.json', plates: ['P01', 'P01'] };
+    if (hero.layout_source === 'assets/daiyu-wang-eight/layout.json' && Array.isArray(hero.plates)) {
+      hero.plates = Array.from({ length: platesNeeded }, () => 'P01');
+    }
+    const label = 'Wide · ' + presetId;
+    const sceneId = options.scene_id || ref.camera_grammar?.scene_id || ref.scene_id || 'scene-01';
+    const atom = {
+      id,
+      label,
+      grammar_role: 'Wide',
+      kind: 'duo',
+      duration_s: dur,
+      plates_needed: platesNeeded,
+      pose_mode: ref.pose_mode || 'hero',
+      motion: {
+        family: ref.motion?.family || 'fight',
+        beat_class: 'guard_recover',
+        grammar_role: 'Wide',
+      },
+      ...(ref.pose_mode === 'library' && ref.poses ? { poses: clone(ref.poses) } : { hero }),
+      camera: { preset: presetId },
+      fx_hooks: [],
+      camera_grammar: {
+        beat_id: id,
+        scene_id: sceneId,
+        triplet: 'W' + (insertAt + 1),
+        role: 'Wide',
+        shot_size: def.shot_size,
+        beat_action: label,
+        fx: 'none',
+        lens_mm: def.lens_mm,
+        direction: preset.direction || move[1],
+        speed: move[2],
+        purpose: mode === 'open' ? 'establish both fighters and the geography' : def.purpose,
+        authored_preset_id: presetId,
+      },
+    };
+    const oldTotal = +next.atoms.reduce((sum, a) => sum + (Number.isFinite(a.duration_s) ? a.duration_s : 0), 0).toFixed(4);
+    next.atoms.splice(insertAt, 0, atom);
+    if (options.keepTarget !== true && typeof next.duration_target_s === 'number' && Math.abs(next.duration_target_s - oldTotal) < 1e-4) {
+      next.duration_target_s = +(oldTotal + dur).toFixed(4);
+    }
+    if (C.reflowAllCamChains) C.reflowAllCamChains(next.atoms);
+    return { show: next, index: insertAt, atom: clone(atom), preset_id: presetId };
+  }
+  global.HMCameraAuthor = Object.freeze({
+    REPORT_CONVENTION, TEMPLATE, ROLES, SIZES, DEFAULTS, WIDE_PRESETS,
+    registry, presetFor, wideEstablishPresets, widePresetFor,
+    clause, parseClause, parseClausesInput, clausesText, clauseMap,
+    rowFor, validate, build, fromShow, author, apply, markdown,
+    chainFromFirst, lintGrammar, markWideBeat, insertWideBeat,
+  });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

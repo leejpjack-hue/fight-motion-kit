@@ -1,4 +1,4 @@
-# Scene grammar, shot maps and camera chains · HM-PF-15/18/19
+# Scene grammar, Wide picker, shot maps, clause export and camera chains · HM-PF-15/18/19/20/21/22
 
 Step 4 uses [hm-cam-grammar-scene](../../skills/hm-cam-grammar-scene/SKILL.md)
 to propose an editable scene sheet. Step 5 uses
@@ -41,16 +41,29 @@ camera-clause formula. Scene sides/geography require human visual review.
    mapped single-preset cameras replace old segments/chains. Camera overrides
    clear the selected beats' timing-pack camera ownership, as ordinary edits do.
 5. Select a beat and edit its role, scene, triplet, shot size, action, lens,
-   direction, speed, purpose or planned FX. The camera menu above overrides its
+   direction, speed, purpose or planned FX. Use the **Wide establish preset**
+   picker (**＋ Insert Wide re-establish** or **Mark beat as Wide**) to insert a
+   `Wide`-tagged atom or mark the selected clip in one click using the best
+   available establish preset (`eye_orbit` for Wide re-establish, `low_rise` for
+   opening Wide) without inventing `wide_*` curves. If a grammar scene has zero
+   `Wide` beats, `HMComposeClient.lintShow` / `HMCameraAuthor.lintGrammar` emits a
+   soft `scene_missing_wide` warning in Show JSON Lint and the grammar panel
+   without blocking bake. The camera menu above overrides its
    preset. Angle/move and the generated clause follow the actual catalog choice.
    An old stored clause cannot override the camera. Different presets inside one
    Dual-segment beat require simplifying to one move before clause export; the
    ordinary preview/export continues to support dual segments.
-6. Export grammar JSON, an editable Markdown beat sheet, or `Camera:` clauses for
-   the prompting operator. Save project retains `camera_authoring` provenance and
-   per-atom `camera_grammar`. It carries no generated plates or new backend state.
-   Undo restores a map or a field edit. Rework blocks authoring until new approval;
-   changed story labels/motion classes/FX require reviewing the story again.
+6. Export grammar JSON, an editable Markdown beat sheet, or `Camera:` clauses in
+   both text (`.camera-clauses.txt`) and JSON (`.camera-clauses.json`) for the
+   prompting operator. Both formats follow `fight-prompting-enhancements-2026-11-01`
+   REPORT conventions (`Camera: {shot_size} framing at {angle}, {lens_mm}; camera {move} {direction} at {speed}, to {purpose}.`),
+   download locally with zero backend upload, and round-trip into
+   `hm-cam-grammar-scene --design`, `hm-cam-shot-author --grammar`, and
+   **Apply grammar / camera map** in HM. Save project retains `camera_authoring`
+   provenance and per-atom `camera_grammar`. It carries no generated plates or new
+   backend state. Undo restores a map, Wide insertion, or field edit. Rework blocks
+   authoring until new approval; changed story labels/motion classes/FX require
+   reviewing the story again.
 
 ```sh
 node skills/hm-cam-grammar-scene/scripts/grammar.cjs \
@@ -59,7 +72,8 @@ node skills/hm-cam-grammar-scene/scripts/grammar.cjs \
   --out work/scene.grammar.json --markdown work/scene.grammar.md
 node skills/hm-cam-shot-author/scripts/author.cjs \
   --grammar work/scene.grammar.json --out work/scene.camera-map.json \
-  --clauses work/scene.camera-clauses.txt
+  --clauses work/scene.camera-clauses.txt \
+  --clauses-json work/scene.camera-clauses.json
 ```
 
 An approved board already carrying roles can omit `--design`. Otherwise provide
