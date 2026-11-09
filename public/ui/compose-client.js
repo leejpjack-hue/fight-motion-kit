@@ -1695,7 +1695,7 @@
   const SEEKABLE_PREVIEW_CONTRACT = Object.freeze({
     id: 'HM-HF-02-SEEKABLE-PREVIEW',
     sot: Object.freeze(['renderStageAt', 'renderStageBAt', 'renderAt', 'sampleStageFrameAt']),
-    surfaces: Object.freeze(['scrub', 'ab_panes', 'frame_peek', 'bake_frame_sample', 'transport_play']),
+    surfaces: Object.freeze(['scrub', 'ab_panes', 'frame_peek', 'bake_frame_sample', 'transport_play', 'bake_qa_dock']),
     softWarnBlocksBake: false,
   });
 
@@ -1870,6 +1870,92 @@
       if (Math.abs(tc - cand.t) < Math.abs(tc - best.t) - 1e-7) best = cand;
     }
     return best;
+  }
+
+  // HM-PF-45: bake QA samples this same show time. Pending strips stay not playable;
+  // a cell index is a crop of the shared t, not a GIF or CSS timer.
+  function stripCellAt(descriptor, time) {
+    if (!descriptor || descriptor.status !== 'pending') return null;
+    const cadence = descriptor.cadence;
+    const geometry = descriptor.geometry;
+    const spc = cadence && +cadence.secondsPerCell;
+    const frames = geometry && geometry.frames;
+    if (!Number.isFinite(spc) || spc <= 0 || !Number.isInteger(frames) || frames < 1) return null;
+    const dur = spc * frames;
+    const raw = Number(time);
+    const tIn = Number.isFinite(raw) ? raw : 0;
+    const t = Math.min(Math.max(0, tIn), Math.max(0, dur - 1e-9));
+    const index = Math.min(frames - 1, Math.max(0, Math.floor((t / spc) + 1e-9)));
+    return {
+      index,
+      frames,
+      secondsPerCell: spc,
+      duration_s: round4(dur),
+      t: round4(t),
+      raw_t: round4(tIn),
+      clamped: tIn < 0 || tIn >= dur - 1e-9,
+      w: geometry.w,
+      h: geometry.h,
+      not_playable: true,
+      clock: 'renderAt',
+    };
+  }
+
+  function pendingStripMedia(project) {
+    const media = project && Array.isArray(project.media) ? project.media : [];
+    return media.filter((item) => item && item.pendingMotion && item.pendingMotion.status === 'pending');
+  }
+
+  function bakeQaSnapshot(project, composed, time) {
+    const show = project && project.show ? project.show : (project || null);
+    const plan = framePeekPlan(project || show, composed);
+    const showDur = plan.duration_s || 0;
+    const raw = Number(time);
+    const tIn = Number.isFinite(raw) ? raw : 0;
+    const strips = pendingStripMedia(project).map((item) => {
+      const cell = stripCellAt(item.pendingMotion, tIn);
+      if (!cell) return null;
+      return {
+        id: item.id || '',
+        name: item.name || 'strip.png',
+        src: item.src || '',
+        plate_id: item.plateId || 'P01',
+        index: cell.index,
+        frames: cell.frames,
+        secondsPerCell: cell.secondsPerCell,
+        duration_s: cell.duration_s,
+        t: cell.t,
+        raw_t: cell.raw_t,
+        clamped: cell.clamped,
+        w: cell.w,
+        h: cell.h,
+        not_playable: true,
+        clock: 'renderAt',
+      };
+    }).filter(Boolean);
+    const stripDur = strips.reduce((max, strip) => Math.max(max, strip.duration_s), 0);
+    const span = Math.max(showDur, stripDur);
+    const t = round4(Math.min(Math.max(0, tIn), span > 0 ? Math.max(0, span - 1e-9) : 0));
+    const peek = plan.peeks.length
+      ? activeFramePeekAt(plan, Math.min(Math.max(0, t), Math.max(0, showDur - 1e-7)))
+      : null;
+    const poseRef = !!(show && show.pose_ref_pack && show.pose_ref_pack.kind === 'pose_ref_plate_pack');
+    return {
+      clock: 'renderAt',
+      separateClock: false,
+      gifClock: false,
+      cssClock: false,
+      t,
+      show_duration_s: showDur,
+      duration_s: round4(span),
+      plate_show: !!(show && (isPlatePackShow(show) || poseRef || show.plate_pack === true)),
+      pose_ref: poseRef,
+      atom_count: plan.atom_count,
+      peek_count: plan.peek_count,
+      peek,
+      peeks: plan.peeks,
+      strips,
+    };
   }
 
   function platePackStats(show) {
@@ -3476,6 +3562,8 @@
     framePeekFilename,
     framePeekPlan,
     activeFramePeekAt,
+    stripCellAt,
+    bakeQaSnapshot,
     classifyFxHook,
     classifyFxHooks,
     LIVE_FX_COMPONENTS,

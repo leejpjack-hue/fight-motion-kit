@@ -1227,10 +1227,10 @@ test('HM-HF-02-SEEKABLE-PREVIEW: SEEKABLE_PREVIEW_CONTRACT defines renderStageAt
   const contract=HMComposeClient.SEEKABLE_PREVIEW_CONTRACT;
   assert.equal(contract.id,'HM-HF-02-SEEKABLE-PREVIEW');
   assert.deepEqual(contract.sot,['renderStageAt','renderStageBAt','renderAt','sampleStageFrameAt']);
-  assert.deepEqual(contract.surfaces,['scrub','ab_panes','frame_peek','bake_frame_sample','transport_play']);
+  assert.deepEqual(contract.surfaces,['scrub','ab_panes','frame_peek','bake_frame_sample','transport_play','bake_qa_dock']);
   assert.equal(contract.softWarnBlocksBake,false);
   // Valid SoT calls (scrub, A/B, peek, bake sample, transport play)
-  for(const [source,t] of [['scrub',1.25],['renderStageAt',0.25],['renderStageBAt',1.675],['frame-peek-strip',0.4999],['bake-export-frames',2.5],['transport-play',3.1]]){
+  for(const [source,t] of [['scrub',1.25],['renderStageAt',0.25],['renderStageBAt',1.675],['frame-peek-strip',0.4999],['bake-export-frames',2.5],['transport-play',3.1],['bake-qa-dock',1.25]]){
     const res=HMComposeClient.evaluateSeekPreviewCall({t,viaSoT:true,source},5);
     assert.equal(res.ok,true,`${source} at t=${t} is ok`);
     assert.equal(res.warn,false,`${source} at t=${t} does not warn`);
