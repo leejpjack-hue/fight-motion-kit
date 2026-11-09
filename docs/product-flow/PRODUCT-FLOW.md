@@ -10,7 +10,7 @@ t2471u asked for a product flow Jack can see and edit. t2473u approved that desi
 
 This folder is that landing. DiagramTool boards are the design source of truth. The HTML Motion frontend composer remains the place artifacts are shown and edited. Skills assist create/edit. n8n, when it is stood up later, is flow control and gates only.
 
-The copied orchestrator brief and [`HANDOFF.json`](HANDOFF.json) still say research-and-recommendation and "IF Jack APPROVE". They were written before t2473u. This page records the approval that follows them. This landing does not install n8n, publish a skill, change the composer or schemas, or SIGN a story.
+The copied orchestrator brief and [`HANDOFF.json`](HANDOFF.json) still say research-and-recommendation and "IF Jack APPROVE". They were written before t2473u. This page records the approval that follows them. This landing does not install n8n into the HTML Motion frontend, publish a skill, change the composer or schemas, or SIGN a story. Community n8n for gates is [`ops/n8n`](../../ops/n8n/). It is not a compose backend.
 
 ## Locked steps (1..10)
 
@@ -79,7 +79,7 @@ controls, and FE-only bake.
 
 [`HANDOFF.json`](HANDOFF.json) records the same pick: `"pick": "n8n"`, `"runner_up": "Dify"`, `"jack_can_visual_edit": true`. Cursor catalog plugin id `73065872` is listed there and is not installed.
 
-The one-page control contract is [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md). Standing up n8n is still a spike. HM-PF-49 left the spike plan, a Docker compose file, workflow JSON, and gate notes outside this kit. Docker runtime smoke is Jack-side and does not block the contract. This landing still does not install n8n or plugin `73065872`.
+The one-page control contract is [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md). The HM-PF-49 spike pack (compose, workflow JSON, gate notes) is [`ops/n8n`](../../ops/n8n/). n8n is flow control and Wait/Approve gates only. Step 10 Voice/#41 stays a disabled HOLD. This landing does not invent a compose API and does not install catalog plugin `73065872` (parent decides after smoke). Cloud Agent Docker and start wiring is [`.cursor/Dockerfile`](../../.cursor/Dockerfile) plus [`.cursor/start-n8n.sh`](../../.cursor/start-n8n.sh). A Cloud Agent session is not an always-on host. See [`ops/n8n/CLOUD-AGENT.md`](../../ops/n8n/CLOUD-AGENT.md).
 
 ## Separation
 

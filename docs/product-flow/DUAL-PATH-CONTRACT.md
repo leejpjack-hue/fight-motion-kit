@@ -6,7 +6,7 @@
 
 Humans and agents share this page for one control rule. n8n orders the steps and holds the gates. The HTML Motion UI shows and edits the artifact. Skills assist beside that edit.
 
-This file is a kit design doc. It does not install n8n, install Cursor catalog plugin `73065872`, add workflow JSON, change the composer or schemas, or define a compose API.
+This file is a kit design doc. It does not install Cursor catalog plugin `73065872`, change the composer or schemas, or define a compose API. The HM-PF-49 spike pack is [`ops/n8n`](../../ops/n8n/).
 
 ## The rule
 
@@ -54,9 +54,9 @@ HTML Motion is browser-local. Jack can resume a paused gate from the n8n executi
 
 ## HM-PF-49 spike
 
-HM-PF-49 spike artifacts are ready and sit outside this kit. They are the spike plan, `docker-compose.yml`, the steps 1..10 workflow JSON, and the gate notes. Live n8n did not start on the Cursor machine. Docker was missing there. Jack runs that smoke on his own machine. That blocked smoke does not block this contract.
+The signed spike pack is in this kit at [`ops/n8n`](../../ops/n8n/): the plan, `docker-compose.yml`, `.env.example`, the steps 1..10 workflow JSON, and the gate notes. n8n stays gates and control only. Step 10 Voice/#41 stays a disabled HOLD and is not on the live path. Catalog plugin `73065872` stays uninstalled. Parent decides after smoke.
 
-This kit does not copy that workflow in, start Docker, or install plugin `73065872`.
+Cloud Agent sessions are not an always-on host. Bring-up for a session that has Docker is [`CLOUD-AGENT.md`](../../ops/n8n/CLOUD-AGENT.md).
 
 ## When step labels drift
 

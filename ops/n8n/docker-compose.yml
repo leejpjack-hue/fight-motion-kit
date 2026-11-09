@@ -1,0 +1,46 @@
+# HM-PF-49 — n8n Community self-host (Jack solo operator spike)
+# Prefer this localhost compose for the spike. Production HTTPS/Traefik is documented
+# in SPIKE-PLAN.md (n8n docs server-setups/docker-compose) — not required for Day-1.
+#
+# Usage (on a machine WITH Docker — not the Cursor box):
+#   cp .env.example .env
+#   # edit N8N_ENCRYPTION_KEY to a long random string
+#   docker compose up -d
+#   open http://localhost:5678
+#
+# Image pin: n8nio/n8n:stable (docs listed stable 2.46.6 as of 2026-11-08)
+# License: Sustainable Use License — internal use only (see SPIKE-PLAN.md)
+
+services:
+  n8n:
+    image: n8nio/n8n:stable
+    restart: unless-stopped
+    ports:
+      - "${N8N_HOST_PORT:-5678}:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL:-http://localhost:5678}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Tokyo}
+      - TZ=${TZ:-Asia/Tokyo}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+      # First-owner bootstrap (Community). Change after first login.
+      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET:-}
+      # Keep file access sandboxed if Read/Write Files nodes are used later.
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  n8n_data:
+    name: hm_pf49_n8n_data

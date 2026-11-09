@@ -5,6 +5,9 @@ dist/
 *.bak-*
 .env
 .env.*
+!.env.example
+ops/n8n/local-files/*
+!ops/n8n/local-files/.gitkeep
 kit/uploads/
 kit/qa/frames/
 __pycache__/

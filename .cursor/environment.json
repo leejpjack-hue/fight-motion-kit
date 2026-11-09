@@ -1,0 +1,15 @@
+{
+  "name": "fight-motion-kit",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "install": "npm install",
+  "start": "bash .cursor/start-n8n.sh",
+  "ports": [
+    {
+      "name": "n8n",
+      "port": 5678
+    }
+  ]
+}

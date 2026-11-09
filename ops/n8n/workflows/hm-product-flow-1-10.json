@@ -1,0 +1,2803 @@
+{
+  "name": "HM product-flow 1..10 Wait gates (spike HM-PF-49)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## HM product-flow 1..10 (n8n = CONTROL ONLY)\n\n- **n8n** = step order + Wait/Approve/Rework gates + skill HTTP stubs\n- **HM UI** = show/edit artifacts (`.motion.json`, plate/cam/rhythm)\n- **Skills** = assist beside human edit (dual path)\n- **DiagramTool boards** = design SoT (not live runtime)\n- **NO compose API** \u2014 HTTP stubs are placeholders only\n- **Step 10 Voice/#41** = disabled HOLD node\n- Plugin `73065872` = install AFTER plan review (not product code)\n\nSoT pin: fight-motion-kit `docs/product-flow/` tip `970c1f9b` \u00b7 boards `/workspace/deliverables/hm-approval-boards-2026-11-08/`",
+        "height": 420,
+        "width": 520,
+        "color": 5
+      },
+      "id": "7d2e9175-0ebb-4ecb-b2ac-13206c7bd2c5",
+      "name": "CONTRACT sticky",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1c6750c0-c8ac-4a66-bab3-e132bf210713",
+      "name": "Manual Trigger \u2014 start show pipeline",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1-step",
+              "name": "step",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "s1-id",
+              "name": "step_id",
+              "value": "character",
+              "type": "string"
+            },
+            {
+              "id": "s1-label",
+              "name": "step_label",
+              "value": "1 Character creation",
+              "type": "string"
+            },
+            {
+              "id": "s1-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: character/plate picker, costume-lock, pose cards",
+              "type": "string"
+            },
+            {
+              "id": "s1-skill",
+              "name": "skill_assist",
+              "value": "character/OpenPose skeleton & JOINT-GEOMETRY",
+              "type": "string"
+            },
+            {
+              "id": "s1-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "40ab4a80-7981-48ce-9c14-62c5afb14249",
+      "name": "S1 Set \u2014 1 Character creation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/character-openpose",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d2d64016-5db6-49c1-8e58-a614e04515a9",
+      "name": "S1 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        0
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: character/OpenPose skeleton & JOINT-GEOMETRY",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p1-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: character/plate picker, costume-lock, pose cards",
+              "type": "string"
+            },
+            {
+              "id": "p1-3",
+              "name": "step_label",
+              "value": "1 Character creation",
+              "type": "string"
+            },
+            {
+              "id": "p1-4",
+              "name": "step",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "p1-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p1-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p1-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S1: open HM UI \u2192 HM UI: character/plate picker, costume-lock, pose cards \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p1-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "417ec693-800d-4857-9e39-35d712670732",
+      "name": "S1 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        0
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 1 Character creation",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: character/plate picker, costume-lock, pose cards\\n\\nSkill assist (optional): character/OpenPose skeleton & JOINT-GEOMETRY\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "fdc1c5a7-3f98-4fd4-a99b-133d305e1c30",
+      "name": "S1 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ],
+      "webhookId": "hm-pf-49-s1-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dfabdc59-ce1f-40bc-956c-685b7f340d51",
+      "name": "S1 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s2-step",
+              "name": "step",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "s2-id",
+              "name": "step_id",
+              "value": "story",
+              "type": "string"
+            },
+            {
+              "id": "s2-label",
+              "name": "step_label",
+              "value": "2 Story",
+              "type": "string"
+            },
+            {
+              "id": "s2-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: atom sequence editor + HM-HF-07 timeline JSON",
+              "type": "string"
+            },
+            {
+              "id": "s2-skill",
+              "name": "skill_assist",
+              "value": "Cantonese 10s/30s storyboard drafting",
+              "type": "string"
+            },
+            {
+              "id": "s2-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "228492ef-e932-47a0-bbe0-1a65cac8f99c",
+      "name": "S2 Set \u2014 2 Story",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/storyboard-draft",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d9fe403e-8dc1-475e-b0db-25e2c8d16721",
+      "name": "S2 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        220
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: Cantonese 10s/30s storyboard drafting",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p2-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p2-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: atom sequence editor + HM-HF-07 timeline JSON",
+              "type": "string"
+            },
+            {
+              "id": "p2-3",
+              "name": "step_label",
+              "value": "2 Story",
+              "type": "string"
+            },
+            {
+              "id": "p2-4",
+              "name": "step",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "p2-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p2-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p2-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S2: open HM UI \u2192 HM UI: atom sequence editor + HM-HF-07 timeline JSON \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p2-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b28fec3c-c9a8-4997-a1b5-8ca09677452d",
+      "name": "S2 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        220
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 2 Story",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: atom sequence editor + HM-HF-07 timeline JSON\\n\\nSkill assist (optional): Cantonese 10s/30s storyboard drafting\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8d3cf9c4-ad3c-4d70-b649-c5596e95cb6e",
+      "name": "S2 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        220
+      ],
+      "webhookId": "hm-pf-49-s2-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-2",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1e03b8f9-db82-4753-9f57-6589b16f725a",
+      "name": "S2 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s3-step",
+              "name": "step",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "s3-id",
+              "name": "step_id",
+              "value": "rhythm",
+              "type": "string"
+            },
+            {
+              "id": "s3-label",
+              "name": "step_label",
+              "value": "3 Rhythm",
+              "type": "string"
+            },
+            {
+              "id": "s3-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: duration_s, beat_blocks, frame peek, scrub",
+              "type": "string"
+            },
+            {
+              "id": "s3-skill",
+              "name": "skill_assist",
+              "value": "rhythm lint + frame-qa.cjs",
+              "type": "string"
+            },
+            {
+              "id": "s3-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ce6c143-934b-4181-bb95-0f512574fb9d",
+      "name": "S3 Set \u2014 3 Rhythm",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/rhythm-frame-qa",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "1e7a48e5-ccf3-48d6-891a-fe9c9b1e28aa",
+      "name": "S3 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        440
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: rhythm lint + frame-qa.cjs",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p3-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p3-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: duration_s, beat_blocks, frame peek, scrub",
+              "type": "string"
+            },
+            {
+              "id": "p3-3",
+              "name": "step_label",
+              "value": "3 Rhythm",
+              "type": "string"
+            },
+            {
+              "id": "p3-4",
+              "name": "step",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "p3-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p3-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p3-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S3: open HM UI \u2192 HM UI: duration_s, beat_blocks, frame peek, scrub \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p3-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff216b27-0d0a-4084-af32-72bd69b5ebe0",
+      "name": "S3 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        440
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 3 Rhythm",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: duration_s, beat_blocks, frame peek, scrub\\n\\nSkill assist (optional): rhythm lint + frame-qa.cjs\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0aa90e83-554b-4d0e-961e-98390238ea7b",
+      "name": "S3 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        440
+      ],
+      "webhookId": "hm-pf-49-s3-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-3",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7e7c5322-9939-4ff8-a356-45983ade95c2",
+      "name": "S3 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s4-step",
+              "name": "step",
+              "value": 4,
+              "type": "number"
+            },
+            {
+              "id": "s4-id",
+              "name": "step_id",
+              "value": "scene_cam",
+              "type": "string"
+            },
+            {
+              "id": "s4-label",
+              "name": "step_label",
+              "value": "4 Scene cam-shot design",
+              "type": "string"
+            },
+            {
+              "id": "s4-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: fight-cam-grammar templates + HM-HF-08 cuts",
+              "type": "string"
+            },
+            {
+              "id": "s4-skill",
+              "name": "skill_assist",
+              "value": "camera-grammar triplet planner",
+              "type": "string"
+            },
+            {
+              "id": "s4-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9e4112f8-f27c-486e-8168-e4d7daaf1a53",
+      "name": "S4 Set \u2014 4 Scene cam-shot design",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/cam-grammar-plan",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "529cc64f-7e1b-43a8-aa24-592e9fa1b98c",
+      "name": "S4 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        660
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: camera-grammar triplet planner",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p4-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p4-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: fight-cam-grammar templates + HM-HF-08 cuts",
+              "type": "string"
+            },
+            {
+              "id": "p4-3",
+              "name": "step_label",
+              "value": "4 Scene cam-shot design",
+              "type": "string"
+            },
+            {
+              "id": "p4-4",
+              "name": "step",
+              "value": 4,
+              "type": "number"
+            },
+            {
+              "id": "p4-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p4-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p4-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S4: open HM UI \u2192 HM UI: fight-cam-grammar templates + HM-HF-08 cuts \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p4-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "18aaf7b2-3257-44ab-945c-552b74247274",
+      "name": "S4 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        660
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 4 Scene cam-shot design",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: fight-cam-grammar templates + HM-HF-08 cuts\\n\\nSkill assist (optional): camera-grammar triplet planner\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "acbdcb41-a15b-4df9-b730-8851279a5cc4",
+      "name": "S4 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        660
+      ],
+      "webhookId": "hm-pf-49-s4-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-4",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a9c6f122-46aa-4d30-890a-2b915d211f58",
+      "name": "S4 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s5-step",
+              "name": "step",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "s5-id",
+              "name": "step_id",
+              "value": "per_scene_cam",
+              "type": "string"
+            },
+            {
+              "id": "s5-label",
+              "name": "step_label",
+              "value": "5 Per-scene cam shots",
+              "type": "string"
+            },
+            {
+              "id": "s5-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: camera.preset, CAM-10R, PAN-SPAN",
+              "type": "string"
+            },
+            {
+              "id": "s5-skill",
+              "name": "skill_assist",
+              "value": "cam-preset tuning / build-project assist",
+              "type": "string"
+            },
+            {
+              "id": "s5-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5d4c2efd-5515-4f19-ba64-d8e2287ee4d8",
+      "name": "S5 Set \u2014 5 Per-scene cam shots",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/cam-preset-tune",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "2516aa5f-9ca9-4a92-8c91-47e7d82b8950",
+      "name": "S5 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        880
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: cam-preset tuning / build-project assist",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p5-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p5-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: camera.preset, CAM-10R, PAN-SPAN",
+              "type": "string"
+            },
+            {
+              "id": "p5-3",
+              "name": "step_label",
+              "value": "5 Per-scene cam shots",
+              "type": "string"
+            },
+            {
+              "id": "p5-4",
+              "name": "step",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "p5-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p5-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p5-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S5: open HM UI \u2192 HM UI: camera.preset, CAM-10R, PAN-SPAN \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p5-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2b64104c-939b-4732-bec0-a4343496c90a",
+      "name": "S5 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        880
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 5 Per-scene cam shots",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: camera.preset, CAM-10R, PAN-SPAN\\n\\nSkill assist (optional): cam-preset tuning / build-project assist\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "e73ee7f6-1e66-465c-9efe-5140db4697bb",
+      "name": "S5 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        880
+      ],
+      "webhookId": "hm-pf-49-s5-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-5",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4e0dd6c8-36de-4c3c-87b7-b5c454f952b5",
+      "name": "S5 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s6-step",
+              "name": "step",
+              "value": 6,
+              "type": "number"
+            },
+            {
+              "id": "s6-id",
+              "name": "step_id",
+              "value": "sprite_gen",
+              "type": "string"
+            },
+            {
+              "id": "s6-label",
+              "name": "step_label",
+              "value": "6 Sprite gen",
+              "type": "string"
+            },
+            {
+              "id": "s6-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: SG-01 staged strip picker (NOT PLAYABLE until SG-02)",
+              "type": "string"
+            },
+            {
+              "id": "s6-skill",
+              "name": "skill_assist",
+              "value": "external sprite-gen CLI wrapper",
+              "type": "string"
+            },
+            {
+              "id": "s6-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "169db8f1-ac9d-4684-964b-04d32f553f4a",
+      "name": "S6 Set \u2014 6 Sprite gen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/sprite-gen-cli",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567001",
+      "name": "S6 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        1100
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: external sprite-gen CLI wrapper",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p6-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p6-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: SG-01 staged strip picker (NOT PLAYABLE until SG-02)",
+              "type": "string"
+            },
+            {
+              "id": "p6-3",
+              "name": "step_label",
+              "value": "6 Sprite gen",
+              "type": "string"
+            },
+            {
+              "id": "p6-4",
+              "name": "step",
+              "value": 6,
+              "type": "number"
+            },
+            {
+              "id": "p6-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p6-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p6-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S6: open HM UI \u2192 HM UI: SG-01 staged strip picker (NOT PLAYABLE until SG-02) \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p6-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567002",
+      "name": "S6 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        1100
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 6 Sprite gen",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: SG-01 staged strip picker (NOT PLAYABLE until SG-02)\\n\\nSkill assist (optional): external sprite-gen CLI wrapper\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567003",
+      "name": "S6 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1100
+      ],
+      "webhookId": "hm-pf-49-s6-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-6",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567004",
+      "name": "S6 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s7-step",
+              "name": "step",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "s7-id",
+              "name": "step_id",
+              "value": "background",
+              "type": "string"
+            },
+            {
+              "id": "s7-label",
+              "name": "step_label",
+              "value": "7 Background scene",
+              "type": "string"
+            },
+            {
+              "id": "s7-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: BG crop/pan/span/parallax",
+              "type": "string"
+            },
+            {
+              "id": "s7-skill",
+              "name": "skill_assist",
+              "value": "background plate framing skill",
+              "type": "string"
+            },
+            {
+              "id": "s7-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567005",
+      "name": "S7 Set \u2014 7 Background scene",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        1320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/bg-frame",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567006",
+      "name": "S7 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        1320
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: background plate framing skill",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p7-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p7-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: BG crop/pan/span/parallax",
+              "type": "string"
+            },
+            {
+              "id": "p7-3",
+              "name": "step_label",
+              "value": "7 Background scene",
+              "type": "string"
+            },
+            {
+              "id": "p7-4",
+              "name": "step",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "p7-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p7-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p7-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S7: open HM UI \u2192 HM UI: BG crop/pan/span/parallax \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p7-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567007",
+      "name": "S7 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        1320
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 7 Background scene",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: BG crop/pan/span/parallax\\n\\nSkill assist (optional): background plate framing skill\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567008",
+      "name": "S7 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1320
+      ],
+      "webhookId": "hm-pf-49-s7-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-7",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567009",
+      "name": "S7 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1320
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s8-step",
+              "name": "step",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "s8-id",
+              "name": "step_id",
+              "value": "foreground",
+              "type": "string"
+            },
+            {
+              "id": "s8-label",
+              "name": "step_label",
+              "value": "8 Foreground",
+              "type": "string"
+            },
+            {
+              "id": "s8-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: FG cutouts + IMPACT FX chips",
+              "type": "string"
+            },
+            {
+              "id": "s8-skill",
+              "name": "skill_assist",
+              "value": "rembg/fx_hooks assist",
+              "type": "string"
+            },
+            {
+              "id": "s8-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567010",
+      "name": "S8 Set \u2014 8 Foreground",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/fg-fx",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567011",
+      "name": "S8 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        1540
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: rembg/fx_hooks assist",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p8-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p8-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: FG cutouts + IMPACT FX chips",
+              "type": "string"
+            },
+            {
+              "id": "p8-3",
+              "name": "step_label",
+              "value": "8 Foreground",
+              "type": "string"
+            },
+            {
+              "id": "p8-4",
+              "name": "step",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "p8-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p8-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p8-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S8: open HM UI \u2192 HM UI: FG cutouts + IMPACT FX chips \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p8-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567012",
+      "name": "S8 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        1540
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 8 Foreground",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: FG cutouts + IMPACT FX chips\\n\\nSkill assist (optional): rembg/fx_hooks assist\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567013",
+      "name": "S8 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1540
+      ],
+      "webhookId": "hm-pf-49-s8-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-8",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567014",
+      "name": "S8 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s9-step",
+              "name": "step",
+              "value": 9,
+              "type": "number"
+            },
+            {
+              "id": "s9-id",
+              "name": "step_id",
+              "value": "compose",
+              "type": "string"
+            },
+            {
+              "id": "s9-label",
+              "name": "step_label",
+              "value": "9 HTML Motion cam-shot compose",
+              "type": "string"
+            },
+            {
+              "id": "s9-hm",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: compose-client + motion-renderer + .motion.json",
+              "type": "string"
+            },
+            {
+              "id": "s9-skill",
+              "name": "skill_assist",
+              "value": "html-motion-composer build-project/frame-qa (NO compose API)",
+              "type": "string"
+            },
+            {
+              "id": "s9-show",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567015",
+      "name": "S9 Set \u2014 9 HTML Motion cam-shot compose",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://placeholder.local/skills/hm-composer-assist",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567016",
+      "name": "S9 HTTP stub \u2014 skill webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        1760
+      ],
+      "notes": "PLACEHOLDER only. Do not point at a real compose backend. Skill: html-motion-composer build-project/frame-qa (NO compose API)",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p9-1",
+              "name": "gate",
+              "value": "Approve_or_Rework",
+              "type": "string"
+            },
+            {
+              "id": "p9-2",
+              "name": "hm_ui_instruction",
+              "value": "HM UI: compose-client + motion-renderer + .motion.json",
+              "type": "string"
+            },
+            {
+              "id": "p9-3",
+              "name": "step_label",
+              "value": "9 HTML Motion cam-shot compose",
+              "type": "string"
+            },
+            {
+              "id": "p9-4",
+              "name": "step",
+              "value": 9,
+              "type": "number"
+            },
+            {
+              "id": "p9-5",
+              "name": "resume_form_url_hint",
+              "value": "={{ $execution.resumeFormUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p9-6",
+              "name": "resume_webhook_url_hint",
+              "value": "={{ $execution.resumeUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "p9-7",
+              "name": "slack_notify_template",
+              "value": "HM gate S9: open HM UI \u2192 HM UI: compose-client + motion-renderer + .motion.json \u2192 then submit Approve/Rework on form URL",
+              "type": "string"
+            },
+            {
+              "id": "p9-8",
+              "name": "show_id",
+              "value": "={{ $json.show_id || 'SHOW-PLACEHOLDER' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567017",
+      "name": "S9 Gate prep \u2014 HM deep-link + resume URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        1760
+      ],
+      "notes": "Send resumeFormUrl via Slack/email in HM-PF-53. Spike keeps stub Set only (no live Slack)."
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "HM Gate \u2014 9 HTML Motion cam-shot compose",
+        "formDescription": "Open HM UI first and edit the artifact for this step.\\n\\nHM UI: compose-client + motion-renderer + .motion.json\\n\\nSkill assist (optional): html-motion-composer build-project/frame-qa (NO compose API)\\n\\nThen choose Approve (continue) or Rework (loop this step). n8n does NOT host plate/cam WYSIWYG.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Rework"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Notes",
+              "fieldType": "textarea",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "show_id",
+              "fieldType": "text",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567018",
+      "name": "S9 Wait \u2014 Approve/Rework form",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1760
+      ],
+      "webhookId": "hm-pf-49-s9-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-9",
+              "leftValue": "={{ $json.Decision || $json.decision }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567019",
+      "name": "S9 IF Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## STEP 10 VOICE \u2014 HOLD / DISABLED\\n\\nVoice / #41 SFX stays HOLD.\\nModelled as disabled node only.\\nDo NOT enable until Jack APPROVAL lifts HOLD.\\npixelfx Wave 1 has no SFX/audio.\\nPipeline ends after Step 9 Approve.",
+        "height": 280,
+        "width": 360,
+        "color": 3
+      },
+      "id": "a59b00c8-29d2-43f6-96c5-81d68290b3d0",
+      "name": "S10 HOLD note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s10-1",
+              "name": "step",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "s10-2",
+              "name": "step_id",
+              "value": "voice",
+              "type": "string"
+            },
+            {
+              "id": "s10-3",
+              "name": "status",
+              "value": "HOLD_DISABLED",
+              "type": "string"
+            },
+            {
+              "id": "s10-4",
+              "name": "reason",
+              "value": "Voice/#41 \u2014 APPROVAL design slice only; no SFX/audio SIGN",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aaa0bc99-ea45-40a0-8682-f47aa10095e5",
+      "name": "S10 Voice HOLD \u2014 disabled",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        1980
+      ],
+      "disabled": true,
+      "notes": "HOLD: Voice/#41. Keep disabled. Do not wire into live path until HOLD lifted.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "end-1",
+              "name": "pipeline_status",
+              "value": "COMPLETE_THROUGH_STEP_9",
+              "type": "string"
+            },
+            {
+              "id": "end-2",
+              "name": "step_10",
+              "value": "SKIPPED_HOLD",
+              "type": "string"
+            },
+            {
+              "id": "end-3",
+              "name": "note",
+              "value": "Show artifacts live in HM UI (.motion.json). n8n was flow control only.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8acb88ef-c497-48b4-b981-f5d4c0e0149e",
+      "name": "End \u2014 pipeline complete (step 10 skipped HOLD)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "S1 Set \u2014 1 Character creation": {
+      "main": [
+        [
+          {
+            "node": "S1 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S1 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S1 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S1 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S2 Set \u2014 2 Story",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S1 Set \u2014 1 Character creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger \u2014 start show pipeline": {
+      "main": [
+        [
+          {
+            "node": "S1 Set \u2014 1 Character creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Set \u2014 2 Story": {
+      "main": [
+        [
+          {
+            "node": "S2 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S2 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S2 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S2 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S3 Set \u2014 3 Rhythm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S2 Set \u2014 2 Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Set \u2014 3 Rhythm": {
+      "main": [
+        [
+          {
+            "node": "S3 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S3 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S3 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S3 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S4 Set \u2014 4 Scene cam-shot design",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S3 Set \u2014 3 Rhythm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Set \u2014 4 Scene cam-shot design": {
+      "main": [
+        [
+          {
+            "node": "S4 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S4 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S4 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S4 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S5 Set \u2014 5 Per-scene cam shots",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S4 Set \u2014 4 Scene cam-shot design",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Set \u2014 5 Per-scene cam shots": {
+      "main": [
+        [
+          {
+            "node": "S5 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S5 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S5 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S5 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S5 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S6 Set \u2014 6 Sprite gen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S5 Set \u2014 5 Per-scene cam shots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Set \u2014 6 Sprite gen": {
+      "main": [
+        [
+          {
+            "node": "S6 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S6 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S6 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S6 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S7 Set \u2014 7 Background scene",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S6 Set \u2014 6 Sprite gen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Set \u2014 7 Background scene": {
+      "main": [
+        [
+          {
+            "node": "S7 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S7 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S7 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S7 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S8 Set \u2014 8 Foreground",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S7 Set \u2014 7 Background scene",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Set \u2014 8 Foreground": {
+      "main": [
+        [
+          {
+            "node": "S8 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S8 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S8 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S8 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "S9 Set \u2014 9 HTML Motion cam-shot compose",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S8 Set \u2014 8 Foreground",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Set \u2014 9 HTML Motion cam-shot compose": {
+      "main": [
+        [
+          {
+            "node": "S9 HTTP stub \u2014 skill webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 HTTP stub \u2014 skill webhook": {
+      "main": [
+        [
+          {
+            "node": "S9 Gate prep \u2014 HM deep-link + resume URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Gate prep \u2014 HM deep-link + resume URLs": {
+      "main": [
+        [
+          {
+            "node": "S9 Wait \u2014 Approve/Rework form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 Wait \u2014 Approve/Rework form": {
+      "main": [
+        [
+          {
+            "node": "S9 IF Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S9 IF Approve?": {
+      "main": [
+        [
+          {
+            "node": "End \u2014 pipeline complete (step 10 skipped HOLD)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S9 Set \u2014 9 HTML Motion cam-shot compose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "hm-pf-49-spike"
+  },
+  "pinData": {},
+  "versionId": "hm-pf-49-2026-11-08",
+  "tags": [
+    {
+      "name": "html-motion"
+    },
+    {
+      "name": "hm-pf-49"
+    },
+    {
+      "name": "spike"
+    }
+  ]
+}
