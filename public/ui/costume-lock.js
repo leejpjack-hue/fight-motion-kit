@@ -152,6 +152,7 @@
     if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
     if (input.show && typeof input.show === 'object') return false;
     if (input.show_id && Array.isArray(input.atoms)) return false;
+    if (input.kind === 'pose_ref_plate_pack' || input.schema === 'hm-pose-ref-plate-pack/v1') return false;
     if (input.kind === 'costume_lock' || input.kind === 'hm-costume-lock-pack' || input.schema === 'hm-costume-lock/v1') return true;
     var cast = input.cast || input.chars || input.costume_lock || input.lock_pack;
     if (!cast || typeof cast !== 'object' || Array.isArray(cast)) return false;

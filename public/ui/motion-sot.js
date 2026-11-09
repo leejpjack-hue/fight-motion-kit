@@ -110,6 +110,9 @@
 
   function asPortableProject(parsed, opts) {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (global.HMComposeClient && typeof global.HMComposeClient.isPoseRefPlatePack === 'function' && global.HMComposeClient.isPoseRefPlatePack(parsed)) {
+      return global.HMComposeClient.normalizePoseRefPlatePack(parsed, opts);
+    }
     if (global.HMComposeClient && typeof global.HMComposeClient.isCostumeLockPackInput === 'function' && global.HMComposeClient.isCostumeLockPackInput(parsed)) {
       return global.HMComposeClient.normalizeCostumeLockPack(parsed, opts);
     }

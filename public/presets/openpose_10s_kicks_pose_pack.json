@@ -1,0 +1,583 @@
+{
+  "kind": "pose_ref_plate_pack",
+  "schema": "hm-pose-ref-plate-pack/v1",
+  "version": 1,
+  "pack_id": "daiyu-wang-10s-kicks-pose-pack",
+  "title": "林黛玉 vs 王熙鳳 · OpenPose 10s kick plate pack",
+  "source": "fight-daiyu-wang-10s-kicks-openpose-2026-11-01",
+  "venue": "street",
+  "fx_profile": "comic",
+  "bg": {
+    "base": "assets/daiyu-wang-codex-import/bg/bg_rooftop.png",
+    "swap": "assets/daiyu-wang-codex-import/bg/bg_rooftop_dented.png",
+    "swap_t": 5.9,
+    "key_white": true,
+    "motion": {
+      "preset": "pan_right",
+      "amount": 0.65,
+      "clock": "show"
+    },
+    "crops": {
+      "base": {
+        "x": 0.08,
+        "y": 0.02,
+        "w": 0.84,
+        "h": 0.96
+      },
+      "swap": {
+        "x": 0.08,
+        "y": 0.02,
+        "w": 0.84,
+        "h": 0.96
+      }
+    }
+  },
+  "cast": {
+    "L": {
+      "name": "林黛玉",
+      "costume_id": "daiyu_pale_teal_tank_v1"
+    },
+    "R": {
+      "name": "王熙鳳",
+      "costume_id": "wang_black_tank_red_skirt_v1"
+    }
+  },
+  "slots": [
+    {
+      "pose_id": "P01",
+      "beat_id": "k10_01_jab",
+      "label": "P01 jab·guard",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P01.png",
+      "duration_s": 0.4,
+      "camera": {
+        "preset": "eye_push",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.05,
+            "b": 1.22,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "const",
+            "v": -20
+          },
+          "y": {
+            "type": "lerp",
+            "a": 10,
+            "b": 35,
+            "ease": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P02",
+      "beat_id": "k10_02_body_punch",
+      "label": "P02 body punch·catch",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P02.png",
+      "duration_s": 0.6,
+      "camera": {
+        "preset": "eye_lateral",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.15,
+            "b": 1.35,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -40,
+            "b": 30,
+            "ease": "smooth"
+          },
+          "y": {
+            "type": "const",
+            "v": 40
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P03",
+      "beat_id": "k10_03_fold_recover",
+      "label": "P03 fold recover",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P03.png",
+      "duration_s": 0.3,
+      "camera": {
+        "preset": "ots_R_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.2,
+            "b": 1.1
+          },
+          "x": {
+            "type": "const",
+            "v": 40
+          },
+          "y": {
+            "type": "const",
+            "v": 20
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P04",
+      "beat_id": "k10_04_hook_load",
+      "label": "P04 hook load",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P04.png",
+      "duration_s": 0.5,
+      "camera": {
+        "preset": "box_side_pan",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.08,
+            "b": 1.25,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 50,
+            "b": -20
+          },
+          "y": {
+            "type": "const",
+            "v": 15
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P05",
+      "beat_id": "k10_05_body_hook_impact",
+      "label": "P05 body hook impact",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P05.png",
+      "duration_s": 0.65,
+      "camera": {
+        "preset": "ecu_fist_lens",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.6,
+            "b": 2.15,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 30,
+            "b": -40
+          },
+          "y": {
+            "type": "const",
+            "v": 90
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P06",
+      "beat_id": "k10_06_hook_aftershock",
+      "label": "P06 hook aftershock",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P06.png",
+      "duration_s": 0.28,
+      "camera": {
+        "preset": "dutch_snap",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.35,
+            "b": 1.15
+          },
+          "x": {
+            "type": "const",
+            "v": -10
+          },
+          "y": {
+            "type": "const",
+            "v": 40
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P07",
+      "beat_id": "k10_07_back_hook_kick",
+      "label": "P07 back hook kick",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P07.png",
+      "duration_s": 0.68,
+      "camera": {
+        "preset": "upward_inside",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.15,
+            "b": 2.2,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 40,
+            "b": 10
+          },
+          "y": {
+            "type": "lerp",
+            "a": 20,
+            "b": 140,
+            "ease": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P08",
+      "beat_id": "k10_08_back_hook_connect",
+      "label": "P08 back hook connect",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P08.png",
+      "duration_s": 0.72,
+      "camera": {
+        "preset": "ecu_jitter",
+        "params": {
+          "s": {
+            "type": "saw",
+            "a": 2.95,
+            "b": 3.25,
+            "period_s": 0.45
+          },
+          "x": {
+            "type": "saw",
+            "a": -14,
+            "b": 14,
+            "period_s": 0.45
+          },
+          "y": {
+            "type": "const",
+            "v": 175
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P09",
+      "beat_id": "k10_09_push_kick",
+      "label": "P09 push kick",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P09.png",
+      "duration_s": 0.4,
+      "camera": {
+        "preset": "eye_orbit",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.2,
+            "b": 1.35
+          },
+          "x": {
+            "type": "lerp",
+            "a": -30,
+            "b": 40
+          },
+          "y": {
+            "type": "const",
+            "v": 30
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P10",
+      "beat_id": "k10_10_slide_reset",
+      "label": "P10 slide reset",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P10.png",
+      "duration_s": 0.28,
+      "camera": {
+        "preset": "whip_A_to_B",
+        "params": {
+          "s": {
+            "type": "const",
+            "v": 1.25
+          },
+          "x": {
+            "type": "lerp",
+            "a": -50,
+            "b": 50,
+            "ease": "smooth"
+          },
+          "y": {
+            "type": "const",
+            "v": 40
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P11",
+      "beat_id": "k10_11_jump_back_kick_air",
+      "label": "P11 jump back kick air",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P11.png",
+      "duration_s": 0.68,
+      "camera": {
+        "preset": "low_rise",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.2,
+            "b": 2.35,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "const",
+            "v": -15
+          },
+          "y": {
+            "type": "lerp",
+            "a": 40,
+            "b": 110,
+            "ease": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P12",
+      "beat_id": "k10_12_jump_back_land",
+      "label": "P12 jump back land",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P12.png",
+      "duration_s": 0.72,
+      "camera": {
+        "preset": "ecu_fist_lens",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 2.6,
+            "b": 3.15,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -20,
+            "b": 25
+          },
+          "y": {
+            "type": "const",
+            "v": 95
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P13",
+      "beat_id": "k10_13_rush_punch",
+      "label": "P13 rush punch·knee",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P13.png",
+      "duration_s": 0.28,
+      "camera": {
+        "preset": "ots_L_hold",
+        "params": {
+          "s": {
+            "type": "const",
+            "v": 1.18
+          },
+          "x": {
+            "type": "const",
+            "v": -45
+          },
+          "y": {
+            "type": "const",
+            "v": 25
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P14",
+      "beat_id": "k10_14_knee_check",
+      "label": "P14 knee check",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P14.png",
+      "duration_s": 0.38,
+      "camera": {
+        "preset": "dutch_snap",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.25,
+            "b": 1.4
+          },
+          "x": {
+            "type": "const",
+            "v": 20
+          },
+          "y": {
+            "type": "const",
+            "v": 50
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P15",
+      "beat_id": "k10_15_jump_side_kick_air",
+      "label": "P15 jump side kick air",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P15.png",
+      "duration_s": 0.68,
+      "camera": {
+        "preset": "high_dive",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.25,
+            "b": 2.4,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 30,
+            "b": -10
+          },
+          "y": {
+            "type": "lerp",
+            "a": -20,
+            "b": 100,
+            "ease": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P16",
+      "beat_id": "k10_16_jump_side_land",
+      "label": "P16 jump side land",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P16.png",
+      "duration_s": 0.72,
+      "camera": {
+        "preset": "ecu_jitter",
+        "params": {
+          "s": {
+            "type": "saw",
+            "a": 3,
+            "b": 3.35,
+            "period_s": 0.4
+          },
+          "x": {
+            "type": "saw",
+            "a": -16,
+            "b": 16,
+            "period_s": 0.4
+          },
+          "y": {
+            "type": "const",
+            "v": 105
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P17",
+      "beat_id": "k10_17_low_sweep",
+      "label": "P17 low sweep·hop",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P17.png",
+      "duration_s": 0.38,
+      "camera": {
+        "preset": "floor_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.15,
+            "b": 1.3
+          },
+          "x": {
+            "type": "lerp",
+            "a": -20,
+            "b": 20
+          },
+          "y": {
+            "type": "const",
+            "v": -30
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P18",
+      "beat_id": "k10_18_hammer_down",
+      "label": "P18 hammer down",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P18.png",
+      "duration_s": 0.42,
+      "camera": {
+        "preset": "high_dive",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.35,
+            "b": 1.55
+          },
+          "x": {
+            "type": "const",
+            "v": 15
+          },
+          "y": {
+            "type": "lerp",
+            "a": -40,
+            "b": 20
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P19",
+      "beat_id": "k10_19_catch",
+      "label": "P19 catch·counter",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P19.png",
+      "duration_s": 0.52,
+      "camera": {
+        "preset": "face_whip",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.4,
+            "b": 1.7,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -30,
+            "b": 30
+          },
+          "y": {
+            "type": "const",
+            "v": 80
+          }
+        }
+      }
+    },
+    {
+      "pose_id": "P20",
+      "beat_id": "k10_20_standoff_crouch",
+      "label": "P20 standoff crouch",
+      "src": "assets/daiyu-wang-10s-kicks/plates/P20.png",
+      "duration_s": 0.48,
+      "camera": {
+        "preset": "pull_aftermath",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.45,
+            "b": 1.12,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "const",
+            "v": 0
+          },
+          "y": {
+            "type": "lerp",
+            "a": 50,
+            "b": 10
+          }
+        }
+      }
+    }
+  ]
+}
