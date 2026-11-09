@@ -1,0 +1,2261 @@
+{
+  "kind": "narrative_board_registry",
+  "boards": [
+    {
+      "kind": "narrative_board",
+      "show_id": "cold-open-rain-alley",
+      "archetype": "cold-open",
+      "title": "Rain alley",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "雨打橫巷，兩人未出手。",
+          "en": "Rain cuts across the side alley. Neither fighter has moved."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "左腳踏進水窪，右腳仍停在乾磚上。",
+          "en": "The left foot steps into a puddle. The right foot stays on dry brick."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "雨水順瓦簷落下，遮住半張臉。",
+          "en": "Rain runs off the eave and covers half a face."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "左手撐住濕牆，指節抵著青磚。",
+          "en": "The left hand braces the wet wall. Knuckles press the blue brick."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "右手垂在身側，五指慢慢張開。",
+          "en": "The right hand hangs at the side and the five fingers open slowly."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "她把濕髮撥到耳後，眼睛不離對面。",
+          "en": "She pushes wet hair behind one ear and does not take her eyes off the other fighter."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "對面人後退半步，鞋跟碰到牆根。",
+          "en": "The other fighter steps back half a pace until a heel touches the wall."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "巷口的風灌進來，兩件濕衣同時貼身。",
+          "en": "Wind pushes in from the alley mouth and both wet jackets cling."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "左拳抬到胸前，停在雨裡，沒有送出。",
+          "en": "A left fist rises to the chest, stops in the rain, and does not go out."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "右掌橫在喉前，掌心向外，只作遮擋。",
+          "en": "A right palm crosses in front of the throat, facing out, only as a cover."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "她深深吸氣，肩膀隨著那一口氣沉下去。",
+          "en": "She draws a deep breath and her shoulders sink with it."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "對面人側過身子，讓出一條窄縫。",
+          "en": "The other fighter turns sideways and leaves a narrow gap."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "水從袖口滴到鞋面，一滴接著一滴。",
+          "en": "Water drips from a cuff onto a shoe, one drop after another."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "她用鞋尖點地，試那塊磚滑不滑。",
+          "en": "She taps the ground with a toe to test whether that brick is slick."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "對面人把重心換到前腳，後腳跟離地。",
+          "en": "The other fighter shifts weight onto the front foot and the back heel lifts."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "兩人一齊低頭，看著腳下那條水線。",
+          "en": "Both lower their heads and look at the line of water at their feet."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她先抬眼，右肩仍貼著牆。",
+          "en": "She lifts her eyes first. Her right shoulder stays on the wall."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "對面人抬起下巴，雨水順著下巴滴落。",
+          "en": "The other fighter lifts the chin and rain runs off it."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "她把後腳跟旋進泥裡，站成一個穩樁。",
+          "en": "She twists her back heel into the mud and sets a firm stance."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "對面人伸出兩指，點了點自己的眉心。",
+          "en": "The other fighter holds up two fingers and taps their own brow."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "巷深處有人收傘，傘骨一響，兩人都不看過去。",
+          "en": "Someone deeper in the alley closes an umbrella. The ribs click, and neither fighter looks."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她把左腳收回乾處，右腳仍留在水裡。",
+          "en": "She draws the left foot back onto dry ground. The right foot stays in the water."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "對面人在腰側握緊拳頭，又沒有握實。",
+          "en": "The other fighter closes a fist at the hip and does not close it hard."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "一道閃電照白巷壁，兩個人影都沒有動。",
+          "en": "A lightning flash whites the alley wall. Neither shadow moves."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "雷聲過去之後，她才把那口氣放出來。",
+          "en": "Only after the thunder passes does she let that breath out."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "對面人用袖口抹掉眼角的雨水。",
+          "en": "The other fighter wipes rain from the corner of an eye with a cuff."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她向前挪了半寸，鞋底在磚上輕響一聲。",
+          "en": "She shifts forward half an inch. The sole ticks once on the brick."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人把拳頭抬到與肩同高，肘仍彎著。",
+          "en": "The other fighter raises a fist level with the shoulder. The elbow stays bent."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "兩人之間只剩一道雨簾，沒有拳風。",
+          "en": "Only a curtain of rain remains between them. There is no wind from a fist."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "她的前腳跟一沉，第一記仍未打出。",
+          "en": "Her front heel settles. The first strike has still not gone out."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "cold-open-neon-door",
+      "archetype": "cold-open",
+      "title": "Neon door",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "霓虹在門框上跳，門仍關著。",
+          "en": "Neon flickers on the doorframe. The door stays shut."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "她的手停在門把上，沒有按下。",
+          "en": "Her hand rests on the handle and does not press it."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "門縫裡漏出一條紅光，照到鞋尖。",
+          "en": "A line of red light leaks through the door crack and reaches a toe."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "對面人站在門內暗處，只露出半邊肩。",
+          "en": "The other fighter stands in the dark inside the door. Only half a shoulder shows."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她把耳朵貼近門板，聽裡面的呼吸。",
+          "en": "She puts an ear to the door and listens for the breath inside."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "門內的人用指節在木板上敲了一下。",
+          "en": "The person inside taps the wood once with a knuckle."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她後退一步，讓那條紅光落到空地上。",
+          "en": "She steps back and lets the red light fall on empty ground."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "霓虹由藍轉紫，兩個人都沒有眨眼。",
+          "en": "The neon shifts from blue to purple. Neither person blinks."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "門內的手扶住門框，指頭還沒有越出來。",
+          "en": "A hand inside braces the frame. The fingers have not come past it."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "她抬起左掌，掌心對著門縫，停在半空。",
+          "en": "She raises her left palm toward the crack and holds it in the air."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "門軸輕響，門板移開一指寬就停住。",
+          "en": "The hinge murmurs. The door moves one finger wider and stops."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "裡面的眼睛在紅光裡對上她的眼睛。",
+          "en": "The eyes inside meet hers in the red light."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她的右腳尖抵住門檻，沒有跨進去。",
+          "en": "Her right toes touch the threshold. She does not step over."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "門內的人側過身，衣角掃過門鈕。",
+          "en": "The person inside turns, and a hem brushes the doorknob."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她數自己的呼吸，數到三就停。",
+          "en": "She counts her own breaths and stops at three."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "門上的霓虹管滋滋作響，光一下明一下暗。",
+          "en": "The neon tube on the door buzzes. The light flares, then dims."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她把濕掌在衣襟上抹乾。",
+          "en": "She wipes a wet palm dry on her lapel."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "門內的人微微抬起下巴，仍不跨出門檻。",
+          "en": "The person inside tips the chin up and still does not cross the threshold."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "兩人之間隔著那塊門板，誰都沒有推。",
+          "en": "The door slab stands between them. Neither one pushes."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她的左肩下沉，右肩卻抬高。",
+          "en": "Her left shoulder drops while the right one rises."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "門內的腳步往後退，木地板響了一聲。",
+          "en": "The footsteps inside move backward. The wooden floor answers once."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她把前額靠近門縫，熱氣在冷門板上散開。",
+          "en": "She brings her forehead near the crack. Warm breath spreads on the cold door."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "門內伸出空著的左手，掌心向上。",
+          "en": "An empty left hand comes out from inside, palm up."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "她看著那隻手，自己的手仍貼在身側。",
+          "en": "She looks at that hand. Her own hand stays at her side."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "霓虹熄了一秒，門口只剩那條紅縫。",
+          "en": "The neon dies for one second. Only the red crack remains at the doorway."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "燈再亮起來時，兩人還站在原來的位置。",
+          "en": "When the light returns, both still stand where they were."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她的手指彎起來，停在門把上方，沒有抓住。",
+          "en": "Her fingers curl and stop above the handle without taking it."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "門內的人把那隻手收回去，門縫仍留一指寬。",
+          "en": "The person inside draws that hand back. The crack stays one finger wide."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她吸進門口的冷風，胸口起伏一次。",
+          "en": "She breathes in the cold air at the door. Her chest rises once."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "兩人隔門對視，第一記仍留在門後。",
+          "en": "They watch each other across the door. The first strike stays behind it."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "cold-open-rooftop-still",
+      "archetype": "cold-open",
+      "title": "Rooftop still",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "天台的風把晾著的白衫吹得貼住鐵絲。",
+          "en": "Wind on the rooftop blows a drying white shirt flat against the wire."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "她站在水箱陰影裡，雙手插在口袋。",
+          "en": "She stands in the water-tank shadow with both hands in her pockets."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "對面人靠著矮牆，下巴抵在前臂上。",
+          "en": "The other fighter leans on the low wall with chin on a forearm."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "一隻鴿從兩人之間掠過，誰都沒有追看。",
+          "en": "A pigeon cuts between them. Neither follows it with a look."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她用鞋底碾碎柏油上的一顆小石。",
+          "en": "She crushes a small stone into the tar with her sole."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "對面人把視線從遠處的城市收回她的手上。",
+          "en": "The other fighter brings their gaze back from the far city to her hands."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "身後的天台門關上，門閂輕輕落下。",
+          "en": "The rooftop door behind them shuts. The latch drops softly."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "她抽出左手，掌心向風，試風有多硬。",
+          "en": "She draws out her left hand, palm to the wind, and tests how hard it blows."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "對面人站直，後腳跟仍靠著矮牆。",
+          "en": "The other fighter stands straight. The back heel still touches the low wall."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "她向前走兩步，在地上畫好的圓圈外停住。",
+          "en": "She walks two steps and stops outside a circle painted on the ground."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "對面人的腳尖點到圓圈邊緣，沒有踏進去。",
+          "en": "The other fighter's toes touch the edge of the circle and do not step in."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "高處一盞飛機燈慢慢移出視線。",
+          "en": "An aircraft light overhead moves slowly out of sight."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她把呼吸放慢，鎖骨一下一下起伏。",
+          "en": "She slows her breathing. Her collarbones rise and fall."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人解開上衣第一顆扣，手就停住。",
+          "en": "The other fighter opens the first button of a coat and the hand stops."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她側過臉，讓風把髮絲從眼前吹開。",
+          "en": "She turns her face and lets the wind blow the hair from her eyes."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人用兩指比出她和自己之間的距離。",
+          "en": "The other fighter measures the gap between them with two fingers."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她把右腳收到左腳旁邊，站成一條窄線。",
+          "en": "She brings the right foot beside the left and stands on a narrow line."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "水箱的滴水打在鐵皮上，節奏一直不變。",
+          "en": "Drips from the tank tick on the metal sheet. The rhythm does not change."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "對面人低頭看自己那隻張開的手。",
+          "en": "The other fighter looks down at their own open hand."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她抬眼，對上那雙還沒有怒意的眼睛。",
+          "en": "She looks up into eyes that still show no anger."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "天台邊緣的燈閃了一下，照出兩人的鞋尖。",
+          "en": "A light at the rooftop edge flashes and picks out both toe caps."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她的肩膀鬆開，兩手卻仍然空著。",
+          "en": "Her shoulders loosen. Both hands stay empty."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "對面人的背離開矮牆，向前半步就停。",
+          "en": "The other fighter's back leaves the low wall. They take half a step and stop."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "樓下巷裡傳來車聲，兩個人都不往下看。",
+          "en": "A car sounds in the alley below. Neither looks down."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她用舌尖潤了潤乾裂的唇，視線不放。",
+          "en": "She wets a dry lip with her tongue. Her gaze does not leave."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "對面人把拳骨在掌心裡轉了一圈，沒有握實。",
+          "en": "The other fighter rolls a knuckle in the palm and does not close a real fist."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她點了一下頭，雙腳卻沒有移動。",
+          "en": "She gives one nod. Both feet do not move."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "風把白衫捲過圓圈，布角擦到她的手腕。",
+          "en": "The wind carries the white shirt across the circle. The cloth brushes her wrist."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "對面人伸手去撥那塊布，手停在半空。",
+          "en": "The other fighter reaches to push the cloth aside. The hand stops in midair."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "圓圈裡面仍是空的，第一記沒有落在天台上。",
+          "en": "The inside of the circle is still empty. The first strike has not landed on the rooftop."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "cold-open-market-dawn",
+      "archetype": "cold-open",
+      "title": "Market dawn",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "天還沒有全亮，菜檔只開了一盞燈。",
+          "en": "Dawn is not fully up. The vegetable stall has only one lamp on."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "她從魚箱旁邊走過，鞋底沾著碎冰。",
+          "en": "She walks past the fish crates. Crushed ice sticks to her soles."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "對面人雙手按住一籠空竹筐，沒有把它搬走。",
+          "en": "The other fighter sets both hands on an empty bamboo basket and does not carry it off."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "水喉還在滴，水珠落進藍色膠盆。",
+          "en": "The tap is still dripping. Drops fall into a blue plastic basin."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她停在兩檔之間的窄道，肩沒有轉過來。",
+          "en": "She stops in the narrow lane between two stalls. Her shoulders do not turn."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "對面人用圍裙擦手，眼睛看著她的腳。",
+          "en": "The other fighter dries their hands on an apron while watching her feet."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "一輛手推車從兩人中間慢慢軋過去。",
+          "en": "A handcart rolls slowly through the space between them."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "手推車過去之後，她才重新看清對面的人。",
+          "en": "After the handcart passes, she can see the other fighter clearly again."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "對面人把一尾魚翻過面，銀鱗閃了一下。",
+          "en": "The other fighter turns a fish over. The silver scales flash once."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "她的手扶住檔口木柱，指頭收緊。",
+          "en": "Her hand holds the stall's wooden post. Her fingers tighten."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "遠處有人喊價，兩個人都沒有應聲。",
+          "en": "Someone farther off calls a price. Neither of them answers."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "她把重心放到後腳，前腳只是點著地。",
+          "en": "She sets her weight on the back foot. The front foot only touches the ground."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "對面人從柱上取下布袋，沒有打開袋口。",
+          "en": "The other fighter takes a cloth bag off the post and does not open the mouth of the bag."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "晨光先照到她的眉骨。",
+          "en": "Morning light reaches her brow first."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她微微側頭，聽身後的水打在菜葉上。",
+          "en": "She tips her head and listens to water striking the leaves behind her."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人把刀留在砧板上，手離開刀柄。",
+          "en": "The other fighter leaves the knife on the block. The hand leaves the handle."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她看著那把刀，自己的手掌仍然張開。",
+          "en": "She looks at the knife. Her own palm stays open."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "一隻貓跳上魚箱，蹲在碎冰上，沒有人趕。",
+          "en": "A cat jumps onto a fish crate and crouches on the ice. Nobody shoos it."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "她向前挪了半步，膠鞋在濕地上輕響。",
+          "en": "She shifts half a step forward. A rubber shoe ticks on the wet ground."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "對面人用空著的手掌比了一個停。",
+          "en": "The other fighter's empty palm makes a stop."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "她停住腳步，呼出的白氣在冷空氣裡散掉。",
+          "en": "She stops her feet. White breath scatters in the cold air."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "檔主掀開帆布一角，眼睛沒有看向他們。",
+          "en": "A stall keeper lifts a corner of the canvas and does not look toward them."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "她把一綹髮從唇邊撥開，眼睛沒有眨。",
+          "en": "She moves a strand of hair off her lip. Her eyes do not blink."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "對面人的肩膀隨著一次深呼吸抬起來。",
+          "en": "The other fighter's shoulders rise with one deep breath."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "兩人之間的窄道仍空著，沒有人先踏進去。",
+          "en": "The narrow lane between them stays empty. Neither steps in first."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "她的左手抬到腰際，掌心向內，像按住自己。",
+          "en": "Her left hand rises to her waist, palm inward, as if holding herself back."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "對面人點頭，指向還未亮起來的巷口。",
+          "en": "The other fighter nods and points toward the alley mouth that is still dark."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "她沒有跟那根手指走，腳跟釘在原地。",
+          "en": "She does not follow that finger. Her heels stay nailed in place."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "第一輛單車從市場邊掠過，鈴聲很遠。",
+          "en": "The first bicycle skims the edge of the market. The bell is far away."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "天色又亮了一分，兩人仍未打出第一記。",
+          "en": "The sky brightens one more shade. Neither has thrown the first strike."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "duel-schoolyard-line",
+      "archetype": "duel",
+      "title": "Schoolyard line",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她踏過操場白線，右拳打向對方面門。",
+          "en": "She steps across the playground's white line and throws a right fist at the other fighter's face."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人用前臂格開那拳，退到沙池邊緣。",
+          "en": "The other fighter parries that fist with a forearm and drops back to the edge of the sandpit."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她補上一記左勾，打在對方肋骨外側。",
+          "en": "She follows with a left hook that lands on the outside of the ribs."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "對面人吃下那記，用肘擊回她的肩頭。",
+          "en": "The other fighter takes the hook and answers with an elbow to her shoulder."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她側身讓過肘尖，膝頭撞向對方腹部。",
+          "en": "She slips the elbow and drives a knee into the other fighter's belly."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "膝撞實了，對面人彎下腰，仍抓住她的袖口。",
+          "en": "The knee lands. The other fighter folds at the waist and still grips her cuff."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她揮臂掙開袖子，掌緣劈在對方後頸。",
+          "en": "She rips her sleeve free and chops the back of the neck with the edge of her hand."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "對面人低頭躲過掌緣，用肩撞進她的胸口。",
+          "en": "The other fighter ducks the hand edge and drives a shoulder into her chest."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "她被肩撞退兩步，後腳跟碾過白線。",
+          "en": "The shoulder hit shoves her back two steps. Her heel grinds across the white line."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "她站穩之後，低踢掃中對方的小腿。",
+          "en": "Once she is set, a low kick sweeps into the other fighter's shin."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "小腿中踢，對面人單膝跪地，馬上又站起來。",
+          "en": "The shin takes the kick. The other fighter drops to one knee and stands back up at once."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "她趁對方起身，直拳打進對方的胃。",
+          "en": "As the other fighter rises, she drives a straight punch into the stomach."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "對面人悶哼一聲，反手扇在她的頰側。",
+          "en": "The other fighter grunts and backhands the side of her cheek."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "她的頭被扇得一偏，第二拳已經夾風而至。",
+          "en": "Her head turns with the slap. A second punch is already arriving on the wind."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她用掌心托住那拳，指頭仍被震得張開。",
+          "en": "She catches that punch in her palm. The fingers still jar open."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人順勢進身，用額頭頂上她的額。",
+          "en": "The other fighter steps in and butts forehead to forehead."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "兩人同時退開半步，她的左拳先回到線上。",
+          "en": "Both give up half a step. Her left fist returns to the line first."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "她連打兩拳，一拳面門，一拳心口。",
+          "en": "She throws two punches, one at the face and one at the chest."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "對面人擋住面門，心口那拳實實打中。",
+          "en": "The other fighter blocks the face. The chest punch lands clean."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "中拳的人抓住她的手腕，往沙池裡一帶。",
+          "en": "The fighter who was hit grabs her wrist and yanks her toward the sandpit."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "她順著拉力跪步，另一肘擊在對方大腿上。",
+          "en": "She goes with the pull into a kneeling step and elbows the other fighter's thigh."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "大腿一軟，對面人鬆開手，她立刻站直。",
+          "en": "The thigh gives. The other fighter lets go, and she stands straight at once."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "她一記側踢，踢在對方的胯上。",
+          "en": "She lands a side kick on the other fighter's hip."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "對面人撞上鐵欄，欄杆響了一聲。",
+          "en": "The other fighter hits the iron fence. The rail rings once."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她逼上前，短拳連打在對方護頭的雙臂上。",
+          "en": "She closes in and lands short punches on the arms covering the other fighter's head."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "對面人從雙臂之間擠出一拳，打中她的下巴。",
+          "en": "The other fighter threads a punch between the arms and hits her chin."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她再次踏過白線，血從唇角滴到沙上。",
+          "en": "She steps across the white line again. Blood drips from the corner of her mouth onto the sand."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "兩人在白線上對打，拳風把沙塵掀起來。",
+          "en": "They trade blows on the white line. The punches lift a skin of sand."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她的右拳破開防守，打在對方頰骨上。",
+          "en": "Her right fist breaks the guard and lands on the cheekbone."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "對面人側身倒地，一手撐住沙，人還沒有離場。",
+          "en": "The other fighter falls sideways, one hand braced in the sand, and has not left the fight."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "duel-rooftop-circle",
+      "archetype": "duel",
+      "title": "Rooftop circle",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她踏進天台圓圈，直拳打向對面人的鼻樑。",
+          "en": "She steps into the rooftop circle and throws a straight punch at the other fighter's nose."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人偏頭讓過，反肘擊向她的太陽穴。",
+          "en": "The other fighter slips the punch and counters with an elbow at her temple."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她抬臂擋住那肘，拳背仍刮到自己的眉骨。",
+          "en": "She blocks the elbow. The back of the fist still scrapes her brow."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "她退到圓圈邊緣，低踢掃向對方的前踝。",
+          "en": "She retreats to the edge of the circle and sweeps a low kick at the front ankle."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "前踝吃了一記，對面人單膝跪在圈裡。",
+          "en": "The ankle takes the kick. The other fighter drops to one knee inside the circle."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "她上步，用掌根推中對方的鎖骨。",
+          "en": "She steps in and drives the heel of her palm into the collarbone."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "對面人抓住她的手腕，把她扯向圈心。",
+          "en": "The other fighter grabs her wrist and hauls her toward the center of the circle."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "她在被扯之中抬膝，頂在對方的肋下。",
+          "en": "While being hauled she raises a knee under the other fighter's ribs."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "對面人鬆開手，一記擺拳打在她的耳側。",
+          "en": "The other fighter lets go and lands a swinging punch on the side of her ear."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "她晃了一晃，仍用肩膀撞開對方的胸口。",
+          "en": "She sways and still shoulders the other fighter's chest open."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "兩人在圈心分開，她的左拳先追上去。",
+          "en": "They separate in the center. Her left fist chases in first."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "左拳打進胃部，對面人彎腰噴出一口氣。",
+          "en": "The left fist sinks into the stomach. The other fighter bends and blows out a breath."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她再抬膝去撞，這次被對方雙掌接住。",
+          "en": "She lifts the knee again. This time both of the other fighter's palms catch it."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人把她的膝推出圈線，她單腳跳回圈內。",
+          "en": "The other fighter shoves her knee past the circle line. She hops back inside on one foot."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她落地就踢，腳背抽在對方大腿外側。",
+          "en": "She kicks as she lands. The instep slaps the outside of the thigh."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人退到水箱旁，抄起一條濕毛巾揮過來。",
+          "en": "The other fighter backs up to the water tank, snatches a wet towel, and swings it."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "毛巾抽在她的前臂上，她抓住布角往回扯。",
+          "en": "The towel cracks on her forearm. She grabs the cloth end and yanks it back."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "她突然鬆手，對面人因拉力往後跌坐。",
+          "en": "She lets go without warning. The pull sits the other fighter down backward."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "她跟上一步，拳打在對方撐地的手背上。",
+          "en": "She steps in and punches the back of the hand braced on the ground."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "對面人抽回那隻手，翻身用腳跟踢她的膝。",
+          "en": "The other fighter snatches the hand back, rolls, and kicks her knee with a heel."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "她的膝一軟，肘仍壓進對方的胸口。",
+          "en": "Her knee softens. Her elbow still drives into the other fighter's chest."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "對面人雙臂交叉格開肘，頭槌撞上她的頰。",
+          "en": "Crossed arms parry the elbow. A headbutt hits her cheek."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "她側臉吃了頭槌，右勾拳打進對方肝側。",
+          "en": "She takes the headbutt on the side of her face and hooks her right fist into the liver."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "肝側中拳，對面人退到圓圈的另一邊。",
+          "en": "The liver shot lands. The other fighter retreats to the other side of the circle."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她追過圈心，側踢踢在對方肩上。",
+          "en": "She crosses the center and a side kick lands on the other fighter's shoulder."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "那一肩撞上矮牆，牆灰落了對面人滿頭。",
+          "en": "That shoulder hits the low wall. Dust falls over the other fighter's head."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她不給對方空間，連續兩拳打在護住的手臂上。",
+          "en": "She gives no room. Two punches in a row land on the guarding arms."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人從牆邊反彈，用肩把她撞退半步。",
+          "en": "The other fighter rebounds off the wall and shoulders her back half a step."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她重新踏進圓圈，直拳再次打中鼻樑。",
+          "en": "She steps into the circle again and the straight punch finds the nose again."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "鼻血滴在圈線上，兩人仍在天台圈裡對打。",
+          "en": "Blood drops on the circle line. They are still trading blows inside the rooftop circle."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "duel-teahouse-table",
+      "archetype": "duel",
+      "title": "Teahouse table",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她掀翻茶桌，第一拳從桌沿打向對方下巴。",
+          "en": "She flips the tea table and throws the first punch from the table edge at the other fighter's chin."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人側頭躲過，抓起茶壺砸向她的肩。",
+          "en": "The other fighter dodges and swings the teapot into her shoulder."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "壺身撞實，熱茶濺到她的頸側。",
+          "en": "The pot connects. Hot tea splashes the side of her neck."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "她悶哼一聲，用桌腿掃向對方的膝。",
+          "en": "She grunts and sweeps a table leg at the other fighter's knee."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "膝被掃中，對面人跪上長凳，凳腳吱呀一響。",
+          "en": "The knee is hit. The other fighter kneels on the bench and a bench leg creaks."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "她上前，肘擊打在對方伏低的背上。",
+          "en": "She steps in and the elbow lands on the other fighter's lowered back."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "對面人翻下長凳，一腳踢飛她手裡的桌腿。",
+          "en": "The other fighter rolls off the bench and kicks the table leg out of her hands."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "桌腿撞上牆，她改用掌根推對方的胸口。",
+          "en": "The table leg hits the wall. She switches to a palm-heel strike on the chest."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "這一掌把人按上窗檻，窗紙裂開一道。",
+          "en": "The palm drives the other fighter onto the windowsill. The paper pane splits."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "對面人抓住她的衣領，用額頭撞她的鼻。",
+          "en": "The other fighter grabs her collar and butts her nose with a forehead."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "她鼻血流下來，短拳仍送進對方腹部。",
+          "en": "Blood runs from her nose. A short punch still goes into the other fighter's belly."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "對面人鬆開衣領，抄起凳子橫掃她的腰。",
+          "en": "The other fighter lets go of the collar, grabs the stool, and swings it at her waist."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她弓身讓過凳面，膝撞在持凳的手腕上。",
+          "en": "She bows under the seat and knees the wrist that holds the stool."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "凳子落地，她的勾拳打上對方的頰。",
+          "en": "The stool drops. Her hook lands on the other fighter's cheek."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "對面人退到茶櫃前，櫃裡的杯子叮噹亂響。",
+          "en": "The other fighter backs into the tea cabinet. Cups inside clatter."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "她追到櫃前，直拳打在對方交叉的小臂上。",
+          "en": "She follows to the cabinet and punches the crossed forearms."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "對面人從小臂下面鑽出來，用肩撞她的胸口。",
+          "en": "The other fighter comes out under the forearms and shoulders her chest."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "她撞上另一張還沒翻倒的桌子，杯碟跳起來。",
+          "en": "She hits a table that is still standing. Cups and saucers jump."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "她抓起一隻茶杯砸過去，杯沿擦過對方額角。",
+          "en": "She snatches a teacup and throws it. The rim grazes the other fighter's temple."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "對面人眨眼的一瞬，她的踢已經到了大腿。",
+          "en": "In that blink her kick has already reached the thigh."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "大腿中了踢，對面人扶著櫃子才沒有坐下。",
+          "en": "The thigh takes the kick. The other fighter stays up only by holding the cabinet."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她貼近身，連續掌擊打在對方的耳門。",
+          "en": "She gets in close and lands a run of palm strikes on the ear."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "對面人揮臂格開第三掌，反肘擊中她的肋。",
+          "en": "The other fighter beats the third palm aside and the elbow finds her ribs."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "她退了半步，一拳打回對方心口。",
+          "en": "She gives half a step and punches back at the chest."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "心口中拳，對面人吐出一口氣，手撐在櫃上。",
+          "en": "The chest punch lands. The other fighter blows out a breath and braces a hand on the cabinet."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "她按住那隻撐櫃的手，膝再頂進腹部。",
+          "en": "She pins the bracing hand and drives the knee into the belly again."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "對面人痛得彎下去，用頭撞開她的壓制。",
+          "en": "Pain folds the other fighter, who butts free of her hold."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "她被撞得後退，鞋底踩碎一隻落地的杯。",
+          "en": "The butt knocks her backward. Her sole crushes a cup on the floor."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她再上前，拳打在對方抬起來防護的前臂。",
+          "en": "She comes in again and punches the forearm raised as a guard."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "茶香混著血腥，兩人還在桌椅之間對打。",
+          "en": "The smell of tea mixes with blood. They are still trading blows among the tables and chairs."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "duel-tram-platform",
+      "archetype": "duel",
+      "title": "Tram platform",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "車門剛開，她的拳就打在對面人胸口。",
+          "en": "The tram doors have just opened and her punch hits the other fighter's chest."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人退到黃線後面，用臂格開第二拳。",
+          "en": "The other fighter drops behind the yellow line and parries the second punch."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她跨過黃線，低踢掃中對方小腿。",
+          "en": "She crosses the yellow line and a low kick catches the shin."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "小腿一軟，對面人扶住月台柱才沒有跪下。",
+          "en": "The shin buckles. The other fighter stays up only by holding a platform post."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她在柱旁出肘，肘尖打在對方肩胛上。",
+          "en": "She throws an elbow beside the post. The tip hits the shoulder blade."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "對面人側身，反手一拳打在她的面頰上。",
+          "en": "The other fighter turns and a backfist lands on her cheek."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她吃了這一拳，後腦幾乎貼上即將關上的車門。",
+          "en": "She takes the punch. The back of her head nearly touches the tram door that is about to shut."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "車門夾住她的衣角，她扯開衣角的同時把拳送出。",
+          "en": "The door pinches her hem. She rips it free as the punch goes out."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "那一拳打在對方護住太陽穴的手掌上。",
+          "en": "That punch lands in the palm guarding the temple."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "對面人手掌發痛，仍抓住她的腕往軌道方向帶。",
+          "en": "The palm hurts. The other fighter still grabs her wrist and drags her toward the tracks."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "她用另一隻手托住對方下巴，把人推回黃線。",
+          "en": "With her other hand she cups the chin and shoves the fighter back to the yellow line."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "對面人撞上等候的長椅，椅背斷成兩截。",
+          "en": "The other fighter hits a waiting bench. The back of the bench snaps in two."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她跟上，膝撞在對方痛得彎下的腹部。",
+          "en": "She follows and knees the belly as the other fighter bends in pain."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人抱住她的膝，把她摔向月台的磚。",
+          "en": "The other fighter hugs her knee and throws her onto the platform bricks."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她肩背著地，立刻用腳踢開對方的手。",
+          "en": "Her shoulder hits the brick. She kicks the gripping hand away at once."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人被這一腳踢退，電車鈴在身後大響。",
+          "en": "That kick drives the other fighter back. A tram bell rings hard behind them."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她翻身站起來，直拳打進還沒合上的防線。",
+          "en": "She rolls to her feet and a straight punch enters the guard that has not closed."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "拳打中鼻樑，對面人退到月台邊緣。",
+          "en": "The punch lands on the bridge of the nose. The other fighter retreats to the platform edge."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "她沒有把人推下月台，改為側踢大腿。",
+          "en": "She does not push them off the platform. She side-kicks the thigh instead."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "大腿中踢，對面人單膝跪在黃線上。",
+          "en": "The thigh takes the kick. The other fighter kneels on one knee on the yellow line."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "她走近，短拳連打在對方架起的雙臂上。",
+          "en": "She steps close and short punches land on the raised arms."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "對面人從雙臂下面撞出來，頭槌打在她胸口。",
+          "en": "The other fighter surges out under the arms and headbutts her chest."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "她退後兩步，把氣吸進胸口。",
+          "en": "She drops back two steps and draws a breath into her chest."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "右勾拳打在對方耳側，人還沒有離開黃線。",
+          "en": "The right hook lands on the ear. The other fighter has not left the yellow line."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她的第二拳打在路線圖玻璃上，裂紋立刻散開。",
+          "en": "Her second punch hits the route-map glass and cracks spread at once."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "對面人閃到柱後，她踢出的腳背擦過柱面。",
+          "en": "The other fighter slips behind the post. The instep of her kick scrapes the post."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她收腳再進，掌根打在從柱邊露出的肩上。",
+          "en": "She recovers the foot, steps in, and the palm heel hits the shoulder that shows past the post."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人抓住柱子，繞柱轉身，肘擊打在她額上。",
+          "en": "The other fighter grabs the post, spins around it, and the elbow hits her brow."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "血從她的眉骨流下，她的拳同時打在對方肋上。",
+          "en": "Blood runs from her brow and her punch lands on the ribs at the same time."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "下一班車的燈已經照到月台，兩人仍在黃線上對打。",
+          "en": "The next tram's lamp already lights the platform. They are still trading blows on the yellow line."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "chase-night-market",
+      "archetype": "chase",
+      "title": "Night market",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她撥開掛著烤腸的人群，衝進夜市窄巷。",
+          "en": "She pushes through the crowd under the hanging grilled sausages and sprints into the night-market lane."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人在她身後三步，撞翻一盆關東煮。",
+          "en": "Three steps behind, the other fighter knocks over a pot of oden."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她躍過滾到腳邊的魚蛋，沒有回頭。",
+          "en": "She leaps the fish balls rolling at her feet and does not look back."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "對面人踩滑一顆魚蛋，抓住糖葫蘆車的把手才站穩。",
+          "en": "The other fighter slips on a fish ball and stays up by grabbing the candied-fruit cart's handle."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她側身穿過兩檔衣服，身後的衣架倒下來。",
+          "en": "She slips sideways between two clothing stalls. The rack behind her falls."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "倒下的衣架絆了追來的人一下，距離拉開一點。",
+          "en": "The fallen rack trips the pursuer and the gap opens a little."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她鑽進蒸汽騰起的麵檔，白霧遮住她的背。",
+          "en": "She ducks into a noodle stall full of rising steam. The white cloud hides her back."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "對面人揮手撥開蒸汽，只看見她的鞋後跟。",
+          "en": "The other fighter waves the steam aside and sees only her heels."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "她向左一轉，跳過一地還沒收走的空瓶。",
+          "en": "She turns left and jumps a scatter of empty bottles that have not been collected."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "對面人把那些瓶子踢開，瓶聲暴露了她的路線。",
+          "en": "The other fighter kicks the bottles aside. The clatter gives her route away."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "她閃到一排燈箱後面，燈光在臉上切成幾條。",
+          "en": "She cuts behind a row of light boxes. The light cuts her face into bands."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "對面人從燈箱另一頭繞過來，幾乎和她迎面碰上。",
+          "en": "The other fighter comes around the other end of the light boxes and they nearly meet head-on."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她急停，改從攤板底下鑽過去。",
+          "en": "She stops hard and crawls under the stall board instead."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人來不及低頭，額頭撞上攤位木板。",
+          "en": "The other fighter does not duck in time and a forehead hits the stall's wooden board."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她從攤位另一側滾出來，爬起繼續跑。",
+          "en": "She rolls out the far side of the stall, gets up, and keeps running."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "一輛送貨單車橫切過來，她抬手讓它先過。",
+          "en": "A delivery bicycle cuts across. She lifts a hand and lets it pass first."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "對面人被單車擋住，只好繞過車尾再追。",
+          "en": "The bicycle blocks the other fighter, who goes around the rear wheel and chases again."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "她衝上一段短階，把階上的紙箱踢散。",
+          "en": "She sprints up a short flight of steps and kicks the cartons there apart."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "紙箱滾下來，追的人只好跳著避開。",
+          "en": "The cartons roll down. The pursuer has to hop to avoid them."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她鑽進階頂的玩具檔，沒有再回頭。",
+          "en": "She ducks into the toy stall at the top of the steps and does not look back again."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "對面人追到階頂，抓住她的背包帶。",
+          "en": "The other fighter reaches the top and catches her backpack strap."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她卸下背包，人已從檔尾穿出去。",
+          "en": "She slips the pack off and is already out through the back of the stall."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "對面人抱著空背包，把它扔掉之後再追。",
+          "en": "The other fighter holds the empty pack, throws it aside, and chases again."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "她跑過一排還在炸東西的油鑊，熱氣撲面。",
+          "en": "She runs past a row of woks that are still frying. Heat hits her face."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "對面人跟得太近，油星濺到手背，腳步沒有慢。",
+          "en": "The other fighter follows too close. Oil spits onto the back of a hand and the pace does not slow."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "她拐進生果檔後面的暗巷，腳步聲忽然變輕。",
+          "en": "She cuts into the dark lane behind the fruit stall. Her footsteps suddenly go quiet."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "對面人衝進巷口，巷子裡卻是空的。",
+          "en": "The other fighter charges into the lane mouth and the lane is empty."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "她從疊著的泡沫箱後面衝出，反向跑回夜市。",
+          "en": "She bursts from behind stacked foam boxes and runs back into the market the other way."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "對面人轉身再追，中間隔著整整一檔的距離。",
+          "en": "The other fighter turns and chases. A full stall's width opens between them."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "她沒有停下來打，只把追的人留在燈火後面。",
+          "en": "She does not stop to fight. She only keeps the pursuer behind the lamps."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "chase-stairwell-drop",
+      "archetype": "chase",
+      "title": "Stairwell drop",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她撞開樓梯間的門，一步跨下三級台階。",
+          "en": "She hits the stairwell door open and drops three steps in one stride."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人還在上面半層，門沒有完全彈回去。",
+          "en": "The other fighter is still half a landing above. The door has not fully swung back."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她的手沿扶手滑下，鞋跟一下一下敲著水泥。",
+          "en": "Her hand skids down the rail. Her heels knock on the concrete."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "對面人跳過轉角，背包帶抽在欄杆上。",
+          "en": "The other fighter jumps the corner. A pack strap cracks against the rail."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她在平台上突然停住，追的人從她身旁衝過去。",
+          "en": "She stops dead on a landing and the pursuer shoots past her side."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "對面人抓住欄杆，才把衝出去的身子拽回來。",
+          "en": "The other fighter grabs the rail and hauls the overshooting body back."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她已經下到再下一層，肩擦過牆上皮開的漆。",
+          "en": "She is already another floor down. Her shoulder scrapes paint peeling off the wall."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "對面人從欄杆外側跨下來，兩人之間又近了。",
+          "en": "The other fighter climbs down outside the rail and the gap between them closes."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "她踢開堆在梯級上的紙箱，紙箱往下滾。",
+          "en": "She kicks the cartons stacked on the steps. The cartons roll downward."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "滾下來的紙箱砸中追的人的小腿。",
+          "en": "A carton rolling down hits the pursuer's shin."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "對面人踉蹌了一下，仍沒有停止下樓。",
+          "en": "The other fighter staggers and does not stop coming down the stairs."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "她推開一扇半掩的鐵門，門後的梯更窄。",
+          "en": "She shoves a half-shut iron door. The stair behind it is narrower."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "鐵門回彈，幾乎打到緊跟在後的額頭。",
+          "en": "The iron door rebounds and nearly hits the forehead close behind."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人用掌心擋住那扇門，門軸拉出一聲長響。",
+          "en": "The other fighter stops the door with a palm. The hinge draws out a long note."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她趁這一擋，連跳兩級，落在下一層平台。",
+          "en": "She uses that block, jumps two steps, and lands on the next landing."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "對面人鬆開鐵門，鞋底在濕梯級上打滑。",
+          "en": "The other fighter lets the iron door go. A sole skids on the wet step."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她聽見打滑的聲音，沒有回頭，只把速度加快。",
+          "en": "She hears the skid, does not look back, and only goes faster."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "一盞壞掉的燈讓半層陷入黑暗，她伸手摸牆。",
+          "en": "A dead lamp drops half a floor into the dark. She feels along the wall."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "黑暗裡對面人撞到她的背包，手又被甩掉。",
+          "en": "In the dark the other fighter bumps her pack and the hand is shaken off."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她衝出黑暗，底下出口漏進一束日光。",
+          "en": "She bursts out of the dark. A beam of daylight leaks in from the exit below."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "對面人跟著那束光下來，手差點抓到她的衣領。",
+          "en": "The other fighter follows that beam down. A hand nearly catches her collar."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她側身讓過那一抓，肩膀撞上出口門框。",
+          "en": "She slips that grab. Her shoulder hits the exit doorframe."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "她撞開出口的門，跑進後巷，門在身後猛地合上。",
+          "en": "She bangs the exit door open, runs into the back lane, and the door slams shut behind her."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "對面人推門的時候，門還卡在回彈的位置。",
+          "en": "When the other fighter pushes, the door is still stuck in its rebound."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她已經跑到後巷轉角，腳步濺起地上的水。",
+          "en": "She is already at the back-lane corner. Her steps splash the water on the ground."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "門終於被推開，對面人再從後巷追出來。",
+          "en": "The door finally opens. The other fighter chases out of the back lane again."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她跳過一排垃圾桶，桶蓋在她身後翻起來。",
+          "en": "She vaults a row of bins. Lids flip up behind her."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人沒有跳過去，只好繞過垃圾桶，距離被拉開。",
+          "en": "The other fighter does not vault and has to go around the bins. The gap opens."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她在巷口回頭，看見追的人還在桶後面。",
+          "en": "At the lane mouth she looks back and sees the pursuer still behind the bins."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "她轉入旁邊的橫街，這一追仍沒有變成對打。",
+          "en": "She turns into the side street beside the lane. The chase still has not become a fight."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "chase-tram-gap",
+      "archetype": "chase",
+      "title": "Tram gap",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她跟著一班即將關門的電車，朝月台跑去。",
+          "en": "She runs toward the platform with a tram whose doors are about to shut."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人在她身後，手差一點抓到背包。",
+          "en": "The other fighter is behind her. A hand comes within a little of catching the pack."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她側身擠進還沒有合上的車門。",
+          "en": "She turns sideways and squeezes through the door that has not closed."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "車門夾住對面人的手腕，那人被留在月台上。",
+          "en": "The door traps the other fighter's wrist. That fighter is left on the platform."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她在車廂裡後退，看著那隻手被門慢慢擠出去。",
+          "en": "Inside the carriage she backs up and watches that hand being squeezed back out."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "電車一動，月台上的人掙開了被夾住的腕。",
+          "en": "The tram lurches. The person on the platform wrenches the trapped wrist free."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她跑到車廂連接處，從門縫看見追的人在旁邊跑。",
+          "en": "She runs to the gangway and through the gap sees the pursuer running alongside."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "對面人沿月台邊緣追，速度和車窗保持一致。",
+          "en": "The other fighter sprints along the platform edge and matches the speed of the window."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "她拉開車廂之間的門，準備在下一站跳下去。",
+          "en": "She hauls open the door between carriages and gets ready to jump at the next stop."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "對面人已經跑到月台盡頭，前面是軌道上方的空檔。",
+          "en": "The other fighter has already reached the end of the platform. Ahead is the open gap above the tracks."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "電車還沒停穩，她推開門跳到月台磚上。",
+          "en": "The tram has not fully stopped. She pushes the door and jumps onto the platform bricks."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "對面人從空檔外側繞過來，兩人差點迎面相撞。",
+          "en": "The other fighter comes around the outside of the gap and they nearly collide head-on."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她急停讓過，改朝相反方向的電車跑。",
+          "en": "She stops short, lets the pursuer pass, and runs for the tram going the other way."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人剎住腳，鞋底在月台磚上劃出聲來。",
+          "en": "The other fighter brakes. A sole shrieks on the platform brick."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她跑上反方向那班電車的踏板。",
+          "en": "She runs onto the step of the tram heading the other way."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "車門開始合上，她的肩還卡在門邊。",
+          "en": "The doors start to close. Her shoulder is still caught in the door edge."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "她把身子擠進車裡，背包帶被門夾住。",
+          "en": "She forces her body into the tram. The pack strap is caught by the door."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "對面人追到這扇門前，抓住露在門外的背包帶。",
+          "en": "The other fighter reaches this door and grabs the pack strap hanging outside."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "電車起動，那條背包帶從對方掌心抽走。",
+          "en": "The tram pulls away. The pack strap rips out of the other fighter's palm."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她從車廂地板上爬起來，月台已經在身後迅速後退。",
+          "en": "She gets up from the carriage floor. The platform is already dropping away behind her."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "對面人沿月台再追幾步，被上車的乘客擋住。",
+          "en": "The other fighter runs a few more steps along the platform and boarding passengers block the way."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她移到車門窗前，看見追的人被留在原地。",
+          "en": "She moves to the door window and sees the pursuer left standing."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "下一站距離很短，她提前站到門邊等候。",
+          "en": "The next stop is close. She stands at the door early and waits."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "車門一開她就跳下去，不跟著人流往出口走。",
+          "en": "The doors open and she jumps. She does not follow the crowd toward the exit."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "對面人從後面一班車的門裡衝出來。",
+          "en": "The other fighter bursts out of the door of the tram behind."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "兩人在兩班車中間的空檔裡面對面站定。",
+          "en": "The two come face to face in the gap between the trams and both stop."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她不揮拳，低下頭從對方面前鑽過去。",
+          "en": "She does not throw a punch. She ducks and goes past the other fighter."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人立刻轉身再追，背包幾乎擦到她的背。",
+          "en": "The other fighter turns at once and chases. The pack nearly brushes her back."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她躍過月台盡頭的黃線，跑下通往街道的斜坡。",
+          "en": "She vaults the yellow line at the end of the platform and runs down the slope to the street."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "斜坡上的距離再次拉開，這一追還沒有停。",
+          "en": "On the slope the gap opens again. The chase has not stopped."
+        }
+      ]
+    },
+    {
+      "kind": "narrative_board",
+      "show_id": "chase-harbour-containers",
+      "archetype": "chase",
+      "title": "Harbour containers",
+      "beats": [
+        {
+          "beat_id": "s01",
+          "second": 1,
+          "yue": "她從貨櫃的縫裡鑽出來，朝碼頭的燈跑去。",
+          "en": "She crawls out of a gap between containers and runs toward the dock lights."
+        },
+        {
+          "beat_id": "s02",
+          "second": 2,
+          "yue": "對面人在後一排貨櫃出現，距離大約二十步。",
+          "en": "The other fighter appears one row back. The gap is about twenty paces."
+        },
+        {
+          "beat_id": "s03",
+          "second": 3,
+          "yue": "她向左轉，沿著藍色貨櫃的長邊全速跑。",
+          "en": "She turns left and sprints the full length of a blue container."
+        },
+        {
+          "beat_id": "s04",
+          "second": 4,
+          "yue": "對面人抄近路，從兩櫃之間的窄縫橫切過去。",
+          "en": "The other fighter takes a shorter line and cuts through the narrow gap between two containers."
+        },
+        {
+          "beat_id": "s05",
+          "second": 5,
+          "yue": "她差點和橫切過來的人撞上，急停才避開。",
+          "en": "She nearly hits the person cutting across and stops hard just in time."
+        },
+        {
+          "beat_id": "s06",
+          "second": 6,
+          "yue": "對面人伸手抓了個空，她已貼著櫃壁滑過去。",
+          "en": "The other fighter grabs empty air. She is already sliding along the container wall."
+        },
+        {
+          "beat_id": "s07",
+          "second": 7,
+          "yue": "她跑上一個用木卡板疊成的低台。",
+          "en": "She runs onto a low stack made of wooden pallets."
+        },
+        {
+          "beat_id": "s08",
+          "second": 8,
+          "yue": "對面人跳上同一堆卡板，木板被踏得亂響。",
+          "en": "The other fighter jumps onto the same stack. The boards clatter underfoot."
+        },
+        {
+          "beat_id": "s09",
+          "second": 9,
+          "yue": "她從卡板上躍到下一排貨櫃的櫃面。",
+          "en": "She leaps from the pallets onto the skin of the next container row."
+        },
+        {
+          "beat_id": "s10",
+          "second": 10,
+          "yue": "對面人跟著躍上去，鐵皮被踩得悶響一聲。",
+          "en": "The other fighter leaps after her. A footfall thumps on the steel skin."
+        },
+        {
+          "beat_id": "s11",
+          "second": 11,
+          "yue": "她在櫃面上跑，鞋底打滑，雙臂張開保持平衡。",
+          "en": "She runs along the containers. Her soles skid and both arms open to keep balance."
+        },
+        {
+          "beat_id": "s12",
+          "second": 12,
+          "yue": "追的人離她只剩兩步，手指碰到她的衣角。",
+          "en": "The pursuer is only two steps away. Fingers touch her hem."
+        },
+        {
+          "beat_id": "s13",
+          "second": 13,
+          "yue": "她突然趴下，那一抓從她背上掠過去。",
+          "en": "She drops flat and that grab skims over her back."
+        },
+        {
+          "beat_id": "s14",
+          "second": 14,
+          "yue": "對面人收不住腳，從櫃邊滑了下去。",
+          "en": "The other fighter cannot stop and slides off the container edge."
+        },
+        {
+          "beat_id": "s15",
+          "second": 15,
+          "yue": "她爬起來，看見對方落在下面的窄巷裡。",
+          "en": "She gets up and sees the other fighter drop into the narrow lane below."
+        },
+        {
+          "beat_id": "s16",
+          "second": 16,
+          "yue": "她不跳下去對打，沿著櫃面繼續往碼頭跑。",
+          "en": "She does not jump down to fight. She keeps running along the containers toward the dock."
+        },
+        {
+          "beat_id": "s17",
+          "second": 17,
+          "yue": "對面人在下面平行追，不時從縫裡抬頭看她。",
+          "en": "The other fighter runs parallel below and looks up through the gaps."
+        },
+        {
+          "beat_id": "s18",
+          "second": 18,
+          "yue": "她在斷開的櫃列前停住，前面是空的。",
+          "en": "She stops where the container row breaks. Ahead is empty air."
+        },
+        {
+          "beat_id": "s19",
+          "second": 19,
+          "yue": "對面人從焊在櫃側的鐵梯爬上來。",
+          "en": "The other fighter climbs the iron ladder welded to the container side."
+        },
+        {
+          "beat_id": "s20",
+          "second": 20,
+          "yue": "她退後兩步，等人頭剛冒出櫃邊就再跑。",
+          "en": "She backs up two steps and runs again as soon as a head clears the edge."
+        },
+        {
+          "beat_id": "s21",
+          "second": 21,
+          "yue": "對面人翻上櫃面，起跑時已經慢了一拍。",
+          "en": "The other fighter rolls onto the container. The start is already a beat late."
+        },
+        {
+          "beat_id": "s22",
+          "second": 22,
+          "yue": "她跳過兩櫃之間的一條黑縫，落在下一櫃。",
+          "en": "She jumps a black gap between two containers and lands on the next one."
+        },
+        {
+          "beat_id": "s23",
+          "second": 23,
+          "yue": "對面人跳同一條縫，手按在她剛離開的櫃邊。",
+          "en": "The other fighter jumps the same gap and a hand slaps the edge she has just left."
+        },
+        {
+          "beat_id": "s24",
+          "second": 24,
+          "yue": "她跑到最後一個貨櫃，下面就是碼頭的水面。",
+          "en": "She reaches the last container. Below is the harbour water."
+        },
+        {
+          "beat_id": "s25",
+          "second": 25,
+          "yue": "她沿著櫃側的直梯快速爬下，沒有跳進水裡。",
+          "en": "She climbs down the vertical ladder on the side and does not jump into the water."
+        },
+        {
+          "beat_id": "s26",
+          "second": 26,
+          "yue": "對面人還在櫃面上，只好去找另一條梯。",
+          "en": "The other fighter is still on the container and has to find another ladder."
+        },
+        {
+          "beat_id": "s27",
+          "second": 27,
+          "yue": "她的腳一沾到碼頭，就鑽進一排橙色貨櫃後面。",
+          "en": "The moment her feet touch the dock she ducks behind a row of orange containers."
+        },
+        {
+          "beat_id": "s28",
+          "second": 28,
+          "yue": "對面人下到地面，只看見橙色櫃壁，看不見人。",
+          "en": "The other fighter reaches the ground and sees only orange walls, not a person."
+        },
+        {
+          "beat_id": "s29",
+          "second": 29,
+          "yue": "她從貨櫃的另一頭探出身，反向跑向閘口。",
+          "en": "She comes out the far end and runs back toward the gate."
+        },
+        {
+          "beat_id": "s30",
+          "second": 30,
+          "yue": "她和閘口之間的距離越拉越大，追的人仍在貨櫃裡繞。",
+          "en": "The gap between her and the gate keeps growing. The pursuer is still weaving among the containers."
+        }
+      ]
+    }
+  ]
+}
