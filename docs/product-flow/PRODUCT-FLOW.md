@@ -31,7 +31,7 @@ Every step is a process card on [`workflow.board.json`](workflow.board.json). Th
 
 Order source: the workflow board sticky note "EXACT JACK 1..10 ORDER", plus [`workflow.dsl`](workflow.dsl).
 
-Skill files for that order are indexed in [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) (HM-PF-51). A name that already has a skill stays as it is. A name with no file yet is a contract stub. Step 10 `hm-voice-track` is DESIGNED-HOLD only. This index does not SIGN voice or #41.
+Skill files for that order are indexed in [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) (HM-PF-51). A name that already has a skill stays as it is. A name with no file yet is a contract stub. Step 10 `hm-voice-track` is DESIGNED-HOLD only. This index does not SIGN voice or #41. [`html-motion-fight-video`](../../skills/html-motion-fight-video/SKILL.md) (HM-PF-40) sequences steps 1..9 over that index and the composer helper, and stops for Jack GO. It does not SIGN voice or #41.
 
 Sprite-gen (`6a3f4c47`) stays an external CLI. Step 6 handoff is [`HM-PF-25-spritegen-handoff.md`](HM-PF-25-spritegen-handoff.md): generation stays outside the FE, and Jack imports one strip PNG and one strip JSON through the File API. `HM-SG-01` is staged-only and **NOT PLAYABLE** until `HM-SG-02` is separately signed, implemented, verified, and shipped. `HM-SG-02`, `HM-SG-03`, and `HM-SG-04` are **DESIGNED (NOT SIGNED)** on the architecture board. Shipped claims inside the boards cite `fight-motion-kit` `main` at `8219598c2749daeeb3719840087964422ba46fa2`.
 
@@ -105,6 +105,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) | FE-only forge checklist: composer/show on this kit, Wave 1 FX vendor on pixelfx (HM-PF-52) |
 | [`HM-PF-24-cam-grammar-sync.md`](HM-PF-24-cam-grammar-sync.md) | Notion ↔ box camera-grammar pointer, locked labels, and drift checklist (HM-PF-24) |
 | [`HM-PF-51-skill-pack.md`](HM-PF-51-skill-pack.md) | Approval skill name set: shipped skills left in place, contract stubs for the missing names, voice DESIGNED-HOLD (HM-PF-51) |
+| [`html-motion-fight-video`](../../skills/html-motion-fight-video/SKILL.md) | Steps 1..9 sequencer over the shipped skills, local compose and export, Jack GO before gen. Voice and #41 stay HOLD (HM-PF-40) |
 | [`HM-PF-05-sprite-forge-absence.md`](HM-PF-05-sprite-forge-absence.md) | Sprite Forge absent / OOS for HM FE; operator path is generate outside, QA, then local PNG + JSON (HM-PF-05) |
 | [`beat-id-bridge.md`](beat-id-bridge.md) | Storyboard `beat_id` shared with `.motion.json` atoms (HM-PF-08). n8n sees the same ids |
 | [`HM-PF-06-cantonese-board.md`](HM-PF-06-cantonese-board.md) | Cantonese second-by-second board, editable HM text, Jack GO before gen or rhythm |
