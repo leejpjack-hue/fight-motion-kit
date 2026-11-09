@@ -58,6 +58,7 @@ For step 3, [approved rhythm plans](RHYTHM-PACING.md) cover the single
 and target-duration lint in the same portable project.
 For steps 4–5, [scene camera authoring](CAMERA-AUTHORING.md) and the
 [rooftop camera-grammar golden show](HM-PF-22-rooftop-golden-show.md) cover the
+grammar field pointer in [HM-PF-24](HM-PF-24-cam-grammar-sync.md), plus the
 template beat sheet, one-click Wide re-establish beat picker and zero-Wide lint,
 strict preset maps, local text/JSON `Camera:` clause exports that round-trip into
 skill inputs, human overrides, the existing chain engine with visible snap-zoom
@@ -95,6 +96,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`DUAL-PATH-CONTRACT.md`](DUAL-PATH-CONTRACT.md) | n8n, HTML Motion UI, and skills Owns / Must-not-own contract (HM-PF-50) |
 | [`MOTION-JSON-SOT.md`](MOTION-JSON-SOT.md) | Any-step edit loop: one `.motion.json`, localStorage draft plus file reopen (HM-PF-44) |
 | [`FORGE-BOUNDARY.md`](FORGE-BOUNDARY.md) | FE-only forge checklist: composer/show on this kit, Wave 1 FX vendor on pixelfx (HM-PF-52) |
+| [`HM-PF-24-cam-grammar-sync.md`](HM-PF-24-cam-grammar-sync.md) | Notion ↔ box camera-grammar pointer, locked labels, and drift checklist (HM-PF-24) |
 | [`beat-id-bridge.md`](beat-id-bridge.md) | Storyboard `beat_id` shared with `.motion.json` atoms (HM-PF-08). n8n sees the same ids |
 | [`architecture.board.json`](architecture.board.json) | DiagramTool v3.0 architecture board (design SoT) |
 | [`architecture.dsl`](architecture.dsl) | Native DSL for that board |
