@@ -82,6 +82,7 @@
 <h2>Local body-strip handoff</h2><p>PENDING, NOT PLAYABLE until SG02. Saves original bytes and normalized policy only. FINAL periodic strips support none/feet alignment and original source samples. FINAL once/once-return strips carry unsupported root motion. Retiming, body/motion anchors and lifetime effects are unsupported. No generation, upload or playback.</p>
 <fieldset id="stripFields"><label>Choose one PNG + one JSON <input id="stripInput" type="file" accept=".png,.json" multiple></label>
 <form method="dialog"><button>Cancel</button></form><button id="commitStrip" disabled>Save pending strip</button></fieldset>
+<div id="stripQaPanel" class="strip-qa-panel" role="group" aria-label="Strip timing and body reference QA" hidden><div class="strip-qa-head"><span class="eyebrow">STRIP QA</span><span id="stripQaSummary" class="pill">not staged</span></div><dl id="stripQaFields" class="strip-qa-fields"></dl><p id="stripQaError" class="field-hint" role="status" hidden></p><ul id="stripQaWarnings" class="strip-qa-warnings" aria-label="Strip warnings and source report" hidden></ul></div>
 <p id="stripStatus" role="status" aria-live="polite"></p>
 </dialog>
 <dialog id="projectMediaDialog" class="project-media-dialog">

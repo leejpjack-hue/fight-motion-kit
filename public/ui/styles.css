@@ -172,3 +172,18 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 .camera-grammar .wide-picker-row{align-items:end;margin:6px 0}
 .camera-grammar .wide-picker-actions{margin-bottom:2px}
 .camera-chain-author{border-top:1px solid var(--border,#343a43);margin-top:10px;padding-top:4px}
+
+/* HM-PF-30 strip QA panel. View-model only; it does not drive the renderer clock. */
+.strip-qa-panel{margin-top:14px;border:1px solid var(--border);border-radius:7px;background:var(--shell-raised);padding:10px 12px}
+.strip-qa-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.strip-qa-fields{display:grid;gap:4px;margin:0}
+.strip-qa-row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:baseline;font-size:11px}
+.strip-qa-row dt{color:var(--muted)}
+.strip-qa-row dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.strip-qa-warnings{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
+.strip-qa-warnings li{font-size:11px;color:var(--shell-text);display:flex;gap:7px;align-items:baseline}
+.strip-qa-source{flex:none;font-size:9px;letter-spacing:.06em;border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted)}
+.strip-qa-warnings li[data-source="producer"] .strip-qa-source,.strip-qa-warnings li[data-source="qa"] .strip-qa-source{border-color:var(--danger);color:var(--danger)}
+.strip-qa-warnings li[data-source="adapter"] .strip-qa-source{border-color:var(--warn);color:var(--warn)}
+.strip-qa-warnings li[data-source="metadata"]{color:var(--muted)}
+#stripQaError{margin:8px 0 0;color:var(--danger)}
