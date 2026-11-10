@@ -67,6 +67,29 @@ print('ok')
   assert.match(out,/ok/);
 });
 
+test('HM-PF-42: recorder MIME matrix prefers a concrete WebM or AVC type',()=>{
+  assert.deepEqual(X.RECORDER_MIME.map(row=>row.mime),[
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
+    'video/webm',
+  ]);
+  const support=set=>type=>set.has(type);
+  assert.equal(X.pickRecorderMime(support(new Set(['video/webm;codecs=vp9','video/mp4']))).mime,'video/webm;codecs=vp9');
+  assert.equal(X.pickRecorderMime(support(new Set(['video/webm;codecs=vp9','video/mp4']))).ext,'webm');
+  assert.equal(X.pickRecorderMime(support(new Set(['video/mp4;codecs=avc1.42E01E','video/mp4']))).mime,'video/mp4;codecs=avc1.42E01E');
+  assert.equal(X.pickRecorderMime(support(new Set(['video/mp4','video/webm']))).mime,'video/mp4');
+  assert.equal(X.pickRecorderMime(support(new Set(['video/webm']))).label,'WebM');
+  assert.equal(X.pickRecorderMime(support(new Set())),null);
+  assert.equal(X.pickRecorderMime(null),null);
+  const exportsSrc=fs.readFileSync('public/ui/exports.js','utf8');
+  assert.match(exportsSrc,/pickRecorderMime/);
+  assert.match(exportsSrc,/Recording needs this tab visible/);
+  assert.equal(exportsSrc.includes("['video/webm;codecs=vp9'"),false);
+  assert.equal(/\/api\/compose|api\.teqcon|wrangler deploy|:8770/.test(exportsSrc),false);
+});
+
 test('HM-EXPORT-X-PRESET: export scripts do not add a Workers compose backend',()=>{
   const src=['public/ui/x-export.js','public/ui/exports.js','public/ui/index.html'].map(p=>fs.readFileSync(p,'utf8')).join('\n');
   assert.equal(/\/api\/compose|api\.teqcon|wrangler deploy|:8770/.test(src),false);
