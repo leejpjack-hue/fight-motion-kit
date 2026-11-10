@@ -20,7 +20,7 @@
     if ($('exportFrame')) $('exportFrame').disabled = blocked;
     if ($('exportFrames')) $('exportFrames').disabled = blocked;
     if ($('exportTiming')) $('exportTiming').disabled = blocked;
-    if ($('exportVideo')) $('exportVideo').disabled = blocked || !videoType() || !HTMLCanvasElement.prototype.captureStream;
+    if ($('exportVideo')) $('exportVideo').disabled = blocked || !recorderChoice() || !HTMLCanvasElement.prototype.captureStream;
     return !blocked;
   }
   function assertExportAllowed() {
@@ -100,9 +100,9 @@
     let seq='Optional zip at '+preset.label+'. The local skill runs ffmpeg.';
     if(S.duration>0){try{seq='Optional zip at '+preset.label+' · '+HMXExport.framePlan(S.duration,preset.fps).length+' frames. The local skill runs ffmpeg.';}catch(e){seq='Optional zip at '+preset.label+'. '+e.message;}}
     $('frameSeqHint').textContent=seq;
-    const mime=videoType();
-    if(!mime||!HTMLCanvasElement.prototype.captureStream)$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML or the frame-sequence zip.';
-    else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
+    const choice=recorderChoice();
+    if(!choice||!HTMLCanvasElement.prototype.captureStream)$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML or the frame-sequence zip.';
+    else $('videoHint').textContent=choice.label+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
   }
   $('exportPreset').addEventListener('change',paintExportHints);
   const stripImages=new Map();
@@ -274,8 +274,8 @@
     window.ready=r.load(data).then(()=>{get('play').disabled=false;draw();});window.renderAt=value=>{playing=false;t=Math.max(0,Math.min(duration,value));draw();};
     window.ready.catch(e=>{get('title').textContent='Unable to load: '+e.message;});
   }
-  function videoType() {return ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));}
-  paintExportHints();if(!videoType()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
+  function recorderChoice(){if(!window.MediaRecorder||typeof MediaRecorder.isTypeSupported!=='function')return null;return HMXExport.pickRecorderMime(type=>MediaRecorder.isTypeSupported(type));}
+  paintExportHints();if(!recorderChoice()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
   on('exportFrames',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();if(!S.composed)throw new Error('Add a clip before exporting a frame sequence.');
@@ -298,20 +298,21 @@
     report('Frame sequence downloaded. Run ffmpeg on the local skill — this tab does not encode it.');
   }));
   on('exportVideo',()=>task(async()=>{
-    const mime=videoType();
-    if(!mime)throw new Error('This browser cannot record canvas video. Export playable HTML or a frame sequence instead.');
+    const choice=recorderChoice();
+    if(!choice)throw new Error('This browser cannot record canvas video. Export playable HTML or a frame sequence instead.');
+    if(document.hidden)throw new Error('Recording needs this tab visible. Keep this tab visible and retry.');
     assertExportAllowed();
     S.pause();await S.compile();S.recording=true;const preset=selectedPreset();
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);S.sampleStageFrameAt(0,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
-    const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:preset.videoBitsPerSecond});
+    const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:choice.mime,videoBitsPerSecond:preset.videoBitsPerSecond});
     const done=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;recorder.onerror=e=>reject(e.error||new Error('Video recorder failed'));});
     let visibilityChanged=false;const interrupted=()=>{if(document.hidden)visibilityChanged=true;};document.addEventListener('visibilitychange',interrupted);
     try{
       recorder.start();const start=performance.now(),duration=S.duration;
       await new Promise(resolve=>{const frame=now=>{const t=Math.min(duration,(now-start)/1000);S.sampleStageFrameAt(t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
       recorder.stop();await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
-      download(S.project.show.show_id+(mime.includes('mp4')?'.mp4':'.webm'),new Blob(chunks,{type:mime}));report('Video downloaded.');
+      download(S.project.show.show_id+'.'+choice.ext,new Blob(chunks,{type:choice.mime}));report('Video downloaded.');
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));
 })();
