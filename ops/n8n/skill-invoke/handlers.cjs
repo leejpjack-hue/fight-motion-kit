@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { assessRepo } = require('./pack.cjs');
+const { assemble } = require('./assemble-scratch-pack.cjs');
 
 const REPO = path.resolve(__dirname, '../../..');
 const SHOW_ID = 'baijia-elfmage-void-array';
@@ -134,12 +135,29 @@ async function cameraShots(body) {
 
 async function sprite(body) {
   loadShow(body.show_id);
+  const keys = path.join(REPO, 'work/scratch-keys');
+  if (fs.existsSync(keys)) {
+    const packed = assemble({
+      src: keys,
+      out: path.join(REPO, 'work/packs', SHOW_ID),
+    });
+    if (packed.ok) {
+      return envelope(body, {
+        ok: true,
+        outcome: 'scratch-pack',
+        tool: 'ops/n8n/skill-invoke/assemble-scratch-pack.cjs',
+        honest: 'Wrote 7 keyed holds for P01–P47 under work/packs. This is not the 377-frame densified pack. Camera and timing stay on the source show. Source show was not modified.',
+        pack: { plates: packed.plates, keys: packed.keys, layout: packed.layout },
+        not_playable: false,
+      });
+    }
+  }
   return envelope(body, {
     ok: false,
     outcome: 'incomplete',
     tool: 'skills/hm-spritegen-handoff/handoff.cjs',
-    honest: 'No strip PNG and strip JSON were supplied. Did not classify a handoff. SG-01 stays NOT PLAYABLE until SG-02. Generation stays outside this server.',
-    missing: ['strip.png', 'strip.json'],
+    honest: 'No scratch key set was in work/scratch-keys, and no strip PNG was supplied. Did not invent plates. Source show was not modified.',
+    missing: ['work/scratch-keys'],
     not_playable: true,
   });
 }
@@ -184,8 +202,12 @@ function linkCutouts(cutoutDir) {
   if (!fs.existsSync(cutoutDir)) return null;
   if (fs.existsSync(dest)) {
     const current = fs.lstatSync(dest);
-    if (current.isSymbolicLink() && fs.realpathSync(dest) === fs.realpathSync(cutoutDir)) return dest;
-    return dest;
+    if (current.isSymbolicLink()) {
+      if (fs.realpathSync(dest) === fs.realpathSync(cutoutDir)) return dest;
+      fs.unlinkSync(dest);
+    } else {
+      return dest;
+    }
   }
   fs.symlinkSync(cutoutDir, dest);
   return dest;

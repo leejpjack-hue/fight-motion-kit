@@ -7,6 +7,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { invoke, SHOW_ID } = require('../ops/n8n/skill-invoke/handlers.cjs');
 const { assessLayout, assessRepo } = require('../ops/n8n/skill-invoke/pack.cjs');
+const { assignments, assemble } = require('../ops/n8n/skill-invoke/assemble-scratch-pack.cjs');
+const { spawnSync } = require('node:child_process');
 
 test('step 1 reads the void-array cast and does not claim a lock pack', async () => {
   const result = await invoke('character-openpose', { step: 1, step_id: 'character', show_id: SHOW_ID });
@@ -65,6 +67,38 @@ test('a layout with the cutout file on disk is pack-ready', () => {
   const verdict = assessLayout(layout, [dir]);
   assert.equal(verdict.ok, true);
   assert.equal(verdict.reason, 'pack-ready');
+});
+
+test('scratch assignments cover every storyboard plate once', () => {
+  const map = assignments();
+  assert.equal(Object.keys(map).length, 47);
+  assert.equal(map.P01, 'k01');
+  assert.equal(map.P02, 'k02');
+  assert.equal(map.P05, 'k03');
+  assert.equal(map.P23, 'k04');
+  assert.equal(map.P28, 'k05');
+  assert.equal(map.P36, 'k06');
+  assert.equal(map.P47, 'k07');
+  assert.equal(new Set(Object.values(map)).size, 7);
+});
+
+test('assemble writes a pack the slate gate accepts', () => {
+  const ffmpeg = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' });
+  if (ffmpeg.status !== 0) return;
+  const src = fs.mkdtempSync(path.join(os.tmpdir(), 'va-keys-'));
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'va-pack-'));
+  const names = ['va-k01-open.jpg', 'va-k02-magic.jpg', 'va-k03b-clash.jpg', 'va-k04-midair.jpg', 'va-k05-disarm.jpg', 'va-k06-freeze.jpg', 'va-k07-end.jpg'];
+  for (const name of names) {
+    const made = spawnSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=white:s=64x36', '-frames:v', '1', path.join(src, name)], { encoding: 'utf8' });
+    assert.equal(made.status, 0, name);
+  }
+  const packed = assemble({ src, out });
+  assert.equal(packed.ok, true);
+  assert.equal(packed.keys, 7);
+  const verdict = assessLayout(JSON.parse(fs.readFileSync(packed.layout, 'utf8')), [out]);
+  assert.equal(verdict.ok, true);
+  assert.equal(verdict.reason, 'pack-ready');
+  assert.equal(verdict.plates, 47);
 });
 
 test('background author refuses to overwrite the pack motion', async () => {
