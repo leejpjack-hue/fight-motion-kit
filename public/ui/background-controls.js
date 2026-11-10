@@ -1,7 +1,8 @@
 /* Background images and motion can inherit project defaults or belong to a clip. */
 (() => {
   const S=window.HMStudio,{$,on,safe}=S,C=window.HMComposeClient;
-  let spanOpenOverride=null,lastSpanScopeKey='',lastSpanAuthored=false;
+  let spanOpenOverride=null,lastSpanScopeKey='',lastSpanAuthored=false,packsDoc=null;
+  fetch('/presets/bg_motion_packs.json').then(r=>{if(!r.ok)throw Error('missing');return r.json();}).then(doc=>{packsDoc=doc;if(S.project)refresh();}).catch(()=>{packsDoc=null;});
   const resolve=(p,src)=>p.assets?.[src]||(/^(data:|blob:|\/)/.test(src)?src:'/'+src);
   let preferPlayhead=false;
   const locationList=global=>global&&Object.prototype.hasOwnProperty.call(global,'locations')&&Array.isArray(global.locations)?global.locations:null;
@@ -85,6 +86,8 @@
     motionSel.value=preset;
     for(const opt of motionSel.options){const info=support[opt.value];opt.disabled=!!(info&&!info.ok);opt.title=info&&!info.ok?info.reason:'';}
     $('backgroundMotionValue').textContent=Math.round((m?.amount??.4)*100)+'%';
+    const amountEl=$('backgroundMotionAmount');if(document.activeElement!==amountEl)amountEl.value=String(m?.amount??.4);
+    const packNote=$('backgroundMotionPackNote');if(packNote)packNote.textContent=packCopy($('backgroundMotionPack').value,clip);
     const blocked=!!(support[preset]&&!support[preset].ok);
     const cNow=context(),scopeKey=`${cNow.projectId}:${cNow.scope}:${cNow.scope==='clip'?cNow.atomId:(schedule?cNow.locationId:cNow.key)}`;
     const baseSpanUi=C.resolveBackgroundSpanUi(m,showSeconds(p),null);
@@ -186,6 +189,13 @@
     }
     return ' Continuous (show): one move across the whole show.';
   }
+  function packCopy(id,clip){
+    const where=clip?'this clip':'the project default';
+    if(id==='hold')return 'Hold keeps the crop still on '+where+', aligned to a micro-cut. The clip camera stays.';
+    if(id==='slow-pan')return 'Slow pan slides the crop once across the show on '+where+', aligned to a dialogue hold. The clip camera stays.';
+    if(id==='accent-pan')return 'Accent pan restarts a stronger move on '+where+', aligned to an impact hold. The clip camera stays.';
+    return clip?'Match rhythm writes hold, slow pan, or accent pan on this clip from its timing hold. The clip camera stays.':'Match rhythm writes hold, slow pan, or accent pan on every clip that already has a timing hold. The clip camera stays.';
+  }
   function motionCopy(crop,preset,honestyLabel){
     const info=(backgroundMotionSupport(crop)||{})[preset]||{ok:false,reason:'This background motion is not available.'};
     if(!info.ok)return {blocked:true,text:info.reason};
@@ -214,6 +224,23 @@
     }catch(e){refresh();throw e;}
   }
   function changeSpan(){spanOpenOverride=true;$('backgroundMotionClock').value='span';changeMotion();}
+  $('backgroundMotionPack').onchange=()=>{const p=S.project;if(!p)return;const clip=$('backgroundScope').value==='clip';$('backgroundMotionPackNote').textContent=packCopy($('backgroundMotionPack').value,clip);};
+  on('applyBackgroundMotionPack',()=>{
+    if(!packsDoc)throw Error('Load the shipped bg_motion_packs.json.');
+    const packId=$('backgroundMotionPack').value,c=context(),show=S.project&&S.project.show;
+    if(!show)throw Error('Choose a project before applying a background motion pack.');
+    const idx=show.atoms.findIndex(a=>a.id===c.atomId);
+    const opts={packs:packsDoc};
+    if(packId==='rhythm'){if(c.scope==='clip'){if(idx<0)throw Error('Select a clip before applying a background motion pack.');opts.indices=[idx];}}
+    else if(c.scope==='clip'){if(idx<0)throw Error('Select a clip before applying a background motion pack.');opts.scope='clip';opts.indices=[idx];}
+    else if(locationList(show.bg||{})){opts.scope='location';opts.locationId=c.locationId;}
+    else opts.scope='project';
+    S.editProject(project=>{
+      if(project.show.show_id!==c.projectId)throw Error('Project changed. Choose the background again.');
+      const next=C.applyBgMotionPack(project.show,packId,opts);
+      project.show.bg=next.bg;project.show.atoms=next.atoms;
+    });
+  });
   $('backgroundMotion').onchange=safe(()=>{spanOpenOverride=null;changeMotion();});
   $('backgroundMotionAmount').onchange=safe(changeMotion);
   $('backgroundMotionClock').onchange=safe(()=>{spanOpenOverride=$('backgroundMotionClock').value==='span'?true:false;changeMotion();});
