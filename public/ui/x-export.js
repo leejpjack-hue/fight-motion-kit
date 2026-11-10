@@ -5,11 +5,25 @@
   'use strict';
   const HINT_SECONDS = 30;
   const HONESTY = 'Real-time Record still needs this tab visible. Deterministic ffmpeg stays on the local skill.';
+  const RECORDER_MIME = [
+    { mime: 'video/webm;codecs=vp9', ext: 'webm', label: 'WebM' },
+    { mime: 'video/webm;codecs=vp8', ext: 'webm', label: 'WebM' },
+    { mime: 'video/mp4;codecs=avc1.42E01E', ext: 'mp4', label: 'MP4' },
+    { mime: 'video/mp4', ext: 'mp4', label: 'MP4' },
+    { mime: 'video/webm', ext: 'webm', label: 'WebM' },
+  ];
   const presets = [
     { id: '720p30', label: '720p30', width: 1280, height: 720, fps: 30, videoBitsPerSecond: 5000000 },
     { id: '1080p30', label: '1080p30', width: 1920, height: 1080, fps: 30, videoBitsPerSecond: 8000000 },
   ];
   function presetById(id) { return presets.find(p => p.id === id) || null; }
+  function pickRecorderMime(isTypeSupported) {
+    if (typeof isTypeSupported !== 'function') return null;
+    for (let i = 0; i < RECORDER_MIME.length; i++) {
+      if (isTypeSupported(RECORDER_MIME[i].mime)) return RECORDER_MIME[i];
+    }
+    return null;
+  }
   function formatMbps(bps) { return (Math.round(bps / 1e5) / 10).toFixed(1) + ' Mbps'; }
   function webmMegabytes(bps, seconds) { return Math.round((bps * seconds / 8 / 1e6) * 10) / 10; }
   function bitrateHint(preset) {
@@ -120,7 +134,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, pickRecorderMime, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
