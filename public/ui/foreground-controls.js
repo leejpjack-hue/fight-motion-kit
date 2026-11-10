@@ -24,8 +24,7 @@
     if (!p.show.fg.cam) p.show.fg.cam = { preset: 'parallax', amount: DEFAULT_FG_PARALLAX, nudge: { x: 0, y: 0, s: 0 } };
     return p.show.fg;
   }
-  function readImage(file) {
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw Error('Choose a PNG, JPG or WebP prop.');
+  function readFile(file) {
     if (file.size > 20 * 1024 * 1024) throw Error('Foreground image must be 20 MB or smaller.');
     return new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -33,6 +32,17 @@
       r.onerror = () => reject(r.error);
       r.readAsDataURL(file);
     });
+  }
+  function readImage(file) {
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw Error('Choose a PNG, JPG or WebP prop.');
+    return readFile(file);
+  }
+  function readBrokenCutout(file) {
+    const name = file.name || '';
+    const png = file.type === 'image/png' || (file.type === '' && /\.png$/i.test(name));
+    const webp = file.type === 'image/webp' || (file.type === '' && /\.webp$/i.test(name));
+    if (!png && !webp) throw Error('Broken cutout must be a PNG or WebP.');
+    return readFile(file);
   }
   function chosenSlot() {
     return $('fgSlot').value === 'overlay' ? 'overlay' : 'prop';
@@ -283,8 +293,8 @@
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const data = await readImage(file);
-      const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[file.type];
+      const data = await readBrokenCutout(file);
+      const ext = file.type === 'image/webp' || /\.webp$/i.test(file.name || '') ? 'webp' : 'png';
       const src = 'foreground/' + crypto.randomUUID() + '-broken.' + ext;
       writeProp((prop, p) => {
         if (prop.effect?.type !== 'break') throw Error('Attach a break before choosing its image.');
