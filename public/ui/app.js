@@ -1825,7 +1825,10 @@
     else if(sid===STREET){await bootShow(load(await builtIn(STREET)));}
     else if(sid===GRAMMAR){await bootShow(load(await builtIn(GRAMMAR)));}
     else if(sid===VOID){await bootShow(load(await builtIn(VOID)));}
-    else if(sid&&!GOLD.includes(sid)){await bootShow(load(copy(defaultGold)));status('Requested project is not stored here. Open its saved project JSON.',true);}
+    else if(sid&&!GOLD.includes(sid)){
+      await bootShow(load(copy(defaultGold)));
+      if(!(window.HMMarketSpritegenProof&&HMMarketSpritegenProof.matchesShow(sid)))status('Requested project is not stored here. Open its saved project JSON.',true);
+    }
     else await bootShow(load(copy(defaultGold)));
     const requestedTime=Number(new URLSearchParams(location.search).get('t'));if(Number.isFinite(requestedTime)){time=Math.min(maxScrubDuration(),Math.max(0,requestedTime));draw();}
   }
