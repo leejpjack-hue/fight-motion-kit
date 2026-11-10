@@ -1,0 +1,507 @@
+{
+  "show_id": "class-dense-fg-cam",
+  "title": "CLASS-DENSE-FG · FG cam vs BG",
+  "duration_target_s": 5,
+  "floor_y": 684,
+  "grounded": true,
+  "parity_mode": true,
+  "compose_mode": "parity",
+  "chars": {
+    "L": {
+      "name": "Lin Daiyu"
+    },
+    "R": {
+      "name": "Wang Xifeng"
+    }
+  },
+  "bg": {
+    "base": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+    "key_white": false,
+    "crops": {
+      "base": {
+        "x": 0.15,
+        "y": 0.05,
+        "w": 0.7,
+        "h": 0.9
+      }
+    },
+    "motion": {
+      "preset": "pan_right",
+      "amount": 0.7,
+      "clock": "show"
+    }
+  },
+  "overlays": [],
+  "atoms": [
+    {
+      "id": "street-01",
+      "label": "Kick retract",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P09"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-02",
+      "label": "Slip inside",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P10"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-03",
+      "label": "Body counter",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P11"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-04",
+      "label": "Parry and turn",
+      "kind": "duo",
+      "duration_s": 0.75,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P12"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-05",
+      "label": "Hook meets guard",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P13"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-06",
+      "label": "Low sweep evasion",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "straight"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P14"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-07",
+      "label": "Final fist clash",
+      "kind": "duo",
+      "duration_s": 0.5,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "clash"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P15"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1.035,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": -4,
+            "b": 4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    },
+    {
+      "id": "street-08",
+      "label": "Guarded standoff",
+      "kind": "duo",
+      "duration_s": 1,
+      "plates_needed": 1,
+      "pose_mode": "hero",
+      "motion": {
+        "family": "fight",
+        "beat_class": "guard_recover"
+      },
+      "hero": {
+        "layout_source": "assets/daiyu-wang-continuation/layout.json",
+        "plates": [
+          "P16"
+        ]
+      },
+      "camera": {
+        "preset": "static_hold",
+        "params": {
+          "s": {
+            "type": "lerp",
+            "a": 1.02,
+            "b": 1,
+            "ease": "smooth"
+          },
+          "x": {
+            "type": "lerp",
+            "a": 4,
+            "b": -4
+          },
+          "y": {
+            "type": "const",
+            "v": 0
+          }
+        }
+      },
+      "fx_hooks": [],
+      "background": {
+        "src": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+        "crop": {
+          "x": 0.15,
+          "y": 0.05,
+          "w": 0.7,
+          "h": 0.9
+        },
+        "motion": {
+          "preset": "pan_right",
+          "amount": 0.7,
+          "clock": "show"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "reuse": "HM-COMPOSE-FG",
+    "fg_proof": {
+      "id": "CLASS-DENSE-FG",
+      "parallax": 0.45,
+      "nudge": {
+        "x": 0,
+        "y": 0,
+        "s": 0
+      },
+      "bg_preset": "pan_right",
+      "bg_amount": 0.7,
+      "crop": {
+        "x": 0.15,
+        "y": 0.05,
+        "w": 0.7,
+        "h": 0.9
+      },
+      "character_preset": "static_hold",
+      "bitmap": "assets/daiyu-wang-continuation/rooftop-dusk.png",
+      "reason": "Classroom-dense crop and pan_right 0.70 with CLASS-DENSE-FG parallax 0.45. Classroom bitmaps and TUNG prop bytes are not in this kit, so the proof uses the shipped rooftop plate and an existing wording image."
+    }
+  },
+  "fg": {
+    "cam": {
+      "preset": "parallax",
+      "amount": 0.45,
+      "nudge": {
+        "x": 0,
+        "y": 0,
+        "s": 0
+      }
+    },
+    "props": [
+      {
+        "id": "class-dense-fg",
+        "src": "assets/wording/clash_en.png",
+        "x": 240,
+        "y": 180,
+        "scale": 0.45,
+        "z": 20,
+        "t_start": 0,
+        "t_end": 5
+      }
+    ]
+  }
+}
