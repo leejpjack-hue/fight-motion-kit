@@ -371,6 +371,74 @@ function cameraChannel(c, u, tl) {
   if (c.type === 'alt_bump') { const k = c.n * u; return (c.offset || 0) + (Math.floor(k) % 2 ? 1 : -1) * c.amp * Math.sin((k % 1) * Math.PI); }
   return 0;
 }
+// HM-PF-38: one sample of the three cameras the player already draws apart.
+// FG uses fgCameraFrame. BG uses the crop window. Character uses the clip pose.
+function layerCamMatrix(timeline, t, layout) {
+  const tl = timeline && typeof timeline === 'object' ? timeline : {};
+  const time = Math.round((Number(t) || 0) * 10000) / 10000;
+  const dur = Number.isFinite(+tl.duration_s) ? +tl.duration_s : 0;
+  const atoms = Array.isArray(tl.atoms) ? tl.atoms : [];
+  const plates = Array.isArray(tl.plates) ? tl.plates : [];
+  const plate = plates.find(p => time >= p.t0 && time < p.t1) || plates[plates.length - 1] || null;
+  const entry = plate && layout && layout[plate.id] ? layout[plate.id] : null;
+  const atom = (entry && atoms.find(a => a.id === entry.atom))
+    || atoms.find(a => time >= a.t0 && time < a.t1)
+    || atoms[atoms.length - 1]
+    || null;
+  const segments = atom && Array.isArray(atom.cam) ? atom.cam : [];
+  const seg = segments.find(s => time >= s.t0 && time < s.t1) || segments[segments.length - 1] || null;
+  const pose = cameraPoseOnSegment(seg, time);
+  const round4 = v => Math.round((+v || 0) * 10000) / 10000;
+  const bgLayer = typeof backgroundAt === 'function'
+    ? backgroundAt(entry, tl.bg, time)
+    : { motion: tl.bg && tl.bg.motion, crop: null };
+  const motion = (bgLayer && bgLayer.motion) || {};
+  const preset = motion.preset || 'follow_camera';
+  const amount = motion.amount == null ? 0.4 : +motion.amount;
+  const clock = atom
+    ? { duration: dur, atomT0: atom.t0, atomT1: atom.t1 }
+    : { duration: dur, atomT0: time, atomT1: time };
+  const u = backgroundMotionProgress(motion, time, clock);
+  const frame = backgroundMotionFrame(bgLayer && bgLayer.crop, preset, amount, u);
+  const fgCam = tl.fg && tl.fg.cam;
+  const fg = fgCam ? fgCameraFrame(fgCam, time, { duration: dur, atomT0: 0, atomT1: dur }) : null;
+  return {
+    t: time,
+    fg: fg ? { preset: fg.preset, amount: fg.amount, x: fg.x, y: fg.y, s: fg.s, u: fg.u } : null,
+    bg: {
+      preset,
+      amount: round4(Math.min(1, Math.max(0, Number.isFinite(amount) ? amount : 0))),
+      x: frame.crop.x,
+      y: frame.crop.y,
+      w: frame.crop.w,
+      h: frame.crop.h,
+      u: round4(u),
+      mode: frame.mode,
+    },
+    character: {
+      preset: (seg && seg.preset) || 'static_hold',
+      x: round4(pose.x),
+      y: round4(pose.y),
+      s: round4(pose.s),
+      r: round4(pose.r),
+    },
+  };
+}
+function layerCamsIndependent(row) {
+  if (!row || !row.fg || !row.bg || !row.character) return false;
+  if (row.fg.preset === row.bg.preset || row.fg.preset === row.character.preset) return false;
+  if (row.fg.x === row.character.x && row.fg.y === row.character.y && row.fg.s === row.character.s) return false;
+  return true;
+}
+function layerCamMatrixText(row) {
+  if (!row || !row.fg) return 'No foreground camera on this show.';
+  const mark = layerCamsIndependent(row) ? 'independent' : 'coupled';
+  return 't ' + row.t.toFixed(2) + 's · FG ' + row.fg.preset + ' ' + row.fg.amount
+    + ' x ' + row.fg.x
+    + ' · BG ' + row.bg.preset + ' ' + row.bg.amount + ' crop x ' + row.bg.x
+    + ' · Character ' + row.character.preset + ' x ' + row.character.x
+    + ' · ' + mark;
+}
 function cameraPoseOnSegment(seg, t) {
   const camera = { x: 0, y: 0, s: 1, r: 0 };
   if (!seg || !seg.curves) return camera;
@@ -475,7 +543,7 @@ backgroundLocationsBundle();
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null;
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -686,6 +754,7 @@ function createMotionRenderer(canvas, assets = {}) {
     const clockT = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
     const heldCut = resolveCutTransition(timeline.cuts, clockT);
     const t = heldCut && heldCut.freeze ? Math.max(0, heldCut.t - 1e-4) : clockT;
+    lastLayerMatrix = layerCamMatrix(timeline, t, layout);
     lastCut = heldCut ? Object.assign({ pictureT: t }, heldCut) : null;
     const pIdx = timeline.plates.findIndex(p => t >= p.t0 && t < p.t1);
     const plateIndex = pIdx >= 0 ? pIdx : timeline.plates.length - 1;
@@ -996,6 +1065,7 @@ function createMotionRenderer(canvas, assets = {}) {
     get lastRenderSource() { return lastRenderSource; },
     get lastPixelfx() { return lastPixelfx; },
     get lastCut() { return lastCut; },
+    get lastLayerMatrix() { return lastLayerMatrix; },
     set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
     get duration() { return timeline?.duration_s || 0; }
   };
@@ -1043,5 +1113,9 @@ hmRoot.resolveCutTransition = resolveCutTransition;
 hmRoot.drawWhipCut = drawWhipCut;
 hmRoot.paintCutOverlay = paintCutOverlay;
 hmRoot.cameraEase = cameraEase;
+hmRoot.cameraChannel = cameraChannel;
+hmRoot.layerCamMatrix = layerCamMatrix;
+hmRoot.layerCamsIndependent = layerCamsIndependent;
+hmRoot.layerCamMatrixText = layerCamMatrixText;
 hmRoot.cameraPoseOnSegment = cameraPoseOnSegment;
 hmRoot.HMMotion = createMotionRenderer;
