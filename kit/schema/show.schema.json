@@ -82,11 +82,12 @@
   },
   "fg": {
    "type": "object",
-   "description": "HM-COMPOSE-FG foreground prop layer. cam is this layer's own camera and does not follow background crop-pan or the clip camera. Human edits land in the Compose FOREGROUND panel.",
+   "description": "HM-COMPOSE-FG foreground prop layer. cam is this layer's own camera and does not follow background crop-pan or the clip camera. Human edits land in the Compose FOREGROUND panel. A breakable prop swaps to an optional broken PNG or WebP at effect.t, or splits on a crack when that cutout is unset.",
    "properties": {
     "cam": {"$ref": "#/$defs/fgCam"},
     "props": {"type": "array", "items": {"$ref": "#/$defs/fgProp"}}
-   }
+   },
+   "additionalProperties": false
   },
   "overlays": {
    "type": "array",
@@ -124,13 +125,31 @@
   },
   "fgEffect": {
    "type": "object",
-   "description": "Break timing on a foreground prop. broken_src is an optional local PNG, WebP, or JPG. No voice or #41 SFX.",
+   "description": "Break timing on a foreground prop. broken_src is an optional local PNG or WebP. No voice or #41 SFX.",
    "required": ["type", "t"],
    "properties": {
     "type": {"const": "break"},
     "t": {"type": "number", "minimum": 0},
-    "broken_src": {"type": "string", "minLength": 1}
+    "broken_src": {
+     "type": "string",
+     "pattern": "\\.(png|webp|PNG|WEBP)$",
+     "description": "Optional broken cutout. PNG or WebP. When omitted, the prop splits on a crack at t."
+    }
    }
+  },
+  "fgBreak": {
+   "type": "object",
+   "required": ["type"],
+   "properties": {
+    "type": {"const": "break"},
+    "t": {"type": "number", "minimum": 0},
+    "broken_src": {
+     "type": "string",
+     "pattern": "\\.(png|webp|PNG|WEBP)$",
+     "description": "Optional broken cutout. PNG or WebP. When omitted, the prop splits on a crack at t."
+    }
+   },
+   "additionalProperties": false
   },
   "fgKeyframe": {
    "type": "object",
@@ -156,7 +175,7 @@
     "t_end": {"type": "number", "minimum": 0},
     "slot": {"type": "string", "enum": ["prop", "overlay"], "description": "overlay art shows between t_start and t_end and does not break"},
     "kf": {"type": "array", "items": {"$ref": "#/$defs/fgKeyframe"}},
-    "effect": {"$ref": "#/$defs/fgEffect"}
+    "effect": {"$ref": "#/$defs/fgBreak"}
    }
   },
   "transform": {

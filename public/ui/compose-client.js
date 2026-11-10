@@ -988,6 +988,13 @@
   const FG_CAM_PRESETS = ['static', 'nudge', 'parallax', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out'];
   const FG_DEFAULT_PARALLAX = 0.45;
   const FG_PARALLAX_PRESETS = Object.freeze([0, FG_DEFAULT_PARALLAX, 1]);
+  function fgBrokenCutoutSrc(src) {
+    if (typeof src !== 'string') return '';
+    const path = src.trim();
+    if (!path) return '';
+    const file = path.split(/[?#]/, 1)[0];
+    return /\.(png|webp)$/i.test(file) ? path : '';
+  }
   function validFgSpan(cam) {
     const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
     if (cam.clock !== undefined && !['show', 'per_atom', 'legacy', 'span'].includes(cam.clock)) return false;
@@ -1106,9 +1113,10 @@
           const et = eff.t == null ? 0 : +eff.t;
           if (!Number.isFinite(et) || et < 0) { errors.push(label + ': invalid break time'); failed = true; return; }
           prop.effect = { type: 'break', t: round4(et) };
-          if (eff.broken_src != null) {
-            if (typeof eff.broken_src !== 'string' || !eff.broken_src) { errors.push(label + ': broken image must be a path'); failed = true; return; }
-            prop.effect.broken_src = eff.broken_src;
+          if (eff.broken_src != null && eff.broken_src !== '') {
+            const cutout = fgBrokenCutoutSrc(eff.broken_src);
+            if (!cutout) { errors.push(label + ': broken image must be a PNG or WebP'); failed = true; return; }
+            prop.effect.broken_src = cutout;
           }
         }
       }
@@ -3750,6 +3758,7 @@
     FG_CAM_PRESETS,
     FG_DEFAULT_PARALLAX,
     FG_PARALLAX_PRESETS,
+    fgBrokenCutoutSrc,
     normalizeFgCam,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
