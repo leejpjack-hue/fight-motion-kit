@@ -104,6 +104,13 @@ use the FOREGROUND panel:
 `#fgSkillHint` names this skill. It sits after the camera block, outside the
 sticky header, so break and camera controls keep scrolling as before.
 
+**Break** (`#fgJumpBreak`) and **Camera** (`#fgJumpCam`) sit on the prop row
+inside `#fgStickyTop`. They scroll `#foregroundPanel` only, to `#fgBreakBox`
+or `#fgCamBox`. The scrollport, sticky add header, sticky break, and scrolling
+prop list stay the HM-FG-PANEL-SCROLL-2026-10-30 rules. Slot notes sit under
+that header so a short dock does not pin them over the break time or the
+camera preset.
+
 ## Anti-jobs
 
 - No `api.teqcon.uk`, no `:8770`, no compose HTTP, no `wrangler deploy`.
