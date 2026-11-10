@@ -1,0 +1,62 @@
+{
+  "story_id": "HM-PF-49",
+  "title": "n8n self-host spike \u2014 1..10 Wait gates",
+  "owner": "Cursor",
+  "status": "READY",
+  "runtime_status": "BLOCKED_RUNTIME",
+  "runtime_note": "Artifacts complete. Live n8n not started \u2014 docker missing on Cursor box. Jack brings up via docker-compose.yml on his machine.",
+  "authorized_by": "pt2476u / t2476u SIGN ALL",
+  "cap_slot": "Cursor lane of today's \u22643 HM SIGNED builds",
+  "deliverable_root": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08",
+  "artifacts": [
+    "SPIKE-PLAN.md",
+    "docker-compose.yml",
+    ".env.example",
+    "workflows/hm-product-flow-1-10.json",
+    "GATE-UX.md",
+    "validation-receipt.json",
+    "HANDOFF.json"
+  ],
+  "musts_met": {
+    "workflow_nodes_1_10_step10_disabled": true,
+    "wait_slack_form_gates_documented": true,
+    "http_stubs_placeholder_only_no_compose_api": true,
+    "plugin_73065872_not_installed_plan_documents_deferral": true
+  },
+  "live_n8n_started": false,
+  "plugin_73065872_installed": false,
+  "next_unlocks": [
+    {
+      "id": "HM-PF-50",
+      "owner": "Cursor",
+      "why": "n8n \u2194 HM dual-path contract page; depends_on HM-PF-49"
+    },
+    {
+      "id": "HM-PF-09",
+      "aka": "Codex-09",
+      "owner": "Codex",
+      "why": "Jack GO gate surface for storyboards; depends_on HM-PF-06,HM-PF-49"
+    },
+    {
+      "id": "HM-PF-53",
+      "owner": "Antigravity",
+      "why": "Jack notify bridge Slack/form without compose API; depends_on HM-PF-49,HM-PF-09"
+    }
+  ],
+  "token_note_for_parent": "Cursor HM-PF-49 spike artifacts DONE this slot. No further Cursor token burn required for 49. Runtime smoke is Jack-side Docker. Remaining Antigravity/Codex/ZCode lanes continue until their tokens empty per t2476u; then wait next available token time. Do not install plugin 73065872 from this handoff.",
+  "decisions_needed": [
+    "Jack smoke on Docker host (import + Approve/Rework)",
+    "Parent decide plugin 73065872 install timing post-smoke",
+    "PO schedule next unlocks under \u22643/day (no week lock)"
+  ],
+  "no_actions_taken": [
+    "no SendToUser",
+    "no SendToAgent",
+    "no plugin install",
+    "no product code / fight-motion-kit edit",
+    "no live Slack",
+    "no docker compose up"
+  ],
+  "created_at_asia_tokyo": "2026-11-08T12:55:00+09:00",
+  "validation_receipt": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/validation-receipt.json"
+}

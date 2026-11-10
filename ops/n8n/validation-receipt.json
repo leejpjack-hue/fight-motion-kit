@@ -1,0 +1,136 @@
+{
+  "story_id": "HM-PF-49",
+  "title": "n8n self-host spike \u2014 1..10 Wait gates",
+  "owner": "Cursor",
+  "authorized_by": "t2476u SIGN ALL",
+  "created_at_asia_tokyo": "2026-11-08T12:55:00+09:00",
+  "deliverable_root": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08",
+  "overall_status": "READY",
+  "runtime_status": "BLOCKED_RUNTIME",
+  "runtime_reason": "docker binary not present on Cursor agent box; live n8n bring-up/import/screenshot deferred to Jack machine with Docker. Plan+compose+workflow+docs complete \u2014 story still SUCCESS per brief.",
+  "verified": [
+    {
+      "check": "SPIKE-PLAN.md present with Docker Compose bring-up, URL, auth, backup volume, license note, DiagramTool vs n8n SoT mitigation, plugin 73065872 install deferred",
+      "result": "PASS",
+      "path": "SPIKE-PLAN.md",
+      "sha256": "81af0d2a8f93d9a6137a2d1bb361d7663181e251db09c2d19f57ef5482e92ae7"
+    },
+    {
+      "check": "docker-compose.yml + .env.example for Community self-host (Asia/Tokyo, named volume hm_pf49_n8n_data, encryption key required)",
+      "result": "PASS",
+      "paths": [
+        "docker-compose.yml",
+        ".env.example"
+      ],
+      "sha256": {
+        "docker-compose.yml": "6c15c0baf95ee534c861fab4579fc97baf7def5927c0bea9f333e7df520c1b9c",
+        ".env.example": "7c826c1aa4fb754dc7785b1c9f344a4b9feaa37011d8d80ee32b6259e6ca410e"
+      }
+    },
+    {
+      "check": "workflows/hm-product-flow-1-10.json importable structure: Manual Trigger + steps 1..9 (Set\u2192HTTP stub\u2192Gate prep\u2192Wait form Approve/Rework\u2192IF) + End; 9 Wait + 9 HTTP; Rework loops; S9 Approve\u2192End",
+      "result": "PASS",
+      "path": "workflows/hm-product-flow-1-10.json",
+      "sha256": "5f11fff1397c4d8845fd845d1a3f2ccf7337b7d2557fe0f76e3e93df3c99189e",
+      "counts": {
+        "nodes": 50,
+        "connections": 46,
+        "wait_nodes": 9,
+        "http_stub_nodes": 9,
+        "if_nodes": 9
+      }
+    },
+    {
+      "check": "Step 10 Voice/#41 modelled as disabled HOLD Set + sticky; NOT wired into live connections",
+      "result": "PASS",
+      "disabled_node": "S10 Voice HOLD \u2014 disabled",
+      "s10_in_connections": false
+    },
+    {
+      "check": "HTTP stubs are placeholder.local skill/webhook URLs only \u2014 no product compose API strings",
+      "result": "PASS",
+      "stub_hosts": [
+        "https://placeholder.local/skills/*"
+      ],
+      "compose_api_invented": false
+    },
+    {
+      "check": "GATE-UX.md documents Approve/Rework form + Slack notify pattern + dual-path contract (n8n=control; HM UI=edit; skills=assist)",
+      "result": "PASS",
+      "path": "GATE-UX.md",
+      "sha256": "709e97d7bebb989cbdd2e6740e60d9cf550a03aea1177d8530471154557ebcbe"
+    },
+    {
+      "check": "Plugin 73065872 not installed; install command documented for parent after plan review only",
+      "result": "PASS",
+      "plugin_installed": false
+    },
+    {
+      "check": "Locked product rules: FE-only; n8n=gates only; DiagramTool boards design SoT cited (tip 970c1f9b / hm-approval-boards)",
+      "result": "PASS"
+    }
+  ],
+  "not_run": [
+    {
+      "check": "docker compose up / healthz",
+      "reason": "docker not installed on box"
+    },
+    {
+      "check": "Live workflow import into running n8n UI",
+      "reason": "no runtime"
+    },
+    {
+      "check": "Manual Trigger \u2192 Wait form Approve/Rework smoke in browser",
+      "reason": "no runtime"
+    },
+    {
+      "check": "Live Slack notify",
+      "reason": "out of scope \u2014 HM-PF-53; GATE-UX documents pattern only"
+    },
+    {
+      "check": "Real skill HTTP endpoints",
+      "reason": "stubs only by design"
+    },
+    {
+      "check": "Cursor catalog plugin 73065872 install",
+      "reason": "deferred to parent after plan review; not product code"
+    },
+    {
+      "check": "Screenshot / export proof from live canvas",
+      "reason": "no runtime"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/SPIKE-PLAN.md",
+      "sha256": "81af0d2a8f93d9a6137a2d1bb361d7663181e251db09c2d19f57ef5482e92ae7"
+    },
+    {
+      "path": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/GATE-UX.md",
+      "sha256": "709e97d7bebb989cbdd2e6740e60d9cf550a03aea1177d8530471154557ebcbe"
+    },
+    {
+      "path": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/docker-compose.yml",
+      "sha256": "6c15c0baf95ee534c861fab4579fc97baf7def5927c0bea9f333e7df520c1b9c"
+    },
+    {
+      "path": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/.env.example",
+      "sha256": "7c826c1aa4fb754dc7785b1c9f344a4b9feaa37011d8d80ee32b6259e6ca410e"
+    },
+    {
+      "path": "/workspace/deliverables/hm-pf-49-n8n-spike-2026-11-08/workflows/hm-product-flow-1-10.json",
+      "sha256": "5f11fff1397c4d8845fd845d1a3f2ccf7337b7d2557fe0f76e3e93df3c99189e"
+    }
+  ],
+  "reuse_pins": [
+    "/workspace/hr/briefs/hm-flow-orchestrator-choice-2026-11-08.md",
+    "/workspace/deliverables/hm-flow-orchestrator-2026-11-08/HANDOFF.json",
+    "/workspace/deliverables/hm-approval-boards-2026-11-08/workflow.board.json",
+    "fight-motion-kit docs/product-flow tip 970c1f9b"
+  ],
+  "jack_or_po_decisions": [
+    "Jack: run docker compose on a machine with Docker; create owner account; import workflow; smoke Approve/Rework",
+    "Parent/Jack: whether to install catalog plugin 73065872 after reviewing SPIKE-PLAN (recommended: after Jack smoke, not before)",
+    "PO: unlock HM-PF-50 / HM-PF-09 / HM-PF-53 under \u22643 HM weekday cap \u2014 no Week A\u2013D lock per t2476u"
+  ]
+}
