@@ -55,6 +55,7 @@ Compose **must run in the browser** for the Jack bar on Workers (network only to
 ## UX / honesty
 - Status must say when running **frontend-only** (no server).
 - Never invent remote sync % / GPU meters.
+- Export honesty (HM-PF-46) probes this browser before the click. Playable HTML and PNG frames are ready here. WebM and MP4 appear only when `captureStream` and `MediaRecorder` say so. MP4 is not universal. Alpha video is not offered. The bake fills the stage white, so frame PNGs are the composited picture. Deterministic ffmpeg stays on the local skill (`HM-EXPORT-X-PRESET`). Workers UI smoke waits until the tip is deployed and that gate is open. See [`docs/product-flow/HM-PF-46-export-honesty.md`](product-flow/HM-PF-46-export-honesty.md).
 - Locked `:root` palette + Stitch 05/06 shell remain.
 - Mobile residuals 6–8 and P1/P2 stay **NOT SIGNED** (wishlist).
 

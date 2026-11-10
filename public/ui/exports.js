@@ -101,10 +101,48 @@
     if(S.duration>0){try{seq='Optional zip at '+preset.label+' · '+HMXExport.framePlan(S.duration,preset.fps).length+' frames. The local skill runs ffmpeg.';}catch(e){seq='Optional zip at '+preset.label+'. '+e.message;}}
     $('frameSeqHint').textContent=seq;
     const mime=videoType();
+    paintExportMatrix();
     if(!mime||!HTMLCanvasElement.prototype.captureStream)$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML or the frame-sequence zip.';
-    else $('videoHint').textContent=(mime.includes('mp4')?'MP4':'WebM')+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
+    else {
+      const kind=mime.includes('mp4')?'MP4 · this browser only · MP4 is not universal':'WebM';
+      $('videoHint').textContent=kind+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
+    }
   }
-  $('exportPreset').addEventListener('change',paintExportHints);
+  function exportCaps(){
+    return HMExportMatrix.browserCaps({
+      captureStream:!!(HTMLCanvasElement.prototype&&HTMLCanvasElement.prototype.captureStream),
+      isTypeSupported:mime=>!!(window.MediaRecorder&&typeof MediaRecorder.isTypeSupported==='function'&&MediaRecorder.isTypeSupported(mime))
+    });
+  }
+  function paintExportMatrix(){
+    const body=$('exportMatrixBody');
+    if(!body||!window.HMExportMatrix)return;
+    const matrix=HMExportMatrix.matrix(exportCaps());
+    const table=$('exportMatrix');
+    if(table){table.dataset.universalMp4='false';table.dataset.universalAlpha='false';}
+    body.replaceChildren();
+    matrix.rows.forEach(row=>{
+      const tr=document.createElement('tr');
+      tr.dataset.exportRow=row.id;
+      tr.dataset.offered=String(row.offered);
+      tr.dataset.scope=row.scope;
+      tr.dataset.alpha=row.alpha;
+      const name=document.createElement('th');
+      name.scope='row';
+      name.textContent=row.label;
+      const detail=document.createElement('small');
+      detail.textContent=row.note;
+      name.append(detail);
+      const here=document.createElement('td');
+      here.textContent=row.here;
+      const alpha=document.createElement('td');
+      alpha.textContent=row.alphaLabel;
+      tr.append(name,here,alpha);
+      body.append(tr);
+    });
+    if($('exportMatrixNote'))$('exportMatrixNote').textContent=matrix.summary;
+  }
+  $('exportPreset').addEventListener('change',()=>{paintExportHints();applyExportGate();});
   const stripImages=new Map();
   let stripPaintToken=0;
   function loadStripImage(src){
@@ -274,7 +312,7 @@
     window.ready=r.load(data).then(()=>{get('play').disabled=false;draw();});window.renderAt=value=>{playing=false;t=Math.max(0,Math.min(duration,value));draw();};
     window.ready.catch(e=>{get('title').textContent='Unable to load: '+e.message;});
   }
-  function videoType() {return ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));}
+  function videoType() {return HMExportMatrix.preferredRecordMime(exportCaps());}
   paintExportHints();if(!videoType()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
   on('exportFrames',()=>task(async()=>{
     assertExportAllowed();
