@@ -62,6 +62,8 @@ Compose **must run in the browser** for the Jack bar on Workers (network only to
 ## Ship host (PO default)
 Cloudflare Workers project already used for UI — keep as ship target unless Jack redirects. Proof of product path = Jack bar on that host **without** hitting `api.teqcon.uk` or `:8770`.
 
+After CoS or Jack gates a story, Development runs [Smoke the Workers composer after a CoS or Jack gate](../ops/HM-PF-54-workers-live-smoke.md). Copy the footer status as shown. Do not merge from that checklist, and do not fall back to `api.teqcon.uk`. The checklist is cap-gate last, after HM-PF-38, HM-PF-39, HM-PF-42, and HM-PF-46.
+
 ## Jack still owes
 **Nothing blocking** to start HM-COMPOSE-07.
 
