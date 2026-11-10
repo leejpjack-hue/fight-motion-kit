@@ -347,6 +347,21 @@
     });
   }
   ['fgNudgeX', 'fgNudgeY', 'fgNudgeS'].forEach(id => { $(id).onchange = safe(writeCam); });
+  function fgLaidOut(el) { return !!(el && el.getClientRects().length); }
+  function scrollFgTarget(id) {
+    const panel = $('foregroundPanel');
+    const target = $(id);
+    const sticky = $('fgStickyTop');
+    if (!panel || !fgLaidOut(target)) return;
+    const stickyH = sticky ? sticky.offsetHeight : 0;
+    const top = target.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+    const max = Math.max(0, panel.scrollHeight - panel.clientHeight);
+    panel.scrollTop = Math.min(Math.max(0, top - stickyH - 8), max);
+    const focus = id === 'fgBreakBox' ? $('fgEffect') : id === 'fgCamBox' ? $('fgCamPreset') : target;
+    if (focus && !focus.disabled) focus.focus({ preventScroll: true });
+  }
+  on('fgJumpBreak', () => scrollFgTarget(fgLaidOut($('fgBreakBox')) ? 'fgBreakBox' : 'fgOverlayLabel'));
+  on('fgJumpCam', () => scrollFgTarget('fgCamBox'));
   $('fgProp').onchange = () => { selectedId = $('fgProp').value || null; refresh(); };
   window.addEventListener('hm:projectchange', refresh);
   window.ready.then(refresh).catch(() => {});
