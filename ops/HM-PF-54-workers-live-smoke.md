@@ -6,13 +6,13 @@ Open https://html-motion-composer.leejpjack.workers.dev/ui/
 
 HM-PF-40 is already shipped. Leave `skills/html-motion-fight-video` as it is. This checklist does not rebuild it.
 
-This page was written on `59090518600b9a28bb146e2a88cc84f077263e71` (HM-PF-42 SHIP, #195). It replaces the copy written on `e59b15b0909931040667fbd77561bba620429510`. Cap-gate order is HM-PF-46, then this checklist last. HM-PF-38, HM-PF-39, and HM-PF-42 are already shipped. Do not merge this page ahead of HM-PF-46. Jack t2552u keeps the tip Cap-free until noon. Do not launch a Cap. Do not issue GO 30a.
+This page was written on `9129701de6bc8cac2616954f126fb2a2a20721ae` (HM-PF-46 SHIP, #199). It replaces the copy written on `59090518600b9a28bb146e2a88cc84f077263e71`. This checklist is the last cap-gate. HM-PF-38, HM-PF-39, HM-PF-42, and HM-PF-46 are already shipped. Development does not merge this page. Jack t2552u keeps the tip Cap-free until noon. Do not launch a Cap. Do not issue GO 30a.
 
 Cursor Cloud Agent may open the pull request that adds this page. Skip Jev. The story issue is https://github.com/leejpjack-hue/fight-motion-kit/issues/124
 
 ## Wait for the gate
 
-This checklist is cap-gate last, after HM-PF-46. HM-PF-38, HM-PF-39, and HM-PF-42 are already shipped. Run the steps below only after CoS or Jack has gated the story and squash-merged it. Development does not merge. This page has no merge step.
+This checklist is the last cap-gate. HM-PF-46 is already shipped. Run the steps below only after CoS or Jack has gated the story and squash-merged it. Development does not merge. This page has no merge step.
 
 If the gate has not happened, stop. Do not deploy. Do not run `wrangler deploy`. Do not start `composer/serve.py` and call that the live smoke.
 
@@ -40,7 +40,7 @@ Compare the live footer with `public/ui/index.html` and `public/ui/app.js` on th
 
 ## Report the status you saw
 
-Send CoS the exact `#status` text from step 1 and from step 3. Say whether the 5.00 second demo loaded, whether Play started and stopped, and whether any request left the Workers host for `api.teqcon.uk` or port 8770. Name pass or fail. On a fail, quote the status text and the blocked request. Do not invent a remote sync percent or a GPU meter. Do not claim the live host matches `59090518600b9a28bb146e2a88cc84f077263e71` unless the gated squash says that commit is what the host serves.
+Send CoS the exact `#status` text from step 1 and from step 3. Say whether the 5.00 second demo loaded, whether Play started and stopped, and whether any request left the Workers host for `api.teqcon.uk` or port 8770. Name pass or fail. On a fail, quote the status text and the blocked request. Do not invent a remote sync percent or a GPU meter. Do not claim the live host matches `9129701de6bc8cac2616954f126fb2a2a20721ae` unless the gated squash says that commit is what the host serves.
 
 ## Leave the holds unchanged
 
