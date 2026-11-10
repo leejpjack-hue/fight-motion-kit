@@ -11,13 +11,15 @@
   const STREET = 'street-old-city';
   const GRAMMAR = 'fight-cam-grammar-starter';
   const CLASSROOM = 'fight-daiyu-baochai-classroom-dense';
+  const FG_CAM = 'class-dense-fg-cam';
   const GRAMMAR_ALIASES = ['fight-daiyu-wang-rooftop-camera-grammar-2026-11-01', 'rooftop-camera-grammar'];
   const CLASSROOM_ALIASES = ['fight-daiyu-baochai-classroom-dense-2026-10-24', 'classroom-dense', 'hm-class-dense-bg'];
+  const FG_CAM_ALIASES = ['class-dense-fg', 'hm-class-dense-fg'];
   const VOID = 'baijia-elfmage-void-array';
   const VOID_ALIASES = ['fight-baijia-elfmage-void-array-2026-11-06'];
   const GOLD = [DEMO, ORIGINAL, CONTINUATION, GRAMMAR, VOID, CLASSROOM];
   const BUILTIN = [...GOLD, STREET];
-  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : VOID_ALIASES.includes(id) ? VOID : CLASSROOM_ALIASES.includes(id) ? CLASSROOM : id;
+  const resolveBuiltInId = id => GRAMMAR_ALIASES.includes(id) ? GRAMMAR : VOID_ALIASES.includes(id) ? VOID : CLASSROOM_ALIASES.includes(id) ? CLASSROOM : FG_CAM_ALIASES.includes(id) ? FG_CAM : id;
   const DEFAULT_FIGHT_PACK = ['low_rise','eye_orbit','eye_push','ecu_fist_lens','upward_inside','whip_A_to_B','dutch_snap','pull_aftermath'];
   const DEFAULT_CUT_PRESETS = {version:'hm-hf-08',presets:[
     {id:'freeze_hold',label:'Freeze hold',defaults:{dur_s:0.12,hold_s:0.12,dir:1}},
@@ -1318,10 +1320,18 @@
     status(`Downloaded ${plan.peeks.length} frame peeks · ${zipName}`);
     return zipName;
   }
+  function paintFgLayerMatrix() {
+    const el = $('fgLayerMatrix');
+    if (!el) return;
+    const row = renderer && renderer.lastLayerMatrix;
+    el.dataset.state = row && layerCamsIndependent(row) ? 'independent' : 'idle';
+    el.textContent = layerCamMatrixText(row);
+  }
   function draw(source = 'draw') {
     const standIn=!playing&&!recording;
     renderStageAt(time,{standIn,source});
     renderStageBAt(time,{standIn,source});
+    paintFgLayerMatrix();
     updateTransport();
     syncFxPathOverlay();
   }
@@ -1825,6 +1835,7 @@
     else if(sid===STREET){await bootShow(load(await builtIn(STREET)));}
     else if(sid===GRAMMAR){await bootShow(load(await builtIn(GRAMMAR)));}
     else if(sid===VOID){await bootShow(load(await builtIn(VOID)));}
+    else if(sid===FG_CAM){await bootShow(load(await builtIn(FG_CAM)));}
     else if(sid&&!GOLD.includes(sid)){
       await bootShow(load(copy(defaultGold)));
       if(!(window.HMMarketSpritegenProof&&HMMarketSpritegenProof.matchesShow(sid)))status('Requested project is not stored here. Open its saved project JSON.',true);
@@ -1835,6 +1846,7 @@
   on('loadDemo',()=>openProject(builtIn(DEMO)));on('loadOriginal',()=>openProject(builtIn(ORIGINAL)));on('loadExtended',()=>openProject(builtIn(CONTINUATION)));on('loadStreet',()=>openProject(builtIn(STREET)));
   on('loadVoidArray',()=>openProject(builtIn(VOID)));
   on('loadClassroomDense',()=>openProject(builtIn(CLASSROOM)));
+  on('loadFgCamProof',()=>openProject(builtIn(FG_CAM)));
   async function openTemplates(){
     const dlg=$('templateDialog'), list=$('templateList'), note=$('templateStatus');
     list.replaceChildren();
