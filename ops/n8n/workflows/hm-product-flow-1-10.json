@@ -86,12 +86,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/character-openpose",
+        "url": "http://172.18.0.1:8787/skills/character-openpose",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -317,12 +317,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/storyboard-draft",
+        "url": "http://172.18.0.1:8787/skills/storyboard-draft",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -548,12 +548,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/rhythm-frame-qa",
+        "url": "http://172.18.0.1:8787/skills/rhythm-frame-qa",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -779,12 +779,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/cam-grammar-plan",
+        "url": "http://172.18.0.1:8787/skills/cam-grammar-plan",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -1010,12 +1010,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/cam-preset-tune",
+        "url": "http://172.18.0.1:8787/skills/cam-preset-tune",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -1241,12 +1241,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/sprite-gen-cli",
+        "url": "http://172.18.0.1:8787/skills/sprite-gen-cli",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -1472,12 +1472,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/bg-frame",
+        "url": "http://172.18.0.1:8787/skills/bg-frame",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -1703,12 +1703,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/fg-fx",
+        "url": "http://172.18.0.1:8787/skills/fg-fx",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
@@ -1934,12 +1934,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://placeholder.local/skills/hm-composer-assist",
+        "url": "http://172.18.0.1:8787/skills/hm-composer-assist",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ step: $json.step, step_id: $json.step_id, show_id: $json.show_id, mode: 'assist_stub', note: 'PLACEHOLDER \u2014 no product compose API' }) }}",
         "options": {
-          "timeout": 5000,
+          "timeout": 1200000,
           "response": {
             "response": {
               "neverError": true
