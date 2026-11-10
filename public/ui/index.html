@@ -28,15 +28,16 @@
 </section><section class="foreground-panel" id="foregroundPanel" aria-label="Foreground props">
 <div class="fg-sticky-top" id="fgStickyTop">
 <div class="background-heading"><span class="eyebrow">FOREGROUND</span><span id="fgCount" class="small-muted">0 props</span></div>
+<div class="background-actions"><button id="fgAdd" type="button">Add prop</button><button id="fgRemove" type="button">Remove</button></div>
+<input id="fgInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+<select id="fgLibrary" aria-label="Use library image in the selected foreground slot"><option value="">Use library image…</option></select>
+<div class="fg-prop-head"><label class="background-label" for="fgProp">Prop</label><div class="fg-jump" role="group" aria-label="Jump to foreground controls"><button type="button" class="text-button" id="fgJumpBreak">Break</button><button type="button" class="text-button" id="fgJumpCam">Camera</button></div></div>
+<select id="fgProp" aria-label="Foreground prop"><option value="">No prop yet</option></select>
+</div>
 <p class="field-hint" id="fgCamNote">Props sit in front of the plates. This camera does not follow background crop-pan or the clip camera.</p>
 <p class="field-hint" id="fgLayerMatrix" role="status" data-state="idle">Scrub to compare FG, background, and character cameras.</p>
 <label class="background-label" for="fgSlot">Slot</label><select id="fgSlot" aria-label="Foreground slot"><option value="prop">Breakable prop</option><option value="overlay">Overlay art</option></select>
 <p class="field-hint" id="fgSlotNote">Overlay art is an existing speed-line or depth image. It shows and hides on From and To. A breakable prop cracks, or swaps to a broken PNG or WebP.</p>
-<div class="background-actions"><button id="fgAdd" type="button">Add prop</button><button id="fgRemove" type="button">Remove</button></div>
-<input id="fgInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-<select id="fgLibrary" aria-label="Use library image in the selected foreground slot"><option value="">Use library image…</option></select>
-<label class="background-label" for="fgProp">Prop</label><select id="fgProp" aria-label="Foreground prop"><option value="">No prop yet</option></select>
-</div>
 <div id="fgPropList" class="fg-prop-list" role="listbox" aria-label="Foreground prop list" hidden></div>
 <div id="fgFields" hidden>
 <div class="fg-grid"><label>X <input id="fgX" type="number" step="1" value="240"></label><label>Y <input id="fgY" type="number" step="1" value="520"></label><label>Scale <input id="fgScale" type="number" min="0.05" max="8" step="0.05" value="1"></label><label>Z <input id="fgZ" type="number" step="1" value="10"></label></div>
