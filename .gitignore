@@ -18,3 +18,6 @@ __pycache__/
 # HM-HF-06 Frame-QA writes lint.json, frame-peek.json, and claim.json under work/qa/.
 # Peek PNGs, zips, and WebM exports stay here too. Do not force those binaries into a PR.
 work/
+
+# Void-array hero cutouts stay outside git. A local pack may be linked here.
+public/assets/baijia-elfmage-void-array/cutout/

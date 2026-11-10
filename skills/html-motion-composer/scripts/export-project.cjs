@@ -7,10 +7,13 @@ let playwright;try{playwright=require('playwright');}catch(_){try{playwright=req
 const {chromium}=playwright;
 const serve=root=>new Promise((resolve,reject)=>{const s=http.createServer((req,res)=>{const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);let f=path.resolve(root,'.'+name);if(!f.startsWith(root+path.sep)){res.writeHead(403).end();return;}try{if(fs.statSync(f).isDirectory())f=path.join(f,'index.html');const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon'}[path.extname(f)]||'application/octet-stream';res.setHeader('Content-Type',mime);fs.createReadStream(f).on('error',()=>res.destroy()).pipe(res);}catch(_){res.writeHead(404).end();}});s.once('error',reject);s.listen(0,'127.0.0.1',()=>resolve(s));});
 (async()=>{
- if(!opt.repo||!opt.project||(!opt.html&&!opt.video))throw Error('Use --repo PATH --project PATH [--html PATH] [--video PATH.webm] [--report PATH] [--fps 30]');
+ if(!opt.repo||!opt.project||(!opt.html&&!opt.video))throw Error('Use --repo PATH --project PATH [--html PATH] [--video PATH.webm|PATH.mp4] [--report PATH] [--fps 30]');
  const fps=Number(opt.fps||30);if(!Number.isInteger(fps)||fps<1||fps>60)throw Error('fps must be 1–60');
  const project=JSON.parse(fs.readFileSync(path.resolve(opt.project),'utf8'));
- const ff=process.env.FFMPEG||'ffmpeg';if(opt.video){if(!opt.video.endsWith('.webm'))throw Error('This helper encodes WebM; use a .webm filename');const check=spawnSync(ff,['-version'],{encoding:'utf8'});if(check.error||check.status)throw Error('ffmpeg unavailable; set FFMPEG to a VP8-capable binary');}
+ const ff=process.env.FFMPEG||'ffmpeg';
+ const videoExt=opt.video?path.extname(opt.video):'';
+ if(opt.video&&videoExt!=='.webm'&&videoExt!=='.mp4')throw Error('Use a .webm or .mp4 filename');
+ if(opt.video){const check=spawnSync(ff,['-hide_banner','-encoders'],{encoding:'utf8'});const encoders=(check.stdout||'')+(check.stderr||'');if(check.error||check.status)throw Error('ffmpeg unavailable; set FFMPEG');if(videoExt==='.webm'&&!/libvpx/.test(encoders))throw Error('ffmpeg has no libvpx VP8 encoder');if(videoExt==='.mp4'&&!/libx264/.test(encoders))throw Error('ffmpeg has no libx264 encoder');}
  const server=await serve(path.resolve(opt.repo,'public'));let browser,encoder,encoded,encoderLog='';
  const errors=[],failed=[],checks={};const report={};
  try{
@@ -28,7 +31,10 @@ const serve=root=>new Promise((resolve,reject)=>{const s=http.createServer((req,
   if(opt.video){const count=duration*fps;if(Math.abs(Math.round(count)-count)>1e-6)throw Error('Duration × fps is not an integer; choose a compatible fps');
    fs.mkdirSync(path.dirname(path.resolve(opt.video)),{recursive:true});
    await page.evaluate(()=>{const c=document.getElementById('stage');document.body.append(c);});await page.addStyleTag({content:'body>*:not(#stage){display:none!important}body{margin:0!important;padding:0!important}#stage{position:fixed!important;left:0!important;top:0!important;width:1280px!important;height:720px!important;border:0!important;border-radius:0!important;box-shadow:none!important}'});
-   encoder=spawn(ff,['-y','-f','image2pipe','-framerate',String(fps),'-vcodec','mjpeg','-i','pipe:0','-an','-c:v','libvpx','-b:v','3500k','-t',String(duration),path.resolve(opt.video)],{stdio:['pipe','ignore','pipe']});encoder.stderr.on('data',b=>encoderLog+=b);encoded=once(encoder,'close');encoder.stdin.on('error',()=>{});
+   const videoArgs=videoExt==='.mp4'
+    ?['-y','-f','image2pipe','-framerate',String(fps),'-vcodec','mjpeg','-i','pipe:0','-an','-c:v','libx264','-pix_fmt','yuv420p','-movflags','+faststart','-t',String(duration),path.resolve(opt.video)]
+    :['-y','-f','image2pipe','-framerate',String(fps),'-vcodec','mjpeg','-i','pipe:0','-an','-c:v','libvpx','-b:v','3500k','-t',String(duration),path.resolve(opt.video)];
+   encoder=spawn(ff,videoArgs,{stdio:['pipe','ignore','pipe']});encoder.stderr.on('data',b=>encoderLog+=b);encoded=once(encoder,'close');encoder.stdin.on('error',()=>{});
    for(let i=0;i<count;i++){await page.evaluate(t=>HMStudio.renderAt(t),i/fps);const frame=await page.locator('#stage').screenshot({type:'jpeg',quality:94});if(!encoder.stdin.write(frame))await Promise.race([once(encoder.stdin,'drain'),encoded.then(()=>{throw Error(encoderLog||'ffmpeg stopped before encoding finished');})]);if(i%fps===0)console.log(`Rendering ${i}/${count} frames`);}
    encoder.stdin.end();const[code]=await encoded;if(code!==0)throw Error(encoderLog);const meta=spawnSync(ff,['-i',path.resolve(opt.video)],{encoding:'utf8'}).stderr||'';const match=meta.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);const actual=match?+match[1]*3600+ +match[2]*60+ +match[3]:NaN;
    checks.video_duration=Math.abs(actual-duration)<=.011;checks.video_dimensions=/1280x720/.test(meta);checks.video_fps=new RegExp('\\b'+fps+' fps').test(meta);if(!checks.video_duration||!checks.video_dimensions||!checks.video_fps)throw Error('Encoded video metadata differs: '+meta);report.video={duration_s:actual,frames:Math.round(count),fps,width:1280,height:720,path:path.resolve(opt.video)};
