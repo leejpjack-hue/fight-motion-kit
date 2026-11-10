@@ -18,6 +18,7 @@ The field names are the ones in [`project-format.md`](../html-motion-composer/re
 - Optional `--crop x,y,w,h` in fractions of the source. Omit it and the skill writes a 16:9 window with room on the travel side.
 - Optional `--preset` (`pan_right` by default), `--amount` (`0.4` by default), and `--clock` `show` or `per_atom`.
 - Optional `--brief file.json` with those same fields. Flags override the file.
+- Optional `--pack` `hold`, `slow-pan`, `accent-pan`, or `rhythm`. This path does not take `--place`, `--preset`, `--amount`, `--clock`, `--crop`, `--layer`, or `--brief`.
 - `--out` must be a new `*.motion.json`. `--repo` selects another checkout.
 
 ## Outputs
@@ -40,6 +41,26 @@ node skills/hm-bg-scene-author/scripts/author.cjs \
 
 The command loads the composer engine and refuses to write when compose rejects the show. An existing `--out` is not replaced.
 
+## Rhythm motion pack
+
+`--pack` writes a row from `public/presets/bg_motion_packs.json` (the same file as `kit/presets/bg_motion_packs.json`) onto the motion fields this skill already uses. It does not add a preset id and it does not move character cameras.
+
+- `hold` writes `{preset: static, amount: 0}`. That is the micro-cut row. The crop stays put so a pan does not cross the cut.
+- `slow-pan` writes `pan_right` at `0.25` on the show clock. That is the dialogue-hold row.
+- `accent-pan` writes `pan_left` at `0.7` with `clock: per_atom`. That is the impact-hold row. The move restarts on the clip.
+- `rhythm` reads each clip's existing `timing_hold.kind` and writes the matching row onto `atom.background.motion`. A clip without a hold is left alone. Project motion is left alone.
+
+A show that already uses background locations has no single project motion. Apply `hold`, `slow-pan`, or `accent-pan` from the Background panel onto one location. `rhythm` still writes clip motion on that show.
+
+```sh
+node skills/hm-bg-scene-author/scripts/author.cjs \
+  --project public/shows/street-old-city.json \
+  --pack rhythm \
+  --out work/street-rhythm.motion.json
+```
+
+The Background panel applies the same four choices. Preview and the playable HTML export both draw the stored motion with the existing window-pan helpers.
+
 ## FE handoff
 
 Open the `.motion.json` in the composer. **Background** (`#backgroundMotionDetails`) shows the crop and the motion. Drag the crop, change the preset, or set Travel to Continuous (show) or Per clip. **Save project** writes the same keys. Undo still covers those edits.
@@ -52,6 +73,7 @@ Span t0-t1 stays on that panel. This skill does not write a span. Set one there 
 - Do not generate plates or fetch images.
 - Do not rewrite the span drawer. That residual is HM-PF-33.
 - Do not touch the 5.00s eight-plate demo file. It has no background image, so this command rejects it.
-- Do not move character camera curves. `follow_camera` is the only preset that rides them.
+- Do not move character camera curves. `follow_camera` is the only preset that rides them. A motion pack refuses that preset.
+- Do not add `hold`, `slow-pan`, or `accent-pan` as renderer preset ids. They name rows in the pack file.
 - Do not add voice, SFX, or a #41 lift.
 - Do not call `api.teqcon.uk`, `:8770`, or a compose / save HTTP API.

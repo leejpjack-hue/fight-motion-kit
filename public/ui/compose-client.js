@@ -3224,6 +3224,89 @@
     return next;
   }
 
+  // Rhythm kinds name the three shipped window pans. follow_camera is refused so a pack cannot ride the character camera.
+  const BG_MOTION_PACK_IDS = ['hold', 'slow-pan', 'accent-pan'];
+  const BG_RHYTHM_KINDS = ['micro_cut', 'hold', 'impact_hold'];
+  function bgMotionPackTable(doc) {
+    const packs = doc && doc.packs;
+    if (!Array.isArray(packs)) throw new Error('Load the shipped bg_motion_packs.json.');
+    const byId = {};
+    const byRhythm = {};
+    for (let i = 0; i < BG_MOTION_PACK_IDS.length; i++) {
+      const id = BG_MOTION_PACK_IDS[i];
+      const rows = packs.filter(p => p && p.id === id);
+      if (rows.length !== 1) throw new Error('Missing or duplicate background motion pack: ' + id);
+      const row = rows[0];
+      if (!validBackgroundMotion(row.motion)) throw new Error('Invalid background motion pack: ' + id);
+      if (row.motion.preset === 'follow_camera') throw new Error('Background motion pack must not follow the character camera: ' + id);
+      if (BG_RHYTHM_KINDS.indexOf(row.aligns) < 0) throw new Error('Background motion pack is not aligned to rhythm: ' + id);
+      if (byRhythm[row.aligns]) throw new Error('Two background packs align to ' + row.aligns);
+      byId[id] = deepClone(row.motion);
+      byRhythm[row.aligns] = id;
+    }
+    if (BG_RHYTHM_KINDS.some(kind => !byRhythm[kind])) throw new Error('Background motion packs must cover micro-cut, dialogue hold, and impact hold.');
+    return { byId, byRhythm };
+  }
+  function backgroundPackIndices(show, list) {
+    const selected = [];
+    const seen = {};
+    const items = list || [];
+    for (let i = 0; i < items.length; i++) {
+      const idx = items[i];
+      if (!Number.isInteger(idx) || idx < 0 || idx >= show.atoms.length || seen[idx]) continue;
+      seen[idx] = true;
+      selected.push(idx);
+    }
+    selected.sort((a, b) => a - b);
+    return selected;
+  }
+  function writeBackgroundPackMotion(atom, motion) {
+    if (!atom.background || typeof atom.background !== 'object' || Array.isArray(atom.background)) atom.background = {};
+    atom.background.motion = deepClone(motion);
+  }
+  function applyBgMotionPack(show, packId, opts) {
+    const options = opts || {};
+    if (!show || typeof show !== 'object' || Array.isArray(show) || !Array.isArray(show.atoms)) throw new Error('Background motion pack needs a show.');
+    const table = bgMotionPackTable(options.packs);
+    const id = typeof packId === 'string' ? packId : '';
+    const next = deepClone(show);
+    if (id === 'rhythm') {
+      const limit = Array.isArray(options.indices) ? backgroundPackIndices(next, options.indices) : null;
+      if (limit && !limit.length) throw new Error('Select a clip before applying a background motion pack.');
+      const chosen = limit ? new Set(limit) : null;
+      let stamped = 0;
+      for (let i = 0; i < next.atoms.length; i++) {
+        if (chosen && !chosen.has(i)) continue;
+        const atom = next.atoms[i];
+        const kind = atom && atom.timing_hold && atom.timing_hold.kind;
+        const pack = table.byRhythm[kind];
+        if (!pack) continue;
+        writeBackgroundPackMotion(atom, table.byId[pack]);
+        stamped += 1;
+      }
+      if (!stamped) throw new Error('Stamp a dialogue hold or micro-cut before matching background motion.');
+      return next;
+    }
+    const motion = table.byId[id];
+    if (!motion) throw new Error('Unknown background motion pack: ' + (id || '(empty)') + '.');
+    const scope = options.scope || 'project';
+    if (scope === 'clip') {
+      const indices = backgroundPackIndices(next, options.indices);
+      if (!indices.length) throw new Error('Select a clip before applying a background motion pack.');
+      indices.forEach(i => writeBackgroundPackMotion(next.atoms[i], motion));
+      return next;
+    }
+    if (scope === 'location') {
+      applyBackgroundEdit(next, { op: 'update-location', id: options.locationId, patch: { motion: deepClone(motion) } });
+      return next;
+    }
+    if (scope !== 'project') throw new Error('Unknown background motion scope.');
+    if (next.bg && Object.prototype.hasOwnProperty.call(next.bg, 'locations')) throw new Error('This show uses background locations. Apply the pack to one location from the Background panel.');
+    if (!next.bg || typeof next.bg !== 'object' || Array.isArray(next.bg)) next.bg = {};
+    applyBackgroundEdit(next, { op: 'set-pair-motion', motion: deepClone(motion) });
+    return next;
+  }
+
   // HM-PF-43: block-pack apply for the gold HF-08 cut presets (show.atoms[i].cut).
   // Same write the per-clip Cut-in form makes; atom 0 never gets a cut (no
   // incoming boundary). Cuts add no time, so durations and plate times stay put.
@@ -3769,6 +3852,8 @@
     buildRhythmPlan,
     applyRhythmPlan,
     applyCutPack,
+    bgMotionPackTable,
+    applyBgMotionPack,
     isFightImpact,
     frameSequenceDump,
     timingExport,

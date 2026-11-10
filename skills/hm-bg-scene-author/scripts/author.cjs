@@ -26,6 +26,22 @@ function windowWithSlack(preset, C) {
   return C.lockBackgroundCropAspect({ x: at.x, y: at.y, w: WINDOW, h: WINDOW }, 16 / 9);
 }
 
+function applyBackgroundMotionPack(input, packId, packs, C) {
+  C = C || globalThis.HMComposeClient;
+  if (!C || typeof C.applyBgMotionPack !== 'function') throw new Error('Background motion helpers are not loaded.');
+  const project = JSON.parse(JSON.stringify(input));
+  const wrapped = !!(project && project.show && project.show.show_id);
+  const show = wrapped ? project.show : project;
+  if (!show || typeof show !== 'object' || Array.isArray(show) || !show.show_id) throw new Error('Project needs a show_id.');
+  const next = C.applyBgMotionPack(show, packId, { packs });
+  if (wrapped) {
+    project.show = next;
+    if (project.version == null) project.version = 1;
+    return project;
+  }
+  return { version: 1, show: next };
+}
+
 function authorBackgroundScene(input, brief, C) {
   C = C || globalThis.HMComposeClient;
   if (!C || typeof backgroundMotionFrame !== 'function' || typeof backgroundMotionSupport !== 'function') {
@@ -91,7 +107,7 @@ function parseCrop(text) {
 }
 
 function parseArgs(argv) {
-  const allowed = new Set(['project', 'out', 'place', 'brief', 'crop', 'preset', 'amount', 'clock', 'layer', 'repo']);
+  const allowed = new Set(['project', 'out', 'place', 'brief', 'crop', 'preset', 'amount', 'clock', 'layer', 'repo', 'pack']);
   const args = {};
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
@@ -124,6 +140,20 @@ async function main(argv) {
   if (!outPath.endsWith('.motion.json')) throw new Error('--out must be a new .motion.json file.');
   if (projectPath === outPath) throw new Error('--out must be a different file from --project.');
   const input = JSON.parse(fs.readFileSync(projectPath, 'utf8'));
+  if (args.pack) {
+    for (const key of ['place', 'brief', 'crop', 'preset', 'amount', 'clock', 'layer']) {
+      if (args[key] != null) throw new Error('A motion pack does not take scene author fields. Drop --' + key + '.');
+    }
+    const packs = JSON.parse(fs.readFileSync(path.join(repo, 'public/presets/bg_motion_packs.json'), 'utf8'));
+    const stamped = applyBackgroundMotionPack(input, args.pack, packs, C);
+    const result = await composeStamped(repo, stamped.show);
+    if (!result.ok) throw new Error(result.errors.join('; '));
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, JSON.stringify(stamped, null, 2) + '\n', { flag: 'wx' });
+    const motion = args.pack === 'rhythm' ? 'rhythm' : stamped.show.bg && stamped.show.bg.motion && stamped.show.bg.motion.preset;
+    console.log('Wrote ' + outPath + ' pack ' + args.pack + (motion && motion !== 'rhythm' ? ' ' + motion : '') + '. Character cameras unchanged. Open it and edit Background.');
+    return;
+  }
   const fromFile = args.brief ? JSON.parse(fs.readFileSync(path.resolve(args.brief), 'utf8')) : {};
   const brief = { ...fromFile };
   if (args.place) brief.place = args.place;
@@ -154,4 +184,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, authorBackgroundScene };
+module.exports = { main, authorBackgroundScene, applyBackgroundMotionPack };

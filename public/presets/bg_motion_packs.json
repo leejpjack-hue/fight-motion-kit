@@ -1,0 +1,26 @@
+{
+  "version": "p0",
+  "id": "bg_motion_rhythm",
+  "label": "Background motion for rhythm",
+  "field": "show.bg.motion | atom.background.motion",
+  "packs": [
+    {
+      "id": "hold",
+      "label": "Hold",
+      "aligns": "micro_cut",
+      "motion": { "preset": "static", "amount": 0 }
+    },
+    {
+      "id": "slow-pan",
+      "label": "Slow pan",
+      "aligns": "hold",
+      "motion": { "preset": "pan_right", "amount": 0.25, "clock": "show" }
+    },
+    {
+      "id": "accent-pan",
+      "label": "Accent pan",
+      "aligns": "impact_hold",
+      "motion": { "preset": "pan_left", "amount": 0.7, "clock": "per_atom" }
+    }
+  ]
+}
