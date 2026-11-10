@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Build a portable project using a checkout's compose engine, without backend/API writes. */
 const fs=require('node:fs'), path=require('node:path'), assert=require('node:assert/strict');
-function args(){const out={};for(let i=2;i<process.argv.length;i+=2){if(!process.argv[i]?.startsWith('--')||!process.argv[i+1])throw Error('Use --repo PATH --show PATH --out PATH [--base-show PATH --append-seconds N]');out[process.argv[i].slice(2)]=process.argv[i+1];}return out;}
+function args(){const out={};for(let i=2;i<process.argv.length;i+=2){if(!process.argv[i]?.startsWith('--')||!process.argv[i+1])throw Error('Use --repo PATH --show PATH --out PATH [--layout PATH] [--base-show PATH --append-seconds N]');out[process.argv[i].slice(2)]=process.argv[i+1];}return out;}
 (async()=>{
  const opt=args();if(!opt.repo||!opt.show||!opt.out)throw Error('--repo, --show and --out are required');
  const repo=path.resolve(opt.repo), root=path.join(repo,'public');
@@ -15,7 +15,8 @@ function args(){const out={};for(let i=2;i<process.argv.length;i+=2){if(!process
  function local(p){const full=path.resolve(root,p);if(full!==root&&!full.startsWith(root+path.sep))throw Error('Asset leaves public/: '+p);return full;}
  function resolveImage(p){if(/^data:image\/(png|jpeg|webp|gif);base64,/.test(p))return p;if(/^(?:[a-z]+:|\/\/)/i.test(p))throw Error('Use embedded or checkout-local images: '+p);let f=local(p.replace(/^\//,''));if(!fs.existsSync(f)&&f.endsWith('.png')){const alternative=[f.replace(/\.png$/,'.webp'),f.replace(/\.png$/,'.jpg')].find(fs.existsSync);if(alternative)f=alternative;}if(!fs.existsSync(f))throw Error('Missing image: '+p);return f;}
  const layouts={};
- for(const key of new Set(show.atoms.map(a=>a.hero?.layout_source))){if(!key)throw Error('Every atom needs a hero layout');layouts[key]=read(local(key));}
+ const layoutOverride=opt.layout?read(path.resolve(opt.layout)):null;
+ for(const key of new Set(show.atoms.map(a=>a.hero?.layout_source))){if(!key)throw Error('Every atom needs a hero layout');layouts[key]=layoutOverride||read(local(key));}
  const media=[];
  for(const [key,layout] of Object.entries(layouts))for(const [id,l]of Object.entries(layout)){
   const dir=path.posix.dirname(key);const src=l.full||l.parts?.[0]?.src;if(!src)throw Error('No image for '+id);
