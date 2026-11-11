@@ -131,6 +131,7 @@ n8n sequences the dual path and pauses for Jack. Plate, camera, and compose stay
 | [`validation-receipt.json`](validation-receipt.json) | Structural counts and SHA-256 of the board sources |
 | [`hm-flow-orchestrator-choice-2026-11-08.md`](hm-flow-orchestrator-choice-2026-11-08.md) | Orchestrator comparison; n8n primary, Dify runner-up |
 | [`HANDOFF.json`](HANDOFF.json) | Machine-readable pick, risks, and next steps |
+| [`po-hm-p1-board-2026-10-30.md`](po-hm-p1-board-2026-10-30.md) | historical DESIGNED/HOLD board for issues #38 (contact sheet), #40 (bake pop scan), and #41 (SFX HOLD). Not a SIGN. |
 
 [`validation-receipt.json`](validation-receipt.json) is a local DiagramTool parser receipt (Node v22.20.0 against diagram-tool `3dd1658e`), not a live browser export. Both boards passed `validatePortableDocument` with `layoutDeltaPx` 0 and no watermark. Digests recorded there, and matched by the copies in this folder:
 
