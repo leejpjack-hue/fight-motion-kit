@@ -126,3 +126,23 @@ test('string hooks and segment presets still dump', () => {
   assert.deepEqual(dump.atoms[1].fx_hooks, []);
   assert.deepEqual(dump.atoms[1].plate_keys, []);
 });
+
+test('empty Story / Timeline JSON says what an atom is for and what to do next', () => {
+  const html = fs.readFileSync('public/ui/index.html', 'utf8');
+  const start = html.indexOf('id="timelineJsonEmpty"');
+  const end = html.indexOf('id="timelineJsonList"');
+  assert.ok(start > 0 && end > start);
+  const empty = html.slice(start, end);
+  assert.match(empty, /This show has no atoms yet/);
+  assert.match(empty, /An atom is one timed beat on the show/);
+  assert.match(empty, /The timeline plays that beat/);
+  assert.match(empty, /Type second marks on the Cantonese board/);
+  assert.match(empty, /open the camera-grammar cold open/);
+  assert.match(empty, /skip this panel until a skill export is needed/);
+  assert.match(empty, /Exporting playable HTML does not require Story approval/);
+  assert.match(empty, /id="timelineJsonColdOpen"/);
+  assert.match(empty, /Open camera-grammar cold open/);
+  assert.doesNotMatch(empty, /No atoms on this show/);
+  assert.match(html, /id="loadGrammarSample"[^>]*>Open camera-grammar cold open</);
+  assert.match(html, /id="firstPath"/);
+});
