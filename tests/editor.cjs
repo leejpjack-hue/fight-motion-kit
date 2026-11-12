@@ -49,6 +49,19 @@ async function ensureServer(urlStr){
     assert.equal((await state()).duration,5);assert.equal(await p.locator('.timeline-clip').count(),8);
     assert.equal(await p.locator('img[src]').evaluateAll(ims=>ims.every(im=>im.complete&&im.naturalWidth>0)),true);
     await p.screenshot({path:path.join(out,'desktop.png'),fullPage:true});check('default eight-plate, five-second project and all thumbnails load');
+    const literacy=await p.locator('#durationLiteracy').innerText();
+    assert.match(literacy,/Show clock 5\.00s/);
+    assert.match(literacy,/Selected clip 0\.50s/);
+    assert.match(literacy,/Export 5\.00s/);
+    assert.equal(await p.locator('#showClockTotal').isVisible(),true);
+    assert.equal(await p.locator('#selectedClipLength').isVisible(),true);
+    assert.equal(await p.locator('#exportDuration').isVisible(),true);
+    await p.click('.timeline-clip[data-index="4"]');await settle();
+    assert.equal(await p.locator('#showClockTotal').innerText(),'Show clock 5.00s');
+    assert.equal(await p.locator('#selectedClipLength').innerText(),'Selected clip 0.75s');
+    assert.equal(await p.locator('#exportDuration').innerText(),'Export 5.00s');
+    await p.click('.timeline-clip[data-index="0"]');await settle();
+    check('show clock, selected clip, and export duration stay visible together');
     const hf07Proof=path.join(out,'hm-hf-07');fs.mkdirSync(hf07Proof,{recursive:true});
     await p.click('#timelineJsonOpen');
     await p.locator('#timelineJsonPanel').evaluate(el=>{el.open=true;});
@@ -196,8 +209,13 @@ async function ensureServer(urlStr){
     const offline=await browser.newPage();const external=[];await offline.route('http://**',r=>{external.push(r.request().url());r.abort();});await offline.route('https://**',r=>{external.push(r.request().url());r.abort();});await offline.goto('file://'+htmlPath);await offline.evaluate(()=>window.ready);await offline.evaluate(()=>renderAt(4.5));assert.match(await offline.locator('#time').textContent(),/4.50 \/ 5.00/);assert.deepEqual(external,[]);await offline.close();check('self-contained HTML plays offline and PNG export works');
     const video=await downloadFrom('exportVideo','daiyu-wang-five-seconds.webm');assert.ok(fs.statSync(video).size>10000);await p.getByRole('button',{name:'Close export',exact:true}).click();check('five-second video recording downloads a nonempty video');
     await change('duration',.625);assert.equal((await state()).duration,5.125);
+    assert.equal(await p.locator('#showClockTotal').innerText(),'Show clock 5.125s');
+    assert.equal(await p.locator('#selectedClipLength').innerText(),'Selected clip 0.625s');
+    assert.equal(await p.locator('#exportDuration').innerText(),'Export 5.125s');
     await p.click('#exportOpen');await p.click('#exportFrames');
     await p.waitForFunction(()=>/whole number of frames/.test(document.getElementById('exportStatus').textContent));
+    assert.equal(await p.locator('#exportDuration').innerText(),'Export 5.125s');
+    assert.match(await p.locator('#exportStatus').innerText(),/Duration × fps is not a whole number of frames/);
     await p.getByRole('button',{name:'Close export',exact:true}).click();await click('undo');assert.equal((await state()).duration,5);check('frame sequence refuses a timeline that is not a whole number of frames');
     await p.evaluate(async()=>{
       const make=draw=>{const c=document.createElement('canvas');c.width=64;c.height=64;draw(c.getContext('2d'));return c.toDataURL('image/png');};

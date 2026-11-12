@@ -86,6 +86,23 @@
   const atom = () => project?.show.atoms[selected];
   const startOf = index => project.show.atoms.slice(0,index).reduce((s,a) => s + a.duration_s, 0);
   const format = t => `${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(2).padStart(5,'0')}`;
+  const secondsLabel = n => {
+    const text = (Math.round(n * 10000) / 10000).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    const parts = text.split('.');
+    return parts[0] + '.' + (parts[1] || '').padEnd(2, '0') + 's';
+  };
+  function paintDurationLiteracy() {
+    const row = $('durationLiteracy');
+    if (!row) return;
+    const showS = duration();
+    const clip = project?.show?.atoms?.[selected];
+    const clipS = clip && Number.isFinite(+clip.duration_s) ? +clip.duration_s : null;
+    // HTML, frame sequence, and Record video bake this show clock. A path that cannot match it still errors.
+    const exportS = showS;
+    $('showClockTotal').textContent = 'Show clock ' + secondsLabel(showS);
+    $('selectedClipLength').textContent = clipS == null ? 'Selected clip none' : 'Selected clip ' + secondsLabel(clipS);
+    $('exportDuration').textContent = 'Export ' + secondsLabel(exportS);
+  }
   function status(text, bad = false) { $('status').textContent = text; $('status').style.color = bad ? 'var(--danger)' : ''; }
   function safe(fn) { return async (...args) => { try { await fn(...args); } catch (e) { status(e.message, true); $('exportStatus').textContent=e.message; $('exportStatus').classList.add('error'); } }; }
   function on(id, fn) { $(id)?.addEventListener('click', safe(fn)); }
@@ -1052,6 +1069,7 @@
     $('scrub').max=maxD||1;$('scrub').value=time;
     $('playhead').style.left=(d?Math.min(1,Math.max(0,time/d))*100:0)+'%';
     $('timecode').innerHTML=`${format(time)} <span>/ ${format(d)}</span>`;
+    paintDurationLiteracy();
     $('play').textContent=preparing?'…':playing?'Ⅱ':'▶';
     $('play').setAttribute('aria-label',preparing?'Cancel playback preparation':playing?'Pause':'Play');
     const i=activeAt(Math.min(time,Math.max(0,d-.00001)));
