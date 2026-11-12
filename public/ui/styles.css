@@ -140,7 +140,7 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 .timeline-json-diff{margin:8px 0 0;font:600 10px ui-monospace,SFMono-Regular,monospace;color:var(--warn)}
 .timeline-json-diff[data-diff="unchanged"]{color:var(--accent)}
 .timeline-json-diff[data-diff="changed"]{color:var(--warn)}
-.timeline-json-fallback{width:100%;min-height:88px;margin-top:8px;font:10px ui-monospace,SFMono-Regular,monospace}
+.timeline-json-fallback{width:100%;min-height:88px;margin-top:8px;font:10px ui-monospace,SFMono-Regular,monospace}#timelineJsonEmpty p{margin:0 0 6px}#timelineJsonEmpty button{font-size:11px;padding:5px 9px}
 .pf09-gate{margin:0 0 10px;padding:8px 10px;border:1px solid var(--shell-shot-line);border-radius:7px;background:var(--shell-bg);font-size:11px}
 .pf09-gate-heading,.pf09-gate-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pf09-gate-heading{justify-content:space-between}.pf09-gate-actions button{padding:5px 12px;font-size:12px;font-weight:650}
 .pf09-gate .field-hint{margin:4px 0;overflow-wrap:anywhere}.pf09-gate a{color:var(--accent)}.pf09-gate-options summary{cursor:pointer;color:var(--muted)}

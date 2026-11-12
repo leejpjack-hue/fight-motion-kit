@@ -2443,6 +2443,7 @@
   });
   $('pf09OpenStory').addEventListener('click', safe(e => { e.preventDefault(); focusStoryboard(); }));
   on('timelineJsonCopy',()=>copyTimelineJson());
+  on('timelineJsonColdOpen',()=>{ $('loadGrammarSample')?.click(); });
   const productFlowNotifyPanel = window.HMProductFlowNotify.mountNotifyPanel($('pf53NotifyPanel'), {
     getProject: () => project,
     getNotes: () => $('pf09GateNotes')?.value || '',
