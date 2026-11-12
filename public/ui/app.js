@@ -465,7 +465,56 @@
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
     ['duplicate','delete','trimMinus','trimPlus','applyBeatBlock'].forEach(id=>{if($(id))$(id).disabled=!atom();});
-    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();renderCantoneseBoardSource();updateAbUI();updateTransport();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+    applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();renderCantoneseBoardSource();updateAbUI();updateTransport();renderPlateJump();syncFirstPath();window.dispatchEvent(new Event('hm:projectchange'));
+  }
+  function syncFirstPath() {
+    const film = $('firstPathFilm');
+    if (!film || !project?.show) return;
+    const teaching = project.show.show_id === DEMO;
+    const atoms = project.show.atoms || [];
+    const beats = atoms.map(a => a.label).filter(Boolean);
+    const eightPlate = atoms.length === 8 && Math.abs(duration() - 5) < 0.001;
+    const beatLine = beats.join(' → ');
+    if (teaching && eightPlate) film.textContent = '5.00s eight-plate teaching film. ' + beatLine;
+    else if (teaching) film.textContent = 'Teaching film is open. ' + duration().toFixed(2) + 's. ' + beatLine;
+    else film.textContent = 'Opened ' + (project.show.title || project.show.show_id) + '. Open demo returns to the 5.00s eight-plate teaching film.';
+    const openBtn = $('firstPathOpen');
+    if (openBtn) openBtn.setAttribute('aria-current', teaching ? 'step' : 'false');
+    const blocked = !atoms.length || recording;
+    ['firstPathWatch', 'firstPathEdit', 'firstPathExport', 'firstPathHtml'].forEach(id => {
+      const el = $(id);
+      if (el) el.disabled = blocked;
+    });
+  }
+  function firstPathStep(step) {
+    if (step === 'open') {
+      if (project?.show?.show_id === DEMO) {
+        time = 0;
+        pause();
+        status('5.00s eight-plate teaching film is open.');
+        return;
+      }
+      return openProject(builtIn(DEMO));
+    }
+    if (step === 'watch') {
+      if (!playing) $('play').click();
+      return;
+    }
+    if (step === 'edit') {
+      if ($('shellFocusClip')) $('shellFocusClip').checked = true;
+      const beat = atom();
+      $('duration')?.focus();
+      status(beat ? 'Edit one beat. ' + beat.label + '.' : 'Select a beat to edit.');
+      return;
+    }
+    const dialog = $('exportDialog');
+    if (!dialog) return;
+    if (!dialog.open) $('exportOpen').click();
+    if (step === 'html') {
+      const button = $('exportHtml');
+      button?.scrollIntoView({block: 'center'});
+      button?.focus();
+    }
   }
   function renderCantoneseBoardSource() {
     const el = $('cantoneseBoardSource');
@@ -2371,6 +2420,11 @@
   });
   on('replaceImage',()=>{replacing=!replacing;if(replacing&&project&&HMComposeClient.isPlatePackShow(project.show)){pickerOpen=true;applyPickerChrome();}document.querySelector('.inspector').dataset.replacing=String(replacing);document.querySelector('.library').scrollIntoView({behavior:'smooth',block:'nearest'});status(replacing?'Choose a library image to replace this plate.':'Plate replacement cancelled.');});
   on('helpOpen',()=>$('helpDialog').showModal());
+  $('firstPath')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-first-path]');
+    if (!button || button.disabled) return;
+    void firstPathStep(button.dataset.firstPath);
+  });
   on('timelineJsonOpen',()=>{const panel=$('timelineJsonPanel');if(panel)panel.open=true;renderTimelineJsonPanel();panel?.scrollIntoView({block:'nearest'});});
   function focusStoryboard() {
     pause();
