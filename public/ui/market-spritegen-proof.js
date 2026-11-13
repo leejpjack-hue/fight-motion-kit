@@ -83,6 +83,9 @@
       if (!dlg.open) dlg.showModal();
       var bar = document.getElementById('status');
       if (bar) bar.textContent = statusLine(receipt);
+      if (root.HMImportReceipt && typeof root.HMImportReceipt.recordMarketSpritegen === 'function') {
+        root.HMImportReceipt.recordMarketSpritegen(receipt);
+      }
       return receipt;
     }).catch(function (err) {
       var bar = document.getElementById('status');

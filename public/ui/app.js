@@ -1671,18 +1671,30 @@
   async function importImages(files) {
     requireEditable();if(!files.length)return;
     const destination=destinationToken();
+    let currentName='';
     try {
-      const items=[];
+      const items=[],landedNames=[];
       for(const file of [...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}))) {
+        currentName=file.name||'image';
         if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Choose PNG, JPG or WebP images.');
         if(file.size>20*1024*1024)throw new Error(file.name+' is larger than 20 MB.');
         const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
         const im=new Image();im.src=data;await im.decode();const id=uid();
+        landedNames.push(currentName);
         items.push({id,name:file.name.replace(/\.[^.]+$/,''),src:data,layoutSource:'embedded/'+id+'/layout.json',plateId:'P01'});
       }
       if(destination.revision!==projectRevision||destination.request!==loadRequest)throw Error('The destination changed. Import images again.');
-      edit(()=>{for(const m of items){project.media.push(m);project.layouts[m.layoutSource]={[m.plateId]:{full:m.src}};}if(!project.show.atoms.length){for(const m of items)project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=0;time=0;}});
+      let addedClips=0;
+      edit(()=>{const wasEmpty=!project.show.atoms.length;for(const m of items){project.media.push(m);project.layouts[m.layoutSource]={[m.plateId]:{full:m.src}};}if(wasEmpty){addedClips=items.length;for(const m of items)project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=0;time=0;}});
       status(`Imported ${items.length} images · Saved with this project on your device`);
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import images',source:'Local image upload',status:'ok',filesLanded:landedNames,clipsLoaded:addedClips,imagesLoaded:items.length,missing:[],warnings:addedClips?['Created '+addedClips+' starter clips on blank project.']:['Added to media library without altering existing timeline clips.'],replaceProject:false,undoable:true});
+      }
+    } catch(err) {
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import images',source:'Local image upload',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[(currentName?currentName+': ':'')+err.message],warnings:['No images committed; open project unchanged.'],replaceProject:false,undoable:false});
+      }
+      throw err;
     } finally {$('imageInput').value='';}
   }
   function download(name,blob) {const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}
