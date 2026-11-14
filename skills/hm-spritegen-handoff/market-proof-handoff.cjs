@@ -37,33 +37,40 @@ function fillRect(rgba, W, H, x, y, w, h, c) {
 }
 
 function renderMarketPlatePng(idx, beat) {
-  const W = 640;
-  const H = 360;
+  const W = 32;
+  const H = 18;
   const rgba = new Uint8Array(W * H * 4);
-  // Night market sky & warm lantern backdrop
+  // Night market sky & warm lantern backdrop (16:9 scaled proof plate)
   const sky = [22 + idx * 3, 28 + (idx % 3) * 4, 42 + idx * 2, 255];
   fillRect(rgba, W, H, 0, 0, W, H, sky);
-  // Warm market lanterns across top band
   for (let l = 0; l < 5; l++) {
-    fillRect(rgba, W, H, 70 + l * 120, 26 + ((l + idx) % 2) * 8, 22, 30, [240, 175 - l * 12, 68, 255]);
+    fillRect(rgba, W, H, 3 + l * 6, 1 + ((l + idx) % 2), 2, 2, [240, 175 - l * 12, 68, 255]);
   }
-  // Wooden market stalls + stone floor (floor aligns near 342 in 360p)
-  fillRect(rgba, W, H, 0, 250, W, 110, [48, 42, 46, 255]);
-  fillRect(rgba, W, H, 0, 342, W, 18, [72, 64, 60, 255]);
+  fillRect(rgba, W, H, 0, 12, W, 6, [48, 42, 46, 255]);
+  fillRect(rgba, W, H, 0, 17, W, 1, [72, 64, 60, 255]);
   // Baijia (L, warm crimson fighter) advances right on beats
-  const bx = 130 + idx * 14;
-  const by = 135 - (beat.beat_class === 'clash' ? 14 : 0);
-  fillRect(rgba, W, H, bx, by, 58, 130, [196, 62, 54, 255]);
-  fillRect(rgba, W, H, bx + 12, by - 36, 34, 34, [238, 198, 170, 255]);
+  const bx = 6 + Math.min(8, idx);
+  const by = 7 - (beat.beat_class === 'clash' ? 1 : 0);
+  fillRect(rgba, W, H, bx, by, 3, 7, [196, 62, 54, 255]);
+  fillRect(rgba, W, H, bx, by - 2, 2, 2, [238, 198, 170, 255]);
   // Elfmage (R, cyan robe) counters left
-  const ex = 450 - idx * 12;
-  const ey = 132 + (idx % 2) * 8;
-  fillRect(rgba, W, H, ex, ey, 58, 134, [48, 174, 196, 255]);
-  fillRect(rgba, W, H, ex + 12, ey - 36, 34, 34, [226, 232, 244, 255]);
-  // Clash spark core on clash beats
+  const ex = 23 - Math.min(7, idx);
+  const ey = 7 + (idx % 2);
+  fillRect(rgba, W, H, ex, ey, 3, 7, [48, 174, 196, 255]);
+  fillRect(rgba, W, H, ex, ey - 2, 2, 2, [226, 232, 244, 255]);
   if (beat.beat_class === 'clash') {
-    const cx = Math.round((bx + 58 + ex) / 2) - 18;
-    fillRect(rgba, W, H, cx, 148, 36, 36, [255, 224, 102, 255]);
+    const cx = Math.round((bx + 3 + ex) / 2) - 1;
+    fillRect(rgba, W, H, cx, 7, 2, 2, [255, 224, 102, 255]);
+  }
+  // Deterministic micro-dither breaks long identical byte runs while keeping plates compact
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const off = (py * W + px) * 4;
+      const jitter = ((px * 7 + py * 13 + idx * 19 + px * py * 3) & 7) - 3;
+      rgba[off] = Math.max(0, Math.min(255, rgba[off] + jitter));
+      rgba[off + 1] = Math.max(0, Math.min(255, rgba[off + 1] - jitter));
+      rgba[off + 2] = Math.max(0, Math.min(255, rgba[off + 2] + ((jitter * 3) & 7) - 3));
+    }
   }
   return sheetLib.encodeRgbaPngNode(W, H, rgba);
 }

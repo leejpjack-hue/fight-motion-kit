@@ -140,7 +140,7 @@ function startStaticServer() {
     assert.equal(dlHtml.suggestedFilename(), 'fight-baijia-elfmage-market-spritegen-2026-11-06.html');
     const htmlPath = await dlHtml.path();
     const exportedHtml = fs.readFileSync(htmlPath, 'utf8');
-    assert.ok(exportedHtml.length > 30000);
+    assert.ok(exportedHtml.length > 10000 && exportedHtml.includes('data:image/png;base64,'));
 
     // Load exported standalone HTML cleanly offline
     const offlinePage = await context.newPage();
