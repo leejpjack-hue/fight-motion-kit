@@ -2,7 +2,16 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const copy = x => structuredClone(x);
+  const copy = x => {
+    if (x && typeof x === 'object' && !Array.isArray(x) && x.assets && typeof x.assets === 'object' && !Array.isArray(x.assets) && Object.values(x.assets).every(v => typeof v === 'string')) {
+      const shallow = { ...x };
+      delete shallow.assets;
+      const cloned = structuredClone(shallow);
+      cloned.assets = { ...x.assets };
+      return cloned;
+    }
+    return structuredClone(x);
+  };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid = () => 'clip-' + crypto.randomUUID();
   const DEMO = 'daiyu-wang-five-seconds';
@@ -197,9 +206,18 @@
     try { await writeSnapshot(copy(project)); if(v===saveVersion)$('saveState').textContent='Saved on this device'; }
     catch(e){$('saveState').textContent='Not saved · download a project';status('Browser storage unavailable. Use Save project to keep your work.',true);}
   }
+  function sameAssets(a, b) {
+    if (a === b) return true;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (const k of ka) if (!Object.hasOwn(b, k) || a[k] !== b[k]) return false;
+    return true;
+  }
   function commit() {
     validate(project); pause();
-    if(JSON.stringify(project)===JSON.stringify(history[historyIndex])){update();return;}
+    const prev=history[historyIndex];
+    if(prev&&sameAssets(project.assets,prev.assets)&&JSON.stringify({...project,assets:undefined})===JSON.stringify({...prev,assets:undefined})){update();return;}
     projectRevision++;history=history.slice(0,historyIndex+1);history.push(copy(project)); if(history.length>60)history.shift();historyIndex=history.length-1;
     time=Math.min(time,duration());update();void compile().catch(e=>status(e.message,true));void persist();
   }
@@ -882,7 +900,8 @@
         note.textContent='PENDING · NOT PLAYABLE until SG02. Original PNG + JSON saved; no plate, background or animation export.';
         card.dataset.pendingMotion='true';card.append(name,note);$('mediaGrid').append(card);return;
       }
-      card.innerHTML=`<button class="media-image" title="Use ${esc(m.name)} in selected clip" aria-label="Use ${esc(m.name)} in selected clip"><img src="${esc(assetSrc(m.src))}" alt="${esc(m.name)}"></button><div class="media-meta"><span>${esc(m.name)}</span><button class="media-add" title="Add ${esc(m.name)} to timeline" aria-label="Add ${esc(m.name)} to timeline">＋</button></div>`;
+      card.innerHTML=`<button class="media-image" title="Use ${esc(m.name)} in selected clip" aria-label="Use ${esc(m.name)} in selected clip"><img alt="${esc(m.name)}"></button><div class="media-meta"><span>${esc(m.name)}</span><button class="media-add" title="Add ${esc(m.name)} to timeline" aria-label="Add ${esc(m.name)} to timeline">＋</button></div>`;
+      card.querySelector('img').src=assetSrc(m.src);
       card.querySelector('.media-image').onclick=safe(()=>{if(!atom())return addMedia(m);edit(()=>{atom().hero={layout_source:m.layoutSource,plates:[m.plateId]};atom().plates_needed=1;});replacing=false;document.querySelector('.inspector').dataset.replacing='false';status('Replaced selected plate with '+m.name);});
       card.querySelector('.media-add').onclick=safe(()=>addMedia(m));$('mediaGrid').append(card);
     });
@@ -903,7 +922,8 @@
       if(a.camera?.chain)b.title=`Camera chain ${a.camera.chain.index+1} of ${a.camera.chain.count}`;
       b.setAttribute('aria-label',`${i+1}. ${a.label||a.id}, ${a.duration_s.toFixed(2)} seconds`);b.setAttribute('aria-pressed',String(i===selected));
       const ticks=(a.fx_hooks||[]).map(beatTickMarkup).join('');
-      b.innerHTML=`${ticks}<img src="${esc(thumbnail(a))}" alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
+      b.innerHTML=`${ticks}<img alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
+      b.querySelector('img').src=thumbnail(a);
       b.onclick=e=>{if(e.shiftKey)selectRange(i);else select(i);};b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
       b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [moved]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,moved);selected=i;rangeAnchor=i;rangeEnd=i;time=startOf(i);HMComposeClient.reflowAllCamChains(project.show.atoms);});dragIndex=-1;});
       b.ondragend=()=>{dragIndex=-1;};$('timelineClips').append(b);
@@ -1671,18 +1691,30 @@
   async function importImages(files) {
     requireEditable();if(!files.length)return;
     const destination=destinationToken();
+    let currentName='';
     try {
-      const items=[];
+      const items=[],landedNames=[];
       for(const file of [...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}))) {
+        currentName=file.name||'image';
         if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Choose PNG, JPG or WebP images.');
         if(file.size>20*1024*1024)throw new Error(file.name+' is larger than 20 MB.');
         const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
         const im=new Image();im.src=data;await im.decode();const id=uid();
+        landedNames.push(currentName);
         items.push({id,name:file.name.replace(/\.[^.]+$/,''),src:data,layoutSource:'embedded/'+id+'/layout.json',plateId:'P01'});
       }
       if(destination.revision!==projectRevision||destination.request!==loadRequest)throw Error('The destination changed. Import images again.');
-      edit(()=>{for(const m of items){project.media.push(m);project.layouts[m.layoutSource]={[m.plateId]:{full:m.src}};}if(!project.show.atoms.length){for(const m of items)project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=0;time=0;}});
+      let addedClips=0;
+      edit(()=>{const wasEmpty=!project.show.atoms.length;for(const m of items){project.media.push(m);project.layouts[m.layoutSource]={[m.plateId]:{full:m.src}};}if(wasEmpty){addedClips=items.length;for(const m of items)project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=0;time=0;}});
       status(`Imported ${items.length} images · Saved with this project on your device`);
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import images',source:'Local image upload',status:'ok',filesLanded:landedNames,clipsLoaded:addedClips,imagesLoaded:items.length,missing:[],warnings:addedClips?['Created '+addedClips+' starter clips on blank project.']:['Added to media library without altering existing timeline clips.'],replaceProject:false,undoable:true});
+      }
+    } catch(err) {
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import images',source:'Local image upload',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[(currentName?currentName+': ':'')+err.message],warnings:['No images committed; open project unchanged.'],replaceProject:false,undoable:false});
+      }
+      throw err;
     } finally {$('imageInput').value='';}
   }
   function download(name,blob) {const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}
@@ -2348,7 +2380,7 @@
       if(path.length<=2)throw new Error('A path needs at least two points.');
       path.splice(+btn.dataset.remove,1);
       writePath(path);
-    }));
+    });
   }
   on('fxPathAdd',()=>{
     const hit=pathHook();if(!hit)return;
