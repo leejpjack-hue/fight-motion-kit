@@ -1532,6 +1532,8 @@
       tlAtoms.push({
         id: a.id,
         ...(bridgedBeatId ? { beat_id: bridgedBeatId } : {}),
+        label: typeof a.label === 'string' ? a.label : '',
+        caption: typeof a.caption === 'string' ? a.caption : '',
         t0: Math.round(t0 * 10000) / 10000,
         t1: Math.round(t1 * 10000) / 10000,
         pose_mode: mode,
