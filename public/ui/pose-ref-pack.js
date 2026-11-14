@@ -190,8 +190,23 @@
     }
 
     S.builtInPosePack = builtInPosePack;
-    S.on('loadPoseRefPack', function () {
-      return S.openProject(builtInPosePack());
+    S.on('loadPoseRefPack', async function () {
+      var opened = await S.openProject(builtInPosePack());
+      if (opened && global.HMImportReceipt && S.project) {
+        var audit = global.HMImportReceipt.auditProjectAssets(S.project, { isBuiltIn: true });
+        global.HMImportReceipt.record({
+          action: 'Pose-ref plate pack',
+          source: S.project.show.show_id,
+          status: audit.missingRefs.length ? 'partial' : 'ok',
+          filesLanded: ['built-in pose-ref plate pack'],
+          clipsLoaded: audit.clipsLoaded,
+          imagesLoaded: audit.imagesLoaded,
+          missing: audit.missingRefs,
+          replaceProject: true,
+          undoable: false,
+        });
+      }
+      return opened;
     });
 
     global.addEventListener('hm:projectchange', syncPosePackNote);

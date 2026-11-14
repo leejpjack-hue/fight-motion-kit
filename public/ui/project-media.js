@@ -306,7 +306,7 @@
 /* Import selected images, with fresh asset/layout keys, without opening the source edit. */
 if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() => {
   const S=window.HMStudio,{$,on}=S;
-  let source=null,items=[],chosen=new Set(),request=0,destination='',busy=false;
+  let source=null,sourceLabel='',excludedPending=[],items=[],chosen=new Set(),request=0,destination='',busy=false;
   const imageData=/^data:image\/(png|jpeg|webp|gif);base64,/;
   const notice=(text,error=false)=>{$('projectMediaStatus').textContent=text;$('projectMediaStatus').classList.toggle('error',error);};
   function update(){
@@ -318,7 +318,8 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
   function candidates(p,embedded){
     if(!p?.show||!Array.isArray(p.media)||!p.layouts||p.media.length>1000)throw Error('Choose a saved HTML Motion .motion.json project.');
     HMStripAdapter.validateProject(p);
-    const result=[],seen=new Set(),pending=new Set((p.media||[]).filter(m=>m.pendingMotion).flatMap(m=>[m.src,p.assets?.[m.src]]));
+    const result=[],seen=new Set(),pendingList=(p.media||[]).filter(m=>m.pendingMotion),pending=new Set(pendingList.flatMap(m=>[m.src,p.assets?.[m.src]]));
+    excludedPending=pendingList.map(m=>(m.name||m.src||'pending strip')+' (pending SG-01 strip excluded)');
     function add(src,name){
       if(!src||seen.has(src)||pending.has(src)||pending.has(p.assets?.[src]))return;
       if(typeof src!=='string')throw Error('Project contains an invalid image.');
@@ -336,11 +337,11 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
     if(!result.length)throw Error('No images found in this project.');
     return result;
   }
-  async function showSource(promise,embedded){
-    const version=++request;busy=true;source=null;items=[];chosen.clear();$('projectMediaGrid').replaceChildren();notice('Opening project images…');update();
+  async function showSource(promise,embedded,label){
+    const version=++request;busy=true;source=null;sourceLabel=label||'Project file';excludedPending=[];items=[];chosen.clear();$('projectMediaGrid').replaceChildren();notice('Opening project images…');update();
     try{
       const p=await promise,next=candidates(p,embedded);if(version!==request)return;
-      source=p;items=next;
+      source=p;sourceLabel=label||p.show?.title||p.show?.show_id||'Project file';items=next;
       items.forEach((m,i)=>{
         const label=document.createElement('label');label.className='project-media-card';
         const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=i;checkbox.setAttribute('aria-label','Import '+m.name);checkbox.onchange=()=>{checkbox.checked?chosen.add(i):chosen.delete(i);update();};
@@ -348,7 +349,14 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
         label.append(checkbox,image,name);$('projectMediaGrid').append(label);
       });
       notice((p.show.title||p.show.show_id)+' · '+items.length+' images. Select the ones you want.');
-    }catch(e){if(version===request)notice(e.message,true);}
+    }catch(e){
+      if(version===request){
+        notice(e.message,true);
+        if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+          HMImportReceipt.record({action:'Import from project',source:sourceLabel||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[e.message],warnings:['No images imported; active project unchanged.'],replaceProject:false,undoable:false});
+        }
+      }
+    }
     finally{if(version===request){busy=false;update();}}
   }
   function dataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});}
@@ -370,9 +378,9 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
   $('projectMediaInput').onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
     $('projectMediaSource').value='';
-    await showSource((async()=>{if(f.size>100*1024*1024)throw Error('Project exceeds the 100 MB import limit.');return JSON.parse(await f.text());})(),true);e.target.value='';
+    await showSource((async()=>{if(f.size>100*1024*1024)throw Error('Project exceeds the 100 MB import limit.');return JSON.parse(await f.text());})(),true,f.name);e.target.value='';
   };
-  $('projectMediaSource').onchange=()=>{const id=$('projectMediaSource').value;if(id)void showSource(S.builtIn(id),false);};
+  $('projectMediaSource').onchange=()=>{const id=$('projectMediaSource').value;if(id)void showSource(S.builtIn(id),false,'Built-in sample: '+id);};
   on('selectAllProjectImages',()=>{chosen=new Set(items.map((_,i)=>i));update();});
   on('clearProjectImages',()=>{chosen.clear();update();});
   on('importSelectedProjectImages',async()=>{
@@ -393,11 +401,19 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
         });p.layouts[layoutSource]=layout;
       });
       $('projectMediaDialog').close();S.status('Imported '+imported.length+' images into the library. Use + to add a clip or choose one as a background.');
-    }catch(e){notice(e.message,true);}
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import from project',source:sourceLabel||'Project file',status:excludedPending.length?'partial':'ok',filesLanded:imported.map(m=>m.name),clipsLoaded:0,imagesLoaded:imported.length,missing:excludedPending,warnings:['Imported into media library without altering timeline clips.'],replaceProject:false,undoable:true});
+      }
+    }catch(e){
+      notice(e.message,true);
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import from project',source:sourceLabel||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[e.message],warnings:['No images imported; active project unchanged.'],replaceProject:false,undoable:false});
+      }
+    }
     finally{if(version===request){busy=false;update();}}
   });
   // A separate pair picker stages without touching the destination or its history.
-  let stripRequest=0,stagedStrip=null,stripDestination=null,stripCommitting=false;
+  let stripRequest=0,stagedStrip=null,stagedFiles=[],stripDestination=null,stripCommitting=false;
   const stripNotice=(message,error=false)=>{$('stripStatus').textContent=message;$('stripStatus').classList.toggle('error',error);};
   // Structured HM-PF-30 QA rows. Render-only: the model is HMStripAdapter.buildStripQaPanel.
   // Warning text is a span so existing dialog harnesses without createTextNode stay fail-closed.
@@ -437,26 +453,37 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
     $('stripDialog').showModal();
   });
   $('stripDialog').addEventListener('cancel',e=>{if(stripCommitting)e.preventDefault();});
-  $('stripDialog').addEventListener('close',()=>{stripRequest++;stagedStrip=null;hideStripQa();});
+  $('stripDialog').addEventListener('close',()=>{stripRequest++;stagedStrip=null;stagedFiles=[];hideStripQa();});
   $('stripInput').onchange=async e=>{
     if(stripCommitting)return;
-    const version=++stripRequest;stagedStrip=null;$('commitStrip').disabled=true;hideStripQa();stripNotice('Validating local pair…');
+    const rawFiles=Array.from(e.target.files||[]).map(f=>f.name).filter(Boolean);
+    const version=++stripRequest;stagedStrip=null;stagedFiles=[];$('commitStrip').disabled=true;hideStripQa();stripNotice('Validating local pair…');
     try{
       const next=await HMStripAdapter.stage(e.target.files,{cancelled:()=>version!==stripRequest});
       if(version!==stripRequest)return;
-      stagedStrip=next;const d=next.pendingMotion,g=d.geometry;
+      stagedStrip=next;stagedFiles=rawFiles;const d=next.pendingMotion,g=d.geometry;
       const panel=HMStripAdapter.buildStripQaPanel(d);renderStripQa(panel);
       stripNotice(next.name+' · '+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' PENDING, NOT PLAYABLE until SG02. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.');
       $('commitStrip').disabled=!panel.ok;
-    }catch(e){if(version===stripRequest){stripNotice(e.message,true);renderStripQa({ok:false,error:e.message});}}
+    }catch(e){
+      if(version===stripRequest){
+        stripNotice(e.message,true);renderStripQa({ok:false,error:e.message});
+        if(rawFiles.length&&typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+          HMImportReceipt.record({action:'Import pending strip',source:rawFiles.join(' + '),status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[e.message],warnings:['Strip was not staged; active project unchanged.'],replaceProject:false,undoable:false});
+        }
+      }
+    }
   };
   on('commitStrip',async()=>{
     if(!stagedStrip||stripCommitting)return;
-    const staged=stagedStrip;stripRequest++;
+    const staged=stagedStrip,files=stagedFiles.slice();stripRequest++;
     stripCommitting=true;$('stripFields').disabled=true;stripNotice('Saving pending strip… Cancellation is disabled until the storage transaction finishes.');
     try{
       await S.commitCandidate(stripDestination,p=>HMStripAdapter.append(p,staged));
       $('stripDialog').close();S.status('Pending strip saved with original bytes. NOT PLAYABLE until SG02; unavailable for timeline, background or motion export.');
+      if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
+        HMImportReceipt.record({action:'Import pending strip',source:staged.name,status:'pending',filesLanded:files.length?files:[staged.name],clipsLoaded:0,imagesLoaded:1,missing:['Playable clips and motion export unavailable until SG-02'],warnings:['PENDING, NOT PLAYABLE until SG02; saved original PNG + JSON bytes only.'].concat((staged.pendingMotion&&staged.pendingMotion.warnings)||[]),replaceProject:false,undoable:true});
+      }
     }catch(e){stripNotice('Strip was not imported: '+e.message,true);}
     finally{stripCommitting=false;$('stripFields').disabled=false;}
   });

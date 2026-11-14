@@ -202,7 +202,24 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden
 #fgLayerMatrix{font:10px/1.45 ui-monospace,SFMono-Regular,monospace}
 #fgLayerMatrix[data-state="independent"]{color:var(--shell-text)}
 .first-path{display:flex;flex-direction:column;gap:6px;margin:0 0 8px;padding:8px 10px;border:1px solid var(--shell-shot-line);border-radius:8px;background:var(--shell-bg);flex-shrink:0}.first-path-film{margin:0;font-size:12px;line-height:1.45;color:var(--shell-text)}.first-path ol{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}.first-path li{margin:0}.first-path button{font-size:12px;padding:6px 10px;background:var(--shell-raised)}.first-path button[aria-current="step"]{background:var(--shell-accent-dim);border-color:var(--accent);color:var(--accent)}
-.library{display:flex;flex-direction:column}.library>*{flex-shrink:0}.library>.panel-heading,.library>h1,.library>.intro{order:1}.library>.library-bottom{order:2}.library>#parityPickerNote,.library>#libraryToolbar,.library>#mediaGrid{order:3}.library>#importImages,.library>#importProjectImages,.library>#importStrip,.library>#projectMediaInput,.library>#imageInput,.library>#projectInput{order:4}.library>.background-panel,.library>#foregroundPanel{order:5}
+.library{display:flex;flex-direction:column}.library>*{flex-shrink:0}.library>.panel-heading,.library>h1,.library>.intro{order:1}.library>.library-bottom{order:2}.library>#parityPickerNote,.library>#libraryToolbar,.library>#mediaGrid{order:3}.library>#importImages,.library>#importProjectImages,.library>#importStrip,.library>#projectMediaInput,.library>#imageInput,.library>#projectInput,.library>#importReceipt{order:4}.library>.background-panel,.library>#foregroundPanel{order:5}
 .timeline-panel{display:flex;flex-direction:column}.timeline-panel>*{flex-shrink:0}.timeline-panel>.timeline-heading,.timeline-panel>.timeline-scroll,.timeline-panel>#scrub,.timeline-panel>.timeline-footer,.timeline-panel>#framePeekStrip{order:1}.timeline-panel>#pf09GatePanel,.timeline-panel>#hmBoardSurface,.timeline-panel>#cantoneseBoardSource,.timeline-panel>#pf53NotifyPanel{order:2}.timeline-panel>#showLintPanel,.timeline-panel>#timelineJsonPanel{order:3}
 .inspector{display:flex;flex-direction:column}.inspector>*{flex-shrink:0}.inspector>.panel-heading,.inspector>#inspectorEmpty,.inspector>#inspectorContent{order:1}.inspector>#dirtyChecklist{order:2}.inspector>#catalogQuery{order:3}
 .duration-literacy{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin:0;padding:0 0 2px;font:11px ui-monospace,SFMono-Regular,monospace;color:var(--shell-text);flex-shrink:0}.duration-literacy span{white-space:nowrap}
+.import-receipt{margin:8px 0 0;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--shell-raised);color:var(--shell-text);display:grid;gap:7px;font-size:11px;line-height:1.4}
+.import-receipt[hidden]{display:none}
+.import-receipt[data-status="blocked"],.import-receipt[data-status="error"]{border-color:var(--danger)}
+.import-receipt[data-status="partial"],.import-receipt[data-status="pending"]{border-color:var(--warn)}
+.import-receipt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.import-receipt-title-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
+.import-receipt-badge{font:700 9px/1.2 ui-monospace,monospace;letter-spacing:.04em;padding:2px 6px;border-radius:999px;border:1px solid var(--border);color:var(--accent)}
+.import-receipt[data-status="blocked"] .import-receipt-badge,.import-receipt[data-status="error"] .import-receipt-badge{color:var(--danger);border-color:var(--danger)}
+.import-receipt[data-status="partial"] .import-receipt-badge,.import-receipt[data-status="pending"] .import-receipt-badge{color:var(--warn);border-color:var(--warn)}
+.import-receipt-close{flex:none;padding:1px 6px;font-size:13px;line-height:1.2}
+.import-receipt-counts{display:flex;flex-wrap:wrap;gap:4px 8px;font:600 10px/1.3 ui-monospace,monospace;color:var(--muted)}
+.import-receipt-section{display:grid;gap:2px}
+.import-receipt-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.import-receipt-list{margin:0;padding-left:16px;font:11px/1.35 ui-monospace,monospace;overflow-wrap:anywhere}
+.import-receipt-list.is-missing li{color:var(--danger)}
+.import-receipt-empty,.import-receipt-note{margin:0;font-size:11px;overflow-wrap:anywhere}
+.import-receipt-note{color:var(--muted)}
