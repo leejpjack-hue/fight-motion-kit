@@ -581,8 +581,23 @@
       },
     });
 
-    S.on('loadCostumeLock', function () {
-      return S.openProject(builtInCostumeLock());
+    S.on('loadCostumeLock', async function () {
+      var opened = await S.openProject(builtInCostumeLock());
+      if (opened && global.HMImportReceipt && S.project) {
+        var audit = global.HMImportReceipt.auditProjectAssets(S.project, { isBuiltIn: true });
+        global.HMImportReceipt.record({
+          action: 'Costume lock pack',
+          source: S.project.show.show_id,
+          status: audit.missingRefs.length ? 'partial' : 'ok',
+          filesLanded: ['built-in costume-lock pack'],
+          clipsLoaded: audit.clipsLoaded,
+          imagesLoaded: audit.imagesLoaded,
+          missing: audit.missingRefs,
+          replaceProject: true,
+          undoable: false,
+        });
+      }
+      return opened;
     });
 
     global.addEventListener('hm:projectchange', refreshAll);

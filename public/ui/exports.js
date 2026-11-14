@@ -55,41 +55,67 @@
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;
     exportIds.forEach(id=>{if($(id))$(id).disabled=true;});
+    await new Promise(resolve=>setTimeout(resolve,25));
     try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});applyExportGate();}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
   on('openProject',()=>$('projectInput').click());
   $('projectInput').onchange=safe(async e=>{
     const files=[...(e.target.files||[])];if(!files.length)return;
+    const skippedFiles=[],localFiles={};let jsonName='',parsed=null,candidateProject=null,fetchedHostShow=false,isLockPack=false;
     try{
       const destination=S.destinationToken();
       const next=await (async()=>{
       const jsonFile=files.find(file=>/\.json$/i.test(file.name||'')||file.type==='application/json')||files[0];
+      jsonName=jsonFile.name||'project.json';
       if(jsonFile.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
-      const localFiles={};
       for(const imgFile of files){
         if(imgFile===jsonFile)continue;
-        if(!['image/png','image/jpeg','image/webp'].includes(imgFile.type)&&!/\.(png|jpe?g|webp)$/i.test(imgFile.name||''))continue;
+        if(!['image/png','image/jpeg','image/webp'].includes(imgFile.type)&&!/\.(png|jpe?g|webp)$/i.test(imgFile.name||'')){if(imgFile.name)skippedFiles.push(imgFile.name);continue;}
         if(imgFile.size>20*1024*1024)throw new Error(imgFile.name+' is larger than 20 MB.');
         if(Object.hasOwn(localFiles,imgFile.name))throw new Error('Duplicate image filename: '+imgFile.name+'. Use distinct filenames for sheets and locked references.');
         localFiles[imgFile.name]=await dataUrl(imgFile);
       }
-      const parsed=JSON.parse(await jsonFile.text());
-      const isLockPack=window.HMComposeClient?.isCostumeLockPackInput?.(parsed);
+      parsed=JSON.parse(await jsonFile.text());
+      isLockPack=Boolean(window.HMComposeClient?.isCostumeLockPackInput?.(parsed));
       const review=isLockPack?await HMCostumeDrift.review(parsed,localFiles):null;
       let p=(window.HMMotionSot&&HMMotionSot.asPortableProject(parsed,{localFiles}))||(window.HMComposeClient&&HMComposeClient.isCostumeLockPackInput?.(parsed)?HMComposeClient.normalizeCostumeLockPack(parsed,{localFiles}):parsed);
       if(review)HMCostumeDrift.attach(p,review.plan,review.report);
       if(!p.show&&p.show_id){
         // Existing show JSON is supported when its layouts are shipped with this host.
         const layouts={};for(const key of new Set(p.atoms.map(a=>a.hero?.layout_source).filter(Boolean))){if(!/^assets\/[a-zA-Z0-9_./-]+\.json$/.test(key)||key.includes('..'))throw new Error('Open a portable .motion.json project to include local images.');const r=await fetch('/'+key);if(!r.ok)throw new Error('Missing layout; use a portable project JSON.');layouts[key]=await r.json();}
+        fetchedHostShow=true;
         const media=[];for(const [key,l] of Object.entries(layouts)){const dir=key.slice(0,key.lastIndexOf('/')+1);for(const [id,e] of Object.entries(l)){if(e.full)e.full=e.full.replace(/(plates\/[^/]+)\.png$/,'$1.jpg');for(const part of e.parts||[])part.src=part.src.replace(/(cutout\/[^/]+)\.png$/,'$1.webp');const src=e.full?dir+e.full:dir+e.parts?.[0]?.src;if(src)media.push({id:crypto.randomUUID(),name:id,src,layoutSource:key,plateId:id});}}
         p={version:1,show:p,layouts,media};
       }
       return p;
       })();
+      candidateProject=next;
       const current=S.destinationToken();
       if(current.revision!==destination.revision||current.request!==destination.request)throw new Error('The open project changed during import review. Select the pack again.');
-      const opened=await S.openProject(Promise.resolve(next));if(opened)report('Project opened.');
+      const opened=await S.openProject(Promise.resolve(next));
+      if(opened){
+        report('Project opened.');
+        if(window.HMImportReceipt){
+          const audit=HMImportReceipt.auditProjectAssets(next,{localFiles,fetchedHostShow});
+          const composeErrs=Array.isArray(S.composed?.errors)?S.composed.errors:[];
+          const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),...composeErrs];
+          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:next.show?.show_id||jsonName,status:missing.length?(audit.imagesLoaded||audit.clipsLoaded?'partial':'error'):'ok',filesLanded:[jsonName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,replaceProject:true,undoable:false});
+        }
+      }
+    }catch(err){
+      if(window.HMImportReceipt){
+        const activeId=S.project?.show?.show_id,candId=candidateProject?.show?.show_id;
+        if(candidateProject&&activeId&&candId&&activeId===candId){
+          const audit=HMImportReceipt.auditProjectAssets(candidateProject,{localFiles,fetchedHostShow});
+          const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),err.message];
+          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:candId||jsonName,status:'partial',filesLanded:[jsonName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:['Opened partially with unresolved images kept missing (0 stand-in art).'],replaceProject:true,undoable:false});
+        }else{
+          const refAudit=parsed?HMImportReceipt.missingFromParsedInput(parsed,localFiles):{missing:[]};
+          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:jsonName||files.map(f=>f.name).join(', ')||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[err.message,...refAudit.missing,...skippedFiles.map(n=>n+' (unsupported file skipped)')],warnings:['Import failed; existing project kept without stand-in art.'],replaceProject:false,undoable:false});
+        }
+      }
+      throw err;
     }finally{e.target.value='';}
   });
   function selectedPreset() {return HMXExport.presetById($('exportPreset').value)||HMXExport.presets[0];}
