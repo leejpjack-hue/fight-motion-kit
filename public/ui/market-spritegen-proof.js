@@ -94,9 +94,66 @@
     });
   }
 
+  var HANDOFF_URL = '/shows/fight-baijia-elfmage-market-spritegen-handoff.json';
+
+  function assessHandoffProject(project) {
+    if (!project || !project.show || project.show.show_id !== SHOW_ID || !Array.isArray(project.show.atoms) || project.show.atoms.length < 8) {
+      throw new Error('Market spritegen handoff bundle is incomplete.');
+    }
+    var assetValues = project.assets ? Object.values(project.assets) : [];
+    var embedded = assetValues.filter(function (v) { return typeof v === 'string' && v.indexOf('data:image/') === 0; }).length;
+    if (embedded < 8) {
+      throw new Error('Market spritegen handoff bundle is missing embedded plate images.');
+    }
+    var duration = project.show.atoms.reduce(function (s, a) { return s + (Number(a.duration_s) || 0); }, 0);
+    return {
+      status: 'READY',
+      showId: project.show.show_id,
+      plates: embedded,
+      atoms: project.show.atoms.length,
+      durationS: Math.round(duration * 1000) / 1000,
+      providerCalls: 0,
+      artInvented: false
+    };
+  }
+
+  function loadLocalHandoff(studio) {
+    var S = studio || root.HMStudio;
+    if (!S || typeof S.load !== 'function') {
+      return Promise.reject(new Error('Studio loader unavailable for local handoff bundle.'));
+    }
+    return fetch(HANDOFF_URL).then(function (res) {
+      if (!res.ok) throw new Error('Market handoff bundle returned ' + res.status);
+      return res.json();
+    }).then(function (project) {
+      var info = assessHandoffProject(project);
+      return S.load(project).then(function (loaded) {
+        if (root.HMImportReceipt && typeof root.HMImportReceipt.record === 'function') {
+          try {
+            root.HMImportReceipt.record({
+              kind: 'market-spritegen-local-handoff',
+              showId: info.showId,
+              plates: info.plates,
+              providerCalls: 0
+            });
+          } catch (e) {}
+        }
+        var dlg = document.getElementById('marketSpritegenDialog');
+        if (dlg && dlg.open) dlg.close();
+        var msg = 'READY (local handoff · ' + info.plates + ' plates · ' + info.durationS.toFixed(2) + 's · 0 provider calls)';
+        var statusEl = document.getElementById('marketSpritegenStatus');
+        if (statusEl) statusEl.textContent = msg;
+        var bar = document.getElementById('status');
+        if (bar) bar.textContent = msg;
+        return { loaded: loaded, info: info, project: project };
+      });
+    });
+  }
+
   function mount() {
     var btn = document.getElementById('openMarketSpritegenProof');
     var handoff = document.getElementById('marketSpritegenHandoff');
+    var localBtn = document.getElementById('marketSpritegenLoadLocal');
     if (btn) btn.addEventListener('click', function () { openDialog(); });
     if (handoff) {
       handoff.addEventListener('click', function () {
@@ -104,6 +161,17 @@
         if (dlg && dlg.open) dlg.close();
         var strip = document.getElementById('importStrip');
         if (strip) strip.click();
+      });
+    }
+    if (localBtn) {
+      localBtn.addEventListener('click', function () {
+        localBtn.disabled = true;
+        loadLocalHandoff().catch(function (err) {
+          var statusEl = document.getElementById('marketSpritegenStatus');
+          if (statusEl) statusEl.textContent = err.message;
+        }).finally(function () {
+          localBtn.disabled = false;
+        });
       });
     }
     var ready = root.ready;
@@ -122,8 +190,11 @@
     PACK_ROOT: PACK_ROOT,
     REQUIRED: REQUIRED,
     RECEIPT_URL: RECEIPT_URL,
+    HANDOFF_URL: HANDOFF_URL,
     matchesShow: matchesShow,
     assess: assess,
+    assessHandoffProject: assessHandoffProject,
+    loadLocalHandoff: loadLocalHandoff,
     statusLine: statusLine,
     openDialog: openDialog
   };

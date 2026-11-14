@@ -1,0 +1,502 @@
+{
+  "version": 1,
+  "provenance": {
+    "kind": "market-spritegen-local-handoff",
+    "source_show_id": "fight-baijia-elfmage-market-spritegen-2026-11-06",
+    "pack_root": "/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06",
+    "provider_calls": 0,
+    "art_invented": false,
+    "note": "Offline portable FE proof bundle (8 embedded PNG plates, 5.00s). Original disk pack stays BLOCKED_RUNTIME when absent."
+  },
+  "show": {
+    "show_id": "fight-baijia-elfmage-market-spritegen-2026-11-06",
+    "title": "Baijia × Elfmage · Market spritegen (5.00s local proof)",
+    "duration_target_s": 5,
+    "floor_y": 684,
+    "grounded": true,
+    "parity_mode": true,
+    "compose_mode": "parity",
+    "chars": {
+      "L": {
+        "name": "Baijia"
+      },
+      "R": {
+        "name": "Elfmage"
+      }
+    },
+    "bg": {},
+    "overlays": [],
+    "atoms": [
+      {
+        "id": "beat-01",
+        "label": "Market lantern clash",
+        "kind": "duo",
+        "duration_s": 0.5,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "clash"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M01"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "shake",
+            "t_rel": 0.08,
+            "params": {
+              "amp": 6,
+              "dur": 0.14
+            }
+          }
+        ],
+        "caption": "Lane opening"
+      },
+      {
+        "id": "beat-02",
+        "label": "Baijia low step",
+        "kind": "duo",
+        "duration_s": 0.5,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "straight"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M02"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": []
+      },
+      {
+        "id": "beat-03",
+        "label": "Elfmage sigil ward",
+        "kind": "duo",
+        "duration_s": 0.5,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "straight"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M03"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "sparks",
+            "t_rel": 0.12,
+            "params": {
+              "dur": 0.16
+            }
+          }
+        ]
+      },
+      {
+        "id": "beat-04",
+        "label": "Stall parry",
+        "kind": "duo",
+        "duration_s": 0.5,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "clash"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M04"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "hit_orange",
+            "t_rel": 0.08,
+            "params": {
+              "dur": 0.14
+            }
+          }
+        ],
+        "caption": "Parry!"
+      },
+      {
+        "id": "beat-05",
+        "label": "Awning leap",
+        "kind": "duo",
+        "duration_s": 0.5,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "straight"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M05"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": []
+      },
+      {
+        "id": "beat-06",
+        "label": "Arcane snap kick",
+        "kind": "duo",
+        "duration_s": 0.75,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "clash"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M06"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "leg_arc",
+            "t_rel": 0.1,
+            "params": {
+              "dur": 0.18
+            }
+          }
+        ]
+      },
+      {
+        "id": "beat-07",
+        "label": "Market palm strike",
+        "kind": "duo",
+        "duration_s": 0.75,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "clash"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M07"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": -4,
+              "b": 4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "fist_pressure",
+            "t_rel": 0.1,
+            "params": {
+              "dur": 0.2
+            }
+          }
+        ],
+        "caption": "Impact!"
+      },
+      {
+        "id": "beat-08",
+        "label": "Lantern standoff finish",
+        "kind": "duo",
+        "duration_s": 1,
+        "plates_needed": 1,
+        "pose_mode": "hero",
+        "motion": {
+          "family": "fight",
+          "beat_class": "clash"
+        },
+        "hero": {
+          "layout_source": "assets/fight-baijia-elfmage-market/layout.json",
+          "plates": [
+            "M08"
+          ]
+        },
+        "camera": {
+          "preset": "static_hold",
+          "params": {
+            "s": {
+              "type": "lerp",
+              "a": 1.01,
+              "b": 1.05,
+              "ease": "smooth"
+            },
+            "x": {
+              "type": "lerp",
+              "a": 4,
+              "b": -4
+            },
+            "y": {
+              "type": "const",
+              "v": 0
+            }
+          }
+        },
+        "fx_hooks": [
+          {
+            "type": "shake",
+            "t_rel": 0.08,
+            "params": {
+              "amp": 5,
+              "dur": 0.16
+            }
+          }
+        ],
+        "caption": "End exchange"
+      }
+    ]
+  },
+  "layouts": {
+    "assets/fight-baijia-elfmage-market/layout.json": {
+      "M01": {
+        "full": "M01.png",
+        "floor": 684
+      },
+      "M02": {
+        "full": "M02.png",
+        "floor": 684
+      },
+      "M03": {
+        "full": "M03.png",
+        "floor": 684
+      },
+      "M04": {
+        "full": "M04.png",
+        "floor": 684
+      },
+      "M05": {
+        "full": "M05.png",
+        "floor": 684
+      },
+      "M06": {
+        "full": "M06.png",
+        "floor": 684
+      },
+      "M07": {
+        "full": "M07.png",
+        "floor": 684
+      },
+      "M08": {
+        "full": "M08.png",
+        "floor": 684
+      }
+    }
+  },
+  "assets": {
+    "assets/fight-baijia-elfmage-market/M01.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACDElEQVR4nMWU205TQRSG5x08AYreyaHdPVGRM2wQJMa3MIbEZ5AQrrww8Y7onQk3HEI5PEJtKX0ILwgHY4xiDybcaH7yTbKbtunANlq9mD17zfevmX91d425di+mro6IOjt71dHl6dbtft2806Mb3VFdv9undnPDIgKC0o6vSuZxLUZYz5vj0ltflZXf0C/5qiw26g1OWMDZ2d6MqlvTFuCcZPiP97Mqrz6ySVQScA7//m6ulh/w0mtf397M1/Jr+y/PqPqycX8DvGpggBFGa/WvZu0IozU44wWnOMIZDsu5dX0tbsjFqZSK/5QbHgiAgCAu5TM6K6zJxcPER5/LOvxSvVRvcMICzoA4BeyPD6owNqyD0XRLTmVs4sqHn3w61+lp5dJ8Q4Cgec5PDKg48tDOrTizPi5Ih8+cPL25r8R21s6uc4yrT3OTQ/ow9UBZf8TZx7+Onuvn8Qsnj+3m5O0VrYFQ90B933I41fMZwvZ5c0z1qa0Da8Clb7gH6vucyjmcX6IVr78nXJzD4zsFa8CV77wH+P7BCNv/zYODg+G8B5J9MaXvxxWPJJTqTcrzUkr0R+y/n89AN7TiAz1RxaKeXPmW7+aUzOStAVe+4cEGQMBfjbez1gQGXHqDExZwBsQpgMoQtZsbAgT/azY44wWnOMIZEKc4bjc3TyYm9XRsXHPTo5qfGta/ji8AhaGXGDI3YmUAAAAASUVORK5CYII=",
+    "assets/fight-baijia-elfmage-market/M02.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB9klEQVR4nMWU204TURSG91MIclCQBIV2eg6HysFKGTC8k9E7At6aGG9MiBdSoNJHgFKoT2FMxMSg1CIa737z7WSaocyMlVi8WLNn7f9fe39rZvaYm0Nj6h1OqOdOTDdGUhoccDQwOK7+W0n13Y6r27phEgMJQlDeeO2quVEM1S/5n7lqrnXmN5AwAVmzXNRpZcEKkGNGB+D81aItohNP//pyWWfPl1r1nv599aG+rRda9a31Hxd1+vTi+gbRi8aua8M/FxWNF66Njv1PXBv+OQMZN5BCBBmEdEJH3dYNFwyICP68WX2jRq0Uqv+L3EDCBGSIkCJAfvKurC/1zVCdRcLqP338ofcnv0J1r96QYAgaq/NTOrqfs2OUL2g8Pj7Th88//+gzUee0Njuhg7msBfjbc57ZPlJ650Cp8t7V/wN0v1fIW4Cocx+Us3l2a19Opd75f6D9nLP54cy0BQjS28+5X6dzNudJhK1/6T/QHmzsRadn3Yvk28NWRPlMbjSpZCylzL20HCej1HhM2btxJeKO/Qbq+UkLEKSnxxIKrd+t2teQK9VC16fecMGAiODP+QaAACBIj8wrdfsNABHlN5AwARkipAh0hunKeqlmIXgSUfWGBMP/Gg1k3NAJRJAhQgpxt3WzuPBAS4U5PZqf0cpsXted/wY7QJshH3Nt7gAAAABJRU5ErkJggg==",
+    "assets/fight-baijia-elfmage-market/M03.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB60lEQVR4nMWUyU4bQRRF6zcSQkIIU2K354R5NJNQ/ihSEDtYZB2RHRIrzPgJeIj5DEBRBJEwNqBkedEpqS3bKtPthcOiuvrVva/eqequMm/eRvW6P6nedzG9GoioZzChl0OeXgyn1NcXV7d1wyAGgspJVtWj+XqMsVFvjSvbWVW/d+DfyKq63uw3kDAA2UNuSbXDRStATjL63c6KbneXbRIr8XWK3/xYref7euVbVvebC/X8+vxfllT72jy/QQxqANDCeK1/a8W2MF4DGS+QQgQZhKyEFXVbNzwwICK0xnf5nKrFg7a6K/71+58ur2qh/AYSBiBDhBQBcky3pT0L0E535Z//udfF9d+2emO+IcDQrs/PfdTPqXHbP+Vr7FP7ZcWOC7YP8pugc1qezFiA0vSn0Oec4t7JmTJ7pc7uAdc5Ls6kLcDZxGjgOfdjVk5xQIL8TfdA6znHfDo/YQEKs2NO3ZVP4XQur8ThqVPv6B6guN/C3gPsgN8C74F4JKHUSFKel1LiQ0Tp4ahiUU/J9zFlhuJ25RRnJ1y6M/+4oORB0X6GoPkNDwyICK0x3x4A/gWX7oz3y3b7AQnyG0gYgAwRUgTIMXVbNwQYnqs3kPECKUSQIUIKcbd1szo3rrWZWX2emtbywqT+d/wIIjGm4PH6jYcAAAAASUVORK5CYII=",
+    "assets/fight-baijia-elfmage-market/M04.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACC0lEQVR4nMWU204TURSG92OgcvCQ4AGmZ0+VU0XKGJ8DY3wFb4yXRrwyMeHOxAgRLdU3KIWCT0GEC01IKdVecKH+5tvJNDN1ph2CwMWaPWt9/9rz753Z2wwMJtU/lNOlvrQunknowtmszp9Laajf0eBARsfNDUUEJICwvP7OVeNtMZL/o3/pqvEint7ghALOGuWiWsszFuAcMRwDP97M2iZW4vGfr+5q/3Wh3e/x5vN72pufbve3539aVOtJcH4D9KL+2bXhr3WL+oJrI7b+mWvDXzM44wWnOMIZDlkJK4Lvfilpr7YYyXv1d+OGBwIgICzHQLO6FMmPkhucUMAZEKcAnCOCVwp5rU5dV3XyVij3929/b2rnWyuSd/YbEgTdRgysj9+wo7/+a+extPUwoOfjW7sHXefzjybOOebDm/mb2riTC/A/Xx/p9/ZcoD/zYUPpj2tKlSr/7x7AANvPLvTSZ5dX5XzaVHKldvh7oPOce+cYA7Wx29ZEGPf3596v2x1IlKuhvLM/cA9EBQa86KVl9V7EmdtkrqTlOBmlro0oe3lUiVFH6asJ5YaTSo6kBOfDaxNZ+w+E8UB/uWp3gJ0I5R39hgcCIODI+UrNrp5/IY7e4IQCzoA4BeAc0aF5qWJ3gNMQp9+QIDit0eCMF5ziCGdAnOL4uLl5MJ7XzPSUZgsTuj85ppPO/wJyy6uVpMFIRQAAAABJRU5ErkJggg==",
+    "assets/fight-baijia-elfmage-market/M05.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB8klEQVR4nMWUzU5aQRiG50KsKFb6o/yjLeAPWFHS9I4ak3bVpF22G9cmTQqlxUtQQLgQdWVBKU2Xb/NMcgjgGTltQl3MmfPN+37fPDPnzJilUErhhbgWFzNaCCcVWlpXZC6t5QcJPZxf06x1wyAGgkG1pO7xi2GMcVSfjAcfS+oe/oX/dUndt+N+AwkDkPVr++rV96wAOcno10dF/fhctkmsxNOZ/OennWG+pw/elXTzfneYP6x/sK/em/H6BnFaA4AWxGv9H4q2BfEayHiBFCLIIGQlrGjWuuGBARHBFV91vqh/WnXqxJfnv3R++TtQPS82kDAAGSKkCJBj8vReq6LrZs2pk8/kFxd9p+5X3xBgmNZ3cs/U3Erb3uVLfDtRptKyfdC6Jug5bmw/12lhTSfFnPOcx+oNRY87FuKf7oG7zvHZRtauHgiXn4mBYAeC3Au37oHJcz56jlk5EOyEn05+6mtb8e9nFsRP96sf6B6g8f295vKwcq8FrWui0ZQST1eUfrSq2GpUyScxZSJxxVcSSj1OytPb+Yzd/tbmuq9u8+sNJWtNuwO+uk99wwMDIoIrZnL+AT6D019p2c/ADkyr58UGEgYgQ4QUAXJMs9YNAYb76g1kvEAKEWSIkEI8a93s7eRVLmT1cmtbrzY29b/jP3TgrIRvCoVHAAAAAElFTkSuQmCC",
+    "assets/fight-baijia-elfmage-market/M06.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACC0lEQVR4nMWU204TURSG96MohxaE0iMHK6cOIiW+honGZ4Abb/TCeEVIvDMx8aK0KLwBpaX4DhpDFBJDKtoq4YLwm28n0wzTaZka0YvVPWt/a+359u7MmOEb4xq6mVK0b1KR/owGB5IaGJxQfyStvuiUrpsbJikgAQTlzVeO6m/yHXlb/TNH9Rfh6g0mTGBW386rUVqyAHOK4Qh8f52zTezE5T/W7+rby4VWv8tPnt/Tz6eLrf7W+k/yaqxeXt8A3WgWHRveuW7RXHNshK5fcWx45wxmXGCKEWYYshN25OUn1YIa5Y2O/Kr+IG74oQAI6JbXa0Udv98MXR8mN5gwgRkQUwDmFHn5Ti6r8vy4duem2vjRl1/6dHzWtT9ofUNCQZixdidjb85Iro8PdHHwyPKDr6c6PGyEWsc7ml7e4+rMhCqzaSsBP//8WPrw0PJUsaZkqaLE5s7f/w64OTdGghPw89jWvuJv96xE2PXavgP+99z/HvMM7E3ftiJ+zs6R4CQ69Qetf+k7cFWwczf8LL1RbkUva5rErRGlo6MaG40pOTymTCSu+EhCqaGkYrGUvJzj389O2hNo4+927fFnCtWO/UHrG34oAAL+OC9V7DPA39BLv8GECcyAmAIwpyg0L1TtzTmJXvoNCQX/azSYcYEpRpgBMcX4urlZnpvW/ZmsFhfmtZSb1b/OfwN2qMAzA+EUFgAAAABJRU5ErkJggg==",
+    "assets/fight-baijia-elfmage-market/M07.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB+klEQVR4nMWU204TQRjH5zE8eyWnHuhJsOVYUEqMb2FM8BmIMfHOBK6MXHtjjEK18AbQQvsUBowhgVDEUr3DP/mN2S2dxOyupnIxO/vN7/tmfjPZWdN/8576bt3VndsFxa+MKnY1p6FreQ1eH9HAjax6zQ2DJBC0yiW1Vx/4MYkXuRu3XpfUfhUh/1lJ7cXufIMJA5idfCqquTFvAeYUw4/fzur0zYwtYiceZ/HvK/f9eo+3Xpb0bWnOr/fnf15U80X3/AYY1BCghcm1+cuztoXJNZjxgilGmGHITtiRy5v1NZ3Uyn/kQfUuNzxIAAKC4uOddzpqvO/iu4en2v/6I1S9GxtMGMAMiCkAc5Jcvj0xop3xvOpjHY7A3sHPUPUuNwQkhO1ZfGv6d3/25Yn0+amSlaoya3XbR53PRL3H7JzFOQntPtavvQW7cGK9odyH7X/7DwTdY+JGYdSeQG2ywxFIfdy0pxB1vq7/gHvP3XsM3ywW7AlUpzocgezqlpUIqnd5qP/AxcbuveaNIeC1qPOZbH9cyXhC6cGkcn3DGo6llBlIK5HIKDUUk8vZOSfASfi8UlW6XLPfQFC9yw0PEoCAv4orVbs430DUeoMJA5gBMQVgTlKvuSEg4bJ6gxkvmGKEGRBTjHvNzaPxCc3NjGl+Oq+Hk1P63/E539O8fPdIcykAAAAASUVORK5CYII=",
+    "assets/fight-baijia-elfmage-market/M08.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB7klEQVR4nMWU20obURSG94PYaluoh5wPnmI8JI614mtIoX2GUm/VC28E8bIURNAY+wqJJmkfohX0ooXiIcZL4S/fhgnTNNHJQPRiTWbtb629v70zMybyfErh/gmFBkY18iKj4ZfjGnqVVaxvUtFnY+o1NwxSQAJol9e/OGp8znfk/9VvOGqs+as3mDCAWaOQ1/VRzgLMKYYjcLk7b5vYicuvdt7odmuh2e/yi823ullfbPY35/+Y1/Xqv/MboBv1omPDO3Zf1LcdG77rPzk2vGMGM24wxQgzDNkJO2rH/3wv6rK615E/1O/lhgsFQICf/Kqyr4tawXf9fbnBhAHMgJgCMKeoHS/lMirPjep4dkJnv+s6/3XbVb+XGxIKuvmtTI9ZCZ2+0935BysQZB77DAR5j1n8W2Zc+rEi/XyvxOGJ4sVS774DrTknUJtKW5HYUdUKpA7Kvvs7fgda3/PW99jlLFzNTtpnIL1fsQLRr8e++zt+B/wGJ+AGi7sRZC4TDUeUGI4q/TqmWCiu5FBCkUhS8ZGQUoNhteOcwMlMyv4N7JzFOQm//V5uuFAABHSdH5StAM9CkH6DCQOYATEFYE7Rg7xYsgLJQi1QvyGh4Kl+DWbcYIoRZkBMMe41N4u5GS3NZrU8ndHC/JweO/8L9DHD/J34iAkAAAAASUVORK5CYII="
+  },
+  "media": [
+    {
+      "id": "market-m01",
+      "name": "M01 · Market lantern clash",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACDElEQVR4nMWU205TQRSG5x08AYreyaHdPVGRM2wQJMa3MIbEZ5AQrrww8Y7onQk3HEI5PEJtKX0ILwgHY4xiDybcaH7yTbKbtunANlq9mD17zfevmX91d425di+mro6IOjt71dHl6dbtft2806Mb3VFdv9undnPDIgKC0o6vSuZxLUZYz5vj0ltflZXf0C/5qiw26g1OWMDZ2d6MqlvTFuCcZPiP97Mqrz6ySVQScA7//m6ulh/w0mtf397M1/Jr+y/PqPqycX8DvGpggBFGa/WvZu0IozU44wWnOMIZDsu5dX0tbsjFqZSK/5QbHgiAgCAu5TM6K6zJxcPER5/LOvxSvVRvcMICzoA4BeyPD6owNqyD0XRLTmVs4sqHn3w61+lp5dJ8Q4Cgec5PDKg48tDOrTizPi5Ih8+cPL25r8R21s6uc4yrT3OTQ/ow9UBZf8TZx7+Onuvn8Qsnj+3m5O0VrYFQ90B933I41fMZwvZ5c0z1qa0Da8Clb7gH6vucyjmcX6IVr78nXJzD4zsFa8CV77wH+P7BCNv/zYODg+G8B5J9MaXvxxWPJJTqTcrzUkr0R+y/n89AN7TiAz1RxaKeXPmW7+aUzOStAVe+4cEGQMBfjbez1gQGXHqDExZwBsQpgMoQtZsbAgT/azY44wWnOMIZEKc4bjc3TyYm9XRsXHPTo5qfGta/ji8AhaGXGDI3YmUAAAAASUVORK5CYII=",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M01"
+    },
+    {
+      "id": "market-m02",
+      "name": "M02 · Baijia low step",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB9klEQVR4nMWU204TURSG91MIclCQBIV2eg6HysFKGTC8k9E7At6aGG9MiBdSoNJHgFKoT2FMxMSg1CIa737z7WSaocyMlVi8WLNn7f9fe39rZvaYm0Nj6h1OqOdOTDdGUhoccDQwOK7+W0n13Y6r27phEgMJQlDeeO2quVEM1S/5n7lqrnXmN5AwAVmzXNRpZcEKkGNGB+D81aItohNP//pyWWfPl1r1nv599aG+rRda9a31Hxd1+vTi+gbRi8aua8M/FxWNF66Njv1PXBv+OQMZN5BCBBmEdEJH3dYNFwyICP68WX2jRq0Uqv+L3EDCBGSIkCJAfvKurC/1zVCdRcLqP338ofcnv0J1r96QYAgaq/NTOrqfs2OUL2g8Pj7Th88//+gzUee0Njuhg7msBfjbc57ZPlJ650Cp8t7V/wN0v1fIW4Cocx+Us3l2a19Opd75f6D9nLP54cy0BQjS28+5X6dzNudJhK1/6T/QHmzsRadn3Yvk28NWRPlMbjSpZCylzL20HCej1HhM2btxJeKO/Qbq+UkLEKSnxxIKrd+t2teQK9VC16fecMGAiODP+QaAACBIj8wrdfsNABHlN5AwARkipAh0hunKeqlmIXgSUfWGBMP/Gg1k3NAJRJAhQgpxt3WzuPBAS4U5PZqf0cpsXted/wY7QJshH3Nt7gAAAABJRU5ErkJggg==",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M02"
+    },
+    {
+      "id": "market-m03",
+      "name": "M03 · Elfmage sigil ward",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB60lEQVR4nMWUyU4bQRRF6zcSQkIIU2K354R5NJNQ/ihSEDtYZB2RHRIrzPgJeIj5DEBRBJEwNqBkedEpqS3bKtPthcOiuvrVva/eqequMm/eRvW6P6nedzG9GoioZzChl0OeXgyn1NcXV7d1wyAGgspJVtWj+XqMsVFvjSvbWVW/d+DfyKq63uw3kDAA2UNuSbXDRStATjL63c6KbneXbRIr8XWK3/xYref7euVbVvebC/X8+vxfllT72jy/QQxqANDCeK1/a8W2MF4DGS+QQgQZhKyEFXVbNzwwICK0xnf5nKrFg7a6K/71+58ur2qh/AYSBiBDhBQBcky3pT0L0E535Z//udfF9d+2emO+IcDQrs/PfdTPqXHbP+Vr7FP7ZcWOC7YP8pugc1qezFiA0vSn0Oec4t7JmTJ7pc7uAdc5Ls6kLcDZxGjgOfdjVk5xQIL8TfdA6znHfDo/YQEKs2NO3ZVP4XQur8ThqVPv6B6guN/C3gPsgN8C74F4JKHUSFKel1LiQ0Tp4ahiUU/J9zFlhuJ25RRnJ1y6M/+4oORB0X6GoPkNDwyICK0x3x4A/gWX7oz3y3b7AQnyG0gYgAwRUgTIMXVbNwQYnqs3kPECKUSQIUIKcbd1szo3rrWZWX2emtbywqT+d/wIIjGm4PH6jYcAAAAASUVORK5CYII=",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M03"
+    },
+    {
+      "id": "market-m04",
+      "name": "M04 · Stall parry",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACC0lEQVR4nMWU204TURSG92OgcvCQ4AGmZ0+VU0XKGJ8DY3wFb4yXRrwyMeHOxAgRLdU3KIWCT0GEC01IKdVecKH+5tvJNDN1ph2CwMWaPWt9/9rz753Z2wwMJtU/lNOlvrQunknowtmszp9Laajf0eBARsfNDUUEJICwvP7OVeNtMZL/o3/pqvEint7ghALOGuWiWsszFuAcMRwDP97M2iZW4vGfr+5q/3Wh3e/x5vN72pufbve3539aVOtJcH4D9KL+2bXhr3WL+oJrI7b+mWvDXzM44wWnOMIZDlkJK4Lvfilpr7YYyXv1d+OGBwIgICzHQLO6FMmPkhucUMAZEKcAnCOCVwp5rU5dV3XyVij3929/b2rnWyuSd/YbEgTdRgysj9+wo7/+a+extPUwoOfjW7sHXefzjybOOebDm/mb2riTC/A/Xx/p9/ZcoD/zYUPpj2tKlSr/7x7AANvPLvTSZ5dX5XzaVHKldvh7oPOce+cYA7Wx29ZEGPf3596v2x1IlKuhvLM/cA9EBQa86KVl9V7EmdtkrqTlOBmlro0oe3lUiVFH6asJ5YaTSo6kBOfDaxNZ+w+E8UB/uWp3gJ0I5R39hgcCIODI+UrNrp5/IY7e4IQCzoA4BeAc0aF5qWJ3gNMQp9+QIDit0eCMF5ziCGdAnOL4uLl5MJ7XzPSUZgsTuj85ppPO/wJyy6uVpMFIRQAAAABJRU5ErkJggg==",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M04"
+    },
+    {
+      "id": "market-m05",
+      "name": "M05 · Awning leap",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB8klEQVR4nMWUzU5aQRiG50KsKFb6o/yjLeAPWFHS9I4ak3bVpF22G9cmTQqlxUtQQLgQdWVBKU2Xb/NMcgjgGTltQl3MmfPN+37fPDPnzJilUErhhbgWFzNaCCcVWlpXZC6t5QcJPZxf06x1wyAGgkG1pO7xi2GMcVSfjAcfS+oe/oX/dUndt+N+AwkDkPVr++rV96wAOcno10dF/fhctkmsxNOZ/OennWG+pw/elXTzfneYP6x/sK/em/H6BnFaA4AWxGv9H4q2BfEayHiBFCLIIGQlrGjWuuGBARHBFV91vqh/WnXqxJfnv3R++TtQPS82kDAAGSKkCJBj8vReq6LrZs2pk8/kFxd9p+5X3xBgmNZ3cs/U3Erb3uVLfDtRptKyfdC6Jug5bmw/12lhTSfFnPOcx+oNRY87FuKf7oG7zvHZRtauHgiXn4mBYAeC3Au37oHJcz56jlk5EOyEn05+6mtb8e9nFsRP96sf6B6g8f295vKwcq8FrWui0ZQST1eUfrSq2GpUyScxZSJxxVcSSj1OytPb+Yzd/tbmuq9u8+sNJWtNuwO+uk99wwMDIoIrZnL+AT6D019p2c/ADkyr58UGEgYgQ4QUAXJMs9YNAYb76g1kvEAKEWSIkEI8a93s7eRVLmT1cmtbrzY29b/jP3TgrIRvCoVHAAAAAElFTkSuQmCC",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M05"
+    },
+    {
+      "id": "market-m06",
+      "name": "M06 · Arcane snap kick",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAACC0lEQVR4nMWU204TURSG96MohxaE0iMHK6cOIiW+honGZ4Abb/TCeEVIvDMx8aK0KLwBpaX4DhpDFBJDKtoq4YLwm28n0wzTaZka0YvVPWt/a+359u7MmOEb4xq6mVK0b1KR/owGB5IaGJxQfyStvuiUrpsbJikgAQTlzVeO6m/yHXlb/TNH9Rfh6g0mTGBW386rUVqyAHOK4Qh8f52zTezE5T/W7+rby4VWv8tPnt/Tz6eLrf7W+k/yaqxeXt8A3WgWHRveuW7RXHNshK5fcWx45wxmXGCKEWYYshN25OUn1YIa5Y2O/Kr+IG74oQAI6JbXa0Udv98MXR8mN5gwgRkQUwDmFHn5Ti6r8vy4duem2vjRl1/6dHzWtT9ofUNCQZixdidjb85Iro8PdHHwyPKDr6c6PGyEWsc7ml7e4+rMhCqzaSsBP//8WPrw0PJUsaZkqaLE5s7f/w64OTdGghPw89jWvuJv96xE2PXavgP+99z/HvMM7E3ftiJ+zs6R4CQ69Qetf+k7cFWwczf8LL1RbkUva5rErRGlo6MaG40pOTymTCSu+EhCqaGkYrGUvJzj389O2hNo4+927fFnCtWO/UHrG34oAAL+OC9V7DPA39BLv8GECcyAmAIwpyg0L1TtzTmJXvoNCQX/azSYcYEpRpgBMcX4urlZnpvW/ZmsFhfmtZSb1b/OfwN2qMAzA+EUFgAAAABJRU5ErkJggg==",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M06"
+    },
+    {
+      "id": "market-m07",
+      "name": "M07 · Market palm strike",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB+klEQVR4nMWU204TQRjH5zE8eyWnHuhJsOVYUEqMb2FM8BmIMfHOBK6MXHtjjEK18AbQQvsUBowhgVDEUr3DP/mN2S2dxOyupnIxO/vN7/tmfjPZWdN/8576bt3VndsFxa+MKnY1p6FreQ1eH9HAjax6zQ2DJBC0yiW1Vx/4MYkXuRu3XpfUfhUh/1lJ7cXufIMJA5idfCqquTFvAeYUw4/fzur0zYwtYiceZ/HvK/f9eo+3Xpb0bWnOr/fnf15U80X3/AYY1BCghcm1+cuztoXJNZjxgilGmGHITtiRy5v1NZ3Uyn/kQfUuNzxIAAKC4uOddzpqvO/iu4en2v/6I1S9GxtMGMAMiCkAc5Jcvj0xop3xvOpjHY7A3sHPUPUuNwQkhO1ZfGv6d3/25Yn0+amSlaoya3XbR53PRL3H7JzFOQntPtavvQW7cGK9odyH7X/7DwTdY+JGYdSeQG2ywxFIfdy0pxB1vq7/gHvP3XsM3ywW7AlUpzocgezqlpUIqnd5qP/AxcbuveaNIeC1qPOZbH9cyXhC6cGkcn3DGo6llBlIK5HIKDUUk8vZOSfASfi8UlW6XLPfQFC9yw0PEoCAv4orVbs430DUeoMJA5gBMQVgTlKvuSEg4bJ6gxkvmGKEGRBTjHvNzaPxCc3NjGl+Oq+Hk1P63/E539O8fPdIcykAAAAASUVORK5CYII=",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M07"
+    },
+    {
+      "id": "market-m08",
+      "name": "M08 · Lantern standoff finish",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAAB7klEQVR4nMWU20obURSG94PYaluoh5wPnmI8JI614mtIoX2GUm/VC28E8bIURNAY+wqJJmkfohX0ooXiIcZL4S/fhgnTNNHJQPRiTWbtb629v70zMybyfErh/gmFBkY18iKj4ZfjGnqVVaxvUtFnY+o1NwxSQAJol9e/OGp8znfk/9VvOGqs+as3mDCAWaOQ1/VRzgLMKYYjcLk7b5vYicuvdt7odmuh2e/yi823ullfbPY35/+Y1/Xqv/MboBv1omPDO3Zf1LcdG77rPzk2vGMGM24wxQgzDNkJO2rH/3wv6rK615E/1O/lhgsFQICf/Kqyr4tawXf9fbnBhAHMgJgCMKeoHS/lMirPjep4dkJnv+s6/3XbVb+XGxIKuvmtTI9ZCZ2+0935BysQZB77DAR5j1n8W2Zc+rEi/XyvxOGJ4sVS774DrTknUJtKW5HYUdUKpA7Kvvs7fgda3/PW99jlLFzNTtpnIL1fsQLRr8e++zt+B/wGJ+AGi7sRZC4TDUeUGI4q/TqmWCiu5FBCkUhS8ZGQUoNhteOcwMlMyv4N7JzFOQm//V5uuFAABHSdH5StAM9CkH6DCQOYATEFYE7Rg7xYsgLJQi1QvyGh4Kl+DWbcYIoRZkBMMe41N4u5GS3NZrU8ndHC/JweO/8L9DHD/J34iAkAAAAASUVORK5CYII=",
+      "layoutSource": "assets/fight-baijia-elfmage-market/layout.json",
+      "plateId": "M08"
+    }
+  ]
+}

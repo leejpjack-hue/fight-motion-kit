@@ -34,3 +34,11 @@ Export bakes the open project. While the pack is missing, the open project is th
 ## What this proof does not do
 
 It does not generate sprites, call a provider, add voice, or lift SG-01 playback. HM-PF-27, HM-PF-28, HM-PF-47, HM-PF-48, and #41 stay on hold.
+
+## Local portable handoff bundle (`#106`)
+
+When the external `/workspace/deliverables/fight-baijia-elfmage-market-spritegen-2026-11-06` folder is absent from disk, `market-spritegen-proof.json` continues to report `BLOCKED_RUNTIME` honestly without calling any provider. To exercise the full 8-plate **Baijia × Elfmage** proof sequence offline in the FE composer:
+
+- **Offline bundle**: `public/shows/fight-baijia-elfmage-market-spritegen-handoff.json` (`8` embedded PNG plates, `5.00s`, `0` provider calls, `art_invented: false`).
+- **UI button**: Inside `#marketSpritegenDialog` ("Market proof"), click **Load local proof bundle (8 plates)** (`#marketSpritegenLoadLocal`) to load the show into `HMStudio`, compose in-browser, and export playable HTML offline.
+- **Generator / validator**: `node skills/hm-spritegen-handoff/market-proof-handoff.cjs --check`
