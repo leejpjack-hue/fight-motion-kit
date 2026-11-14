@@ -1,0 +1,21 @@
+{
+  "description": "Known-pop fixture: unauthored single-frame white flash at 0.80s and unauthored black drop at 1.40s",
+  "show": {
+    "show_id": "pop-scan-spike-fixture",
+    "atoms": [
+      { "id": "beat-01", "duration_s": 0.5, "fx_hooks": [] },
+      { "id": "beat-02", "duration_s": 1.2, "fx_hooks": [] }
+    ]
+  },
+  "frames": [
+    { "t": 0.00, "lumaMean": 0.42, "satMean": 0.22, "clipWhiteFrac": 0.02, "crushBlackFrac": 0.05 },
+    { "t": 0.25, "lumaMean": 0.43, "satMean": 0.22, "clipWhiteFrac": 0.02, "crushBlackFrac": 0.05 },
+    { "t": 0.50, "lumaMean": 0.58, "satMean": 0.26, "clipWhiteFrac": 0.04, "crushBlackFrac": 0.04 },
+    { "t": 0.70, "lumaMean": 0.57, "satMean": 0.25, "clipWhiteFrac": 0.04, "crushBlackFrac": 0.04 },
+    { "t": 0.80, "lumaMean": 0.98, "satMean": 0.02, "clipWhiteFrac": 0.94, "crushBlackFrac": 0.00 },
+    { "t": 0.90, "lumaMean": 0.58, "satMean": 0.25, "clipWhiteFrac": 0.04, "crushBlackFrac": 0.04 },
+    { "t": 1.20, "lumaMean": 0.57, "satMean": 0.25, "clipWhiteFrac": 0.04, "crushBlackFrac": 0.04 },
+    { "t": 1.40, "lumaMean": 0.01, "satMean": 0.00, "clipWhiteFrac": 0.00, "crushBlackFrac": 0.98 },
+    { "t": 1.60, "lumaMean": 0.57, "satMean": 0.25, "clipWhiteFrac": 0.04, "crushBlackFrac": 0.04 }
+  ]
+}

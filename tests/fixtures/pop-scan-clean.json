@@ -1,0 +1,19 @@
+{
+  "description": "Clean frame series with authored cut boundary at 0.50s and authored exposure_warm_crush FX window at 1.10s",
+  "show": {
+    "show_id": "pop-scan-clean-fixture",
+    "atoms": [
+      { "id": "beat-01", "duration_s": 0.5, "fx_hooks": [] },
+      { "id": "beat-02", "duration_s": 1.0, "fx_hooks": [ { "type": "exposure_warm_crush", "t_rel": 0.60, "params": { "dur": 0.10 } } ] }
+    ]
+  },
+  "frames": [
+    { "t": 0.00, "lumaMean": 0.42, "satMean": 0.22, "clipWhiteFrac": 0.02, "crushBlackFrac": 0.05 },
+    { "t": 0.25, "lumaMean": 0.43, "satMean": 0.23, "clipWhiteFrac": 0.02, "crushBlackFrac": 0.05 },
+    { "t": 0.48, "lumaMean": 0.44, "satMean": 0.23, "clipWhiteFrac": 0.02, "crushBlackFrac": 0.05 },
+    { "t": 0.50, "lumaMean": 0.72, "satMean": 0.30, "clipWhiteFrac": 0.08, "crushBlackFrac": 0.03 },
+    { "t": 0.80, "lumaMean": 0.71, "satMean": 0.29, "clipWhiteFrac": 0.08, "crushBlackFrac": 0.03 },
+    { "t": 1.10, "lumaMean": 0.94, "satMean": 0.12, "clipWhiteFrac": 0.78, "crushBlackFrac": 0.12 },
+    { "t": 1.30, "lumaMean": 0.70, "satMean": 0.28, "clipWhiteFrac": 0.07, "crushBlackFrac": 0.03 }
+  ]
+}

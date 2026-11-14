@@ -130,3 +130,4 @@ test('HM-PF-45 imported strip cells follow the shared scrub time and stay not pl
   assert.equal(HMComposeClient.stripCellAt({status:'ready',geometry:{frames:4,w:2,h:2},cadence:{secondsPerCell:0.1}},0.2),null);
   assert.equal(HMComposeClient.stripCellAt(null,0),null);
 });
+require('./hm-38-40-41-106.test.cjs');
