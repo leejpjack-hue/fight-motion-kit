@@ -2380,7 +2380,7 @@
       if(path.length<=2)throw new Error('A path needs at least two points.');
       path.splice(+btn.dataset.remove,1);
       writePath(path);
-    });
+    }));
   }
   on('fxPathAdd',()=>{
     const hit=pathHook();if(!hit)return;
