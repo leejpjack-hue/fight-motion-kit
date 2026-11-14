@@ -55,6 +55,7 @@
   async function task(fn) {
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;
     exportIds.forEach(id=>{if($(id))$(id).disabled=true;});
+    await new Promise(resolve=>setTimeout(resolve,25));
     try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});applyExportGate();}
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
