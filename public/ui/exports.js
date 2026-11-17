@@ -77,6 +77,7 @@
         localFiles[imgFile.name]=await dataUrl(imgFile);
       }
       parsed=JSON.parse(await jsonFile.text());
+      if(typeof HMStripAdapter!=='undefined'&&HMStripAdapter.assertNotRootMotion)HMStripAdapter.assertNotRootMotion(parsed);
       isLockPack=Boolean(window.HMComposeClient?.isCostumeLockPackInput?.(parsed));
       const review=isLockPack?await HMCostumeDrift.review(parsed,localFiles):null;
       let p=(window.HMMotionSot&&HMMotionSot.asPortableProject(parsed,{localFiles}))||(window.HMComposeClient&&HMComposeClient.isCostumeLockPackInput?.(parsed)?HMComposeClient.normalizeCostumeLockPack(parsed,{localFiles}):parsed);

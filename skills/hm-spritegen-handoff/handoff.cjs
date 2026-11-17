@@ -70,7 +70,7 @@ function lead(rejected) {
   if (reasons.has('credential')) return 'Credential files are rejected. They never enter HM.';
   if (reasons.has('run-session')) return 'Run-session files are rejected. They never enter HM.';
   if (reasons.has('atlas-hold')) return 'Atlas manifest is DESIGNED-HOLD (HM-PF-27). The first path is strip PNG+JSON.';
-  if (reasons.has('root-motion-hold')) return 'root_motion is rejected. The first path remains strip PNG+JSON.';
+  if (reasons.has('root-motion-hold')) return 'root_motion / engine-export is rejected as a product import (HM-PF-28). HTML Motion is not an engine runtime. The first path remains strip PNG+JSON.';
   if (reasons.has('unsafe-name')) return 'Use local filenames without paths or references.';
   if (reasons.has('not-png')) return 'Strip PNG is missing a PNG signature.';
   if (reasons.has('not-json')) return 'Strip JSON must parse as an object sidecar.';
@@ -119,8 +119,11 @@ function classifyHandoff(entries) {
       scan(parsed, hit);
       if (hit.credential) rejected.push({ name, reason: 'credential' });
       else if (hit.session) rejected.push({ name, reason: 'run-session' });
-      else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
-        (Object.prototype.hasOwnProperty.call(parsed, 'root_motion') || Object.prototype.hasOwnProperty.call(parsed, 'rootmotion'))) {
+      else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (
+        ['root_motion', 'rootmotion', 'engine_export', 'engineExport'].some(k => Object.prototype.hasOwnProperty.call(parsed, k) || (parsed.show && typeof parsed.show === 'object' && !Array.isArray(parsed.show) && Object.prototype.hasOwnProperty.call(parsed.show, k))) ||
+        (Array.isArray(parsed.atoms) && parsed.atoms.some(a => a && typeof a === 'object' && ['root_motion', 'rootmotion', 'engine_export', 'engineExport'].some(k => Object.prototype.hasOwnProperty.call(a, k)))) ||
+        (parsed.show && Array.isArray(parsed.show.atoms) && parsed.show.atoms.some(a => a && typeof a === 'object' && ['root_motion', 'rootmotion', 'engine_export', 'engineExport'].some(k => Object.prototype.hasOwnProperty.call(a, k))))
+      )) {
         rejected.push({ name, reason: 'root-motion-hold' });
       } else named.push({ name, bytes, parsed });
     } else if (/\.png$/i.test(name)) {

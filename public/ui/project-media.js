@@ -2,11 +2,23 @@
 ((root) => {
   const limits=Object.freeze({png:33554432,json:262144,pixels:32000000,cells:1024});
   const adapter='hm-sg01-body-strip';
+  const ROOT_MOTION_KEYS=Object.freeze(['root_motion','rootmotion','engine_export','engineExport']);
+  const ROOT_MOTION_REASON='root_motion / engine-export payloads are rejected as a product import (HM-PF-28). HTML Motion is not an engine runtime; use the strip PNG+JSON handoff.';
   const integer=(n,label)=>{if(!Number.isSafeInteger(n)||n<=0)throw Error(label+' must be a positive finite integer.');return n;};
   const positive=(n,label)=>{if(typeof n!=='number'||!Number.isFinite(n)||n<=0)throw Error(label+' must be a positive finite number.');return n;};
   const index=(n,label)=>{if(!Number.isSafeInteger(n)||n<0)throw Error(label+' must be a nonnegative integer.');};
   const localName=n=>typeof n==='string'&&n.length>0&&n.length<=255&&!/[\\/:\u0000-\u001f]/.test(n)&&n!=='.'&&n!=='..';
   const owns=(o,key)=>o!=null&&Object.prototype.hasOwnProperty.call(o,key);
+  function isRootMotionPayload(raw){
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))return false;
+    const hasKey=o=>o&&typeof o==='object'&&!Array.isArray(o)&&ROOT_MOTION_KEYS.some(k=>owns(o,k));
+    if(hasKey(raw)||hasKey(raw.show))return true;
+    const atoms=Array.isArray(raw.atoms)?raw.atoms:(raw.show&&Array.isArray(raw.show.atoms)?raw.show.atoms:null);
+    return Array.isArray(atoms)&&atoms.some(hasKey);
+  }
+  function assertNotRootMotion(raw){
+    if(isRootMotionPayload(raw))throw Error(ROOT_MOTION_REASON);
+  }
   const keys=(o,allowed,label)=>{if(!o||typeof o!=='object'||Array.isArray(o)||Object.keys(o).some(k=>!allowed.includes(k))||allowed.some(k=>!owns(o,k)))throw Error('Invalid '+label+' fields.');};
   const pixel=(n,label,min=0,max=limits.pixels)=>{if(!Number.isSafeInteger(n)||n<min||n>max)throw Error('Invalid '+label+' pixel value.');};
   // FINAL writer diagnostics (pin 6a3f4c4 loop.py 3210-3289, held_fill.public).
@@ -81,7 +93,10 @@
     // Deliberately bounded subset of producer 6a3f4c4. No arbitrary reports/run files.
     const provenance='scale source_rect top_margin_px cell_height_cap body_height_target foot_anchor drift_px foot_sway_px foot_x anchor source_cut events'.split(' ');
     const fields=new Set(('frames w h body_h fps delay_ms cycle_frames cycle_seconds source_fps kind loop hold_last returns end_frame subsampled cell_cap sample_indices body_ref body_ref_frame body_src_h warnings').split(' ').concat(provenance,finalFields));
-    for(const key of Object.keys(raw))if(!fields.has(key))throw Error('Unsupported strip field: '+key);
+    for(const key of Object.keys(raw))if(!fields.has(key)){
+      if(ROOT_MOTION_KEYS.includes(key))throw Error('Unsupported strip field: '+key+' — '+ROOT_MOTION_REASON);
+      throw Error('Unsupported strip field: '+key);
+    }
     const {frames,w,h,body_h}=raw;
     [frames,w,h,body_h].forEach((n,i)=>integer(n,['frames','w','h','body_h'][i]));
     if(frames>limits.cells)throw Error('Strip limit is 1024 exported cells.');
@@ -239,6 +254,11 @@
   async function decodeImage(data){const image=new Image();image.src=data;await image.decode();return {width:image.naturalWidth,height:image.naturalHeight};}
   async function stage(files,{cancelled=()=>false,decode=decodeImage}={}){
     const list=Array.from(files||[]),png=list.filter(f=>/\.png$/i.test(f.name)),json=list.filter(f=>/\.json$/i.test(f.name));
+    if(json.length===1&&localName(json[0].name)&&Number.isSafeInteger(json[0].size)&&json[0].size>=1&&json[0].size<=limits.json&&typeof json[0].arrayBuffer==='function'){
+      let probe=null;
+      try{probe=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(await json[0].arrayBuffer())));}catch{}
+      if(isRootMotionPayload(probe))throw Error('Unsupported strip field: root_motion — '+ROOT_MOTION_REASON);
+    }
     if(list.length!==2||png.length!==1||json.length!==1)throw Error('Choose exactly one local PNG and one JSON sidecar.');
     if(list.some(f=>!localName(f.name)))throw Error('Use local filenames without paths or references.');
     sizes(png[0].size,json[0].size);
@@ -299,7 +319,7 @@
       if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded pending PNG dimensions disagree with the descriptor.');
     }
   }
-  root.HMStripAdapter={limits,normalize,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject};
+  root.HMStripAdapter={limits,normalize,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject,ROOT_MOTION_KEYS,ROOT_MOTION_REASON,isRootMotionPayload,assertNotRootMotion};
   if(typeof module!=='undefined')module.exports=root.HMStripAdapter;
 })(globalThis);
 
@@ -316,6 +336,7 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
     $('projectMediaGrid').querySelectorAll('input').forEach(input=>{input.checked=chosen.has(Number(input.value));input.disabled=busy;});
   }
   function candidates(p,embedded){
+    HMStripAdapter.assertNotRootMotion(p);
     if(!p?.show||!Array.isArray(p.media)||!p.layouts||p.media.length>1000)throw Error('Choose a saved HTML Motion .motion.json project.');
     HMStripAdapter.validateProject(p);
     const result=[],seen=new Set(),pendingList=(p.media||[]).filter(m=>m.pendingMotion),pending=new Set(pendingList.flatMap(m=>[m.src,p.assets?.[m.src]]));
