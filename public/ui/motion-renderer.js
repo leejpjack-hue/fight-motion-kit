@@ -377,7 +377,7 @@ function layerCamMatrix(timeline, t, layout) {
   const dur = Number.isFinite(+tl.duration_s) ? +tl.duration_s : 0;
   const atoms = Array.isArray(tl.atoms) ? tl.atoms : [];
   const plates = Array.isArray(tl.plates) ? tl.plates : [];
-  const plate = plates.find(p => time >= p.t0 && t < p.t1) || plates[plates.length - 1] || null;
+  const plate = plates.find(p => time >= p.t0 && time < p.t1) || plates[plates.length - 1] || null;
   const entry = plate && layout && layout[plate.id] ? layout[plate.id] : null;
   const atom = (entry && atoms.find(a => a.id === entry.atom))
     || atoms.find(a => time >= a.t0 && time < a.t1)
