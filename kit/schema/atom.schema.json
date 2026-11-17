@@ -135,6 +135,11 @@
     "move": {
      "type": "string"
     },
+    "micro_move": {
+     "type": "string",
+     "enum": ["shake_burst", "punch_in", "scan_gate", ""],
+     "description": "HM-HF-12 additive micro-move id in presets/camera_presets.json#micro_moves"
+    },
     "params": {
      "$ref": "#/$defs/curve_overrides"
     },
@@ -181,6 +186,10 @@
       "properties": {
        "preset": {
         "type": "string"
+       },
+       "micro_move": {
+        "type": "string",
+        "enum": ["shake_burst", "punch_in", "scan_gate", ""]
        },
        "dur_s": {
         "type": "number",
@@ -382,6 +391,14 @@
      }
     }
    }
+  },
+  "caption": {
+   "type": "string"
+  },
+  "caption_style": {
+   "type": "string",
+   "enum": ["slam", "glitch_edge", "clean_bar", "impact_hit", "street_mark", ""],
+   "description": "HM-HF-09 frontend caption style id (opt-in; STREET silent by default)"
   },
   "cut": {
    "type": "object",

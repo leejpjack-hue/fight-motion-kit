@@ -54,6 +54,168 @@
     full: 'Full chips keeps every FX chip, including photographic dust and warm light. Rejected photo fire and light overlays are never added on their own. A show that already has those chips still opens.',
   });
 
+  // HM-HF-09: 5 named frontend caption styles (CSS/canvas only, opt-in; STREET stays silent by default).
+  const CAPTION_STYLE_KEYS = [
+    'fill', 'stroke', 'strokeWidth', 'fontSize', 'fontWeight', 'italic', 'fontFamily',
+    'boxFill', 'boxStroke', 'boxStrokeWidth', 'padX', 'padY', 'skewX', 'accentBar',
+    'glitchCyan', 'glitchMagenta', 'glitchOffset',
+  ];
+  const CAPTION_STYLES = Object.freeze({
+    slam: Object.freeze({
+      id: 'slam',
+      label: 'Slam',
+      theme: 'clash',
+      fontSize: 48,
+      fontWeight: 900,
+      italic: true,
+      fontFamily: 'Impact, "Arial Black", sans-serif',
+      fill: '#ffe66d',
+      stroke: '#14110e',
+      strokeWidth: 10,
+      boxFill: 'rgba(20, 17, 14, 0.88)',
+      boxStroke: '#ff5d3b',
+      boxStrokeWidth: 4,
+      padX: 26,
+      padY: 14,
+      skewX: -0.18,
+    }),
+    glitch_edge: Object.freeze({
+      id: 'glitch_edge',
+      label: 'Glitch edge',
+      theme: 'clash',
+      fontSize: 44,
+      fontWeight: 900,
+      italic: false,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, sans-serif',
+      fill: '#f7fff8',
+      stroke: '#0d1417',
+      strokeWidth: 8,
+      boxFill: 'rgba(13, 20, 23, 0.82)',
+      boxStroke: '#3bf0ff',
+      boxStrokeWidth: 2,
+      padX: 22,
+      padY: 12,
+      glitchCyan: '#29f2ff',
+      glitchMagenta: '#ff3ca6',
+      glitchOffset: 5,
+    }),
+    clean_bar: Object.freeze({
+      id: 'clean_bar',
+      label: 'Clean bar',
+      theme: 'hero',
+      fontSize: 34,
+      fontWeight: 800,
+      italic: false,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fill: '#f2f6ee',
+      stroke: '#101512',
+      strokeWidth: 4,
+      boxFill: 'rgba(15, 22, 18, 0.90)',
+      boxStroke: '#ccf17b',
+      boxStrokeWidth: 2,
+      accentBar: '#ccf17b',
+      padX: 28,
+      padY: 12,
+    }),
+    impact_hit: Object.freeze({
+      id: 'impact_hit',
+      label: 'Impact hit',
+      theme: 'clash',
+      fontSize: 46,
+      fontWeight: 900,
+      italic: true,
+      fontFamily: 'Impact, "Arial Black", sans-serif',
+      fill: '#ffffff',
+      stroke: '#ff6b1a',
+      strokeWidth: 9,
+      boxFill: 'rgba(28, 12, 6, 0.86)',
+      boxStroke: '#ffb347',
+      boxStrokeWidth: 3,
+      padX: 24,
+      padY: 12,
+      skewX: -0.1,
+    }),
+    street_mark: Object.freeze({
+      id: 'street_mark',
+      label: 'Street mark',
+      theme: 'STREET',
+      fontSize: 40,
+      fontWeight: 900,
+      italic: false,
+      fontFamily: '"Arial Black", sans-serif',
+      fill: '#f4efe4',
+      stroke: '#14110e',
+      strokeWidth: 11,
+      boxFill: 'rgba(23, 20, 17, 0.84)',
+      boxStroke: '#f4efe4',
+      boxStrokeWidth: 3,
+      padX: 22,
+      padY: 11,
+    }),
+  });
+
+  function resolveCaptionStyle(id) {
+    const key = typeof id === 'string' ? id.trim() : '';
+    const spec = key && Object.prototype.hasOwnProperty.call(CAPTION_STYLES, key) ? CAPTION_STYLES[key] : null;
+    if (!spec) return null;
+    const out = {};
+    CAPTION_STYLE_KEYS.forEach((k) => {
+      if (spec[k] != null) out[k] = spec[k];
+    });
+    return out;
+  }
+
+  // HM-HF-12: additive camera micro-moves (leave presets unchanged when unset).
+  const DEFAULT_MICRO_MOVES = Object.freeze([
+    {
+      id: 'shake_burst',
+      label: 'Shake burst',
+      move: 'shake_burst',
+      duration_s: 0.25,
+      u_range: [0, 0.55],
+      curves: {
+        x: { type: 'alt_bump', offset: 0, amp: 18, n: 6 },
+        y: { type: 'alt_bump', offset: 0, amp: -12, n: 6 },
+        r: { type: 'sin', offset: 0, amp: 2.4, cycles: 3 },
+      },
+    },
+    {
+      id: 'punch_in',
+      label: 'Punch-in',
+      move: 'punch_in',
+      duration_s: 0.35,
+      u_range: [0, 1],
+      curves: {
+        s: { type: 'lerp', a: 0, b: 0.16, ease: 'snap' },
+        y: { type: 'lerp', a: 0, b: -14, ease: 'snap' },
+      },
+    },
+    {
+      id: 'scan_gate',
+      label: 'Scan-gate',
+      move: 'scan_gate',
+      duration_s: 0.5,
+      u_range: [0, 1],
+      curves: {
+        x: { type: 'sin', offset: 0, amp: 28, cycles: 1 },
+        y: { type: 'saw', a: -6, b: 6, period_s: 0.125 },
+        r: { type: 'sin', offset: 0, amp: 1.2, cycles: 1 },
+      },
+    },
+  ]);
+
+  function resolveMicroMovesMap(cameraPresets) {
+    const map = Object.create(null);
+    DEFAULT_MICRO_MOVES.forEach((m) => { map[m.id] = deepClone(m); });
+    const list = cameraPresets && Array.isArray(cameraPresets.micro_moves) ? cameraPresets.micro_moves : [];
+    list.forEach((m) => {
+      if (m && typeof m.id === 'string' && m.id && m.curves && typeof m.curves === 'object') {
+        map[m.id] = deepClone(m);
+      }
+    });
+    return map;
+  }
+
   function showVenue(show) {
     if (!show || typeof show !== 'object') return '';
     const meta = show.meta && typeof show.meta === 'object' ? show.meta : {};
@@ -580,6 +742,20 @@
     return out;
   }
 
+  function evalMicroMoveDelta(microCurves, localU, tl, microURange) {
+    const delta = { x: 0, y: 0, s: 0, r: 0 };
+    if (!microCurves || typeof microCurves !== 'object') return delta;
+    const range = Array.isArray(microURange) ? microURange : [0, 1];
+    const mu0 = range[0] == null ? 0 : +range[0];
+    const mu1 = range[1] == null ? 1 : +range[1];
+    if (localU < mu0 - 1e-9 || localU > mu1 + 1e-9) return delta;
+    const mu = Math.min(1, Math.max(0, (localU - mu0) / Math.max(1e-7, mu1 - mu0)));
+    for (const ch of 'xysr') {
+      if (microCurves[ch]) delta[ch] = evalCurve(microCurves[ch], mu, tl);
+    }
+    return delta;
+  }
+
   // Local ease rides a chord between the segment's own endpoints.
   // Snap-zoom's extra scale uses the chain parameter (u0..u1 across clips) so both sides of a cut share one scale.
   function poseOnSegment(seg, t) {
@@ -589,20 +765,31 @@
     const tl = t - seg.t0;
     const u0 = seg.u0 == null ? 0 : +seg.u0;
     const u1 = seg.u1 == null ? 1 : +seg.u1;
+    let camera;
     if (!seg.ease && !seg.snap_zoom) {
-      return evalCam(seg.curves, u0 + (u1 - u0) * local, tl);
+      camera = evalCam(seg.curves, u0 + (u1 - u0) * local, tl);
+    } else {
+      camera = { x: 0, y: 0, s: 1, r: 0 };
+      const shaped = seg.ease ? ease(seg.ease, local) : local;
+      for (const ch of 'xysr') {
+        const c = seg.curves[ch];
+        if (!c) continue;
+        if (!seg.ease) camera[ch] = evalCurve(c, u0 + (u1 - u0) * local, tl);
+        else camera[ch] = evalCurve(c, u0, 0) + (evalCurve(c, u1, span) - evalCurve(c, u0, 0)) * shaped;
+      }
+      const smin = 1 + Math.abs(Math.sin((camera.r * Math.PI) / 180)) * 0.9;
+      camera.s = Math.max(camera.s, smin);
+      if (seg.snap_zoom) camera.s += SNAP_ZOOM * ease('snap', u0 + (u1 - u0) * local);
     }
-    const camera = { x: 0, y: 0, s: 1, r: 0 };
-    const shaped = seg.ease ? ease(seg.ease, local) : local;
-    for (const ch of 'xysr') {
-      const c = seg.curves[ch];
-      if (!c) continue;
-      if (!seg.ease) camera[ch] = evalCurve(c, u0 + (u1 - u0) * local, tl);
-      else camera[ch] = evalCurve(c, u0, 0) + (evalCurve(c, u1, span) - evalCurve(c, u0, 0)) * shaped;
+    if (seg.micro_curves && typeof seg.micro_curves === 'object') {
+      const md = evalMicroMoveDelta(seg.micro_curves, local, tl, seg.micro_u_range);
+      camera.x += md.x;
+      camera.y += md.y;
+      camera.s += md.s;
+      camera.r += md.r;
+      const sminAfter = 1 + Math.abs(Math.sin((camera.r * Math.PI) / 180)) * 0.9;
+      camera.s = Math.max(camera.s, sminAfter);
     }
-    const smin = 1 + Math.abs(Math.sin((camera.r * Math.PI) / 180)) * 0.9;
-    camera.s = Math.max(camera.s, smin);
-    if (seg.snap_zoom) camera.s += SNAP_ZOOM * ease('snap', u0 + (u1 - u0) * local);
     return camera;
   }
 
@@ -957,11 +1144,16 @@
         const path = resolveFxPath(kind, o.path);
         if (path) row.path = path;
       }
-      if (o.style && typeof o.style === 'object') {
-        row.style = {};
-        ['fill', 'stroke', 'strokeWidth', 'fontSize', 'fontWeight', 'italic', 'fontFamily'].forEach((k) => {
-          if (o.style[k] != null) row.style[k] = o.style[k];
-        });
+      const captionStyleId = typeof o.caption_style === 'string' ? o.caption_style.trim() : '';
+      const resolvedCaptionStyle = captionStyleId ? resolveCaptionStyle(captionStyleId) : null;
+      if (captionStyleId) row.caption_style = captionStyleId;
+      if (resolvedCaptionStyle || (o.style && typeof o.style === 'object')) {
+        row.style = resolvedCaptionStyle ? Object.assign({}, resolvedCaptionStyle) : {};
+        if (o.style && typeof o.style === 'object') {
+          CAPTION_STYLE_KEYS.forEach((k) => {
+            if (o.style[k] != null) row.style[k] = o.style[k];
+          });
+        }
       }
       const eff = o.effect;
       if (typeof eff === 'string') {
@@ -1262,6 +1454,7 @@
       exposure: [], fist: [], leg: [], tornado: [], pixelfx: [],
     };
     const fxProfile = resolveFxProfile(show);
+    const microMap = resolveMicroMovesMap(opts.cameraPresets);
     const heroLayouts = {};
     let t = 0;
     let nPlate = 0;
@@ -1330,12 +1523,28 @@
         if (s.ease && CAM_EASES.indexOf(s.ease) < 0) errors.push(a.id + ': unknown camera ease ' + s.ease);
         if (s.snap_zoom != null && typeof s.snap_zoom !== 'boolean') errors.push(a.id + ': snap_zoom must be true or false');
         const snapZoom = s.snap_zoom === true || cam.snap_zoom === true || segEase === 'snap';
+        const microMoveId = (typeof s.micro_move === 'string' && s.micro_move)
+          ? s.micro_move
+          : ((typeof cam.micro_move === 'string' && cam.micro_move) ? cam.micro_move : '');
+        let microSpec = null;
+        if (microMoveId) {
+          microSpec = microMap[microMoveId] || null;
+          if (!microSpec) {
+            if (allowSoftLint) warns.push(a.id + ': unknown camera micro_move ' + microMoveId + ' (ignored)');
+            else errors.push(a.id + ': unknown camera micro_move ' + microMoveId);
+          }
+        }
         cs.push({
           t0: Math.round(st * 10000) / 10000,
           t1: Math.round((st + s.dur_s) * 10000) / 10000,
           u0, u1, preset: segPresetName, curves,
           ...(segEase ? { ease: segEase } : {}),
           ...(snapZoom ? { snap_zoom: true } : {}),
+          ...(microSpec ? {
+            micro_move: microMoveId,
+            micro_curves: deepClone(microSpec.curves),
+            ...(Array.isArray(microSpec.u_range) ? { micro_u_range: microSpec.u_range.slice(0, 2) } : {}),
+          } : {}),
         });
         st += +s.dur_s;
       }
@@ -1534,6 +1743,7 @@
         ...(bridgedBeatId ? { beat_id: bridgedBeatId } : {}),
         label: typeof a.label === 'string' ? a.label : '',
         caption: typeof a.caption === 'string' ? a.caption : '',
+        ...(typeof a.caption_style === 'string' && a.caption_style ? { caption_style: a.caption_style } : {}),
         t0: Math.round(t0 * 10000) / 10000,
         t1: Math.round(t1 * 10000) / 10000,
         pose_mode: mode,
@@ -1580,7 +1790,26 @@
       }
     }
 
-    const overlays = normalizeOverlays(show, dur, warns).map((overlay) => {
+    const authoredOverlays = Array.isArray(show.overlays) ? show.overlays.slice() : [];
+    const authoredOverlayIds = new Set(authoredOverlays.map((o) => o && o.id).filter(Boolean));
+    for (const ta of tlAtoms) {
+      if (ta.caption && ta.caption_style && !authoredOverlayIds.has('caption-' + ta.id)) {
+        authoredOverlays.push({
+          id: 'caption-' + ta.id,
+          editor_caption: true,
+          kind: 'text',
+          text: ta.caption,
+          caption_style: ta.caption_style,
+          t_start: ta.t0,
+          t_end: ta.t1,
+          x: 640,
+          y: 644,
+          z: 20,
+        });
+      }
+    }
+    const overlayInput = authoredOverlays.length === (show.overlays || []).length ? show : Object.assign({}, show, { overlays: authoredOverlays });
+    const overlays = normalizeOverlays(overlayInput, dur, warns).map((overlay) => {
       const styled = styleOverlayForProfile(overlay, fxProfile);
       if (fxProfile === 'comic' && isPhotoFxOverlay(styled)) return Object.assign({}, styled, { fx_paint: false });
       return styled;
@@ -3927,6 +4156,11 @@
     detachCamChain,
     poseOnSegment,
     CAM_EASES,
+    CAPTION_STYLES,
+    resolveCaptionStyle,
+    DEFAULT_MICRO_MOVES,
+    resolveMicroMovesMap,
+    evalMicroMoveDelta,
     stockFxPath,
     normalizeFxPath,
     resolveFxPath,

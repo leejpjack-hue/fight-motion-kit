@@ -415,6 +415,7 @@ function layerCamMatrix(timeline, t, layout) {
     },
     character: {
       preset: (seg && seg.preset) || 'static_hold',
+      ...(seg && seg.micro_move ? { micro_move: seg.micro_move } : {}),
       x: round4(pose.x),
       y: round4(pose.y),
       s: round4(pose.s),
@@ -460,6 +461,18 @@ function cameraPoseOnSegment(seg, t) {
   camera.s = Math.max(camera.s, 1 + Math.abs(Math.sin(camera.r * Math.PI / 180)) * 0.9);
   // Extra scale follows the chain parameter so both sides of a cut share one zoom.
   if (seg.snap_zoom) camera.s += 0.18 * cameraEase('snap', u0 + (u1 - u0) * local);
+  if (seg.micro_curves && typeof seg.micro_curves === 'object') {
+    const mr = Array.isArray(seg.micro_u_range) ? seg.micro_u_range : [0, 1];
+    const mu0 = mr[0] == null ? 0 : +mr[0];
+    const mu1 = mr[1] == null ? 1 : +mr[1];
+    if (local >= mu0 - 1e-9 && local <= mu1 + 1e-9) {
+      const mu = Math.min(1, Math.max(0, (local - mu0) / Math.max(1e-7, mu1 - mu0)));
+      for (const k of 'xysr') {
+        if (seg.micro_curves[k]) camera[k] += cameraChannel(seg.micro_curves[k], mu, tl);
+      }
+      camera.s = Math.max(camera.s, 1 + Math.abs(Math.sin(camera.r * Math.PI / 180)) * 0.9);
+    }
+  }
   return camera;
 }
 function backgroundLocationsBundle() {
@@ -1050,7 +1063,30 @@ function createMotionRenderer(canvas, assets = {}) {
     if (heldCut && heldCut.whip) drawWhipCut(ctx, heldCut.whip);
     paintOverlays.filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
       ctx.save();ctx.globalAlpha=clamp(o.opacity??1,0,1);ctx.translate(o.x??640,o.y??640);ctx.scale(o.scale||1,o.scale||1);
-      if(o.kind==='text'||o.text){const style=o.style||{};ctx.font=`${style.italic?'italic ':''}${style.fontWeight||700} ${style.fontSize||38}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';ctx.strokeStyle=style.stroke||'#15201c';ctx.lineWidth=style.strokeWidth??6;ctx.strokeText(o.text,0,0,1150);ctx.fillStyle=style.fill||'#ffffff';ctx.fillText(o.text,0,0,1150);}else if(o.src){const im=images.get(o.src);if(im)image(o.src,-im.width/2,-im.height/2,im.width,im.height);}ctx.restore();
+      if(o.kind==='text'||o.text){
+        const style=o.style||{};
+        const fontSize=Number(style.fontSize)||38;
+        ctx.font=`${style.italic?'italic ':''}${style.fontWeight||700} ${fontSize}px ${style.fontFamily||'sans-serif'}`;
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.lineJoin='round';
+        if(style.skewX&&typeof ctx.transform==='function')ctx.transform(1,0,Number(style.skewX)||0,1,0,0);
+        if(style.boxFill||style.boxStroke||style.accentBar){
+          const measured=typeof ctx.measureText==='function'?ctx.measureText(o.text).width:0;
+          const tw=Math.min(1150,Math.max(40,measured||String(o.text).length*fontSize*0.6));
+          const px=Number(style.padX??20),py=Number(style.padY??10),bw=tw+px*2,bh=fontSize+py*2;
+          if(style.boxFill&&typeof ctx.fillRect==='function'){ctx.fillStyle=style.boxFill;ctx.fillRect(-bw/2,-bh/2,bw,bh);}
+          if(style.boxStroke&&typeof ctx.strokeRect==='function'){ctx.strokeStyle=style.boxStroke;ctx.lineWidth=Number(style.boxStrokeWidth??3);ctx.strokeRect(-bw/2,-bh/2,bw,bh);}
+          if(style.accentBar&&typeof ctx.fillRect==='function'){ctx.fillStyle=style.accentBar;ctx.fillRect(-bw/2,-bh/2,8,bh);}
+        }
+        if(style.glitchCyan){ctx.fillStyle=style.glitchCyan;ctx.fillText(o.text,-Number(style.glitchOffset||4),0,1150);}
+        if(style.glitchMagenta){ctx.fillStyle=style.glitchMagenta;ctx.fillText(o.text,Number(style.glitchOffset||4),0,1150);}
+        ctx.strokeStyle=style.stroke||'#15201c';
+        ctx.lineWidth=style.strokeWidth??6;
+        ctx.strokeText(o.text,0,0,1150);
+        ctx.fillStyle=style.fill||'#ffffff';
+        ctx.fillText(o.text,0,0,1150);
+      }else if(o.src){const im=images.get(o.src);if(im)image(o.src,-im.width/2,-im.height/2,im.width,im.height);}ctx.restore();
     });
     ctx.restore();
   }

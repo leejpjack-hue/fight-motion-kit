@@ -30,6 +30,45 @@
     }
   ];
 
+  // HM-HF-09: 5 named frontend caption styles (additive over CAPTION_STUBS; STREET stays silent by default).
+  const CAPTION_STYLES = [
+    {
+      id: 'slam',
+      label: 'Slam',
+      theme: 'clash',
+      description: 'Heavy skewed slam block with bold punch outline for clash hits.',
+      sample: 'SLAM!'
+    },
+    {
+      id: 'glitch_edge',
+      label: 'Glitch edge',
+      theme: 'clash',
+      description: 'Split cyan and magenta chromatic edge strips for hard impacts.',
+      sample: 'CRACK'
+    },
+    {
+      id: 'clean_bar',
+      label: 'Clean bar',
+      theme: 'hero',
+      description: 'Crisp dark slate bar with lime rule for hero callouts.',
+      sample: 'GUARD'
+    },
+    {
+      id: 'impact_hit',
+      label: 'Impact hit',
+      theme: 'clash',
+      description: 'High-contrast orange-white strike caption badge.',
+      sample: 'HIT'
+    },
+    {
+      id: 'street_mark',
+      label: 'Street mark',
+      theme: 'STREET',
+      description: 'Opt-in graphic stencil mark for STREET beats (silent by default).',
+      sample: 'STREET'
+    }
+  ];
+
   function asList(doc, keys) {
     if (!doc) return [];
     if (Array.isArray(doc)) return doc.filter(Boolean);
@@ -493,6 +532,7 @@
   const api = {
     KINDS,
     CAPTION_STUBS,
+    CAPTION_STYLES,
     blockList,
     buildIndex,
     query,
