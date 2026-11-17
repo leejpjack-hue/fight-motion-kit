@@ -680,5 +680,45 @@
     }
    }
   }
+ ],
+ "micro_moves": [
+  {
+   "id": "shake_burst",
+   "label": "Shake burst",
+   "move": "shake_burst",
+   "duration_s": 0.25,
+   "u_range": [0, 0.55],
+   "comment": "HM-HF-12 additive rapid burst on x/y/r at beat entry",
+   "curves": {
+    "x": { "type": "alt_bump", "offset": 0, "amp": 18, "n": 6 },
+    "y": { "type": "alt_bump", "offset": 0, "amp": -12, "n": 6 },
+    "r": { "type": "sin", "offset": 0, "amp": 2.4, "cycles": 3 }
+   }
+  },
+  {
+   "id": "punch_in",
+   "label": "Punch-in",
+   "move": "punch_in",
+   "duration_s": 0.35,
+   "u_range": [0, 1],
+   "comment": "HM-HF-12 additive snap scale punch-in (+0.16s) with slight vertical lock",
+   "curves": {
+    "s": { "type": "lerp", "a": 0, "b": 0.16, "ease": "snap" },
+    "y": { "type": "lerp", "a": 0, "b": -14, "ease": "snap" }
+   }
+  },
+  {
+   "id": "scan_gate",
+   "label": "Scan-gate",
+   "move": "scan_gate",
+   "duration_s": 0.5,
+   "u_range": [0, 1],
+   "comment": "HM-HF-12 additive horizontal scan-gate sweep with micro saw pulse",
+   "curves": {
+    "x": { "type": "sin", "offset": 0, "amp": 28, "cycles": 1 },
+    "y": { "type": "saw", "a": -6, "b": 6, "period_s": 0.125 },
+    "r": { "type": "sin", "offset": 0, "amp": 1.2, "cycles": 1 }
+   }
+  }
  ]
 }
