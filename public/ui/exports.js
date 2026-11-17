@@ -360,7 +360,7 @@
     const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
     files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
     const zip=HMXExport.zipStore(files);
-    download(S.project.show.show_id+'-'+preset.id-'-frames.zip'.replace('-','-') ? S.project.show.show_id+'-'+preset.id+'-frames.zip' : S.project.show.show_id+'-'+preset.id+'-frames.zip',new Blob([zip],{type:'application/zip'}));
+    download(S.project.show.show_id+'-'+preset.id+'-frames.zip',new Blob([zip],{type:'application/zip'}));
     report('Frame sequence downloaded. Run ffmpeg on the local skill — this tab does not encode it.');
   }));
   on('exportVideo',()=>task(async()=>{
