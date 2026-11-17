@@ -26,6 +26,10 @@ The gate is `skills/hm-spritegen-handoff/handoff.cjs`. It classifies local files
 
 HM-PF-27 atlas, HM-PF-28 `root_motion` as a product import, SG-02 playback, voice / #41, Remotion, and a vendored sprite-gen server stay out of this story. `manifest.json` and `root_motion` sidecars fail the gate.
 
+## HM-PF-28 — root_motion / engine-export rejection (#224)
+
+`root_motion` (`rootmotion`) and `engine_export` payloads are rejected as a product import with a clear human-readable reason pointing to the strip PNG+JSON handoff (`handoff.cjs`, `HMStripAdapter`, Open project, Import from project, and Reference B import). HTML Motion stays a FE composer and does not become an engine runtime.
+
 ## Verification
 
 `npm test` includes `tests/hm-pf-25-spritegen-handoff.test.cjs`.

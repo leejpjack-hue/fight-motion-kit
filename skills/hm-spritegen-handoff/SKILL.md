@@ -50,7 +50,7 @@ The panel model itself is pure and unit-testable: `HMStripAdapter.buildStripQaPa
 ## Anti-jobs (hard refusals)
 
 - **No RIFE from HM.** Frame interpolation is an external sprite-gen concern; HM does not install, call, or proxy it.
-- **No root_motion.** FINAL `once`/`once-return`/`one-shot` sidecars carry `root_motion` and are rejected by SG-01. Do not "fix" them by stripping the field.
+- **No root_motion or engine-export product import (HM-PF-28).** FINAL `once`/`once-return`/`one-shot` sidecars and `engine_export` payloads carry `root_motion` and are not a product import. Both `handoff.cjs` and the FE composer (`HMStripAdapter`, Open project, Import from project, and Reference B import) reject them with a clear human-readable reason pointing to the strip PNG+JSON handoff. HTML Motion does not become an engine runtime, and must never "fix" them by stripping the field.
 - **No SG-02.** No playback, timeline plates, background use, or export composition for a pending strip. Do not ungate `NOT PLAYABLE`.
 - **No voice, no generation, no upload.** Generation stays outside the FE. Credential files and run-session files are rejected. No provider calls enter HM.
 - **No Sprite Forge and no vendored sprite-gen server.** File API import only. Atlas and SG-02 playback stay HOLD. Voice / #41 stays HOLD.
