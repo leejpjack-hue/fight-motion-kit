@@ -22,9 +22,10 @@ The gate is `skills/hm-spritegen-handoff/handoff.cjs`. It classifies local files
 3. On `path: "strip-png-json"`, open `/ui/` and use **Import pending strip · PNG + JSON**. Select those two files.
 4. Read the strip QA panel, then **Save pending strip**.
 
-## Left on HOLD
+## Related holds & extensions
 
-HM-PF-27 atlas, HM-PF-28 `root_motion` as a product import, SG-02 playback, voice / #41, Remotion, and a vendored sprite-gen server stay out of this story. `manifest.json` and `root_motion` sidecars fail the gate.
+- **HM-PF-27 (#225 — Native multi-state / atlas path)**: [`HM-PF-27-sg02-atlas-path.md`](HM-PF-27-sg02-atlas-path.md) accepts a native sheet + manifest pair with explicit `frame_layout` rectangles and `states` metadata through the File API without inferring equal grids and without putting Aseprite JSON first. Bare `manifest.json` files without `frame_layout` + `states` still fail the gate (`atlas-hold`).
+- SG-02 playback of pending strips, voice / #41, Remotion, and a vendored sprite-gen server remain out of scope here.
 
 ## HM-PF-28 — root_motion / engine-export rejection (#224)
 
