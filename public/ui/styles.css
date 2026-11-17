@@ -482,7 +482,8 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
   .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#cantoneseBoardSource,
   .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#pf53NotifyPanel,
   .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#showLintPanel,
-  .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#timelineJsonPanel{display:none}
+  .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#timelineJsonPanel,
+  .workspace:has(#shellFocusTimeline:checked) .timeline-panel>#historyReceiptsPanel{display:none}
 
   .workspace:has(#shellFocusClip:checked) .timeline-panel,
   .workspace:has(#shellFocusClip:checked) .library{display:none}
