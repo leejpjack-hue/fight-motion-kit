@@ -19,6 +19,18 @@
   function assertNotRootMotion(raw){
     if(isRootMotionPayload(raw))throw Error(ROOT_MOTION_REASON);
   }
+  function isAsepriteJson(raw){
+    if(!raw||typeof raw!=='object'||Array.isArray(raw)||owns(raw,'frame_layout'))return false;
+    const meta=raw.meta;
+    if(meta&&typeof meta==='object'&&!Array.isArray(meta)&&(owns(meta,'frameTags')||owns(meta,'slices')||(typeof meta.app==='string'&&/aseprite/i.test(meta.app))))return true;
+    const frames=raw.frames;
+    if(Array.isArray(frames)&&frames.some(f=>f&&typeof f==='object'&&(owns(f,'spriteSourceSize')||owns(f,'sourceSize')||(f.frame&&typeof f.frame==='object'))))return true;
+    if(frames&&typeof frames==='object'&&!Array.isArray(frames)&&Object.values(frames).some(f=>f&&typeof f==='object'&&(owns(f,'spriteSourceSize')||owns(f,'sourceSize')||(f.frame&&typeof f.frame==='object'))))return true;
+    return false;
+  }
+  function isNativeAtlasManifest(raw){
+    return Boolean(raw&&typeof raw==='object'&&!Array.isArray(raw)&&owns(raw,'frame_layout')&&owns(raw,'states'));
+  }
   const keys=(o,allowed,label)=>{if(!o||typeof o!=='object'||Array.isArray(o)||Object.keys(o).some(k=>!allowed.includes(k))||allowed.some(k=>!owns(o,k)))throw Error('Invalid '+label+' fields.');};
   const pixel=(n,label,min=0,max=limits.pixels)=>{if(!Number.isSafeInteger(n)||n<min||n>max)throw Error('Invalid '+label+' pixel value.');};
   // FINAL writer diagnostics (pin 6a3f4c4 loop.py 3210-3289, held_fill.public).
@@ -88,8 +100,154 @@
     if(!Number.isSafeInteger(png)||png<1||png>limits.png)throw Error('PNG limit is 33554432 bytes.');
     if(!Number.isSafeInteger(json)||json<1||json>limits.json)throw Error('JSON limit is 262144 bytes.');
   }
+  function cadenceOf(raw,fallbackFps){
+    if(raw&&raw.fps!==undefined){const fps=positive(raw.fps,'fps');return {secondsPerCell:1/fps,timingSource:'fps'};}
+    if(raw&&raw.delay_ms!==undefined){
+      const ms=positive(raw.delay_ms,'delay_ms'),rate=Math.round(1000/ms);
+      const snap=!Number.isInteger(ms)&&Number.isSafeInteger(rate)&&rate>0&&Math.abs(ms-1000/rate)<=.01;
+      return {secondsPerCell:snap?1/rate:ms/1000,timingSource:snap?'delay_ms-integer-rate-snap':'delay_ms-literal'};
+    }
+    if(fallbackFps!==undefined){const fps=positive(fallbackFps,'fps');return {secondsPerCell:1/fps,timingSource:'fps'};}
+    throw Error('delay_ms or fps must be a positive finite number.');
+  }
+  function normalizeAtlas(raw){
+    if(!isNativeAtlasManifest(raw))throw Error('Native atlas manifest requires frame_layout and states.');
+    assertNotRootMotion(raw);
+    const atlasAllowed=new Set(['frame_layout','states','sheet_w','sheet_h','w','h','body_h','body_src_h','body_ref','body_ref_frame','fps','delay_ms','source_fps','scale','warnings','cell_record','sheet_sha256','state']);
+    for(const key of Object.keys(raw))if(!atlasAllowed.has(key)){
+      if(ROOT_MOTION_KEYS.includes(key))throw Error('Unsupported strip field: '+key+' — '+ROOT_MOTION_REASON);
+      throw Error('Unsupported atlas field: '+key);
+    }
+    if(raw.warnings!==undefined&&(!Array.isArray(raw.warnings)||raw.warnings.length>100||raw.warnings.some(s=>typeof s!=='string'||s.length>500||/https?:|[\\/]|\.\.|[\u0000-\u001f]/i.test(s))))throw Error('Warnings must be short local text, without references.');
+    if(raw.sheet_w!==undefined)integer(raw.sheet_w,'sheet_w');
+    if(raw.sheet_h!==undefined)integer(raw.sheet_h,'sheet_h');
+    const sheetW=raw.sheet_w!==undefined?raw.sheet_w:null;
+    const sheetH=raw.sheet_h!==undefined?raw.sheet_h:null;
+    if(sheetW!==null&&sheetH!==null&&sheetW>Math.floor(limits.pixels/sheetH))throw Error('Atlas limit is 32000000 decoded pixels.');
+
+    const rawLayout=raw.frame_layout;
+    let layoutEntries=[];
+    if(Array.isArray(rawLayout)){
+      layoutEntries=rawLayout.map((row,idx)=>({fallbackId:'F'+String(idx+1).padStart(3,'0'),row}));
+    }else if(rawLayout&&typeof rawLayout==='object'){
+      layoutEntries=Object.entries(rawLayout).map(([k,row])=>({fallbackId:k,row}));
+    }else{
+      throw Error('Atlas frame_layout must be an array or map of explicit rectangles.');
+    }
+    if(!layoutEntries.length||layoutEntries.length>limits.cells)throw Error('Atlas limit is 1 to 1024 frame_layout rectangles.');
+
+    const frameLayout=[];
+    const idToIndex=new Map();
+    const layoutAllowed=new Set(['id','state','x','y','w','h','rect','source_frame','anchor']);
+    let maxRight=0,maxBottom=0;
+    for(let i=0;i<layoutEntries.length;i++){
+      const entry=layoutEntries[i],row=entry.row;
+      if(!row||typeof row!=='object'||Array.isArray(row))throw Error('Each frame_layout entry must be an object with explicit rectangle coordinates.');
+      for(const rk of Object.keys(row)){
+        if(ROOT_MOTION_KEYS.includes(rk))throw Error('Unsupported strip field: '+rk+' — '+ROOT_MOTION_REASON);
+        if(!layoutAllowed.has(rk))throw Error('Unsupported frame_layout field: '+rk);
+      }
+      const coords=Array.isArray(row.rect)?row.rect:[row.x,row.y,row.w,row.h];
+      if(!Array.isArray(coords)||coords.length!==4)throw Error('frame_layout entry requires explicit [x, y, w, h] coordinates.');
+      const [rx,ry,rw,rh]=coords;
+      index(rx,'frame_layout x');index(ry,'frame_layout y');
+      integer(rw,'frame_layout w');integer(rh,'frame_layout h');
+      if(rx+rw>limits.pixels||ry+rh>limits.pixels)throw Error('Atlas rectangle exceeds pixel limit.');
+      if(sheetW!==null&&rx+rw>sheetW)throw Error('Atlas frame_layout rectangle exceeds sheet_w.');
+      if(sheetH!==null&&ry+rh>sheetH)throw Error('Atlas frame_layout rectangle exceeds sheet_h.');
+      const fid=typeof row.id==='string'&&row.id.trim()?row.id.trim():entry.fallbackId;
+      if(fid.length>128||/[\\/:\u0000-\u001f]/.test(fid))throw Error('Invalid frame_layout id.');
+      if(idToIndex.has(fid))throw Error('Duplicate frame_layout id: '+fid);
+      idToIndex.set(fid,i);
+      const normRect={id:fid,x:rx,y:ry,w:rw,h:rh};
+      if(row.state!==undefined){
+        if(typeof row.state!=='string'||!/^[a-zA-Z0-9_-]{1,64}$/.test(row.state))throw Error('Invalid frame_layout state.');
+        normRect.state=row.state;
+      }
+      if(row.source_frame!==undefined){index(row.source_frame,'source_frame');normRect.source_frame=row.source_frame;}
+      if(row.anchor!==undefined){
+        if(!Array.isArray(row.anchor)||row.anchor.length!==2||!row.anchor.every(v=>typeof v==='number'&&Number.isFinite(v)))throw Error('Invalid frame_layout anchor.');
+        normRect.anchor=[row.anchor[0],row.anchor[1]];
+      }
+      maxRight=Math.max(maxRight,rx+rw);
+      maxBottom=Math.max(maxBottom,ry+rh);
+      frameLayout.push(normRect);
+    }
+    const effSheetW=sheetW!==null?sheetW:maxRight;
+    const effSheetH=sheetH!==null?sheetH:maxBottom;
+    if(effSheetW>Math.floor(limits.pixels/effSheetH))throw Error('Atlas limit is 32000000 decoded pixels.');
+
+    const rawStates=raw.states;
+    let stateEntries=[];
+    if(Array.isArray(rawStates)){
+      stateEntries=rawStates.map((row,idx)=>({fallbackId:row&&typeof row==='object'&&(row.id||row.name||row.state)||('state_'+(idx+1)),row}));
+    }else if(rawStates&&typeof rawStates==='object'){
+      stateEntries=Object.entries(rawStates).map(([k,row])=>({fallbackId:k,row}));
+    }else{
+      throw Error('Atlas states must be an array or map of animation states.');
+    }
+    if(!stateEntries.length||stateEntries.length>64)throw Error('Atlas states must contain between 1 and 64 states.');
+
+    const states=[];
+    const seenStates=new Set();
+    const stateAllowed=new Set(['id','name','state','frames','fps','delay_ms','kind','loop','returns','hold_last','end_frame','body_h']);
+    for(const entry of stateEntries){
+      const srow=entry.row;
+      if(!srow||typeof srow!=='object'||Array.isArray(srow))throw Error('Each atlas state entry must be an object.');
+      for(const sk of Object.keys(srow)){
+        if(ROOT_MOTION_KEYS.includes(sk))throw Error('Unsupported strip field: '+sk+' — '+ROOT_MOTION_REASON);
+        if(!stateAllowed.has(sk))throw Error('Unsupported atlas state field: '+sk);
+      }
+      const sid=String(srow.id||srow.name||srow.state||entry.fallbackId||'').trim();
+      if(!/^[a-zA-Z0-9_-]{1,64}$/.test(sid))throw Error('Invalid atlas state id.');
+      if(seenStates.has(sid))throw Error('Duplicate atlas state id: '+sid);
+      seenStates.add(sid);
+      if(!Array.isArray(srow.frames)||!srow.frames.length||srow.frames.length>limits.cells)throw Error('Atlas state '+sid+' needs a non-empty frames array.');
+      const resolvedIndices=[];
+      for(const ref of srow.frames){
+        if(Number.isSafeInteger(ref)&&ref>=0&&ref<frameLayout.length){resolvedIndices.push(ref);}
+        else if(typeof ref==='string'&&idToIndex.has(ref)){resolvedIndices.push(idToIndex.get(ref));}
+        else{throw Error('Atlas state '+sid+' references unknown frame_layout entry.');}
+      }
+      const skind=srow.kind===undefined?(srow.loop===false?(srow.returns?'once-return':'once'):'repeat'):srow.kind;
+      if(!['periodic','repeat','loop','once','once-return','one-shot'].includes(skind))throw Error('Unsupported atlas state kind: '+skind);
+      const srepeat=['periodic','repeat','loop'].includes(skind),sreturns=skind==='once-return',shold=!srepeat&&!sreturns;
+      if((srow.loop!==undefined&&srow.loop!==srepeat)||(srow.returns!==undefined&&sreturns!==srow.returns)||(srow.hold_last!==undefined&&srow.hold_last!==shold))throw Error('Conflicting end policy on atlas state '+sid+'.');
+      const scad=(srow.fps!==undefined||srow.delay_ms!==undefined)?cadenceOf(srow):(raw.fps!==undefined||raw.delay_ms!==undefined)?cadenceOf(raw):{secondsPerCell:1/12,timingSource:'default-12fps'};
+      states.push({
+        id:sid,
+        frames:resolvedIndices,
+        frameIds:resolvedIndices.map(idx=>frameLayout[idx].id),
+        cadence:scad,
+        policy:{kind:sreturns?'once-return':srepeat?'repeat':'once',loop:srepeat,returns:sreturns,holdLast:shold,endFrame:resolvedIndices.length-1}
+      });
+    }
+
+    const firstRect=frameLayout[0];
+    const primW=raw.w!==undefined?integer(raw.w,'w'):firstRect.w;
+    const primH=raw.h!==undefined?integer(raw.h,'h'):firstRect.h;
+    const bodyH=raw.body_h!==undefined?integer(raw.body_h,'body_h'):Math.min(primH,Math.max(...frameLayout.map(r=>r.h)));
+    if(raw.body_h!==undefined&&bodyH>Math.max(...frameLayout.map(r=>r.h)))throw Error('body_h exceeds exported atlas frame height.');
+    if(raw.sheet_sha256!==undefined&&(typeof raw.sheet_sha256!=='string'||!/^[a-f0-9]{64}$/.test(raw.sheet_sha256)))throw Error('Invalid sheet_sha256.');
+
+    const cadence=(raw.fps!==undefined||raw.delay_ms!==undefined)?cadenceOf(raw):states[0].cadence;
+    positive(cadence.secondsPerCell,'cell duration');
+    const primaryPolicy=states[0].policy;
+    const metadata={layoutMode:'manifest-rects',sheetWidth:effSheetW,sheetHeight:effSheetH,stateCount:states.length};
+    for(const key of ['source_fps','body_ref','body_ref_frame','body_src_h'])if(raw[key]!==undefined)metadata[key]=structuredClone(raw[key]);
+    const warnings=[...(raw.warnings||[])];
+    return {
+      adapter,version:1,format:'native-atlas',status:'pending',
+      geometry:{frames:frameLayout.length,w:primW,h:primH,body_h:bodyH,sheetWidth:effSheetW,sheetHeight:effSheetH,layoutMode:'manifest-rects'},
+      cadence,policy:primaryPolicy,
+      atlas:{format:'native-manifest',layoutMode:'manifest-rects',sheetWidth:effSheetW,sheetHeight:effSheetH,explicitSheetSize:sheetW!==null||sheetH!==null,frameLayout,states},
+      metadata,warnings
+    };
+  }
   function normalize(raw){
     if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Choose an unversioned body-strip sidecar.');
+    if(isAsepriteJson(raw))throw Error('Aseprite JSON is not the first path (HM-PF-27); import a native sprite-gen atlas manifest (frame_layout + states) or an SG-01 strip sidecar.');
+    if(isNativeAtlasManifest(raw))return normalizeAtlas(raw);
     // Deliberately bounded subset of producer 6a3f4c4. No arbitrary reports/run files.
     const provenance='scale source_rect top_margin_px cell_height_cap body_height_target foot_anchor drift_px foot_sway_px foot_x anchor source_cut events'.split(' ');
     const fields=new Set(('frames w h body_h fps delay_ms cycle_frames cycle_seconds source_fps kind loop hold_last returns end_frame subsampled cell_cap sample_indices body_ref body_ref_frame body_src_h warnings').split(' ').concat(provenance,finalFields));
@@ -205,6 +363,12 @@
       {key:'timingSource',label:'Timing source',value:c.timingSource},
       {key:'duration',label:'Strip duration',value:rate(c.secondsPerCell*g.frames)+' s ('+g.frames+' × '+rate(c.secondsPerCell)+' s/cell)'}
     ];
+    if(descriptor.format==='native-atlas'&&descriptor.atlas){
+      fields.push(
+        {key:'atlasLayout',label:'Atlas layout',value:'native manifest rects ('+descriptor.atlas.frameLayout.length+' rects · no equal-grid inference)'},
+        {key:'atlasStates',label:'Atlas states',value:descriptor.atlas.states.map(s=>s.id+' ('+s.frames.length+'f)').join(', ')}
+      );
+    }
     if(meta.source_fps!==undefined)fields.push({key:'sourceFps',label:'Source rate',value:'source_fps '+meta.source_fps+(raw&&raw.fps!==undefined?' · export fps '+raw.fps:'')});
     const warnings=(raw&&Array.isArray(raw.warnings)?raw.warnings:[]).map(text=>({source:'producer',text}));
     warnings.push(...descriptor.warnings.slice(warnings.length).map(text=>({source:'adapter',text})));
@@ -266,7 +430,12 @@
     const bytes=new Uint8Array(pb),jsonBytes=new Uint8Array(jb);sizes(bytes.length,jsonBytes.length);
     if(cancelled())throw Error('Strip import cancelled.');
     const header=pngHeader(bytes),raw=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(jsonBytes)),descriptor=normalize(raw),g=descriptor.geometry;
-    if(header.width!==g.frames*g.w||header.height!==g.h)throw Error('PNG must be exactly frames × w by h.');
+    if(descriptor.format==='native-atlas'&&descriptor.atlas){
+      if(raw.sheet_w!==undefined&&header.width!==raw.sheet_w)throw Error('PNG sheet width disagrees with atlas sheet_w.');
+      if(raw.sheet_h!==undefined&&header.height!==raw.sheet_h)throw Error('PNG sheet height disagrees with atlas sheet_h.');
+      if(descriptor.atlas.frameLayout.some(r=>r.x+r.w>header.width||r.y+r.h>header.height))throw Error('Atlas frame_layout rectangle exceeds PNG sheet dimensions.');
+      if(raw.sheet_sha256&&pngDigest(bytes)!==raw.sheet_sha256)throw Error('Atlas PNG SHA256 disagrees with manifest sheet_sha256.');
+    }else if(header.width!==g.frames*g.w||header.height!==g.h)throw Error('PNG must be exactly frames × w by h.');
     pngChunks(bytes);integrity(raw,bytes);
     const data='data:image/png;base64,'+base64(bytes),decoded=await decode(data);
     if(cancelled())throw Error('Strip import cancelled.');
@@ -292,7 +461,12 @@
       if(JSON.stringify(d)!==JSON.stringify(expected))throw Error('Pending descriptor disagrees with original sidecar.');
       if(typeof data!=='string'||!data.startsWith('data:image/png;base64,')||data.length>22+4*Math.ceil(limits.png/3))throw Error('Missing or oversized pending PNG.');
       const png=originalBytes(data.slice(22),limits.png),header=pngHeader(png),g=d.geometry;pngChunks(png);integrity(raw,png);
-      if(header.width!==g.frames*g.w||header.height!==g.h)throw Error('Pending strip geometry changed.');
+      if(d.format==='native-atlas'&&d.atlas){
+        if(raw.sheet_w!==undefined&&header.width!==raw.sheet_w)throw Error('Pending atlas sheet width changed.');
+        if(raw.sheet_h!==undefined&&header.height!==raw.sheet_h)throw Error('Pending atlas sheet height changed.');
+        if(d.atlas.frameLayout.some(r=>r.x+r.w>header.width||r.y+r.h>header.height))throw Error('Pending atlas frame_layout exceeds PNG sheet dimensions.');
+        if(raw.sheet_sha256&&pngDigest(png)!==raw.sheet_sha256)throw Error('Pending atlas PNG SHA256 disagrees.');
+      }else if(header.width!==g.frames*g.w||header.height!==g.h)throw Error('Pending strip geometry changed.');
       refs.add(m.src);refs.add(m.layoutSource);refs.add(data);
       for(const [key,value] of Object.entries(p.assets||{}))if(value===data)refs.add(key);
     }
@@ -315,11 +489,13 @@
   }
   async function decodeProject(p){
     for(const m of p.media.filter(m=>m.pendingMotion)){
-      const decoded=await decodeImage(p.assets[m.src]),g=m.pendingMotion.geometry;
-      if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded pending PNG dimensions disagree with the descriptor.');
+      const decoded=await decodeImage(p.assets[m.src]),d=m.pendingMotion,g=d.geometry;
+      if(d.format==='native-atlas'&&d.atlas){
+        if(d.atlas.frameLayout.some(r=>r.x+r.w>decoded.width||r.y+r.h>decoded.height))throw Error('Decoded pending atlas PNG dimensions disagree with manifest frame_layout.');
+      }else if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded pending PNG dimensions disagree with the descriptor.');
     }
   }
-  root.HMStripAdapter={limits,normalize,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject,ROOT_MOTION_KEYS,ROOT_MOTION_REASON,isRootMotionPayload,assertNotRootMotion};
+  root.HMStripAdapter={limits,normalize,normalizeAtlas,isNativeAtlasManifest,isAsepriteJson,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject,ROOT_MOTION_KEYS,ROOT_MOTION_REASON,isRootMotionPayload,assertNotRootMotion};
   if(typeof module!=='undefined')module.exports=root.HMStripAdapter;
 })(globalThis);
 
@@ -484,7 +660,8 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
       if(version!==stripRequest)return;
       stagedStrip=next;stagedFiles=rawFiles;const d=next.pendingMotion,g=d.geometry;
       const panel=HMStripAdapter.buildStripQaPanel(d);renderStripQa(panel);
-      stripNotice(next.name+' · '+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' PENDING, NOT PLAYABLE until SG02. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.');
+      const atlasNote=d.format==='native-atlas'&&d.atlas?(d.atlas.states.length+' states · '+d.atlas.frameLayout.length+' manifest rects · '):'';
+      stripNotice(next.name+' · '+atlasNote+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' PENDING, NOT PLAYABLE until SG02. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.');
       $('commitStrip').disabled=!panel.ok;
     }catch(e){
       if(version===stripRequest){

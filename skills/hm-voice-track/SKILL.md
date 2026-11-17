@@ -1,41 +1,53 @@
 ---
 name: hm-voice-track
-description: DESIGNED-HOLD shell for Step 10 voice. Not SIGNED. Do not record audio, add SFX, enable n8n step 10, or build a voice UI. #41 stays HOLD.
+description: DESIGNED-HOLD shell for Step 10 voice (HM-PF-47). Documents future VO/SFX hook boundaries while staying disabled until signed. Clash SFX #41 is already shipped separately.
 ---
 
 # hm-voice-track
 
-**Status:** DESIGNED-HOLD. Step 10 on the Approval Page.
-**Not SIGNED.** This file does not lift #41 and does not SIGN HM-PF-47 or HM-PF-48.
+**Status:** DESIGNED-HOLD. Step 10 on the Approval Page (HM-PF-47).
+**Not SIGNED.** This skill shell defines the documented Step 10 VO/SFX contract only. It does **not** ship a frontend voice recorder, invent a voice HTTP backend, redo [#41](../../docs/product-flow/HM-SFX-SAME-CLOCK.md), or treat #41 as still held. Do not SIGN HM-PF-47 or HM-PF-48 here.
 
-HM-PF-47 is the designed skill shell. HM-PF-48 is the designed lift checklist. Both stay DESIGNED-HOLD. This story does not turn either into a weekday SIGN and does not write the checklist as tasks to implement.
-
-Dialogue-hold timing packs (`dialogue_film_slow`, `micro_cut_flurry`) are rhythm. They are not a voice track and they are not an input to this skill.
+Clash SFX (#41) already shipped on tip `35ee259` (accepted 16 Nov 2026) via the opt-in same-clock local WebAudio/WAV synth (`public/ui/clash-sfx-clock.js` and `scripts/clash-sfx-clock.cjs` on `renderAt`). HM-PF-48 ([`HM-PF-48-sfx-41-lift-checklist.md`](../../docs/product-flow/HM-PF-48-sfx-41-lift-checklist.md)) records the post-ship criteria audit for #41. Dialogue-hold timing packs (`dialogue_film_slow`, `micro_cut_flurry`) remain timing rhythm, not voice audio.
 
 ## Inputs
 
-None. There is no product run.
+When a future Step 10 voice slice is signed and enabled outside this hold, a handoff to `hm-voice-track` would accept read-only metadata only:
 
-A future design note, not accepted here, would be a rights-cleared voice or SFX reference and a Jack decision that lifts #41. This file does not collect that reference and does not record that decision.
+- `show_id` and beat sequence exported from an approved Step 2 story (`beat_id`, `id`, `t0`, `t1`, `duration_s` from `renderAt` / `HMStudio.timelineDump`).
+- Optional beat dialogue/caption lines (`atom.caption`, `atom.caption_style`, `atom.label`) without rewriting picture timing.
+- External local rights/clearance manifest supplied by an operator (voice talent release, license scope, language locale).
+- Reference boundary to existing clash SFX peaks (`show.sfx.hero_beat_t0` and `HMClashSfxClock.buildCuePlan` cue windows) so any future VO bed ducks rather than collides with shipped #41 clash transients.
+
+Nothing in this shell triggers audio capture or collects voice files today.
 
 ## Outputs
 
-None. No audio file, no caption track that stands in for voice, no recorder session, and no change to `.motion.json`.
+No live product outputs yet. Future signed outputs stay strictly beside the composer:
 
-The node stays visible on the workflow board and disabled in any n8n spike. Disabled means the gate cannot approve voice.
+- A local cue/script sheet (dialogue lines + `t0`..`t1` windows + `renderAt` offsets) prepared **outside** the browser composer.
+- Disabled/visible n8n Step 10 flow-control hook metadata (`step: 10`, `step_id: voice`, `disabled: true`, `HMProductFlowNotify` refusal of step 10 until separately signed). Do not enable n8n step 10 or any Wait gate that approves live voice automation.
+- No `.motion.json` audio binary embedding, no cloud TTS URLs, and no modification to the picture compose timeline.
 
 ## FE handoff
 
-There is no product voice surface to hand off.
+What stays **outside** the FE composer (HM FE-only invariant):
 
-Existing local HTML, PNG, and video bake stays the composer export. That bake is picture. It is not a VO or SFX deliverable, and browser MediaRecorder output is still MIME-dependent. Do not add a recorder, a waveform, or a voice cue control to the composer from this file.
+- Voice recording, microphone capture, cloud TTS / HeyGen avatars, and `-14 LUFS` broadcast loudness mastering.
+- Audio-to-video muxing (external local `ffmpeg` workflow alongside exported frame sequences + timing JSON / local WAV).
+- Any backend HTTP route (`api.teqcon.uk`, `:8770`, `/api/compose`, `/api/save`, workers voice upload).
+
+What the FE composer keeps:
+
+- Picture-only Playable HTML, PNG frames, and real-time WebM capture (`public/ui/exports.js`).
+- Silent-by-default opt-in clash SFX preview in Bake QA (`#clashSfxToggle` on `renderAt` in `public/ui/clash-sfx-clock.js`), already shipped under #41.
+- Do not add a voice recorder, waveform editor, microphone permission prompt, or live voice product UI to `public/ui/*` from this skill shell.
 
 ## Anti-jobs
 
-- Do not SIGN this skill, HM-PF-47, HM-PF-48, or SFX / #41.
-- Do not enable n8n step 10 or any Wait gate that approves voice.
-- Do not add an FE voice recorder, microphone capture, or SFX library.
-- Do not productize future VO or SFX hooks, including a UI placeholder that looks live.
-- Do not schedule this file as Week A, Week B, or Week C implementation.
-- Do not treat a rhythm hold as audio.
-- Do not call `api.teqcon.uk`, `:8770`, or a compose / save HTTP API.
+- Do not SIGN this skill, HM-PF-47, HM-PF-48, or re-open #41 as held.
+- Do not re-implement or rewrite shipped #41 clash SFX (`public/ui/clash-sfx-clock.js`, `scripts/clash-sfx-clock.cjs`).
+- Do not enable n8n step 10 or any Wait gate that approves voice in production workflows.
+- Do not add an FE voice recorder, microphone capture UI, cloud TTS client, or required audio engine.
+- Do not invent a new audio HTTP backend or call `api.teqcon.uk`, `:8770`, or `/api/compose`.
+- Do not treat timing packs (`dialogue_film_slow`, `micro_cut_flurry`) or picture captions as a voice track.

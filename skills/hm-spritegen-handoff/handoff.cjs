@@ -37,8 +37,35 @@ function nameVerdict(name) {
   if (!base) return { name: String(name ?? ''), reason: 'unsafe-name' };
   if (credentialName(base)) return { name: base, reason: 'credential' };
   if (runSessionName(base)) return { name: base, reason: 'run-session' };
-  if (base.toLowerCase() === 'manifest.json') return { name: base, reason: 'atlas-hold' };
   return null;
+}
+
+function isAsepriteJson(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+  if (Object.prototype.hasOwnProperty.call(parsed, 'frame_layout')) return false;
+  const meta = parsed.meta;
+  if (meta && typeof meta === 'object' && !Array.isArray(meta) && (
+    Object.prototype.hasOwnProperty.call(meta, 'frameTags') ||
+    Object.prototype.hasOwnProperty.call(meta, 'slices') ||
+    (typeof meta.app === 'string' && /aseprite/i.test(meta.app))
+  )) return true;
+  const f = parsed.frames;
+  const list = Array.isArray(f) ? f : (f && typeof f === 'object' ? Object.values(f) : []);
+  return list.some(row => row && typeof row === 'object' && (
+    Object.prototype.hasOwnProperty.call(row, 'spriteSourceSize') ||
+    Object.prototype.hasOwnProperty.call(row, 'sourceSize') ||
+    (row.frame && typeof row.frame === 'object')
+  ));
+}
+
+function hasEntries(v) {
+  if (Array.isArray(v)) return v.length > 0;
+  return Boolean(v && typeof v === 'object' && Object.keys(v).length > 0);
+}
+
+function isNativeAtlasManifest(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+  return hasEntries(parsed.frame_layout) && hasEntries(parsed.states);
 }
 
 function bytesOf(entry) {
@@ -69,7 +96,8 @@ function lead(rejected) {
   const reasons = new Set(rejected.map(item => item.reason));
   if (reasons.has('credential')) return 'Credential files are rejected. They never enter HM.';
   if (reasons.has('run-session')) return 'Run-session files are rejected. They never enter HM.';
-  if (reasons.has('atlas-hold')) return 'Atlas manifest is DESIGNED-HOLD (HM-PF-27). The first path is strip PNG+JSON.';
+  if (reasons.has('aseprite-hold')) return 'Aseprite JSON is not the first path (HM-PF-27). Provide a native sprite-gen atlas manifest (frame_layout + states) or strip PNG+JSON.';
+  if (reasons.has('atlas-hold')) return 'Atlas manifest is DESIGNED-HOLD (HM-PF-27). Use strip PNG+JSON or a native manifest with frame_layout and states.';
   if (reasons.has('root-motion-hold')) return 'root_motion / engine-export is rejected as a product import (HM-PF-28). HTML Motion is not an engine runtime. The first path remains strip PNG+JSON.';
   if (reasons.has('unsafe-name')) return 'Use local filenames without paths or references.';
   if (reasons.has('not-png')) return 'Strip PNG is missing a PNG signature.';
@@ -125,6 +153,10 @@ function classifyHandoff(entries) {
         (parsed.show && Array.isArray(parsed.show.atoms) && parsed.show.atoms.some(a => a && typeof a === 'object' && ['root_motion', 'rootmotion', 'engine_export', 'engineExport'].some(k => Object.prototype.hasOwnProperty.call(a, k))))
       )) {
         rejected.push({ name, reason: 'root-motion-hold' });
+      } else if (isAsepriteJson(parsed)) {
+        rejected.push({ name, reason: 'aseprite-hold' });
+      } else if (name.toLowerCase() === 'manifest.json' && !isNativeAtlasManifest(parsed)) {
+        rejected.push({ name, reason: 'atlas-hold' });
       } else named.push({ name, bytes, parsed });
     } else if (/\.png$/i.test(name)) {
       if (bytes.length < PNG_SIG.length || !bytes.subarray(0, PNG_SIG.length).equals(PNG_SIG)) {
@@ -140,6 +172,17 @@ function classifyHandoff(entries) {
     return fail('First path is one strip PNG and one strip JSON. Generation stays outside the FE. File API import only.', []);
   }
   const parsed = json[0].parsed;
+  if (isNativeAtlasManifest(parsed)) {
+    return {
+      ok: true,
+      path: 'atlas-native-manifest',
+      generation: 'outside-fe',
+      import: 'file-api',
+      files: [png[0].name, json[0].name],
+      error: null,
+      rejected: []
+    };
+  }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || STRIP_KEYS.some(key => !Object.prototype.hasOwnProperty.call(parsed, key))) {
     return fail(lead([{ reason: 'not-strip' }]), [{ name: json[0].name, reason: 'not-strip' }]);
   }

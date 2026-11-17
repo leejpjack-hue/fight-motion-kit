@@ -18,3 +18,8 @@ node scripts/clash-sfx-clock.cjs public/shows/daiyu-wang-five-seconds.json
 # Opt-in WAV synthesis on the shared clock
 node scripts/clash-sfx-clock.cjs public/shows/daiyu-wang-five-seconds.json --enabled --hero-beat 0.5 --out /tmp/clash.wav
 ```
+
+## Related Product-Flow Records
+
+- Post-ship lift criteria & audit: [`HM-PF-48-sfx-41-lift-checklist.md`](HM-PF-48-sfx-41-lift-checklist.md)
+- Step 10 voice skill shell boundary: [`HM-PF-47-voice-track-skill-shell.md`](HM-PF-47-voice-track-skill-shell.md) · [`skills/hm-voice-track/SKILL.md`](../../skills/hm-voice-track/SKILL.md)
