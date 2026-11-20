@@ -515,13 +515,19 @@
     else film.textContent = 'Opened ' + (project.show.title || project.show.show_id) + '. Open demo returns to the 5.00s eight-plate teaching film.';
     const openBtn = $('firstPathOpen');
     if (openBtn) openBtn.setAttribute('aria-current', teaching ? 'step' : 'false');
+    const importHtmlBtn = $('firstPathImportHtml');
+    if (importHtmlBtn) importHtmlBtn.setAttribute('aria-current', !teaching ? 'step' : 'false');
     const blocked = !atoms.length || recording;
-    ['firstPathWatch', 'firstPathEdit', 'firstPathExport', 'firstPathHtml'].forEach(id => {
+    ['firstPathWatch', 'firstPathEdit', 'firstPathVideo', 'firstPathExport', 'firstPathHtml'].forEach(id => {
       const el = $(id);
       if (el) el.disabled = blocked;
     });
   }
   function firstPathStep(step) {
+    if (step === 'import-html') {
+      $('openProject')?.click();
+      return;
+    }
     if (step === 'open') {
       if (project?.show?.show_id === DEMO) {
         time = 0;
@@ -545,7 +551,11 @@
     const dialog = $('exportDialog');
     if (!dialog) return;
     if (!dialog.open) $('exportOpen').click();
-    if (step === 'html') {
+    if (step === 'video') {
+      const button = $('exportVideo');
+      button?.scrollIntoView({block: 'center'});
+      button?.focus();
+    } else if (step === 'html') {
       const button = $('exportHtml');
       button?.scrollIntoView({block: 'center'});
       button?.focus();
