@@ -133,7 +133,11 @@
       desktopDefaultOpen: true
     });
 
-    // 4. Pipeline & QA secondary panels (Cantonese board & Notify preview start compact on both viewports)
+    // 4. Pipeline & QA secondary panels (Story gate, Cantonese board & Notify preview start compact on both viewports)
+    mountGroupDrawer('pf09Gate', $('pf09GatePanel'), '.pf09-gate-heading', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: false
+    });
     const openBoardHash = location.hash === '#hmBoardSurface';
     mountGroupDrawer('hmBoard', $('hmBoardSurface'), '.hm-board-heading', {
       mobileDefaultOpen: openBoardHash,
@@ -144,7 +148,12 @@
       desktopDefaultOpen: false
     });
 
-    // 5. Export modal Bake & QA section (compact drawer on narrow phones unless Bake QA opened directly)
+    // 5. Export modal Bake & QA section (compact drawer on narrow phones; Bake QA dock collapsed by default until opened)
+    mountGroupDrawer('bakeQaDock', $('bakeQaDock'), '.bake-qa-head', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: false,
+      labels: { open: 'Hide QA', closed: 'Show QA' }
+    });
     const exportBake = document.querySelector('#exportDialog .export-bake');
     if (exportBake) {
       const head = document.createElement('div');
@@ -375,6 +384,12 @@
       if (d) {
         d.userSetMobile = true;
         applyDrawerState(d, true);
+      }
+      const qa = drawers.get('bakeQaDock');
+      if (qa) {
+        qa.userSetMobile = true;
+        qa.userSetDesktop = true;
+        applyDrawerState(qa, true);
       }
     });
 

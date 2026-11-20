@@ -195,6 +195,8 @@
       warnings: warnings,
       replaceProject: Boolean(src.replaceProject),
       undoable: Boolean(src.undoable),
+      relinkable: Boolean(src.relinkable),
+      formatHint: trimStr(src.formatHint),
       providerCalls: 0,
       artInvented: false,
       recordedAt: trimStr(src.recordedAt) || new Date().toISOString(),
@@ -305,12 +307,58 @@
     box.appendChild(landedWrap);
     box.appendChild(missingWrap);
 
+    var showRelink = Boolean(receipt.relinkable && receipt.status === 'partial' && receipt.missing.length);
+    var showHint = Boolean(receipt.formatHint);
+    if (showRelink || showHint) {
+      var actions = el(doc, 'div', { class: 'import-receipt-actions' });
+      if (showRelink) {
+        var relinkBtn = el(doc, 'button', {
+          id: 'importReceiptRelink',
+          type: 'button',
+          class: 'primary',
+        }, 'Relink missing images…');
+        relinkBtn.onclick = function () {
+          var input = doc.getElementById('relinkAssetsInput');
+          if (input) input.click();
+        };
+        actions.appendChild(relinkBtn);
+      }
+      if (showHint) {
+        var hintBtn = el(doc, 'button', {
+          id: 'importReceiptCopyHint',
+          type: 'button',
+        }, 'Copy AI HTML format hint');
+        hintBtn.onclick = function () {
+          var copiedOk = function () {
+            hintBtn.textContent = 'Copied format hint';
+            var noteEl = doc.getElementById('importReceiptNote');
+            if (noteEl) noteEl.textContent = 'Copied AI HTML format hint (<script id="hm-project-data" type="application/json">).';
+          };
+          if (root.navigator && root.navigator.clipboard && typeof root.navigator.clipboard.writeText === 'function') {
+            Promise.resolve(root.navigator.clipboard.writeText(receipt.formatHint)).then(copiedOk).catch(function () {});
+          } else if (doc.execCommand && doc.body) {
+            var ta = doc.createElement('textarea');
+            ta.value = receipt.formatHint;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            doc.body.appendChild(ta);
+            ta.select();
+            try { if (doc.execCommand('copy')) copiedOk(); } catch (e) {}
+            doc.body.removeChild(ta);
+          }
+        };
+        actions.appendChild(hintBtn);
+      }
+      box.appendChild(actions);
+    }
+
     var notes = receipt.warnings.slice();
     if (receipt.undoable) notes.push('Undo restores your previous draft.');
     if (receipt.status === 'blocked' && !receipt.replaceProject) {
       notes.push('Missing pack kept un-replaced (0 stand-in images, 0 provider calls).');
     }
-    if (notes.length) {
+    if (notes.length || showHint) {
       box.appendChild(el(doc, 'p', { id: 'importReceiptNote', class: 'import-receipt-note' }, notes.join(' ')));
     }
   }

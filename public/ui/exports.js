@@ -8,13 +8,16 @@
     return 'Checklist blocked export · ' + list.blocks.map(row => row.text).join(' · ');
   }
   function applyExportGate() {
-    const list = exportChecklist();
-    const timing = HMComposeClient.rhythmTiming(S.project?.show);
-    const timingError = !timing.durations_valid || !timing.target_valid;
-    const blocked = !!checklistBlockMessage(list) || timingError;
-    if (timingError) report('Rhythm validation failed: fix missing durations or an invalid target before bake.', true);
+    const proj = S.project;
+    const emptyShow = !(proj?.show?.atoms?.length);
+    const list = emptyShow ? null : HMComposeClient.parityDirtyChecklist(proj);
+    const timing = emptyShow ? { durations_valid: true, target_valid: true } : HMComposeClient.rhythmTiming(proj?.show);
+    const timingError = !emptyShow && (!timing.durations_valid || !timing.target_valid);
+    const blocked = emptyShow || !!checklistBlockMessage(list) || timingError;
+    if (emptyShow) report('Open an AI motion HTML or add a clip to export video.', false);
+    else if (timingError) report('Rhythm validation failed: fix missing durations or an invalid target before bake.', true);
     const warn = !blocked && list?.active && list.warns?.length ? 'Checklist warning · ' + list.warns.map(row => row.text).join(' · ') : '';
-    if (blocked && !timingError) report(checklistBlockMessage(list), true);
+    if (blocked && !emptyShow && !timingError) report(checklistBlockMessage(list), true);
     else if (warn) report(warn, false);
     if ($('exportHtml')) $('exportHtml').disabled = blocked;
     if ($('exportFrame')) $('exportFrame').disabled = blocked;
@@ -24,6 +27,7 @@
     return !blocked;
   }
   function assertExportAllowed() {
+    if (!(S.project?.show?.atoms?.length)) throw new Error('Open an AI motion HTML or add a clip to export video.');
     const timing = HMComposeClient.rhythmTiming(S.project?.show);
     if (!timing.durations_valid || !timing.target_valid) throw new Error('Rhythm validation failed: fix missing durations or an invalid target before bake.');
     const message = checklistBlockMessage(exportChecklist());
@@ -60,23 +64,33 @@
   }
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
   on('openProject',()=>$('projectInput').click());
-  $('projectInput').onchange=safe(async e=>{
-    const files=[...(e.target.files||[])];if(!files.length)return;
-    const skippedFiles=[],localFiles={};let jsonName='',parsed=null,candidateProject=null,fetchedHostShow=false,isLockPack=false;
+  async function openProjectFiles(files){
+    files=[...(files||[])];if(!files.length)return false;
+    const skippedFiles=[],localFiles={};let primaryName='',parsed=null,candidateProject=null,fetchedHostShow=false,isLockPack=false,isHtml=false,htmlWarnings=[];
     try{
       const destination=S.destinationToken();
       const next=await (async()=>{
-      const jsonFile=files.find(file=>/\.json$/i.test(file.name||'')||file.type==='application/json')||files[0];
-      jsonName=jsonFile.name||'project.json';
-      if(jsonFile.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
+      const htmlFile=files.find(file=>/\.html?$/i.test(file.name||'')||file.type==='text/html');
+      const jsonFile=files.find(file=>/\.json$/i.test(file.name||'')||file.type==='application/json');
+      const primaryFile=htmlFile||jsonFile||files[0];
+      isHtml=Boolean(htmlFile);
+      primaryName=primaryFile.name||(isHtml?'motion.html':'project.json');
+      if(primaryFile.size>100*1024*1024)throw new Error('Project exceeds the 100 MB import limit.');
       for(const imgFile of files){
-        if(imgFile===jsonFile)continue;
+        if(imgFile===primaryFile)continue;
         if(!['image/png','image/jpeg','image/webp'].includes(imgFile.type)&&!/\.(png|jpe?g|webp)$/i.test(imgFile.name||'')){if(imgFile.name)skippedFiles.push(imgFile.name);continue;}
         if(imgFile.size>20*1024*1024)throw new Error(imgFile.name+' is larger than 20 MB.');
         if(Object.hasOwn(localFiles,imgFile.name))throw new Error('Duplicate image filename: '+imgFile.name+'. Use distinct filenames for sheets and locked references.');
         localFiles[imgFile.name]=await dataUrl(imgFile);
       }
-      parsed=JSON.parse(await jsonFile.text());
+      if(isHtml){
+        if(!window.HMHtmlImport)throw new Error('HTML import helper is unavailable.');
+        const htmlResult=HMHtmlImport.parseMotionHtml(await primaryFile.text(),{fileName:primaryName,localFiles});
+        htmlWarnings=Array.isArray(htmlResult.warnings)?htmlResult.warnings.slice():[];
+        parsed=htmlResult.project;
+      }else{
+        parsed=JSON.parse(await primaryFile.text());
+      }
       if(typeof HMStripAdapter!=='undefined'&&HMStripAdapter.assertNotRootMotion)HMStripAdapter.assertNotRootMotion(parsed);
       isLockPack=Boolean(window.HMComposeClient?.isCostumeLockPackInput?.(parsed));
       const review=isLockPack?await HMCostumeDrift.review(parsed,localFiles):null;
@@ -86,8 +100,12 @@
         // Existing show JSON is supported when its layouts are shipped with this host.
         const layouts={};for(const key of new Set(p.atoms.map(a=>a.hero?.layout_source).filter(Boolean))){if(!/^assets\/[a-zA-Z0-9_./-]+\.json$/.test(key)||key.includes('..'))throw new Error('Open a portable .motion.json project to include local images.');const r=await fetch('/'+key);if(!r.ok)throw new Error('Missing layout; use a portable project JSON.');layouts[key]=await r.json();}
         fetchedHostShow=true;
-        const media=[];for(const [key,l] of Object.entries(layouts)){const dir=key.slice(0,key.lastIndexOf('/')+1);for(const [id,e] of Object.entries(l)){if(e.full)e.full=e.full.replace(/(plates\/[^/]+)\.png$/,'$1.jpg');for(const part of e.parts||[])part.src=part.src.replace(/(cutout\/[^/]+)\.png$/,'$1.webp');const src=e.full?dir+e.full:dir+e.parts?.[0]?.src;if(src)media.push({id:crypto.randomUUID(),name:id,src,layoutSource:key,plateId:id});}}
+        const media=[];for(const [key,l] of Object.entries(layouts)){const dir=key.slice(0,key.lastIndexOf('/')+1);for(const [id,e] of Object.entries(l)){if(e.full)e.full=e.full.replace(/(plates\/[^/]+)\.png$/,'$1.jpg');for(const part of e.parts||[])part.src=part.src.replace(/(cutout\/[^/]+)\.png$/,'$1.webp');const src=e.full?dir+e.full:dir+e.parts?.[0]?.src;if(src)media.push({id:uid(),name:id,src,layoutSource:key,plateId:id});}}
         p={version:1,show:p,layouts,media};
+      }
+      if(isHtml&&window.HMHtmlImport&&Object.keys(localFiles).length){
+        const relinked=HMHtmlImport.relinkMissingAssets(p,localFiles);
+        p=relinked.project;
       }
       return p;
       })();
@@ -96,29 +114,89 @@
       if(current.revision!==destination.revision||current.request!==destination.request)throw new Error('The open project changed during import review. Select the pack again.');
       const opened=await S.openProject(Promise.resolve(next));
       if(opened){
-        report('Project opened.');
+        report(isHtml?'AI motion HTML opened.':'Project opened.');
         if(window.HMImportReceipt){
           const audit=HMImportReceipt.auditProjectAssets(next,{localFiles,fetchedHostShow});
           const composeErrs=Array.isArray(S.composed?.errors)?S.composed.errors:[];
           const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),...composeErrs];
-          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:next.show?.show_id||jsonName,status:missing.length?(audit.imagesLoaded||audit.clipsLoaded?'partial':'error'):'ok',filesLanded:[jsonName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,replaceProject:true,undoable:false});
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:next.show?.show_id||primaryName,status:missing.length?(audit.imagesLoaded||audit.clipsLoaded?'partial':'error'):'ok',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:htmlWarnings,relinkable:audit.missingRefs.length>0,replaceProject:true,undoable:false});
         }
       }
+      return opened;
     }catch(err){
       if(window.HMImportReceipt){
         const activeId=S.project?.show?.show_id,candId=candidateProject?.show?.show_id;
         if(candidateProject&&activeId&&candId&&activeId===candId){
           const audit=HMImportReceipt.auditProjectAssets(candidateProject,{localFiles,fetchedHostShow});
           const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),err.message];
-          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:candId||jsonName,status:'partial',filesLanded:[jsonName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:['Opened partially with unresolved images kept missing (0 stand-in art).'],replaceProject:true,undoable:false});
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:candId||primaryName,status:'partial',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:[...htmlWarnings,'Opened partially with unresolved images kept missing (0 stand-in art).'],relinkable:audit.missingRefs.length>0,replaceProject:true,undoable:false});
         }else{
           const refAudit=parsed?HMImportReceipt.missingFromParsedInput(parsed,localFiles):{missing:[]};
-          HMImportReceipt.record({action:isLockPack?'Costume lock pack':'Open project',source:jsonName||files.map(f=>f.name).join(', ')||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[err.message,...refAudit.missing,...skippedFiles.map(n=>n+' (unsupported file skipped)')],warnings:['Import failed; existing project kept without stand-in art.'],replaceProject:false,undoable:false});
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:primaryName||files.map(f=>f.name).join(', ')||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[err.message,...refAudit.missing,...skippedFiles.map(n=>n+' (unsupported file skipped)')],warnings:['Import failed; existing project kept without stand-in art.'],formatHint:err&&err.formatHint?err.formatHint:'',replaceProject:false,undoable:false});
         }
       }
       throw err;
-    }finally{e.target.value='';}
+    }
+  }
+  async function relinkMissingFiles(files){
+    files=[...(files||[])];if(!files.length||!S.project||!window.HMHtmlImport)return false;
+    const localFiles={},skipped=[];
+    for(const file of files){
+      if(!['image/png','image/jpeg','image/webp'].includes(file.type)&&!/\.(png|jpe?g|webp)$/i.test(file.name||'')){if(file.name)skipped.push(file.name);continue;}
+      if(file.size>20*1024*1024)throw new Error(file.name+' is larger than 20 MB.');
+      if(Object.hasOwn(localFiles,file.name))throw new Error('Duplicate image filename: '+file.name+'.');
+      localFiles[file.name]=await dataUrl(file);
+    }
+    const res=HMHtmlImport.relinkMissingAssets(S.project,localFiles);
+    if(!res.matched.length){
+      if(window.HMImportReceipt){
+        const beforeAudit=HMImportReceipt.auditProjectAssets(S.project,{localFiles:null});
+        HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:beforeAudit.missingRefs.length?'partial':'ok',filesLanded:[],clipsLoaded:beforeAudit.clipsLoaded,imagesLoaded:beforeAudit.imagesLoaded,missing:[...beforeAudit.missingRefs,...skipped.map(n=>n+' (unsupported file skipped)')],warnings:['No dropped files matched the missing image filenames.'],relinkable:beforeAudit.missingRefs.length>0,replaceProject:false,undoable:false});
+      }
+      S.status('No selected files matched the missing image filenames.',true);
+      return false;
+    }
+    const patch={};res.matched.forEach(m=>{patch[m.ref]=res.project.assets[m.ref];});
+    S.editProject(p=>{p.assets=Object.assign({},p.assets||{},patch);});
+    try{await S.compile();}catch(e){}
+    if(window.HMImportReceipt){
+      const afterAudit=HMImportReceipt.auditProjectAssets(S.project,{localFiles:null});
+      const warnings=[];
+      if(res.unmatchedFiles.length)warnings.push('Unmatched files ignored: '+res.unmatchedFiles.join(', '));
+      if(skipped.length)warnings.push('Unsupported files skipped: '+skipped.join(', '));
+      HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:afterAudit.missingRefs.length?'partial':'ok',filesLanded:res.matched.map(m=>m.file),clipsLoaded:afterAudit.clipsLoaded,imagesLoaded:afterAudit.imagesLoaded,missing:afterAudit.missingRefs,warnings,relinkable:afterAudit.missingRefs.length>0,replaceProject:false,undoable:true});
+    }
+    S.status('Relinked '+res.matched.length+' missing image'+(res.matched.length===1?'':'s')+'.');
+    return true;
+  }
+  S.openProjectFiles=openProjectFiles;
+  S.relinkMissingFiles=relinkMissingFiles;
+  $('projectInput').onchange=safe(async e=>{
+    try{await openProjectFiles(e.target.files);}
+    finally{e.target.value='';}
   });
+  if($('relinkAssetsInput'))$('relinkAssetsInput').onchange=safe(async e=>{
+    try{await relinkMissingFiles(e.target.files);}
+    finally{e.target.value='';}
+  });
+  const stageDropHost=document.querySelector('main.stage-well');
+  const isFileDrop=e=>Array.from(e.dataTransfer?.types||[]).includes('Files');
+  if(stageDropHost){
+    stageDropHost.addEventListener('dragover',e=>{if(!isFileDrop(e))return;e.preventDefault();stageDropHost.classList.add('is-file-drop-target');});
+    stageDropHost.addEventListener('dragleave',e=>{if(!e.relatedTarget||!stageDropHost.contains(e.relatedTarget))stageDropHost.classList.remove('is-file-drop-target');});
+    stageDropHost.addEventListener('drop',safe(async e=>{
+      if(!isFileDrop(e))return;
+      e.preventDefault();stageDropHost.classList.remove('is-file-drop-target');
+      const dropped=Array.from(e.dataTransfer?.files||[]);if(!dropped.length)return;
+      if(dropped.some(f=>/\.(html?|json)$/i.test(f.name||'')||f.type==='text/html'||f.type==='application/json')){
+        await openProjectFiles(dropped);
+      }else if(window.HMImportReceipt&&S.project&&HMImportReceipt.auditProjectAssets(S.project).missingRefs.length){
+        await relinkMissingFiles(dropped);
+      }else{
+        S.status('Drop an AI motion .html or .motion.json file to open it.');
+      }
+    }));
+  }
   function selectedPreset() {return HMXExport.presetById($('exportPreset').value)||HMXExport.presets[0];}
   function paintExportHints() {
     const preset=selectedPreset();
@@ -272,10 +350,15 @@
     if(mid)S.seekToPeek(mid.index);
     paintBakeQa();
   }
-  function openBakeQa(){
+  function openExportDialog(){
     S.pause();report('');paintExportHints();applyExportGate();
     $('exportDialog').showModal();
     paintBakeQa();
+  }
+  function openBakeQa(){
+    openExportDialog();
+    window.HMUiLayout?.setDrawer?.('exportBake',true);
+    window.HMUiLayout?.setDrawer?.('bakeQaDock',true);
     $('bakeQaDock')?.scrollIntoView({block:'nearest'});
     $('bakeQaScrub')?.focus();
   }
@@ -296,7 +379,7 @@
     $('framePeekStrip')?.scrollIntoView({block:'nearest'});
     S.status('Frame peek strip · same plan as bake QA');
   });
-  on('exportOpen',openBakeQa);
+  on('exportOpen',openExportDialog);
   on('openBakeQa',openBakeQa);
   on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
   on('exportTiming',()=>task(async()=>{
@@ -326,7 +409,8 @@
     const data=JSON.stringify({...result,assets}).replace(/</g,'\\u003c');
     const pxBundle=await pixelfxExportBundle(project);
     const pxScript=pxBundle?`<script>${pxBundle.replace(/<\/script/gi,'<\\/script')}<\/script>`:'';
-    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}#pixelfxHonesty{margin:0 16px 12px;padding:8px 10px;background:#2f1c0fee;border:1px solid #ff9e44;color:#ffe4bf;font:600 12px/1.4 ui-monospace,monospace}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><p id="pixelfxHonesty" hidden></p><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p><p id="layers"></p></main>${pxScript}<script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBrokenCutoutSrc.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPathOrStock.toString()}\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${cameraEase.toString()}\n${cameraChannel.toString()}\n${cameraPoseOnSegment.toString()}\n${cutTransitionsBundle.toString()}\ncutTransitionsBundle();\n${backgroundLocationsBundle.toString()}\nbackgroundLocationsBundle();\n${layerCamMatrix.toString()}\n${layerCamsIndependent.toString()}\n${layerCamMatrixText.toString()}\n${createMotionRenderer.toString()}\n${typeof createHMTeachingFilm==='function'?createHMTeachingFilm.toString()+'\nconst HMTeachingFilm=createHMTeachingFilm();\n':''}const DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
+    const hmProjectScript=window.HMHtmlImport?HMHtmlImport.embedProjectScript(project,{omitAssets:true}):'';
+    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}#pixelfxHonesty{margin:0 16px 12px;padding:8px 10px;background:#2f1c0fee;border:1px solid #ff9e44;color:#ffe4bf;font:600 12px/1.4 ui-monospace,monospace}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><p id="pixelfxHonesty" hidden></p><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p><p id="layers"></p></main>${hmProjectScript}${pxScript}<script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBrokenCutoutSrc.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPathOrStock.toString()}\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${cameraEase.toString()}\n${cameraChannel.toString()}\n${cameraPoseOnSegment.toString()}\n${cutTransitionsBundle.toString()}\ncutTransitionsBundle();\n${backgroundLocationsBundle.toString()}\nbackgroundLocationsBundle();\n${layerCamMatrix.toString()}\n${layerCamsIndependent.toString()}\n${layerCamMatrixText.toString()}\n${createMotionRenderer.toString()}\n${typeof createHMTeachingFilm==='function'?createHMTeachingFilm.toString()+'\nconst HMTeachingFilm=createHMTeachingFilm();\n':''}const DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
     download(project.show.show_id+'.html',new Blob([html],{type:'text/html'}));report('Playable HTML downloaded. All images are embedded.');
   }));
   function standalonePlayer(data) {
@@ -342,6 +426,15 @@
   }
   function recorderChoice(){if(!window.MediaRecorder||typeof MediaRecorder.isTypeSupported!=='function')return null;return HMXExport.pickRecorderMime(type=>MediaRecorder.isTypeSupported(type));}
   paintExportHints();if(!recorderChoice()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
+  window.addEventListener('hm:projectchange', () => {
+    if (busy || !S.show) return;
+    if ($('exportDialog')?.open) {
+      paintExportHints();
+      applyExportGate();
+    } else if (!S.show.atoms?.length) {
+      applyExportGate();
+    }
+  });
   on('exportFrames',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();if(!S.composed)throw new Error('Add a clip before exporting a frame sequence.');
