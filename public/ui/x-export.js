@@ -15,14 +15,117 @@
   const presets = [
     { id: '720p30', label: '720p30', width: 1280, height: 720, fps: 30, videoBitsPerSecond: 5000000 },
     { id: '1080p30', label: '1080p30', width: 1920, height: 1080, fps: 30, videoBitsPerSecond: 8000000 },
+    { id: '720p24', label: '720p24', width: 1280, height: 720, fps: 24, videoBitsPerSecond: 4000000 },
+    { id: '1080p24', label: '1080p24', width: 1920, height: 1080, fps: 24, videoBitsPerSecond: 6400000 },
   ];
   function presetById(id) { return presets.find(p => p.id === id) || null; }
-  function pickRecorderMime(isTypeSupported) {
-    if (typeof isTypeSupported !== 'function') return null;
+  function availableRecorderFormats(isTypeSupported) {
+    if (typeof isTypeSupported !== 'function') return [];
+    const seen = new Set();
+    const out = [];
     for (let i = 0; i < RECORDER_MIME.length; i++) {
-      if (isTypeSupported(RECORDER_MIME[i].mime)) return RECORDER_MIME[i];
+      const entry = RECORDER_MIME[i];
+      if (seen.has(entry.ext)) continue;
+      let ok = false;
+      try { ok = !!isTypeSupported(entry.mime); } catch (e) {}
+      if (ok) {
+        seen.add(entry.ext);
+        out.push(entry);
+      }
+    }
+    return out;
+  }
+  function pickRecorderMime(isTypeSupported, preferredExt) {
+    const formats = availableRecorderFormats(isTypeSupported);
+    if (!formats.length) return null;
+    if (preferredExt) {
+      const match = formats.find(entry => entry.ext === preferredExt);
+      if (match) return match;
+    }
+    return formats[0];
+  }
+  function positiveNum(n) { return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null; }
+  function stripFpsOf(item) {
+    if (!item || typeof item !== 'object') return null;
+    const direct = positiveNum(item.fps) || positiveNum(item.strip_fps) || positiveNum(item.source_fps) || positiveNum(item.cadence && item.cadence.fps);
+    if (direct) return direct;
+    const spc = positiveNum(item.cadence && item.cadence.secondsPerCell);
+    if (spc) return 1 / spc;
+    const pm = item.pendingMotion;
+    if (pm && typeof pm === 'object') {
+      const pmSpc = positiveNum(pm.cadence && pm.cadence.secondsPerCell);
+      if (pmSpc) return 1 / pmSpc;
+      const pmSrc = positiveNum(pm.metadata && pm.metadata.source_fps);
+      if (pmSrc) return pmSrc;
     }
     return null;
+  }
+  function detectCadenceMismatch(project, preset) {
+    const targetFps = preset && positiveNum(preset.fps) ? preset.fps : 30;
+    const names = [];
+    const addIf24 = (item, fallbackName) => {
+      const fps = stripFpsOf(item);
+      if (fps && Math.abs(fps - 24) < 0.05) {
+        const label = (item && (item.name || item.label || item.id)) || fallbackName || 'motion strip';
+        if (!names.includes(label)) names.push(label);
+      }
+    };
+    const media = Array.isArray(project && project.media) ? project.media : [];
+    const strips = Array.isArray(project && project.strips) ? project.strips : [];
+    const showStrips = Array.isArray(project && project.show && project.show.strips) ? project.show.strips : [];
+    const atoms = Array.isArray(project && project.show && project.show.atoms) ? project.show.atoms : [];
+    media.forEach(item => addIf24(item, 'imported strip'));
+    strips.forEach(item => addIf24(item, 'motion strip'));
+    showStrips.forEach(item => addIf24(item, 'motion strip'));
+    atoms.forEach(atom => {
+      addIf24(atom && atom.strip, atom && (atom.label || atom.id));
+      if (positiveNum(atom && atom.strip_fps) && Math.abs(atom.strip_fps - 24) < 0.05) {
+        const label = (atom.label || atom.id || 'clip strip');
+        if (!names.includes(label)) names.push(label);
+      }
+    });
+    const mismatch = names.length > 0 && targetFps !== 24;
+    const warning = mismatch
+      ? 'Cadence warning: 24 fps strip (' + names.join(', ') + ') with ' + targetFps + ' fps preset will duplicate frames in real-time video; pick 720p24 or 1080p24 to match cadence.'
+      : '';
+    return {
+      mismatch,
+      stripFps: names.length ? 24 : null,
+      targetFps,
+      stripNames: names,
+      warning,
+    };
+  }
+  function cadenceTelemetry(opts) {
+    const o = opts || {};
+    const durationS = Math.max(0.001, positiveNum(o.durationS) || 0.1);
+    const targetFps = positiveNum(o.targetFps) || 30;
+    const renderedFrames = Math.max(0, Math.round(Number(o.renderedFrames) || 0));
+    const expectedFrames = Math.max(1, Math.round(durationS * targetFps));
+    const elapsedS = positiveNum(o.actualElapsedMs) ? Math.max(0.001, o.actualElapsedMs / 1000) : durationS;
+    const measuredFps = Math.round((renderedFrames / elapsedS) * 10) / 10;
+    const droppedFrames = Math.max(0, expectedFrames - renderedFrames);
+    const dropRatio = expectedFrames > 0 ? droppedFrames / expectedFrames : 0;
+    const significantDrop = droppedFrames >= 2 && dropRatio > 0.15;
+    const mime = String(o.mime || 'video/webm');
+    const res = (positiveNum(o.width) || 1280) + '×' + (positiveNum(o.height) || 720);
+    const droppedWarning = significantDrop
+      ? ' Cadence warning: dropped ' + droppedFrames + ' of ' + expectedFrames + ' expected frames (real-time lossy capture); use PNG frames for deterministic timing.'
+      : '';
+    const summary = 'Video downloaded · ' + mime + ' · ' + res + ' · target ' + targetFps + ' fps · measured ' + measuredFps.toFixed(1) + ' fps (' + renderedFrames + '/' + expectedFrames + ' frames).' + droppedWarning;
+    return {
+      mime,
+      width: positiveNum(o.width) || 1280,
+      height: positiveNum(o.height) || 720,
+      target_fps: targetFps,
+      expected_frames: expectedFrames,
+      rendered_frames: renderedFrames,
+      dropped_frames: droppedFrames,
+      measured_fps: measuredFps,
+      significant_drop: significantDrop,
+      dropped_warning: droppedWarning,
+      summary,
+    };
   }
   function formatMbps(bps) { return (Math.round(bps / 1e5) / 10).toFixed(1) + ' Mbps'; }
   function webmMegabytes(bps, seconds) { return Math.round((bps * seconds / 8 / 1e6) * 10) / 10; }
@@ -134,7 +237,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, pickRecorderMime, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -42,16 +42,18 @@
     };
   }
 
-  function preferredRecordMime(caps) {
+  function preferredRecordMime(caps, preferredExt) {
     const c = normalize(caps);
     if (!c.captureStream) return '';
+    if (preferredExt === 'mp4' && c.mp4.length) return c.mp4[0];
+    if (preferredExt === 'webm' && c.webm.length) return c.webm[0];
     const have = new Set(c.webm.concat(c.mp4));
     return RECORD_ORDER.find(type => have.has(type)) || '';
   }
 
-  function matrix(caps) {
+  function matrix(caps, preferredExt) {
     const c = normalize(caps);
-    const record = preferredRecordMime(c);
+    const record = preferredRecordMime(c, preferredExt);
     const webm = !!(c.captureStream && c.webm.length);
     const mp4 = !!(c.captureStream && c.mp4.length);
     const webmNote = webm
