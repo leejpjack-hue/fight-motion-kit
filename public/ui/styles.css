@@ -246,10 +246,10 @@ main.stage-well{padding:8px 14px 4px}
 .stage-well:has(#abContainer[data-ab="false"]) #abSnapshot,
 .stage-well:has(#abContainer[data-ab="false"]) #abImport{display:none}
 .stage-well:has(#abContainer[data-ab="false"]) #paneA{max-width:min(100%,calc((100vh - 250px) * 16 / 9));margin:0 auto}
-.first-path{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px;padding:5px 10px}
-.first-path-film{flex:1 1 180px;min-width:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.first-path ol{flex-wrap:wrap;gap:4px;justify-content:flex-end}
-.first-path button{font-size:11px;padding:4px 8px;border-radius:6px}
+.first-path{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px;padding:4px 8px}
+.first-path-film{flex:1 1 90px;min-width:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.first-path ol{flex-wrap:nowrap;gap:3px;justify-content:flex-end}
+.first-path button{font-size:10.5px;padding:3px 6px;border-radius:6px;white-space:nowrap}
 .ab-pane-head{padding:3px 7px;font-size:9px}
 .ab-compare-bar{margin-top:5px;padding:4px 8px;font-size:9px}
 .transport{padding:5px 0}
@@ -348,8 +348,14 @@ main.stage-well{padding:8px 14px 4px}
 .background-panel[data-ui-collapsed="true"]>:not(.background-heading),
 #foregroundPanel[data-ui-collapsed="true"]>:not(#fgStickyTop),
 #foregroundPanel[data-ui-collapsed="true"] #fgStickyTop>:not(.background-heading),
+#pf09GatePanel[data-ui-collapsed="true"]>:not(.pf09-gate-heading),
+#bakeQaDock[data-ui-collapsed="true"]>:not(.bake-qa-head),
 #hmBoardSurface[data-ui-collapsed="true"]>:not(.hm-board-heading),
 #pf53NotifyPanel[data-ui-collapsed="true"]>:not(.pf53-notify-heading){display:none!important}
+.export-options button.primary strong span,.export-options button.primary small{color:var(--shell-accent-ink);opacity:.9}
+.import-receipt-actions{display:flex;flex-wrap:wrap;gap:6px}
+.import-receipt-actions button{font-size:11px;padding:5px 10px}
+.stage-well.is-file-drop-target{outline:2px dashed var(--accent);outline-offset:-4px;background:color-mix(in srgb,var(--shell-accent) 7%,var(--bg))}
 #foregroundPanel[data-ui-collapsed="true"] #fgStickyTop{border-bottom:0;padding-bottom:0}
 
 /* Panel Section Filter Views */
@@ -439,7 +445,7 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
   .workspace:has(#shellFocusPreview:checked) main.stage-well{position:static;box-shadow:none;padding:10px 12px}
   .workspace:has(#shellFocusPreview:checked) .first-path{flex-direction:column;align-items:stretch}
   .workspace:has(#shellFocusPreview:checked) .first-path-film{white-space:normal}
-  .workspace:has(#shellFocusPreview:checked) .first-path ol{justify-content:flex-start}
+  .workspace:has(#shellFocusPreview:checked) .first-path ol{flex-wrap:wrap;justify-content:flex-start}
   .ab-stage-grid[data-ab=true]{grid-template-columns:minmax(0,1fr);gap:8px}
 
   .transport{padding:4px 0 2px;gap:4px}
