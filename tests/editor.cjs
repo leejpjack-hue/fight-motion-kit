@@ -191,7 +191,7 @@ async function ensureServer(urlStr){
     const portablePath=await downloadFrom('saveProject','portable.motion.json');const portable=JSON.parse(fs.readFileSync(portablePath));assert.ok(Object.values(portable.assets).every(x=>x.startsWith('data:image/')));assert.equal(portable.media.length,8);
     await change('projectTitle','Changed title');await p.setInputFiles('#projectInput',portablePath);await p.waitForFunction(()=>HMStudio.project.show.title.includes('First exchange'));await settle();assert.equal((await state()).duration,5);check('portable project download and reopen with embedded images');
     await p.click('#exportOpen');
-    assert.deepEqual(await p.locator('#exportPreset option').allTextContents(),['720p30','1080p30']);
+    assert.deepEqual(await p.locator('#exportPreset option').allTextContents(),['720p30','1080p30','720p24','1080p24']);
     assert.equal(await p.locator('#exportPreset').inputValue(),'720p30');
     assert.equal(await p.locator('#exportBitrateHint').textContent(),'720p30 · 1280×720 · 30 fps · 5.0 Mbps · ≈ 18.8 MB for a 30s WebM');
     assert.equal(await p.locator('#exportHonesty').textContent(),'Real-time Record still needs this tab visible. Deterministic ffmpeg stays on the local skill.');

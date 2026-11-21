@@ -1,7 +1,27 @@
 (() => {
   const S = window.HMStudio, { $, on, safe, copy, download } = S;
   let busy = false;
-  const report = (text, error = false) => { $('exportStatus').textContent = text; $('exportStatus').classList.toggle('error', error); };
+  let activeCancel = null;
+  const report = (text, error = false, warn = false) => {
+    const el = $('exportStatus');
+    el.textContent = text;
+    el.classList.toggle('error', error);
+    el.classList.toggle('cadence-warning', Boolean(warn && !error));
+  };
+  function setProgress(fraction, text, showCancel = true) {
+    const wrap = $('exportProgressWrap'), bar = $('exportProgress'), out = $('exportProgressText'), btn = $('cancelExport');
+    if (bar) bar.value = Math.max(0, Math.min(1, Number(fraction) || 0));
+    if (out) out.textContent = text || '';
+    if (btn) { btn.hidden = !showCancel; btn.disabled = !showCancel; }
+    if (wrap) wrap.hidden = false;
+  }
+  function clearProgress() {
+    const wrap = $('exportProgressWrap'), bar = $('exportProgress'), out = $('exportProgressText'), btn = $('cancelExport');
+    if (wrap) wrap.hidden = true;
+    if (bar) bar.value = 0;
+    if (out) out.textContent = '';
+    if (btn) { btn.hidden = true; btn.disabled = true; }
+  }
   const exportChecklist = () => HMComposeClient.parityDirtyChecklist(S.project);
   function checklistBlockMessage(list) {
     if (!list?.active || !list.blocks?.length) return '';
@@ -57,11 +77,13 @@
   }
   const exportIds = ['exportHtml','exportVideo','exportFrames','exportFrame','exportTiming','saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'];
   async function task(fn) {
-    if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;
+    if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;if($('exportFormat'))$('exportFormat').disabled=true;
     exportIds.forEach(id=>{if($(id))$(id).disabled=true;});
     await new Promise(resolve=>setTimeout(resolve,25));
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});applyExportGate();}
+    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;activeCancel=null;clearProgress();document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});paintExportHints();applyExportGate();}
   }
+  on('cancelExport',()=>{if(typeof activeCancel==='function')activeCancel();});
+  $('exportDialog')?.addEventListener('close',()=>{if(typeof activeCancel==='function')activeCancel();});
   on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
   on('openProject',()=>$('projectInput').click());
   async function openProjectFiles(files){
@@ -198,10 +220,48 @@
     }));
   }
   function selectedPreset() {return HMXExport.presetById($('exportPreset').value)||HMXExport.presets[0];}
+  function isMimeSupported(type){return !!(window.MediaRecorder&&typeof MediaRecorder.isTypeSupported==='function'&&MediaRecorder.isTypeSupported(type));}
+  function selectedFormatExt() {
+    const sel=$('exportFormat');
+    return sel&&sel.value?sel.value:'';
+  }
+  function refreshFormatSelect() {
+    const sel=$('exportFormat');
+    if(!sel)return [];
+    const formats=HTMLCanvasElement.prototype.captureStream&&typeof HMXExport.availableRecorderFormats==='function'
+      ?HMXExport.availableRecorderFormats(isMimeSupported)
+      :[];
+    const userChoice=sel.dataset.userChoice||'';
+    const key=formats.map(f=>f.ext+':'+f.mime).join('|');
+    if(sel.dataset.formatKey!==key){
+      sel.dataset.formatKey=key;
+      sel.replaceChildren();
+      if(!formats.length){
+        const opt=document.createElement('option');
+        opt.value='';
+        opt.textContent='Unavailable here';
+        sel.append(opt);
+      }else{
+        formats.forEach(f=>{
+          const opt=document.createElement('option');
+          opt.value=f.ext;
+          opt.textContent=f.ext==='mp4'?'MP4 (this browser only · not universal)':f.label+' (preferred)';
+          sel.append(opt);
+        });
+      }
+      if(userChoice&&formats.some(f=>f.ext===userChoice))sel.value=userChoice;
+      else if(formats.length)sel.value=formats[0].ext;
+    }
+    if(!busy)sel.disabled=formats.length<2;
+    return formats;
+  }
   function paintExportHints() {
     const preset=selectedPreset();
+    refreshFormatSelect();
+    const cadence=typeof HMXExport.detectCadenceMismatch==='function'?HMXExport.detectCadenceMismatch(S.project,preset):{mismatch:false,warning:''};
     $('exportBitrateHint').textContent=HMXExport.bitrateHint(preset);
-    $('exportHonesty').textContent=HMXExport.HONESTY;
+    $('exportHonesty').textContent=cadence.mismatch?HMXExport.HONESTY+' · '+cadence.warning:HMXExport.HONESTY;
+    $('exportHonesty').classList.toggle('cadence-warning',Boolean(cadence.mismatch));
     let seq='Optional zip at '+preset.label+'. The local skill runs ffmpeg.';
     if(S.duration>0){try{seq='Optional zip at '+preset.label+' · '+HMXExport.framePlan(S.duration,preset.fps).length+' frames. The local skill runs ffmpeg.';}catch(e){seq='Optional zip at '+preset.label+'. '+e.message;}}
     $('frameSeqHint').textContent=seq;
@@ -210,19 +270,21 @@
     if(!choice||!HTMLCanvasElement.prototype.captureStream)$('videoHint').textContent='Video recording unavailable in this browser. Use playable HTML or the frame-sequence zip.';
     else {
       const kind=choice.ext==='mp4'?'MP4 · this browser only · MP4 is not universal':choice.label;
-      $('videoHint').textContent=kind+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible';
+      const hintWarn=cadence.mismatch?' · cadence mismatch (24 fps strip vs '+preset.fps+' fps preset)':'';
+      $('videoHint').textContent=kind+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible'+hintWarn;
     }
   }
   function exportCaps(){
     return HMExportMatrix.browserCaps({
       captureStream:!!(HTMLCanvasElement.prototype&&HTMLCanvasElement.prototype.captureStream),
-      isTypeSupported:mime=>!!(window.MediaRecorder&&typeof MediaRecorder.isTypeSupported==='function'&&MediaRecorder.isTypeSupported(mime))
+      isTypeSupported:isMimeSupported
     });
   }
   function paintExportMatrix(){
     const body=$('exportMatrixBody');
     if(!body||!window.HMExportMatrix)return;
-    const matrix=HMExportMatrix.matrix(exportCaps());
+    const ext=selectedFormatExt();
+    const matrix=ext==='mp4'?HMExportMatrix.matrix(exportCaps(),ext):HMExportMatrix.matrix(exportCaps());
     const table=$('exportMatrix');
     if(table){table.dataset.universalMp4='false';table.dataset.universalAlpha='false';}
     body.replaceChildren();
@@ -248,6 +310,7 @@
     if($('exportMatrixNote'))$('exportMatrixNote').textContent=matrix.summary;
   }
   $('exportPreset').addEventListener('change',()=>{paintExportHints();applyExportGate();});
+  if($('exportFormat'))$('exportFormat').addEventListener('change',()=>{$('exportFormat').dataset.userChoice=$('exportFormat').value||'';paintExportHints();applyExportGate();});
   const stripImages=new Map();
   let stripPaintToken=0;
   function loadStripImage(src){
@@ -351,7 +414,7 @@
     paintBakeQa();
   }
   function openExportDialog(){
-    S.pause();report('');paintExportHints();applyExportGate();
+    S.pause();report('');clearProgress();paintExportHints();applyExportGate();
     $('exportDialog').showModal();
     paintBakeQa();
   }
@@ -424,7 +487,7 @@
     window.ready=r.load(data).then(()=>{get('play').disabled=false;draw();});window.renderAt=value=>{playing=false;t=Math.max(0,Math.min(duration,value));draw();};
     window.ready.catch(e=>{get('title').textContent='Unable to load: '+e.message;});
   }
-  function recorderChoice(){if(!window.MediaRecorder||typeof MediaRecorder.isTypeSupported!=='function')return null;return HMXExport.pickRecorderMime(type=>MediaRecorder.isTypeSupported(type));}
+  function recorderChoice(){if(!window.MediaRecorder||typeof MediaRecorder.isTypeSupported!=='function')return null;return HMXExport.pickRecorderMime(type=>MediaRecorder.isTypeSupported(type),selectedFormatExt());}
   paintExportHints();if(!recorderChoice()||!HTMLCanvasElement.prototype.captureStream)$('exportVideo').disabled=true;
   window.addEventListener('hm:projectchange', () => {
     if (busy || !S.show) return;
@@ -441,20 +504,26 @@
     const preset=selectedPreset();const duration=S.duration;const plan=HMXExport.framePlan(duration,preset.fps);
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);
-    const files=[];
+    const files=[];let cancelled=false;activeCancel=()=>{cancelled=true;};
+    setProgress(0,'Frame 0 / '+plan.length+' (0%)',true);
     for(let i=0;i<plan.length;i++){
+      if(cancelled){report('Export cancelled.');return;}
       S.sampleStageFrameAt(plan[i].t,{renderer:r,standIn:false,onion:false,source:'bake-export-frames'});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      if(cancelled){report('Export cancelled.');return;}
       if(!blob)throw new Error('Could not export frame '+(i+1)+'.');
       files.push({name:plan[i].file,data:new Uint8Array(await blob.arrayBuffer())});
+      const pct=(i+1)/plan.length;
+      setProgress(pct,'Frame '+(i+1)+' / '+plan.length+' ('+Math.round(pct*100)+'%)',true);
       report('Frame '+(i+1)+' / '+plan.length+' · '+preset.label);
       await new Promise(resolve=>setTimeout(resolve,0));
     }
+    if(cancelled){report('Export cancelled.');return;}
     const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
     files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
     const zip=HMXExport.zipStore(files);
     download(S.project.show.show_id+'-'+preset.id+'-frames.zip',new Blob([zip],{type:'application/zip'}));
-    report('Frame sequence downloaded. Run ffmpeg on the local skill — this tab does not encode it.');
+    report('Frame sequence downloaded ('+plan.length+' frames · '+preset.label+'). Run ffmpeg on the local skill — this tab does not encode it.');
   }));
   on('exportVideo',()=>task(async()=>{
     const choice=recorderChoice();
@@ -465,13 +534,24 @@
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);S.sampleStageFrameAt(0,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
     const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:choice.mime,videoBitsPerSecond:preset.videoBitsPerSecond});
-    const done=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;recorder.onerror=e=>reject(e.error||new Error('Video recorder failed'));});
-    let visibilityChanged=false;const interrupted=()=>{if(document.hidden)visibilityChanged=true;};document.addEventListener('visibilitychange',interrupted);
+    let resolveStop=()=>{};
+    let cancelled=false,visibilityChanged=false,recorderError=null,renderedFrames=0,resolveLoop=()=>{};
+    const done=new Promise(resolve=>{resolveStop=resolve;recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;});
+    const stopLoop=()=>{if(recorder.state!=='inactive'){try{recorder.stop();}catch(err){resolveStop();}}else resolveStop();resolveLoop();};
+    recorder.onerror=e=>{recorderError=e?.error||new Error('Video recorder failed');stopLoop();};
+    activeCancel=()=>{cancelled=true;stopLoop();};
+    const interrupted=()=>{if(document.hidden){visibilityChanged=true;stopLoop();}};document.addEventListener('visibilitychange',interrupted);
     try{
       recorder.start();const start=performance.now(),duration=S.duration;
-      await new Promise(resolve=>{const frame=now=>{const t=Math.min(duration,(now-start)/1000);S.sampleStageFrameAt(t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
-      recorder.stop();await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
-      download(S.project.show.show_id+'.'+choice.ext,new Blob(chunks,{type:choice.mime}));report('Video downloaded.');
+      setProgress(0,'0.0 / '+duration.toFixed(1)+'s · '+choice.label+' '+preset.label,true);
+      await new Promise(resolve=>{resolveLoop=resolve;const frame=now=>{if(visibilityChanged||cancelled||recorderError){resolve();return;}const t=Math.min(duration,(now-start)/1000);S.sampleStageFrameAt(t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});renderedFrames++;const pct=duration>0?Math.min(1,t/duration):1;setProgress(pct,t.toFixed(1)+' / '+duration.toFixed(1)+'s · '+choice.label+' '+preset.label,true);report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged||cancelled||recorderError)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
+      const elapsedMs=performance.now()-start;
+      if(recorder.state!=='inactive')recorder.stop();
+      await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
+      if(recorderError)throw recorderError;
+      if(cancelled){report('Export cancelled.');return;}
+      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:choice.mime,width:preset.width,height:preset.height});
+      download(S.project.show.show_id+'.'+choice.ext,new Blob(chunks,{type:choice.mime}));report(telemetry.summary,false,telemetry.significant_drop);
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));
 })();

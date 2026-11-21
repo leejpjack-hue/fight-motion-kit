@@ -6,8 +6,8 @@ const path=require('node:path');
 const {execFileSync}=require('node:child_process');
 const X=require('../public/ui/x-export.js');
 
-test('HM-EXPORT-X-PRESET: 720p30 and 1080p30 presets carry a ~30s WebM bitrate hint',()=>{
-  assert.deepEqual(X.presets.map(p=>p.id),['720p30','1080p30']);
+test('HM-EXPORT-X-PRESET: 24 fps and 30 fps presets carry a ~30s WebM bitrate hint',()=>{
+  assert.deepEqual(X.presets.map(p=>p.id),['720p30','1080p30','720p24','1080p24']);
   const p720=X.presetById('720p30');
   const p1080=X.presetById('1080p30');
   assert.deepEqual([p720.width,p720.height,p720.fps,p720.videoBitsPerSecond],[1280,720,30,5000000]);
