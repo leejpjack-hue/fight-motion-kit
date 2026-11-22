@@ -163,7 +163,7 @@ async function ensureServer(urlStr){
     assert.equal(chained[0].camera.ease,'snap');
     assert.equal(chained[0].camera.snap_zoom,true);
     assert.equal(chained[2].camera.segments[0].ease,'snap');
-    assert.equal(chained[2].camera.segments[0].snap_zoom,true);
+    assert.equal(chained[2].camera.snap_zoom,true);
     const zoom=await p.evaluate(()=>{
       const c=HMStudio.composed;
       const seg=c.timeline.atoms[2].cam[0];
