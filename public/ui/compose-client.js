@@ -4,6 +4,9 @@
  */
 (function (global) {
   'use strict';
+  if (typeof module === 'object' && module && module.exports && typeof require === 'function') {
+    require('./strip-sampler.js');
+  }
   const FPS_PLATES = 2;
   const DEFAULTS = { x: 0, y: 0, s: 1.12, r: 0 };
 
@@ -1610,7 +1613,20 @@
                 if (se.floor != null) entry.floor = se.floor;
                 entry.source_plate = srcIds[i];
                 entry.kind = se.kind || a.kind;
-                if (se.full) entry.full = joinRel(ldir, se.full);
+                if (se.strip) {
+                  entry.strip = {
+                    id: se.strip.id || entry.source_plate,
+                    src: joinRel(ldir, se.strip.src || 'strip.png'),
+                    geometry: deepClone(se.strip.geometry),
+                    cadence: deepClone(se.strip.cadence),
+                    policy: deepClone(se.strip.policy),
+                    metadata: deepClone(se.strip.metadata || {}),
+                    clip_offset_s: round4(Math.max(0, +a.strip_offset_s || 0)),
+                    atom_t0: round4(t0),
+                    atom_duration_s: round4(d),
+                    floor_y: se.floor != null ? se.floor : floor,
+                  };
+                } else if (se.full) entry.full = joinRel(ldir, se.full);
                 else {
                   entry.parts = (se.parts || []).map((p) =>
                     Object.assign({}, p, { src: joinRel(ldir, p.src) })
@@ -1738,6 +1754,16 @@
         }
       }
       const bridgedBeatId = beatToken(a.beat_id);
+      const firstHeroEntry = a.hero?.layout_source && heroLayouts[a.hero.layout_source]?.[a.hero.plates?.[0]];
+      const stripSummary = firstHeroEntry?.strip
+        ? {
+            id: firstHeroEntry.strip.id || a.hero.plates?.[0] || 'strip',
+            clip_offset_s: round4(Math.max(0, +a.strip_offset_s || 0)),
+            frames: firstHeroEntry.strip.geometry?.frames,
+            body_h: firstHeroEntry.strip.geometry?.body_h,
+            policy: firstHeroEntry.strip.policy?.kind || 'repeat',
+          }
+        : null;
       tlAtoms.push({
         id: a.id,
         ...(bridgedBeatId ? { beat_id: bridgedBeatId } : {}),
@@ -1752,6 +1778,7 @@
         cam: cs,
         fx_hooks: atomFx,
         source_refs: a.source_refs || [],
+        ...(stripSummary ? { strip: stripSummary } : {}),
         ...(holdMeta ? { timing_hold: holdMeta } : {}),
         ...(cutMeta ? { cut: cutMeta } : {}),
       });
@@ -2326,17 +2353,19 @@
   // HM-PF-45: bake QA samples this same show time. Pending strips stay not playable;
   // a cell index is a crop of the shared t, not a GIF or CSS timer.
   function stripCellAt(descriptor, time) {
-    if (!descriptor || descriptor.status !== 'pending') return null;
+    if (!descriptor || (descriptor.status !== 'pending' && descriptor.status !== 'playable')) return null;
     const cadence = descriptor.cadence;
     const geometry = descriptor.geometry;
     const spc = cadence && +cadence.secondsPerCell;
     const frames = geometry && geometry.frames;
     if (!Number.isFinite(spc) || spc <= 0 || !Number.isInteger(frames) || frames < 1) return null;
+    const sampler = global.HMStripSampler || (typeof sampleStripAt === 'function' ? { sampleStripAt } : null);
     const dur = spc * frames;
     const raw = Number(time);
     const tIn = Number.isFinite(raw) ? raw : 0;
-    const t = Math.min(Math.max(0, tIn), Math.max(0, dur - 1e-9));
-    const index = Math.min(frames - 1, Math.max(0, Math.floor((t / spc) + 1e-9)));
+    const sampled = sampler && typeof sampler.sampleStripAt === 'function' ? sampler.sampleStripAt(descriptor, tIn) : null;
+    const t = sampled ? Math.min(Math.max(0, sampled.cycle_t), Math.max(0, dur - 1e-9)) : Math.min(Math.max(0, tIn), Math.max(0, dur - 1e-9));
+    const index = sampled ? sampled.cellIndex : Math.min(frames - 1, Math.max(0, Math.floor((t / spc) + 1e-9)));
     return {
       index,
       frames,
@@ -2344,17 +2373,18 @@
       duration_s: round4(dur),
       t: round4(t),
       raw_t: round4(tIn),
-      clamped: tIn < 0 || tIn >= dur - 1e-9,
+      clamped: sampled ? sampled.clamped : (tIn < 0 || tIn >= dur - 1e-9),
       w: geometry.w,
       h: geometry.h,
-      not_playable: true,
+      not_playable: descriptor.status === 'pending',
+      status: descriptor.status,
       clock: 'renderAt',
     };
   }
 
   function pendingStripMedia(project) {
     const media = project && Array.isArray(project.media) ? project.media : [];
-    return media.filter((item) => item && item.pendingMotion && item.pendingMotion.status === 'pending');
+    return media.filter((item) => item && ((item.pendingMotion && item.pendingMotion.status === 'pending') || (item.strip && item.strip.status === 'playable')));
   }
 
   function bakeQaSnapshot(project, composed, time) {
@@ -2364,7 +2394,8 @@
     const raw = Number(time);
     const tIn = Number.isFinite(raw) ? raw : 0;
     const strips = pendingStripMedia(project).map((item) => {
-      const cell = stripCellAt(item.pendingMotion, tIn);
+      const desc = item.strip || item.pendingMotion;
+      const cell = stripCellAt(desc, tIn);
       if (!cell) return null;
       return {
         id: item.id || '',
@@ -2380,7 +2411,8 @@
         clamped: cell.clamped,
         w: cell.w,
         h: cell.h,
-        not_playable: true,
+        not_playable: cell.not_playable,
+        status: cell.status,
         clock: 'renderAt',
       };
     }).filter(Boolean);
@@ -2484,7 +2516,12 @@
           pushChecklist(warns, { kind: 'plate', level: 'warn', atom_id: atom.id || null, text: 'Missing plate · ' + where + ' · ' + pid });
           return;
         }
-        if (entry.full) {
+        if (entry.strip && entry.strip.src) {
+          const src = joinRel(dir, entry.strip.src);
+          if (!assetResolved(project, src) && !assetResolved(project, entry.strip.src)) {
+            pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · plate ' + pid });
+          }
+        } else if (entry.full) {
           const src = joinRel(dir, entry.full);
           if (!assetResolved(project, src) && !assetResolved(project, entry.full)) {
             pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · plate ' + pid });
@@ -2802,7 +2839,19 @@
               );
               return;
             }
-            if (entry.full) {
+            if (entry.strip && entry.strip.src) {
+              const src = joinRel(ldir, entry.strip.src);
+              if (!assetResolved(project, src) && !assetResolved(project, entry.strip.src)) {
+                pushFinding(
+                  'missing_plate',
+                  label + ': strip "' + pidStr + '" image path "' + entry.strip.src + '" is unresolved',
+                  'Fix: Re-import or relink the strip PNG in the Media panel.',
+                  atomId,
+                  i,
+                  'structural'
+                );
+              }
+            } else if (entry.full) {
               const src = joinRel(ldir, entry.full);
               if ((!assetResolved(project, src) && !assetResolved(project, entry.full)) || /404|missing/i.test(String(entry.full))) {
                 pushFinding(
@@ -4061,6 +4110,36 @@
     return next;
   }
 
+  function splitAtomAt(atom, splitRelS, nextId) {
+    if (!atom || typeof atom !== 'object') throw new Error('Select a clip to split.');
+    const dur = +atom.duration_s;
+    const rel = Number(splitRelS);
+    if (!Number.isFinite(dur) || dur < 0.2 || !Number.isFinite(rel) || rel < 0.1 - 1e-6 || dur - rel < 0.1 - 1e-6) {
+      throw new Error('Clip must be at least 0.20s to split (0.10s minimum per half).');
+    }
+    const firstDur = round4(rel);
+    const secondDur = round4(dur - firstDur);
+    const baseOffset = Number.isFinite(+atom.strip_offset_s) ? Math.max(0, +atom.strip_offset_s) : null;
+    const left = deepClone(atom);
+    left.duration_s = firstDur;
+    delete left.timing_hold;
+    if (baseOffset != null) left.strip_offset_s = round4(baseOffset);
+    if (left.camera && Array.isArray(left.camera.segments)) scaleSegmentDurs(left.camera.segments, firstDur);
+    if (left.camera) detachCamChain(left.camera);
+
+    const right = assignCopiedBeatId(atom, nextId);
+    right.duration_s = secondDur;
+    right.label = (atom.label || atom.id || 'Clip') + ' (part 2)';
+    delete right.timing_hold;
+    delete right.cut;
+    if (baseOffset != null || atom.strip_offset_s != null || (atom.hero && String(atom.hero.layout_source || '').startsWith('imports/'))) {
+      right.strip_offset_s = round4((baseOffset || 0) + firstDur);
+    }
+    if (right.camera && Array.isArray(right.camera.segments)) scaleSegmentDurs(right.camera.segments, secondDur);
+    if (right.camera) detachCamChain(right.camera);
+    return [left, right];
+  }
+
   function lintBeatBridge(show, board) {
     if (board && typeof board === 'object' && Array.isArray(board.beats)) {
       const applied = applyBoardToShow(show, board);
@@ -4095,6 +4174,7 @@
     renameBeat,
     roundTripBoard,
     assignCopiedBeatId,
+    splitAtomAt,
     inspectAt,
     compareAt,
     plateCatalog,
