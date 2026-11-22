@@ -318,16 +318,17 @@ main.stage-well{padding:8px 14px 4px}
 .effect-options button{font-size:10px;padding:6px 4px}
 .export-bake-drawer-head{display:none;align-items:center;justify-content:space-between;gap:8px}
 @media(min-width:601px){
-  #exportDialog[open]{width:min(880px,95vw);max-height:92vh;padding:20px 24px;display:grid;grid-template-columns:minmax(250px,310px) minmax(0,1fr);column-gap:18px;row-gap:4px;align-items:start;overflow:hidden}
+  #exportDialog[open]{width:min(880px,95vw);max-height:92vh;padding:20px 24px;display:grid;grid-template-columns:minmax(250px,310px) minmax(0,1fr);grid-template-rows:auto auto auto auto auto auto auto minmax(0,1fr);column-gap:18px;row-gap:4px;align-items:start;overflow-y:auto}
   #exportDialog[open]>form{position:absolute;right:15px;top:12px;margin:0}
   #exportDialog[open]>.eyebrow,#exportDialog[open]>h2,#exportDialog[open]>p.muted{grid-column:1/-1;margin:0}
   #exportDialog[open]>h2{font-size:20px;margin:2px 0}
   #exportDialog[open]>p.muted{font-size:11px;margin-bottom:8px;line-height:1.45}
-  #exportDialog[open]>.export-options{grid-column:1;grid-row:4;margin-top:0;gap:7px;max-height:calc(92vh - 150px);overflow-y:auto;overscroll-behavior:contain}
-  #exportDialog[open]>.export-options button{padding:11px 13px}
-  #exportDialog[open]>#exportProgressWrap{grid-column:1;grid-row:5;margin:6px 0 0}
-  #exportDialog[open]>#exportStatus{grid-column:1;grid-row:6;margin:4px 0 0}
-  #exportDialog[open]>.export-bake{grid-column:2;grid-row:4/span 3;margin-top:0;padding:10px 12px;max-height:calc(92vh - 100px);overflow-y:auto;overscroll-behavior:contain}
+  #exportDialog[open]>.export-options{grid-column:1;grid-row:4;margin-top:0;gap:6px;max-height:calc(92vh - 150px);overflow-y:auto;overscroll-behavior:contain}
+  #exportDialog[open]>.export-options button{padding:10px 12px}
+  #exportDialog[open]>#exportReceipt{grid-column:1;grid-row:5;margin:6px 0 0}
+  #exportDialog[open]>#exportProgressWrap{grid-column:1;grid-row:6;margin:6px 0 0}
+  #exportDialog[open]>#exportStatus{grid-column:1;grid-row:7;margin:4px 0 0}
+  #exportDialog[open]>.export-bake{grid-column:2;grid-row:4/9;margin-top:0;padding:10px 12px;max-height:calc(92vh - 110px);overflow-y:auto;overscroll-behavior:contain}
   #exportDialog[open] .export-matrix{margin-top:8px;font-size:10.5px}
   #exportDialog[open] .export-matrix th,#exportDialog[open] .export-matrix td{padding:4px 6px 4px 0}
   #exportDialog[open] .bake-qa-dock{margin-top:8px;gap:6px}
@@ -357,6 +358,14 @@ main.stage-well{padding:8px 14px 4px}
 .import-receipt-actions{display:flex;flex-wrap:wrap;gap:6px}
 .import-receipt-actions button{font-size:11px;padding:5px 10px}
 .stage-well.is-file-drop-target{outline:2px dashed var(--accent);outline-offset:-4px;background:color-mix(in srgb,var(--shell-accent) 7%,var(--bg))}
+.media-strip-badge{position:absolute;left:6px;top:6px;background:#0e121ad8;border:1px solid var(--shell-shot-line);color:var(--accent);font:600 8px ui-monospace,SFMono-Regular,monospace;padding:2px 5px;border-radius:4px;pointer-events:none}
+.export-ffmpeg-box{margin-top:10px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel)}
+.export-ffmpeg-cmd{display:block;margin-top:6px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--shell-bg);font:10px/1.4 ui-monospace,SFMono-Regular,monospace;word-break:break-all;color:var(--shell-text)}
+.export-ffmpeg-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.export-ffmpeg-actions button,.export-receipt button{font-size:10px;padding:5px 9px}
+.export-receipt{padding:8px 10px;border:1px solid var(--shell-shot-line);border-radius:8px;background:var(--shell-shot)}
+.export-receipt strong{display:block;font-size:11px;color:var(--accent)}
+.export-receipt .field-hint{margin:3px 0 6px}
 #foregroundPanel[data-ui-collapsed="true"] #fgStickyTop{border-bottom:0;padding-bottom:0}
 
 /* Panel Section Filter Views */
@@ -548,8 +557,9 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
   #exportDialog[open]>.export-options{order:1;margin-top:10px;gap:7px}
   #exportDialog[open]>.export-options button{padding:11px 13px}
   #exportDialog[open]>.export-bake{order:2;margin-top:10px}
-  #exportDialog[open]>#exportProgressWrap{order:3;margin-top:8px}
-  #exportDialog[open]>#exportStatus{order:4}
+  #exportDialog[open]>#exportReceipt{order:3;margin-top:8px}
+  #exportDialog[open]>#exportProgressWrap{order:4;margin-top:8px}
+  #exportDialog[open]>#exportStatus{order:5}
   .export-bake-drawer-head{display:flex}
   .export-bake[data-ui-collapsed="true"]>:not(.export-bake-drawer-head){display:none!important}
 }
