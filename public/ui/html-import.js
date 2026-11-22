@@ -2,6 +2,7 @@
 (function (root) {
   'use strict';
 
+  var sec = root.HMImportSecurity || (typeof require === 'function' ? require('./import-security.js') : null);
   var DATA_IMG_RE = /^data:image\/(?:png|jpeg|webp|gif);base64,/i;
   var INLINE_DATA_IMG_RE = /data:image\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+/gi;
   var LAYOUT_KEY = 'imported-html-layout.json';
@@ -54,8 +55,11 @@
   }
 
   function escapeJsonForScript(jsonText) {
+    if (sec && typeof sec.escapeScriptJson === 'function') return sec.escapeScriptJson(jsonText);
     return String(jsonText || '')
       .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
       .replace(/\u2028/g, '\\u2028')
       .replace(/\u2029/g, '\\u2029');
   }
@@ -81,10 +85,13 @@
 
   function extractBalancedJson(text, openBraceIndex) {
     if (typeof text !== 'string' || openBraceIndex < 0 || text[openBraceIndex] !== '{') return null;
+    var maxChars = sec && sec.LIMITS ? sec.LIMITS.MAX_SCAN_CHARS : 25 * 1024 * 1024;
+    var maxDepth = sec && sec.LIMITS ? sec.LIMITS.MAX_JSON_DEPTH : 32;
+    var endCap = Math.min(text.length, openBraceIndex + maxChars);
     var depth = 0;
     var inString = false;
     var escaped = false;
-    for (var i = openBraceIndex; i < text.length; i++) {
+    for (var i = openBraceIndex; i < endCap; i++) {
       var ch = text[i];
       if (inString) {
         if (escaped) {
@@ -100,12 +107,17 @@
         inString = true;
       } else if (ch === '{') {
         depth++;
+        if (depth > maxDepth + 8) return null;
       } else if (ch === '}') {
         depth--;
         if (depth === 0) return text.slice(openBraceIndex, i + 1);
       }
     }
     return null;
+  }
+
+  function parseJsonSafe(rawText) {
+    return sec && typeof sec.safeParseJson === 'function' ? sec.safeParseJson(rawText) : JSON.parse(rawText);
   }
 
   function extractConstData(htmlText) {
@@ -118,7 +130,7 @@
       var rawObj = extractBalancedJson(htmlText, braceIdx);
       if (!rawObj) continue;
       try {
-        var parsed = JSON.parse(rawObj);
+        var parsed = parseJsonSafe(rawObj);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           if (parsed.timeline || parsed.layout || parsed.assets || parsed.show) return parsed;
           if (!firstParsed) firstParsed = parsed;
@@ -151,9 +163,18 @@
       var keys = Object.keys(src);
       for (var i = 0; i < keys.length; i++) {
         var k = keys[i];
-        if (typeof src[k] === 'string' && src[k]) out[k] = src[k];
+        if (sec && typeof sec.isDangerousKey === 'function' && sec.isDangerousKey(k)) continue;
+        var cleanKey = sec && typeof sec.sanitizeAssetKey === 'function' ? sec.sanitizeAssetKey(k) : k;
+        var val = src[k];
+        if (typeof val === 'string' && val) {
+          if (sec && typeof sec.assertSafeAssetUri === 'function') sec.assertSafeAssetUri(val, cleanKey);
+          out[cleanKey] = val;
+        }
       }
     });
+    if (sec && typeof sec.assertProjectAssetBudget === 'function') {
+      sec.assertProjectAssetBudget(out);
+    }
     return out;
   }
 
@@ -509,7 +530,7 @@
     for (var i = 0; i < scripts.length; i++) {
       if (scripts[i].id === 'hm-project-data') {
         try {
-          var embedded = JSON.parse(scripts[i].content);
+          var embedded = parseJsonSafe(scripts[i].content);
           if (embedded && typeof embedded === 'object' && embedded.show && Array.isArray(embedded.show.atoms)) {
             var p1 = clone(embedded);
             var baseAssets1 = p1.assets_ref === 'DATA.assets' || !p1.assets || !Object.keys(p1.assets).length ? getDataAssets() : null;
@@ -517,9 +538,11 @@
             p1.assets = mergeAssets(baseAssets1, p1.assets, localFiles);
             p1.layouts = p1.layouts || {};
             p1.media = Array.isArray(p1.media) ? p1.media : [];
-            return { kind: 'hm-project-data', project: p1, warnings: [] };
+            return { kind: 'hm-project-data', project: sec ? sec.sanitizeProjectBounds(p1) : p1, warnings: [] };
           }
-        } catch (e) {}
+        } catch (e) {
+          if (e && /nesting depth|Unsafe asset|blocked|decompression|memory budget|duration_s/i.test(e.message)) throw e;
+        }
       }
     }
 
@@ -529,7 +552,7 @@
       if (sc.type && sc.type !== 'application/json') continue;
       if (!sc.type && sc.id !== 'hm-project-data') continue;
       try {
-        var json = JSON.parse(sc.content);
+        var json = parseJsonSafe(sc.content);
         if (json && typeof json === 'object' && !Array.isArray(json)) {
           if (json.show && typeof json.show === 'object' && Array.isArray(json.show.atoms)) {
             var p2 = clone(json);
@@ -538,42 +561,62 @@
             p2.assets = mergeAssets(baseAssets2, p2.assets, localFiles);
             p2.layouts = p2.layouts || {};
             p2.media = Array.isArray(p2.media) ? p2.media : [];
-            return { kind: 'json-script', project: p2, warnings: [] };
+            return { kind: 'json-script', project: sec ? sec.sanitizeProjectBounds(p2) : p2, warnings: [] };
           }
           if (json.show_id && Array.isArray(json.atoms)) {
             var mergedAssets = mergeAssets(getDataAssets(), json.assets, localFiles);
+            var hydrated = hydrateShowProject(json, fileName, mergedAssets);
             return {
               kind: 'json-script',
-              project: hydrateShowProject(json, fileName, mergedAssets),
+              project: sec ? sec.sanitizeProjectBounds(hydrated) : hydrated,
               warnings: ['Imported show JSON embedded in HTML.'],
             };
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        if (e && /nesting depth|Unsafe asset|blocked|decompression|memory budget|duration_s/i.test(e.message)) throw e;
+      }
     }
 
     // 3. Legacy standalone HTML Motion `const DATA = {...};`
     if (!dataObj) dataObj = extractConstData(htmlText);
     if (dataObj && dataObj.timeline && Array.isArray(dataObj.timeline.atoms) && dataObj.timeline.atoms.length) {
+      var recon = reconstructProjectFromData(dataObj, fileName, localFiles);
       return {
         kind: 'legacy-data',
-        project: reconstructProjectFromData(dataObj, fileName, localFiles),
+        project: sec ? sec.sanitizeProjectBounds(recon) : recon,
         warnings: ['Reconstructed editable timeline from standalone HTML DATA. Save or re-export HTML to store full project metadata.'],
       };
     }
 
+    // Reject active SVG/HTML/JS data URI payloads before raw image fallback
+    var blockedSchemes = sec && typeof sec.detectBlockedUriSchemes === 'function' ? sec.detectBlockedUriSchemes(htmlText) : [];
+
     // 4. Generic AI-generated HTML containing inline data:image/* assets
     var rawImagesProject = extractInlineDataImages(htmlText, fileName, localFiles);
     if (rawImagesProject) {
+      var rawWarn = [
+        'Extracted ' +
+          rawImagesProject.show.atoms.length +
+          ' inline image(s) from raw HTML into sequential 0.75s clips.',
+      ];
+      if (blockedSchemes.length) {
+        rawWarn.push('Ignored unsafe URI scheme(s): ' + blockedSchemes.join(', ') + '.');
+      }
       return {
         kind: 'raw-html-images',
-        project: rawImagesProject,
-        warnings: [
-          'Extracted ' +
-            rawImagesProject.show.atoms.length +
-            ' inline image(s) from raw HTML into sequential 0.75s clips.',
-        ],
+        project: sec ? sec.sanitizeProjectBounds(rawImagesProject) : rawImagesProject,
+        warnings: rawWarn,
       };
+    }
+
+    if (blockedSchemes.length) {
+      var secErr = new Error(
+        'Blocked unsafe HTML URI scheme (' + blockedSchemes.join(', ') + '). Only embedded PNG, JPG, WebP, or GIF images are allowed.'
+      );
+      secErr.code = 'BLOCKED_URI_SCHEME';
+      secErr.formatHint = FORMAT_HINT_SNIPPET;
+      throw secErr;
     }
 
     // 5. Fail closed with copyable format hint
@@ -690,6 +733,112 @@
     };
   }
 
+  function normMatchToken(str) {
+    var base = basename(str).replace(/\.[^.]+$/, '').toLowerCase();
+    return base
+      .replace(/^(?:hero|plate|shot|frame|sprite|char|cutout|bg|fg)[_-]+/g, '')
+      .replace(/[_-]+(?:final|v\d+|clean|fixed|edit|copy)$/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  function extractPlateTag(str) {
+    var m = /(?:^|[^a-z0-9])(p\d{1,3}|s\d{1,4})(?:$|[^a-z0-9])/i.exec(basename(str).replace(/\.[^.]+$/, ''));
+    return m ? m[1].toLowerCase() : '';
+  }
+
+  function suggestAssetMatches(missingRefs, localFiles) {
+    var refs = Array.isArray(missingRefs) ? missingRefs : [];
+    var files = localFiles && typeof localFiles === 'object' ? Object.keys(localFiles) : [];
+    if (!refs.length || !files.length) return [];
+    var used = Object.create(null);
+    var out = [];
+
+    for (var i = 0; i < refs.length; i++) {
+      var ref = refs[i];
+      var refBase = basename(ref).toLowerCase();
+      var refNorm = normMatchToken(ref);
+      var refTag = extractPlateTag(ref);
+      var best = null;
+      for (var j = 0; j < files.length; j++) {
+        var f = files[j];
+        if (Object.prototype.hasOwnProperty.call(used, f)) continue;
+        var fBase = basename(f).toLowerCase();
+        var fNorm = normMatchToken(f);
+        var fTag = extractPlateTag(f);
+        if (refBase && fBase === refBase) {
+          best = { ref: ref, file: f, reason: 'case-insensitive filename match' };
+          break;
+        }
+        if (refTag && fTag && refTag === fTag) {
+          best = { ref: ref, file: f, reason: 'plate id match (' + refTag.toUpperCase() + ')' };
+          break;
+        }
+        if (refNorm && fNorm && (fNorm === refNorm || (refNorm.length >= 3 && (fNorm.indexOf(refNorm) >= 0 || refNorm.indexOf(fNorm) >= 0)))) {
+          best = { ref: ref, file: f, reason: 'stem token match' };
+        }
+      }
+      if (best) {
+        used[best.file] = true;
+        out.push(best);
+      }
+    }
+    return out;
+  }
+
+  function analyzeImportHealth(project, opts) {
+    var p = project || {};
+    var show = p.show || {};
+    var atoms = Array.isArray(show.atoms) ? show.atoms : [];
+    var o = opts || {};
+    var missingRefs = Array.isArray(o.missingRefs) ? o.missingRefs : fallbackMissingRefs(p);
+    var totalDur = 0;
+    var unpacedIndices = [];
+    for (var i = 0; i < atoms.length; i++) {
+      var a = atoms[i] || {};
+      var d = Number(a.duration_s);
+      if (Number.isFinite(d) && d > 0) totalDur += d;
+      var hasCam = a.camera && (a.camera.preset || (Array.isArray(a.camera.segments) && a.camera.segments.length));
+      if (!Number.isFinite(d) || d < 0.15 || d > 12 || !hasCam) {
+        unpacedIndices.push(i);
+      }
+    }
+    var assetKeys = Object.keys(p.assets || {});
+    var suggestedMatches = suggestAssetMatches(missingRefs, o.localFiles || null);
+    return {
+      clipCount: atoms.length,
+      imageCount: assetKeys.length,
+      totalDurationS: +totalDur.toFixed(4),
+      missingCount: missingRefs.length,
+      exportReady: atoms.length > 0 && missingRefs.length === 0,
+      suggestedMatches: suggestedMatches,
+      unpacedAtomIndices: unpacedIndices,
+      canNormalizePacing: unpacedIndices.length > 0,
+    };
+  }
+
+  function normalizeAiPacing(project) {
+    if (!project || !project.show || !Array.isArray(project.show.atoms)) {
+      throw new Error('No clips available to normalize.');
+    }
+    var next = clone(project);
+    var changed = 0;
+    for (var i = 0; i < next.show.atoms.length; i++) {
+      var a = next.show.atoms[i];
+      if (!a) continue;
+      var d = Number(a.duration_s);
+      if (!Number.isFinite(d) || d < 0.15 || d > 12) {
+        a.duration_s = 0.6;
+        delete a.timing_hold;
+        changed++;
+      }
+      if (!a.camera || (!a.camera.preset && !(Array.isArray(a.camera.segments) && a.camera.segments.length))) {
+        a.camera = { preset: i % 2 === 0 ? 'establish' : 'slow_push' };
+        changed++;
+      }
+    }
+    return { project: next, changedCount: changed };
+  }
+
   var api = {
     LAYOUT_KEY: LAYOUT_KEY,
     FORMAT_HINT_SNIPPET: FORMAT_HINT_SNIPPET,
@@ -700,6 +849,9 @@
     reconstructProjectFromData: reconstructProjectFromData,
     parseMotionHtml: parseMotionHtml,
     relinkMissingAssets: relinkMissingAssets,
+    suggestAssetMatches: suggestAssetMatches,
+    analyzeImportHealth: analyzeImportHealth,
+    normalizeAiPacing: normalizeAiPacing,
   };
 
   root.HMHtmlImport = api;

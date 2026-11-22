@@ -198,6 +198,11 @@
       undoable: Boolean(src.undoable),
       relinkable: Boolean(src.relinkable),
       formatHint: trimStr(src.formatHint),
+      exportReady: typeof src.exportReady === 'boolean' ? src.exportReady : null,
+      totalDurationS: Number.isFinite(+src.totalDurationS) ? +src.totalDurationS : null,
+      suggestedMatches: Array.isArray(src.suggestedMatches) ? src.suggestedMatches.slice() : [],
+      canNormalizePacing: Boolean(src.canNormalizePacing),
+      quarantineDraft: Boolean(src.quarantineDraft),
       providerCalls: 0,
       artInvented: false,
       recordedAt: trimStr(src.recordedAt) || new Date().toISOString(),
@@ -276,7 +281,16 @@
     meta.appendChild(el(doc, 'span', { 'data-receipt': 'source' }, receipt.source));
     meta.appendChild(el(doc, 'span', { 'data-receipt': 'clips' }, receipt.clipsLoaded + ' clip' + (receipt.clipsLoaded === 1 ? '' : 's')));
     meta.appendChild(el(doc, 'span', { 'data-receipt': 'images' }, receipt.imagesLoaded + ' image' + (receipt.imagesLoaded === 1 ? '' : 's')));
+    if (receipt.totalDurationS != null && receipt.totalDurationS > 0) {
+      meta.appendChild(el(doc, 'span', { 'data-receipt': 'duration' }, receipt.totalDurationS.toFixed(2) + 's'));
+    }
     meta.appendChild(el(doc, 'span', { 'data-receipt': 'missing-count' }, receipt.missing.length + ' missing'));
+    if (receipt.exportReady !== null) {
+      meta.appendChild(el(doc, 'span', {
+        'data-receipt': 'export-ready',
+        class: 'import-receipt-ready-badge' + (receipt.exportReady ? ' is-ready' : ' is-needs-fix'),
+      }, receipt.exportReady ? 'Export Video ready' : 'Needs relink before export'));
+    }
     meta.appendChild(el(doc, 'span', { 'data-receipt': 'provider' }, 'No provider · local only'));
 
     var landedWrap = el(doc, 'div', { id: 'importReceiptLanded', class: 'import-receipt-section' });
@@ -309,20 +323,60 @@
     box.appendChild(missingWrap);
 
     var showRelink = Boolean(receipt.relinkable && receipt.status === 'partial' && receipt.missing.length);
+    var showAutoMatch = Boolean(receipt.suggestedMatches && receipt.suggestedMatches.length);
+    var showNormalize = Boolean(receipt.canNormalizePacing);
+    var showQuarantine = Boolean(receipt.quarantineDraft);
     var showHint = Boolean(receipt.formatHint);
-    if (showRelink || showHint) {
+    if (showRelink || showAutoMatch || showNormalize || showQuarantine || showHint) {
       var actions = el(doc, 'div', { class: 'import-receipt-actions' });
+      if (showAutoMatch) {
+        var autoBtn = el(doc, 'button', {
+          id: 'importReceiptAutoMatch',
+          type: 'button',
+          class: 'primary',
+        }, 'Auto-match ' + receipt.suggestedMatches.length + ' image' + (receipt.suggestedMatches.length === 1 ? '' : 's'));
+        autoBtn.onclick = function () {
+          if (typeof doc.dispatchEvent === 'function' && typeof root.CustomEvent === 'function') {
+            doc.dispatchEvent(new root.CustomEvent('hm:receipt-automatch', { detail: receipt.suggestedMatches }));
+          }
+        };
+        actions.appendChild(autoBtn);
+      }
       if (showRelink) {
         var relinkBtn = el(doc, 'button', {
           id: 'importReceiptRelink',
           type: 'button',
-          class: 'primary',
+          class: showAutoMatch ? '' : 'primary',
         }, 'Relink missing images…');
         relinkBtn.onclick = function () {
           var input = doc.getElementById('relinkAssetsInput');
           if (input) input.click();
         };
         actions.appendChild(relinkBtn);
+      }
+      if (showNormalize) {
+        var normBtn = el(doc, 'button', {
+          id: 'importReceiptNormalizePacing',
+          type: 'button',
+        }, 'Normalize AI pacing');
+        normBtn.onclick = function () {
+          if (typeof doc.dispatchEvent === 'function' && typeof root.CustomEvent === 'function') {
+            doc.dispatchEvent(new root.CustomEvent('hm:receipt-normalize-pacing'));
+          }
+        };
+        actions.appendChild(normBtn);
+      }
+      if (showQuarantine) {
+        var qBtn = el(doc, 'button', {
+          id: 'importReceiptDownloadQuarantine',
+          type: 'button',
+        }, 'Download quarantined draft JSON');
+        qBtn.onclick = function () {
+          if (typeof doc.dispatchEvent === 'function' && typeof root.CustomEvent === 'function') {
+            doc.dispatchEvent(new root.CustomEvent('hm:receipt-download-quarantine'));
+          }
+        };
+        actions.appendChild(qBtn);
       }
       if (showHint) {
         var hintBtn = el(doc, 'button', {
