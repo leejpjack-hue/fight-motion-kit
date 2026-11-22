@@ -84,7 +84,11 @@
   }
   on('cancelExport',()=>{if(typeof activeCancel==='function')activeCancel();});
   $('exportDialog')?.addEventListener('close',()=>{if(typeof activeCancel==='function')activeCancel();});
-  on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(project.show.show_id+'.motion.json',new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
+  const safeName = (stem, suffix) => (window.HMXExport && typeof HMXExport.sanitizeDownloadName === 'function')
+    ? HMXExport.sanitizeDownloadName(stem, suffix)
+    : String(stem || 'motion').replace(/[^a-zA-Z0-9._-]+/g, '-') + String(suffix || '');
+  let lastRelinkLocalFiles = null;
+  on('saveProject',()=>task(async()=>{S.pause();report('Packing images and edits…');const {project}=await portable();const body=window.HMMotionSot?HMMotionSot.serialize(project):JSON.stringify(project);download(safeName(project.show.show_id,'.motion.json'),new Blob([body],{type:'application/json'}));try{if(window.HMMotionSot)HMMotionSot.writeDraft(localStorage,project,S.time);}catch(e){}try{if(window.HMTimelineJson)HMTimelineJson.writeSave(localStorage,project.show);}catch(e){}report('Project saved with embedded images.');$('saveState').textContent='Project downloaded';if(typeof S.renderTimelineJsonPanel==='function')S.renderTimelineJsonPanel();}));
   on('openProject',()=>$('projectInput').click());
   async function openProjectFiles(files){
     files=[...(files||[])];if(!files.length)return false;
@@ -103,7 +107,9 @@
         if(!['image/png','image/jpeg','image/webp'].includes(imgFile.type)&&!/\.(png|jpe?g|webp)$/i.test(imgFile.name||'')){if(imgFile.name)skippedFiles.push(imgFile.name);continue;}
         if(imgFile.size>20*1024*1024)throw new Error(imgFile.name+' is larger than 20 MB.');
         if(Object.hasOwn(localFiles,imgFile.name))throw new Error('Duplicate image filename: '+imgFile.name+'. Use distinct filenames for sheets and locked references.');
-        localFiles[imgFile.name]=await dataUrl(imgFile);
+        const uri=await dataUrl(imgFile);
+        if(window.HMImportSecurity&&typeof HMImportSecurity.inspectDataUrlDimensions==='function')HMImportSecurity.inspectDataUrlDimensions(uri,imgFile.name);
+        localFiles[imgFile.name]=uri;
       }
       if(isHtml){
         if(!window.HMHtmlImport)throw new Error('HTML import helper is unavailable.');
@@ -111,7 +117,13 @@
         htmlWarnings=Array.isArray(htmlResult.warnings)?htmlResult.warnings.slice():[];
         parsed=htmlResult.project;
       }else{
-        parsed=JSON.parse(await primaryFile.text());
+        const rawJson=await primaryFile.text();
+        parsed=(window.HMImportSecurity&&typeof HMImportSecurity.safeParseJson==='function')
+          ?HMImportSecurity.safeParseJson(rawJson)
+          :JSON.parse(rawJson);
+      }
+      if(parsed&&parsed.assets&&window.HMImportSecurity&&typeof HMImportSecurity.assertProjectAssetBudget==='function'){
+        HMImportSecurity.assertProjectAssetBudget(parsed.assets);
       }
       if(typeof HMStripAdapter!=='undefined'&&HMStripAdapter.assertNotRootMotion)HMStripAdapter.assertNotRootMotion(parsed);
       isLockPack=Boolean(window.HMComposeClient?.isCostumeLockPackInput?.(parsed));
@@ -132,6 +144,7 @@
       return p;
       })();
       candidateProject=next;
+      lastRelinkLocalFiles=Object.keys(localFiles).length?{...localFiles}:null;
       const current=S.destinationToken();
       if(current.revision!==destination.revision||current.request!==destination.request)throw new Error('The open project changed during import review. Select the pack again.');
       const opened=await S.openProject(Promise.resolve(next));
@@ -141,7 +154,10 @@
           const audit=HMImportReceipt.auditProjectAssets(next,{localFiles,fetchedHostShow});
           const composeErrs=Array.isArray(S.composed?.errors)?S.composed.errors:[];
           const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),...composeErrs];
-          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:next.show?.show_id||primaryName,status:missing.length?(audit.imagesLoaded||audit.clipsLoaded?'partial':'error'):'ok',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:htmlWarnings,relinkable:audit.missingRefs.length>0,replaceProject:true,undoable:false});
+          const health=window.HMHtmlImport&&typeof HMHtmlImport.analyzeImportHealth==='function'
+            ?HMHtmlImport.analyzeImportHealth(next,{missingRefs:audit.missingRefs,localFiles})
+            :null;
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:next.show?.show_id||primaryName,status:missing.length?(audit.imagesLoaded||audit.clipsLoaded?'partial':'error'):'ok',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:htmlWarnings,relinkable:audit.missingRefs.length>0,exportReady:health?health.exportReady:undefined,totalDurationS:health?health.totalDurationS:undefined,suggestedMatches:health?health.suggestedMatches:undefined,canNormalizePacing:health?health.canNormalizePacing:undefined,replaceProject:true,undoable:false});
         }
       }
       return opened;
@@ -151,10 +167,13 @@
         if(candidateProject&&activeId&&candId&&activeId===candId){
           const audit=HMImportReceipt.auditProjectAssets(candidateProject,{localFiles,fetchedHostShow});
           const missing=[...audit.missingRefs,...skippedFiles.map(n=>n+' (unsupported file skipped)'),err.message];
-          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:candId||primaryName,status:'partial',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:[...htmlWarnings,'Opened partially with unresolved images kept missing (0 stand-in art).'],relinkable:audit.missingRefs.length>0,replaceProject:true,undoable:false});
+          const health=window.HMHtmlImport&&typeof HMHtmlImport.analyzeImportHealth==='function'
+            ?HMHtmlImport.analyzeImportHealth(candidateProject,{missingRefs:audit.missingRefs,localFiles})
+            :null;
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:candId||primaryName,status:'partial',filesLanded:[primaryName,...Object.keys(localFiles)],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing,warnings:[...htmlWarnings,'Opened partially with unresolved images kept missing (0 stand-in art).'],relinkable:audit.missingRefs.length>0,exportReady:health?health.exportReady:false,totalDurationS:health?health.totalDurationS:undefined,suggestedMatches:health?health.suggestedMatches:undefined,canNormalizePacing:health?health.canNormalizePacing:undefined,replaceProject:true,undoable:false});
         }else{
           const refAudit=parsed?HMImportReceipt.missingFromParsedInput(parsed,localFiles):{missing:[]};
-          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:primaryName||files.map(f=>f.name).join(', ')||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[err.message,...refAudit.missing,...skippedFiles.map(n=>n+' (unsupported file skipped)')],warnings:['Import failed; existing project kept without stand-in art.'],formatHint:err&&err.formatHint?err.formatHint:'',replaceProject:false,undoable:false});
+          HMImportReceipt.record({action:isHtml?'Open AI HTML':(isLockPack?'Costume lock pack':'Open project'),source:primaryName||files.map(f=>f.name).join(', ')||'Project file',status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[err.message,...refAudit.missing,...skippedFiles.map(n=>n+' (unsupported file skipped)')],warnings:['Import failed; existing project kept without stand-in art.'],formatHint:err&&err.formatHint?err.formatHint:'',exportReady:false,replaceProject:false,undoable:false});
         }
       }
       throw err;
@@ -167,13 +186,17 @@
       if(!['image/png','image/jpeg','image/webp'].includes(file.type)&&!/\.(png|jpe?g|webp)$/i.test(file.name||'')){if(file.name)skipped.push(file.name);continue;}
       if(file.size>20*1024*1024)throw new Error(file.name+' is larger than 20 MB.');
       if(Object.hasOwn(localFiles,file.name))throw new Error('Duplicate image filename: '+file.name+'.');
-      localFiles[file.name]=await dataUrl(file);
+      const uri=await dataUrl(file);
+      if(window.HMImportSecurity&&typeof HMImportSecurity.inspectDataUrlDimensions==='function')HMImportSecurity.inspectDataUrlDimensions(uri,file.name);
+      localFiles[file.name]=uri;
     }
+    lastRelinkLocalFiles={...localFiles};
     const res=HMHtmlImport.relinkMissingAssets(S.project,localFiles);
     if(!res.matched.length){
       if(window.HMImportReceipt){
         const beforeAudit=HMImportReceipt.auditProjectAssets(S.project,{localFiles:null});
-        HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:beforeAudit.missingRefs.length?'partial':'ok',filesLanded:[],clipsLoaded:beforeAudit.clipsLoaded,imagesLoaded:beforeAudit.imagesLoaded,missing:[...beforeAudit.missingRefs,...skipped.map(n=>n+' (unsupported file skipped)')],warnings:['No dropped files matched the missing image filenames.'],relinkable:beforeAudit.missingRefs.length>0,replaceProject:false,undoable:false});
+        const suggested=(HMHtmlImport.suggestAssetMatches&&HMHtmlImport.suggestAssetMatches(beforeAudit.missingRefs,localFiles))||[];
+        HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:beforeAudit.missingRefs.length?'partial':'ok',filesLanded:[],clipsLoaded:beforeAudit.clipsLoaded,imagesLoaded:beforeAudit.imagesLoaded,missing:[...beforeAudit.missingRefs,...skipped.map(n=>n+' (unsupported file skipped)')],warnings:[suggested.length?'No exact filename matched, but candidate matches are ready for 1-click Auto-match.':'No dropped files matched the missing image filenames.'],relinkable:beforeAudit.missingRefs.length>0,exportReady:beforeAudit.missingRefs.length===0,suggestedMatches:suggested,replaceProject:false,undoable:false});
       }
       S.status('No selected files matched the missing image filenames.',true);
       return false;
@@ -186,11 +209,43 @@
       const warnings=[];
       if(res.unmatchedFiles.length)warnings.push('Unmatched files ignored: '+res.unmatchedFiles.join(', '));
       if(skipped.length)warnings.push('Unsupported files skipped: '+skipped.join(', '));
-      HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:afterAudit.missingRefs.length?'partial':'ok',filesLanded:res.matched.map(m=>m.file),clipsLoaded:afterAudit.clipsLoaded,imagesLoaded:afterAudit.imagesLoaded,missing:afterAudit.missingRefs,warnings,relinkable:afterAudit.missingRefs.length>0,replaceProject:false,undoable:true});
+      const suggested=(HMHtmlImport.suggestAssetMatches&&HMHtmlImport.suggestAssetMatches(afterAudit.missingRefs,localFiles))||[];
+      HMImportReceipt.record({action:'Relink missing images',source:S.project.show?.show_id||'Current project',status:afterAudit.missingRefs.length?'partial':'ok',filesLanded:res.matched.map(m=>m.file),clipsLoaded:afterAudit.clipsLoaded,imagesLoaded:afterAudit.imagesLoaded,missing:afterAudit.missingRefs,warnings,relinkable:afterAudit.missingRefs.length>0,exportReady:afterAudit.missingRefs.length===0,suggestedMatches:suggested,replaceProject:false,undoable:true});
     }
     S.status('Relinked '+res.matched.length+' missing image'+(res.matched.length===1?'':'s')+'.');
     return true;
   }
+  document.addEventListener('hm:receipt-automatch',safe(async e=>{
+    const matches=Array.isArray(e?.detail)?e.detail:[];
+    if(!matches.length||!lastRelinkLocalFiles||!S.project)return;
+    const patch={};
+    const landed=[];
+    for(const m of matches){
+      const data=lastRelinkLocalFiles[m.file];
+      if(data){patch[m.ref]=data;landed.push(m.file);}
+    }
+    if(!landed.length)return;
+    S.editProject(p=>{p.assets=Object.assign({},p.assets||{},patch);});
+    try{await S.compile();}catch(err){}
+    if(window.HMImportReceipt){
+      const audit=HMImportReceipt.auditProjectAssets(S.project,{localFiles:null});
+      HMImportReceipt.record({action:'Auto-match images',source:S.project.show?.show_id||'Current project',status:audit.missingRefs.length?'partial':'ok',filesLanded:landed,clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing:audit.missingRefs,warnings:['Auto-matched '+landed.length+' image(s) by stem/plate ID.'],relinkable:audit.missingRefs.length>0,exportReady:audit.missingRefs.length===0,replaceProject:false,undoable:true});
+    }
+    S.status('Auto-matched '+landed.length+' missing image(s).');
+  }));
+  document.addEventListener('hm:receipt-normalize-pacing',safe(async()=>{
+    if(!S.project||!window.HMHtmlImport?.normalizeAiPacing)return;
+    const res=HMHtmlImport.normalizeAiPacing(S.project);
+    if(!res.changedCount){S.status('Clip pacing already looks clean.');return;}
+    S.editProject(p=>{p.show.atoms=res.project.show.atoms;});
+    try{await S.compile();}catch(err){}
+    if(window.HMImportReceipt){
+      const audit=HMImportReceipt.auditProjectAssets(S.project,{localFiles:null});
+      const health=HMHtmlImport.analyzeImportHealth(S.project,{missingRefs:audit.missingRefs});
+      HMImportReceipt.record({action:'Normalize AI pacing',source:S.project.show?.show_id||'Current project',status:audit.missingRefs.length?'partial':'ok',filesLanded:[],clipsLoaded:audit.clipsLoaded,imagesLoaded:audit.imagesLoaded,missing:audit.missingRefs,warnings:['Normalized clip pacing and default cameras ('+res.changedCount+' update(s)).'],relinkable:audit.missingRefs.length>0,exportReady:health.exportReady,totalDurationS:health.totalDurationS,canNormalizePacing:health.canNormalizePacing,replaceProject:false,undoable:true});
+    }
+    S.status('Normalized AI pacing across clips.');
+  }));
   S.openProjectFiles=openProjectFiles;
   S.relinkMissingFiles=relinkMissingFiles;
   $('projectInput').onchange=safe(async e=>{
@@ -294,6 +349,17 @@
     const preset=selectedPreset();
     refreshFormatSelect();
     const cadence=typeof HMXExport.detectCadenceMismatch==='function'?HMXExport.detectCadenceMismatch(S.project,preset):{mismatch:false,warning:''};
+    if($('exportPreflight')&&typeof HMXExport.preflightSummary==='function'){
+      const pf=HMXExport.preflightSummary(S.duration,preset);
+      $('exportPreflight').dataset.exact=String(Boolean(pf.frameExact||!S.duration));
+      if($('exportPreflightText'))$('exportPreflightText').textContent=pf.summary;
+      const snapBtn=$('snapFrameBoundary');
+      if(snapBtn){
+        const needsSnap=Boolean(S.duration>0&&!pf.frameExact);
+        snapBtn.hidden=!needsSnap;
+        if(needsSnap)snapBtn.textContent=`Snap to ${pf.exactFrames} frames (${pf.nearestDurationS.toFixed(4)}s)`;
+      }
+    }
     $('exportBitrateHint').textContent=HMXExport.bitrateHint(preset);
     $('exportHonesty').textContent=cadence.mismatch?HMXExport.HONESTY+' · '+cadence.warning:HMXExport.HONESTY;
     $('exportHonesty').classList.toggle('cadence-warning',Boolean(cadence.mismatch));
@@ -310,6 +376,14 @@
       $('videoHint').textContent=kind+' · '+preset.label+' · '+preset.width+'×'+preset.height+' · '+preset.fps+' fps · '+HMXExport.formatMbps(preset.videoBitsPerSecond)+' · records in real time · keep this tab visible'+hintWarn;
     }
   }
+  on('snapFrameBoundary',()=>{
+    if(!S.show?.atoms?.length||typeof HMXExport.snapShowToFrameBoundary!=='function')return;
+    const preset=selectedPreset();
+    const res=HMXExport.snapShowToFrameBoundary(S.show.atoms,preset.fps,S.selectedIndex);
+    S.editProject(p=>{p.show.atoms=res.atoms;if(window.HMComposeClient?.reflowAllCamChains)HMComposeClient.reflowAllCamChains(p.show.atoms);});
+    paintExportHints();applyExportGate();
+    report('Snapped show duration to '+res.exactFrames+' exact frames ('+res.snappedDurationS.toFixed(4)+'s at '+preset.fps+' fps).');
+  });
   function exportCaps(){
     return HMExportMatrix.browserCaps({
       captureStream:!!(HTMLCanvasElement.prototype&&HTMLCanvasElement.prototype.captureStream),
@@ -480,7 +554,7 @@
   });
   on('exportOpen',openExportDialog);
   on('openBakeQa',openBakeQa);
-  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(S.project.show.show_id+'-'+S.time.toFixed(2)+'s.png',blob);report('Current frame downloaded.');}));
+  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(safeName(S.project.show.show_id,'-'+S.time.toFixed(2)+'s.png'),blob);report('Current frame downloaded.');}));
   on('exportTiming',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();
@@ -488,7 +562,7 @@
     const presets=S.timingPacks;
     if(!presets?.packs?.length)throw new Error('Timing packs are not loaded.');
     const dump=HMComposeClient.timingExport(presets,S.composed,24);
-    download(S.project.show.show_id+'-timing.json',new Blob([JSON.stringify(dump)],{type:'application/json'}));
+    download(safeName(S.project.show.show_id,'-timing.json'),new Blob([JSON.stringify(dump)],{type:'application/json'}));
     report('Timing presets and frame sequence downloaded.');
   }));
   async function pixelfxExportBundle(project) {
@@ -505,12 +579,16 @@
   on('exportHtml',()=>task(async()=>{
     assertExportAllowed();
     report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
-    const data=JSON.stringify({...result,assets}).replace(/</g,'\\u003c');
+    const rawData=JSON.stringify({...result,assets});
+    const data=(window.HMImportSecurity&&typeof HMImportSecurity.escapeScriptJson==='function')
+      ?HMImportSecurity.escapeScriptJson(rawData)
+      :rawData.replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
     const pxBundle=await pixelfxExportBundle(project);
     const pxScript=pxBundle?`<script>${pxBundle.replace(/<\/script/gi,'<\\/script')}<\/script>`:'';
     const hmProjectScript=window.HMHtmlImport?HMHtmlImport.embedProjectScript(project,{omitAssets:true}):'';
-    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}#pixelfxHonesty{margin:0 16px 12px;padding:8px 10px;background:#2f1c0fee;border:1px solid #ff9e44;color:#ffe4bf;font:600 12px/1.4 ui-monospace,monospace}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><p id="pixelfxHonesty" hidden></p><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p><p id="layers"></p></main>${hmProjectScript}${pxScript}<script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBrokenCutoutSrc.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPathOrStock.toString()}\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${cameraEase.toString()}\n${cameraChannel.toString()}\n${cameraPoseOnSegment.toString()}\n${cutTransitionsBundle.toString()}\ncutTransitionsBundle();\n${backgroundLocationsBundle.toString()}\nbackgroundLocationsBundle();\n${typeof stripSamplerBundle==='function'?stripSamplerBundle.toString()+'\nstripSamplerBundle();\n':''}${layerCamMatrix.toString()}\n${layerCamsIndependent.toString()}\n${layerCamMatrixText.toString()}\n${createMotionRenderer.toString()}\n${typeof createHMTeachingFilm==='function'?createHMTeachingFilm.toString()+'\nconst HMTeachingFilm=createHMTeachingFilm();\n':''}const DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
-    const htmlFile=project.show.show_id+'.html';
+    const cspMeta='<meta http-equiv="Content-Security-Policy" content="'+"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"+'">';
+    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${cspMeta}<title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}#pixelfxHonesty{margin:0 16px 12px;padding:8px 10px;background:#2f1c0fee;border:1px solid #ff9e44;color:#ffe4bf;font:600 12px/1.4 ui-monospace,monospace}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><p id="pixelfxHonesty" hidden></p><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p><p id="layers"></p></main>${hmProjectScript}${pxScript}<script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBrokenCutoutSrc.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPathOrStock.toString()}\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${cameraEase.toString()}\n${cameraChannel.toString()}\n${cameraPoseOnSegment.toString()}\n${cutTransitionsBundle.toString()}\ncutTransitionsBundle();\n${backgroundLocationsBundle.toString()}\nbackgroundLocationsBundle();\n${typeof stripSamplerBundle==='function'?stripSamplerBundle.toString()+'\nstripSamplerBundle();\n':''}${layerCamMatrix.toString()}\n${layerCamsIndependent.toString()}\n${layerCamMatrixText.toString()}\n${createMotionRenderer.toString()}\n${typeof createHMTeachingFilm==='function'?createHMTeachingFilm.toString()+'\nconst HMTeachingFilm=createHMTeachingFilm();\n':''}const DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
+    const htmlFile=safeName(project.show.show_id,'.html');
     download(htmlFile,new Blob([html],{type:'text/html'}));report('Playable HTML downloaded. All images are embedded.');
     if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'html',filename:htmlFile,format:'Offline HTML + Project SoT',durationS:result.timeline?.duration_s||S.duration,showId:project.show.show_id,note:'All images embedded'}));
   }));
@@ -560,7 +638,7 @@
     const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
     files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
     const zip=HMXExport.zipStore(files);
-    const zipFile=S.project.show.show_id+'-'+preset.id+'-frames.zip';
+    const zipFile=safeName(S.project.show.show_id,'-'+preset.id+'-frames.zip');
     download(zipFile,new Blob([zip],{type:'application/zip'}));
     report('Frame sequence downloaded ('+plan.length+' frames · '+preset.label+'). Copy the local ffmpeg MP4 command below to encode H.264.');
     if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',preset,durationS:duration,showId:S.project.show.show_id,note:plan.length+' frames'}));
@@ -591,7 +669,7 @@
       if(recorderError)throw recorderError;
       if(cancelled){report('Export cancelled.');return;}
       const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:choice.mime,width:preset.width,height:preset.height});
-      const vidFile=S.project.show.show_id+'.'+choice.ext;
+      const vidFile=safeName(S.project.show.show_id,'.'+choice.ext);
       download(vidFile,new Blob(chunks,{type:choice.mime}));report(telemetry.summary,false,telemetry.significant_drop);
       if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:choice.mime,preset,durationS:duration,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'}));
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
