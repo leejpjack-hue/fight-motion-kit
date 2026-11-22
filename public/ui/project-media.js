@@ -333,7 +333,7 @@
     const metadata={};for(const key of ['cycle_frames','cycle_seconds','source_fps','cell_cap','sample_indices','subsampled','body_ref','body_ref_frame','body_src_h',...provenance])if(raw[key]!==undefined)metadata[key]=structuredClone(raw[key]);
     const warnings=[...(raw.warnings||[])];
     if(raw.subsampled||raw.cycle_frames>frames)warnings.push('Subsampled export: retained cells only; missing source cells are not reconstructed.');
-    return {adapter,version:1,status:'pending',geometry:{frames,w,h,body_h},cadence:{secondsPerCell,timingSource},policy:{kind:returns?'once-return':repeat?'repeat':'once',loop:repeat,returns,holdLast,endFrame:frames-1},metadata,warnings};
+    return {adapter,version:1,status:'playable',geometry:{frames,w,h,body_h},cadence:{secondsPerCell,timingSource},policy:{kind:returns?'once-return':repeat?'repeat':'once',loop:repeat,returns,holdLast,endFrame:frames-1},metadata,warnings};
   }
   // HM-PF-30 QA panel model. Pure view-model over a NORMALIZED descriptor: it reports
   // cadence secondsPerCell and policy exactly as normalize computed them; it never
@@ -441,58 +441,97 @@
     if(cancelled())throw Error('Strip import cancelled.');
     if(decoded.width!==header.width||decoded.height!==header.height)throw Error('Decoded PNG dimensions disagree with IHDR.');
     descriptor.originalJsonBase64=base64(jsonBytes);
-    return {name:png[0].name,src:data,pendingMotion:descriptor};
+    return {name:png[0].name,src:data,pendingMotion:descriptor,strip:descriptor.status==='playable'?descriptor:null};
   }
   function append(p,staged){
+    const d=staged.strip||staged.pendingMotion;
     const id=crypto.randomUUID(),folder='imports/'+id,src=folder+'/strip.png',layoutSource=folder+'/layout.json';
-    p.assets||={};p.assets[src]=staged.src;p.layouts[layoutSource]={P01:{pendingMotion:id}};
-    p.media.push({id,name:staged.name,src,layoutSource,plateId:'P01',pendingMotion:structuredClone(staged.pendingMotion)});
+    p.assets||={};p.assets[src]=staged.src;
+    if(d&&d.status==='playable'){
+      const stripSpec={id,src:'strip.png',geometry:structuredClone(d.geometry),cadence:structuredClone(d.cadence),policy:structuredClone(d.policy),metadata:structuredClone(d.metadata||{})};
+      p.layouts[layoutSource]={P01:{strip:stripSpec}};
+      p.media.push({id,name:staged.name,src,layoutSource,plateId:'P01',strip:structuredClone(d)});
+      if(p.show&&Array.isArray(p.show.atoms)&&!p.show.atoms.length){
+        const dur=Math.max(0.1,Math.min(120,+(d.geometry.frames*d.cadence.secondsPerCell).toFixed(4)));
+        p.show.atoms.push({id:'clip-'+crypto.randomUUID(),label:staged.name.replace(/\.[^.]+$/,''),kind:'duo',duration_s:dur,plates_needed:1,pose_mode:'hero',strip_offset_s:0,motion:{family:'fight',beat_class:'straight'},hero:{layout_source:layoutSource,plates:['P01']},camera:{preset:'static_hold'},fx_hooks:[]});
+      }
+      return;
+    }
+    p.layouts[layoutSource]={P01:{pendingMotion:id}};
+    p.media.push({id,name:staged.name,src,layoutSource,plateId:'P01',pendingMotion:structuredClone(d)});
+  }
+  function verifyStripBytesAndDescriptor(p,m,d,expectedStatus){
+    const allowedKeys=expectedStatus==='playable'?['id','name','src','layoutSource','plateId','strip']:['id','name','src','layoutSource','plateId','pendingMotion'];
+    const label=expectedStatus==='playable'?'playable strip':'pending strip';
+    const data=p.assets?.[m.src];
+    if(!d||typeof d!=='object'||Array.isArray(d)||!localName(m.name)||typeof m.id!=='string'||!/^[a-zA-Z0-9-]+$/.test(m.id)||m.src!=='imports/'+m.id+'/strip.png'||m.layoutSource!=='imports/'+m.id+'/layout.json'||m.plateId!=='P01'||Object.keys(m).some(k=>!allowedKeys.includes(k)))throw Error('Invalid '+label+' media or local paths.');
+    if(d.adapter!==adapter||d.version!==1||d.status!==expectedStatus)throw Error('Invalid '+label+' descriptor.');
+    const bytes=originalBytes(d.originalJsonBase64,limits.json);
+    const raw=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)),expected=normalize(raw);
+    expected.originalJsonBase64=d.originalJsonBase64;
+    if(JSON.stringify(d)!==JSON.stringify(expected))throw Error((expectedStatus==='playable'?'Playable strip':'Pending')+' descriptor disagrees with original sidecar.');
+    if(typeof data!=='string'||!data.startsWith('data:image/png;base64,')||data.length>22+4*Math.ceil(limits.png/3))throw Error('Missing or oversized '+label+' PNG.');
+    const png=originalBytes(data.slice(22),limits.png),header=pngHeader(png),g=d.geometry;pngChunks(png);integrity(raw,png);
+    if(d.format==='native-atlas'&&d.atlas){
+      if(raw.sheet_w!==undefined&&header.width!==raw.sheet_w)throw Error('Pending atlas sheet width changed.');
+      if(raw.sheet_h!==undefined&&header.height!==raw.sheet_h)throw Error('Pending atlas sheet height changed.');
+      if(d.atlas.frameLayout.some(r=>r.x+r.w>header.width||r.y+r.h>header.height))throw Error('Pending atlas frame_layout exceeds PNG sheet dimensions.');
+      if(raw.sheet_sha256&&pngDigest(png)!==raw.sheet_sha256)throw Error('Pending atlas PNG SHA256 disagrees.');
+    }else if(header.width!==g.frames*g.w||header.height!==g.h)throw Error((expectedStatus==='playable'?'Playable':'Pending')+' strip geometry changed.');
+    return data;
   }
   function validateProject(p){
-    const pending=p.media.filter(m=>owns(m,'pendingMotion')),refs=new Set(),ids=new Set();
+    const pending=p.media.filter(m=>owns(m,'pendingMotion')),playable=p.media.filter(m=>owns(m,'strip'));
+    const pendingRefs=new Set(),stripRawRefs=new Set(),ids=new Set();
+    const recordUniqueId=m=>{if(ids.has(m.id)||p.media.filter(x=>x.id===m.id).length!==1)throw Error('Duplicate strip asset ID.');ids.add(m.id);};
+    const localPath=(value,dir='')=>{try{return decodeURIComponent(new URL(value,'https://hm.local/'+dir).pathname).slice(1);}catch{return value;}};
     for(const m of pending){
-      const d=m.pendingMotion,entry=p.layouts[m.layoutSource]?.[m.plateId],data=p.assets?.[m.src];
-      if(!d||typeof d!=='object'||Array.isArray(d)||!localName(m.name)||typeof m.id!=='string'||!/^[a-zA-Z0-9-]+$/.test(m.id)||m.src!=='imports/'+m.id+'/strip.png'||m.layoutSource!=='imports/'+m.id+'/layout.json'||m.plateId!=='P01'||Object.keys(m).some(k=>!['id','name','src','layoutSource','plateId','pendingMotion'].includes(k)))throw Error('Invalid pending strip media or local paths.');
-      if(ids.has(m.id)||p.media.filter(x=>x.id===m.id).length!==1)throw Error('Duplicate pending asset ID.');ids.add(m.id);
-      if(d.adapter!==adapter||d.version!==1||d.status!=='pending'||entry?.pendingMotion!==m.id||Object.keys(entry).length!==1)throw Error('Invalid pending strip descriptor.');
-      const bytes=originalBytes(d.originalJsonBase64,limits.json);
-      const raw=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)),expected=normalize(raw);
-      expected.originalJsonBase64=d.originalJsonBase64;
-      if(JSON.stringify(d)!==JSON.stringify(expected))throw Error('Pending descriptor disagrees with original sidecar.');
-      if(typeof data!=='string'||!data.startsWith('data:image/png;base64,')||data.length>22+4*Math.ceil(limits.png/3))throw Error('Missing or oversized pending PNG.');
-      const png=originalBytes(data.slice(22),limits.png),header=pngHeader(png),g=d.geometry;pngChunks(png);integrity(raw,png);
-      if(d.format==='native-atlas'&&d.atlas){
-        if(raw.sheet_w!==undefined&&header.width!==raw.sheet_w)throw Error('Pending atlas sheet width changed.');
-        if(raw.sheet_h!==undefined&&header.height!==raw.sheet_h)throw Error('Pending atlas sheet height changed.');
-        if(d.atlas.frameLayout.some(r=>r.x+r.w>header.width||r.y+r.h>header.height))throw Error('Pending atlas frame_layout exceeds PNG sheet dimensions.');
-        if(raw.sheet_sha256&&pngDigest(png)!==raw.sheet_sha256)throw Error('Pending atlas PNG SHA256 disagrees.');
-      }else if(header.width!==g.frames*g.w||header.height!==g.h)throw Error('Pending strip geometry changed.');
-      refs.add(m.src);refs.add(m.layoutSource);refs.add(data);
-      for(const [key,value] of Object.entries(p.assets||{}))if(value===data)refs.add(key);
+      recordUniqueId(m);
+      const entry=p.layouts[m.layoutSource]?.[m.plateId];
+      if(!entry||entry.pendingMotion!==m.id||Object.keys(entry).length!==1)throw Error('Invalid pending strip descriptor.');
+      const data=verifyStripBytesAndDescriptor(p,m,m.pendingMotion,'pending');
+      pendingRefs.add(m.src);pendingRefs.add(m.layoutSource);pendingRefs.add(data);
+      for(const [key,value] of Object.entries(p.assets||{}))if(value===data)pendingRefs.add(key);
     }
-    const localPath=(value,dir='')=>{
-      try{return decodeURIComponent(new URL(value,'https://hm.local/'+dir).pathname).slice(1);}catch{return value;}
-    };
-    function rejectUse(value,dir=''){
+    for(const m of playable){
+      recordUniqueId(m);
+      const entry=p.layouts[m.layoutSource]?.[m.plateId];
+      if(!entry||!entry.strip||entry.strip.id!==m.id||entry.strip.src!=='strip.png')throw Error('Invalid playable strip layout.');
+      const data=verifyStripBytesAndDescriptor(p,m,m.strip,'playable');
+      stripRawRefs.add(m.src);stripRawRefs.add(data);
+      for(const [key,value] of Object.entries(p.assets||{}))if(value===data)stripRawRefs.add(key);
+    }
+    function rejectUse(value,dir,refs,reason){
       if(!refs.size)return;
-      if(typeof value==='string'&&(refs.has(value)||refs.has(localPath(value))||refs.has(localPath(value,dir))))throw Error('Pending strip is NOT PLAYABLE until SG02; it cannot be used as an image.');
-      if(value&&typeof value==='object')Object.values(value).forEach(v=>rejectUse(v,dir));
+      if(typeof value==='string'&&(refs.has(value)||refs.has(localPath(value))||refs.has(localPath(value,dir))))throw Error(reason);
+      if(value&&typeof value==='object')Object.values(value).forEach(v=>rejectUse(v,dir,refs,reason));
     }
-    rejectUse(p.show);
+    rejectUse(p.show,'',pendingRefs,'Pending strip is NOT PLAYABLE until SG03; it cannot be used as an image.');
+    rejectUse(p.show.bg,'',stripRawRefs,'Playable strip sheet cannot be used directly as a static background image.');
+    rejectUse(p.show.fg,'',stripRawRefs,'Playable strip sheet cannot be used directly as a static foreground prop.');
+    rejectUse(p.show.overlays,'',stripRawRefs,'Playable strip sheet cannot be used directly as an image overlay.');
     for(const [key,layout] of Object.entries(p.layouts))for(const [plate,entry] of Object.entries(layout)){
       if(owns(entry,'pendingMotion')){
         if(!pending.some(m=>m.id===entry.pendingMotion&&m.layoutSource===key&&m.plateId===plate))throw Error('Orphan pending layout.');
-        if(p.show.atoms.some(a=>a.hero?.layout_source===key&&a.hero.plates?.includes(plate)))throw Error('Pending strip is NOT PLAYABLE until SG02.');
-      }else rejectUse(entry,key.slice(0,key.lastIndexOf('/')+1));
+        if(p.show.atoms.some(a=>a.hero?.layout_source===key&&a.hero.plates?.includes(plate)))throw Error('Pending strip is NOT PLAYABLE until SG03.');
+      }else if(owns(entry,'strip')){
+        if(!playable.some(m=>m.id===entry.strip.id&&m.layoutSource===key&&m.plateId===plate))throw Error('Orphan playable strip layout.');
+      }else{
+        rejectUse(entry,key.slice(0,key.lastIndexOf('/')+1),pendingRefs,'Pending strip is NOT PLAYABLE until SG03; it cannot be used as an image.');
+        rejectUse(entry,key.slice(0,key.lastIndexOf('/')+1),stripRawRefs,'Playable strip sheet cannot be used as a still plate.');
+      }
     }
-    p.media.filter(m=>!m.pendingMotion).forEach(m=>rejectUse(m.src));
+    p.media.filter(m=>!m.pendingMotion&&!m.strip).forEach(m=>{
+      rejectUse(m.src,'',pendingRefs,'Pending strip is NOT PLAYABLE until SG03; it cannot be used as an image.');
+      rejectUse(m.src,'',stripRawRefs,'Playable strip sheet cannot be used as a still plate.');
+    });
   }
   async function decodeProject(p){
-    for(const m of p.media.filter(m=>m.pendingMotion)){
-      const decoded=await decodeImage(p.assets[m.src]),d=m.pendingMotion,g=d.geometry;
+    for(const m of p.media.filter(m=>m.pendingMotion||m.strip)){
+      const decoded=await decodeImage(p.assets[m.src]),d=m.pendingMotion||m.strip,g=d.geometry;
       if(d.format==='native-atlas'&&d.atlas){
         if(d.atlas.frameLayout.some(r=>r.x+r.w>decoded.width||r.y+r.h>decoded.height))throw Error('Decoded pending atlas PNG dimensions disagree with manifest frame_layout.');
-      }else if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded pending PNG dimensions disagree with the descriptor.');
+      }else if(decoded.width!==g.frames*g.w||decoded.height!==g.h)throw Error('Decoded strip PNG dimensions disagree with the descriptor.');
     }
   }
   root.HMStripAdapter={limits,normalize,normalizeAtlas,isNativeAtlasManifest,isAsepriteJson,buildStripQaPanel,pngHeader,stage,append,validateProject,decodeProject,ROOT_MOTION_KEYS,ROOT_MOTION_REASON,isRootMotionPayload,assertNotRootMotion};
@@ -658,29 +697,36 @@ if(typeof window!=='undefined') window.addEventListener('DOMContentLoaded',() =>
     try{
       const next=await HMStripAdapter.stage(e.target.files,{cancelled:()=>version!==stripRequest});
       if(version!==stripRequest)return;
-      stagedStrip=next;stagedFiles=rawFiles;const d=next.pendingMotion,g=d.geometry;
+      stagedStrip=next;stagedFiles=rawFiles;const d=next.strip||next.pendingMotion,g=d.geometry,isPlayable=d.status==='playable';
       const panel=HMStripAdapter.buildStripQaPanel(d);renderStripQa(panel);
       const atlasNote=d.format==='native-atlas'&&d.atlas?(d.atlas.states.length+' states · '+d.atlas.frameLayout.length+' manifest rects · '):'';
-      stripNotice(next.name+' · '+atlasNote+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' PENDING, NOT PLAYABLE until SG02. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.');
+      const statusCopy=isPlayable
+        ? 'PLAYABLE on shared renderAt sampler. Original PNG + JSON bytes will be saved.'
+        : 'PENDING, NOT PLAYABLE until SG03. Original PNG + JSON bytes will be saved; no motion quality or rights approval is implied.';
+      stripNotice(next.name+' · '+atlasNote+g.frames+' exported cells · '+d.cadence.secondsPerCell+' s/cell ('+d.cadence.timingSource+') · '+d.policy.kind+' · body_h '+g.body_h+' (standing reference), cell h '+g.h+'. '+JSON.stringify(d.metadata)+' '+d.warnings.join(' ')+' '+statusCopy);
+      if($('commitStrip').textContent!==undefined)$('commitStrip').textContent=isPlayable?'Import playable strip':'Save pending atlas';
       $('commitStrip').disabled=!panel.ok;
     }catch(e){
       if(version===stripRequest){
         stripNotice(e.message,true);renderStripQa({ok:false,error:e.message});
         if(rawFiles.length&&typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
-          HMImportReceipt.record({action:'Import pending strip',source:rawFiles.join(' + '),status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[e.message],warnings:['Strip was not staged; active project unchanged.'],replaceProject:false,undoable:false});
+          HMImportReceipt.record({action:'Import motion strip',source:rawFiles.join(' + '),status:'error',filesLanded:[],clipsLoaded:0,imagesLoaded:0,missing:[e.message],warnings:['Strip was not staged; active project unchanged.'],replaceProject:false,undoable:false});
         }
       }
     }
   };
   on('commitStrip',async()=>{
     if(!stagedStrip||stripCommitting)return;
-    const staged=stagedStrip,files=stagedFiles.slice();stripRequest++;
-    stripCommitting=true;$('stripFields').disabled=true;stripNotice('Saving pending strip… Cancellation is disabled until the storage transaction finishes.');
+    const staged=stagedStrip,files=stagedFiles.slice(),d=staged.strip||staged.pendingMotion,isPlayable=d&&d.status==='playable';stripRequest++;
+    stripCommitting=true;$('stripFields').disabled=true;stripNotice('Saving strip… Cancellation is disabled until the storage transaction finishes.');
     try{
       await S.commitCandidate(stripDestination,p=>HMStripAdapter.append(p,staged));
-      $('stripDialog').close();S.status('Pending strip saved with original bytes. NOT PLAYABLE until SG02; unavailable for timeline, background or motion export.');
+      $('stripDialog').close();
+      S.status(isPlayable
+        ? 'Playable motion strip imported. Use + in Media to add a clip or play on the timeline.'
+        : 'Pending atlas saved with original bytes. NOT PLAYABLE until SG03.');
       if(typeof HMImportReceipt!=='undefined'&&HMImportReceipt.record){
-        HMImportReceipt.record({action:'Import pending strip',source:staged.name,status:'pending',filesLanded:files.length?files:[staged.name],clipsLoaded:0,imagesLoaded:1,missing:['Playable clips and motion export unavailable until SG-02'],warnings:['PENDING, NOT PLAYABLE until SG02; saved original PNG + JSON bytes only.'].concat((staged.pendingMotion&&staged.pendingMotion.warnings)||[]),replaceProject:false,undoable:true});
+        HMImportReceipt.record({action:isPlayable?'Import motion strip':'Import pending strip',source:staged.name,status:isPlayable?'ok':'pending',filesLanded:files.length?files:[staged.name],clipsLoaded:isPlayable&&!(S.project&&S.project.show&&S.project.show.atoms&&S.project.show.atoms.length)?1:0,imagesLoaded:1,missing:isPlayable?[]:['Playable atlas states unavailable until SG-03'],warnings:(isPlayable?['Playable one-state strip ready on shared renderAt sampler.']:['PENDING, NOT PLAYABLE until SG03; saved original PNG + JSON bytes only.']).concat((d&&d.warnings)||[]),replaceProject:false,undoable:true});
       }
     }catch(e){stripNotice('Strip was not imported: '+e.message,true);}
     finally{stripCommitting=false;$('stripFields').disabled=false;}
