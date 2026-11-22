@@ -151,6 +151,7 @@
     if (p.show.atoms.reduce((s,a)=>s+a.duration_s,0) > 120) throw new Error('Keep the sequence within 120 seconds.');
     if(p.assets)for(const value of Object.values(p.assets))if(typeof value!=='string'||!/^data:image\/(png|jpeg|webp|gif);base64,/.test(value))throw new Error('Embedded assets must be image data, not external URLs.');
     Object.values(p.layouts).forEach(pathsSafe); (p.media||[]).forEach(m=>pathsSafe(m.src)); backgroundImageRefs(p.show.bg).forEach(pathsSafe); (p.show.overlays||[]).forEach(o=>{if(o.src)pathsSafe(o.src);}); if(p.show.fg)pathsSafe(p.show.fg);
+    if(window.HMImportSecurity&&typeof HMImportSecurity.sanitizeProjectBounds==='function')HMImportSecurity.sanitizeProjectBounds(p);
     HMStripAdapter.validateProject(p);
   }
   async function builtIn(id) {
@@ -967,7 +968,44 @@
       b.querySelector('img').src=thumbnail(a);
       b.onclick=e=>{if(e.shiftKey)selectRange(i);else select(i);};b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
       b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [moved]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,moved);selected=i;rangeAnchor=i;rangeEnd=i;time=startOf(i);HMComposeClient.reflowAllCamChains(project.show.atoms);});dragIndex=-1;});
-      b.ondragend=()=>{dragIndex=-1;};$('timelineClips').append(b);
+      b.ondragend=()=>{dragIndex=-1;};
+      if(i===selected){
+        const handle=document.createElement('span');
+        handle.className='clip-trim-handle';
+        handle.title='Drag right edge to trim duration (Shift for 0.05s precision)';
+        handle.setAttribute('aria-hidden','true');
+        b.append(handle);
+        handle.addEventListener('pointerdown',e=>{
+          if(e.button!==0||recording)return;
+          e.preventDefault();e.stopPropagation();
+          b.draggable=false;
+          const startX=e.clientX,origDur=a.duration_s,trackW=$('timelineClips')?.getBoundingClientRect().width||600,totalD=duration()||5;
+          let latest=origDur;
+          const tip=document.createElement('div');tip.className='clip-trim-tooltip';
+          const moveTip=(cx,label)=>{tip.textContent=label;tip.style.left=Math.round(cx+10)+'px';tip.style.top=Math.round(b.getBoundingClientRect().top-26)+'px';};
+          tip.textContent=origDur.toFixed(2)+'s · +0.00s';document.body.append(tip);moveTip(e.clientX,tip.textContent);
+          const onMove=ev=>{
+            const res=window.HMUxHelpers?HMUxHelpers.computeTrimmedDuration({startDurationS:origDur,deltaPx:ev.clientX-startX,trackWidthPx:trackW,totalDurationS:totalD,shiftKey:ev.shiftKey}):{duration_s:origDur,label:''};
+            latest=res.duration_s;
+            const durSpan=b.querySelector('.clip-duration');if(durSpan)durSpan.textContent=latest.toFixed(2)+'s';
+            b.style.flex=latest+' 0 0';
+            moveTip(ev.clientX,res.label||latest.toFixed(2)+'s');
+          };
+          const finish=safe(ev=>{
+            window.removeEventListener('pointermove',onMove);
+            window.removeEventListener('pointerup',finish);
+            window.removeEventListener('pointercancel',finish);
+            tip.remove();b.draggable=true;
+            if(ev?.type!=='pointercancel'&&Math.abs(latest-origDur)>=1e-4)setDuration(latest);
+            else renderTimeline();
+          });
+          window.addEventListener('pointermove',onMove);
+          window.addEventListener('pointerup',finish);
+          window.addEventListener('pointercancel',finish);
+        });
+        handle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+      }
+      $('timelineClips').append(b);
     });
     $('ruler').replaceChildren();for(let i=0;i<=5;i++){const s=document.createElement('span');s.textContent=(d*i/5).toFixed(d<10?1:0)+'s';s.style.left=i*20+'%';$('ruler').append(s);}
     $('scrub').max=maxScrubDuration()||1;
@@ -1156,6 +1194,21 @@
     updateFxHonestyUI();
     syncPlateJumpState();
     syncFramePeekState();
+    syncStageMissingOverlay();
+    if($('playheadPill')){
+      $('playheadPill').textContent=a?`${format(time)} · ${a.label||a.id}`:format(time);
+    }
+  }
+  function syncStageMissingOverlay() {
+    const box=$('stageMissingOverlay'),detail=$('stageMissingDetail');
+    if(!box)return;
+    const info=(project&&window.HMUxHelpers&&typeof HMUxHelpers.missingAssetsForActiveClip==='function')
+      ?HMUxHelpers.missingAssetsForActiveClip(project,time)
+      :{atomIndex:-1,clipLabel:'',missingRefs:[]};
+    if(!info.missingRefs.length){box.hidden=true;return;}
+    box.hidden=false;
+    if($('stageMissingTitle'))$('stageMissingTitle').textContent=`Missing image on ${info.clipLabel}`;
+    if(detail)detail.textContent=info.missingRefs.join(', ')+' — drop image file(s) here or click Relink.';
   }
   // HM-HF-02-SEEKABLE-PREVIEW: Single Source of Truth (SoT) for time -> pixels across scrub, A/B panes, Frame Peek, and bake sampling.
   function renderStageAt(t, opts = {}) {
@@ -1759,9 +1812,17 @@
         if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Choose PNG, JPG or WebP images.');
         if(file.size>20*1024*1024)throw new Error(file.name+' is larger than 20 MB.');
         const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
-        const im=new Image();im.src=data;await im.decode();const id=uid();
+        if(window.HMImportSecurity&&typeof HMImportSecurity.inspectDataUrlDimensions==='function')HMImportSecurity.inspectDataUrlDimensions(data,currentName);
+        const im=new Image();im.src=data;await im.decode();
+        if(window.HMImportSecurity&&typeof HMImportSecurity.assertImageDimensions==='function'){
+          HMImportSecurity.assertImageDimensions({width:im.naturalWidth||im.width,height:im.naturalHeight||im.height,pixels:(im.naturalWidth||im.width)*(im.naturalHeight||im.height)},currentName);
+        }
+        const id=uid();
         landedNames.push(currentName);
         items.push({id,name:file.name.replace(/\.[^.]+$/,''),src:data,layoutSource:'embedded/'+id+'/layout.json',plateId:'P01'});
+      }
+      if(window.HMImportSecurity&&HMImportSecurity.LIMITS&&((Object.keys(project.assets||{}).length+items.length)>HMImportSecurity.LIMITS.MAX_ASSET_COUNT)){
+        throw new Error('Project exceeds maximum embedded asset count ('+HMImportSecurity.LIMITS.MAX_ASSET_COUNT+').');
       }
       if(destination.revision!==projectRevision||destination.request!==loadRequest)throw Error('The destination changed. Import images again.');
       let addedClips=0;
@@ -1991,7 +2052,32 @@
     const missingBitmap=e=>/Image could not load|Missing plate/.test(String(e&&e.message));
     const bootShow=async task=>{try{return await task;}catch(e){if(!missingBitmap(e))throw e;status('Preview unavailable: '+e.message,true);return false;}};
     await bootShow(loadB(defaultGold,'gold',goldDefault));
-    if(saved&&(!sid||sid===saved.show.show_id)){try{await load(saved);}catch(e){status('Saved draft could not load: '+e.message,true);await bootShow(load(copy(defaultGold)));}}
+    if(saved&&(!sid||sid===saved.show.show_id)){
+      try{await load(saved);}
+      catch(e){
+        const quarantined=window.HMImportSecurity&&typeof HMImportSecurity.quarantineCorruptDraft==='function'
+          ?HMImportSecurity.quarantineCorruptDraft(localStorage,saved,e.message)
+          :null;
+        try{if(HMAssetStore.del)await HMAssetStore.del('active');}catch(_){}
+        status('Corrupted local draft quarantined · loaded 5s demo: '+e.message,true);
+        await bootShow(load(copy(defaultGold)));
+        if(window.HMImportReceipt&&HMImportReceipt.record){
+          HMImportReceipt.record({
+            action:'Recover corrupted draft',
+            source:saved.show?.show_id||'browser-storage',
+            status:'error',
+            filesLanded:[],
+            clipsLoaded:0,
+            imagesLoaded:0,
+            missing:[e.message],
+            warnings:['Corrupt draft quarantined safely so the editor booted cleanly.'+(quarantined?' You can download it for inspection.':'')],
+            quarantineDraft:Boolean(quarantined),
+            replaceProject:false,
+            undoable:false
+          });
+        }
+      }
+    }
     else if(sid===STREET){await bootShow(load(await builtIn(STREET)));}
     else if(sid===GRAMMAR){await bootShow(load(await builtIn(GRAMMAR)));}
     else if(sid===VOID){await bootShow(load(await builtIn(VOID)));}
@@ -2086,7 +2172,17 @@
   on('downloadPeekZip',()=>downloadAllPeeksZip());
   on('seekPreviewWarnDismiss',()=>clearSeekPreviewWarnings());
   on('fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('stage').requestFullscreen();});
-  $('scrub').oninput=()=>{renderAt(+$('scrub').value,{source:'scrub'});};$('ruler').onclick=e=>{renderAt(duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth)),{source:'ruler-scrub'});};
+  $('scrub').oninput=()=>{if($('playheadPill'))$('playheadPill').hidden=false;renderAt(+$('scrub').value,{source:'scrub'});};
+  $('scrub').addEventListener('change',()=>{if($('playheadPill'))$('playheadPill').hidden=true;});
+  $('scrub').addEventListener('pointerup',()=>{if($('playheadPill'))$('playheadPill').hidden=true;});
+  on('stageMissingRelink',()=>$('relinkAssetsInput')?.click());
+  document.addEventListener('hm:receipt-download-quarantine',safe(()=>{
+    const q=window.HMImportSecurity&&HMImportSecurity.readQuarantinedDraft?HMImportSecurity.readQuarantinedDraft(localStorage):null;
+    if(!q){status('No quarantined draft stored.',true);return;}
+    download('quarantined-draft.motion.json',new Blob([JSON.stringify(q,null,2)],{type:'application/json'}));
+    status('Downloaded quarantined draft JSON.');
+  }));
+  $('ruler').onclick=e=>{renderAt(duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth)),{source:'ruler-scrub'});};
   on('undo',()=>restore(-1));on('redo',()=>restore(1));on('splitClip',splitSelectedClip);on('duplicate',duplicate);on('delete',remove);
   if($('stripOffset'))$('stripOffset').onchange=safe(()=>{const v=+$('stripOffset').value;if(!Number.isFinite(v)||v<0)throw new Error('Use a non-negative strip offset.');edit(()=>{atom().strip_offset_s=+v.toFixed(4);});});
   on('trimMinus',()=>rippleTrim(-0.1));on('trimPlus',()=>rippleTrim(0.1));
@@ -2572,7 +2668,19 @@
   document.addEventListener('keydown',safe(async e=>{
     if(recording||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
     const mod=e.metaKey||e.ctrlKey;
-    if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}else if(e.key==='?')$('helpDialog').showModal();
+    if(e.code==='Space'){e.preventDefault();await play();}else if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();restore(e.shiftKey?1:-1);}else if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicate();}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}else if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();jumpToPlate({step:-1});}else if(e.altKey&&e.key==='ArrowRight'){e.preventDefault();jumpToPlate({step:1});}else if(e.key==='ArrowLeft'){e.preventDefault();$('previous').click();}else if(e.key==='ArrowRight'){e.preventDefault();$('next').click();}else if(e.key==='Home'){e.preventDefault();$('restart').click();}
+    else if(window.HMUxHelpers&&typeof HMUxHelpers.resolveNleShortcut==='function'){
+      const act=HMUxHelpers.resolveNleShortcut({key:e.key,code:e.code,ctrlKey:e.ctrlKey,metaKey:e.metaKey,altKey:e.altKey,shiftKey:e.shiftKey,targetTagName:e.target.tagName,isContentEditable:e.target.isContentEditable,modalOpen:Boolean(document.querySelector('dialog[open]')),recording});
+      if(!act)return;
+      e.preventDefault();
+      if(act==='split'&&$('splitClip')&&!$('splitClip').disabled)splitSelectedClip();
+      else if(act==='trim-minus'&&atom())rippleTrim(-0.1);
+      else if(act==='trim-plus'&&atom())rippleTrim(0.1);
+      else if(act==='step-back')renderAt(HMUxHelpers.stepFrameTime(time,duration(),-1,30),{source:'nle-step'});
+      else if(act==='step-forward')renderAt(HMUxHelpers.stepFrameTime(time,duration(),1,30),{source:'nle-step'});
+      else if(act==='export'&&$('exportOpen')&&!$('exportOpen').disabled)$('exportOpen').click();
+      else if(act==='help')$('helpDialog').showModal();
+    }else if(e.key==='?')$('helpDialog').showModal();
   }));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&!recording)pause();});
   window.HMStudio={get project(){return copy(project);},get show(){return project?copy(project.show):null;},get selectedIndex(){return selected;},get selectedIndices(){return selectedRun();},get cameraPresets(){return copy(presets);},get composed(){return copy(result);},get projectB(){return copy(projectB);},get composedB(){return copy(resultB);},get sourceKindB(){return sourceKindB;},get abEnabled(){return abEnabled;},get abComparison(){return HMComposeClient.compareAt(result,resultB,time);},get fxPreviewState(){return HMComposeClient.classifyFxHooks(atom()?.fx_hooks||[],effects);},get framePeekPlan(){return project?HMComposeClient.framePeekPlan(project,result):null;},get activeFramePeek(){return project?HMComposeClient.activeFramePeekAt(HMComposeClient.framePeekPlan(project,result),time):null;},get seekPreviewContract(){return {...HMComposeClient.SEEKABLE_PREVIEW_CONTRACT,lastEntry:lastSeekPreviewEntry,lastTime:lastSeekPreviewTime,warns:copy(seekPreviewWarns)};},get showLint(){return currentShowLint();},get timelineDump(){return timelineDump();},renderTimelineJsonPanel,copyTimelineJson,get catalogIndex(){return catalogIndex;},get catalogHits(){return catalogHitsView.slice();},applyCatalogSelection,lintShow(p,opts){return HMComposeClient.lintShow(p||project,{cameraPresets:presets,fxPresets:effects,...(opts||{})});},jumpToLintAtom,renderShowLintPanel,get time(){return time;},get playing(){return playing;},get onion(){return onion;},get loading(){return loading||loadingB;},get copiedCam(){return copy(copiedCam);},get parity(){return !!(project&&HMComposeClient.isPlatePackShow(project.show));},get pickerOpen(){return !!(project&&(!HMComposeClient.isPlatePackShow(project.show)||pickerOpen));},get charHonesty(){return project?HMComposeClient.charHonesty(project.show):null;},get dirtyChecklist(){return project?HMComposeClient.parityDirtyChecklist(project):null;},get historyIndex(){return historyIndex;},get historyLength(){return history.length;},restore(delta){return restore(delta);},editProject(fn){edit(()=>{const nextSel=fn(project);if(Number.isInteger(nextSel)&&nextSel>=0&&nextSel<project.show.atoms.length){selected=nextSel;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);}});},destinationToken,commitCandidate,get pendingCommit(){return snapshotCommit;},builtIn,status,compile,compileB,renderAt,renderStageAt,renderStageBAt,sampleStageFrameAt,recordSeekPreviewCall,clearSeekPreviewWarnings,seekToPeek,downloadPeekPng,downloadAllPeeksZip,renderFramePeekStrip,load,openProject,loadB,openReferenceB,selectBSource,snapshotAToB,toggleAb,download,safe,on,$,copy,get renderer(){return renderer;},get rendererB(){return rendererB;},pause,get timingPacks(){return copy(timingPacks||DEFAULT_TIMING_PACKS);},get beatBlocks(){return copy(beatBlockList());},get beatBlockId(){return beatBlockId;},get duration(){return duration();},get durationB(){return durationB();},get recording(){return recording;},set recording(v){recording=v;},update};

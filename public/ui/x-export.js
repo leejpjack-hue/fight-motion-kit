@@ -143,18 +143,117 @@
     for (let i = 0; i < n; i++) frames.push({ index: i, file: 'frames/' + String(i).padStart(6, '0') + '.png', t: i / fps });
     return frames;
   }
+  function sanitizeDownloadName(stem, suffix) {
+    var s = String(stem == null ? '' : stem)
+      .replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '')
+      .replace(/\.\./g, '-')
+      .replace(/[\\/]+/g, '-')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/^[.-]+/, '')
+      .replace(/-+/g, '-')
+      .slice(0, 96);
+    if (!s) s = 'motion';
+    var ext = String(suffix || '').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069\\/]+/g, '');
+    return s + ext;
+  }
   function safeShowStem(showId) {
-    return String(showId || 'motion').replace(/[^a-zA-Z0-9._-]+/g, '-') || 'motion';
+    return sanitizeDownloadName(showId, '');
   }
   function ffmpegArgv(preset, durationS, outName) {
     const kbps = Math.round(preset.videoBitsPerSecond / 1000);
-    return ['ffmpeg', '-y', '-framerate', String(preset.fps), '-start_number', '0', '-i', 'frames/%06d.png', '-an', '-c:v', 'libvpx', '-b:v', kbps + 'k', '-t', Number(durationS).toFixed(3), outName];
+    const stem = String(outName || 'motion').replace(/\.(webm|mp4)$/i, '');
+    const webmName = sanitizeDownloadName(stem, '.webm');
+    return ['ffmpeg', '-y', '-framerate', String(preset.fps), '-start_number', '0', '-i', 'frames/%06d.png', '-an', '-c:v', 'libvpx', '-b:v', kbps + 'k', '-t', Number(durationS).toFixed(3), webmName];
   }
   function ffmpegMp4Argv(preset, durationS, outName) {
     const kbps = Math.round(preset.videoBitsPerSecond / 1000);
     const stem = String(outName || 'motion').replace(/\.(webm|mp4)$/i, '');
-    const mp4Name = (stem || 'motion') + '.mp4';
+    const mp4Name = sanitizeDownloadName(stem, '.mp4');
     return ['ffmpeg', '-y', '-framerate', String(preset.fps), '-start_number', '0', '-i', 'frames/%06d.png', '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-b:v', kbps + 'k', '-movflags', '+faststart', '-t', Number(durationS).toFixed(3), mp4Name];
+  }
+  function exactFrameQuantum(fps) {
+    for (let k = 1; k <= fps; k++) {
+      const dur = Math.round((k / fps) * 10000) / 10000;
+      if (dur > 0 && Math.abs(Math.round(dur * fps) - dur * fps) <= 1e-6) return k;
+    }
+    return fps;
+  }
+  function preflightSummary(durationS, preset) {
+    const p = preset || presets[0];
+    const dur = Number.isFinite(+durationS) && +durationS > 0 ? +durationS : 0;
+    if (!dur) {
+      return {
+        presetId: p.id,
+        presetLabel: p.label,
+        width: p.width,
+        height: p.height,
+        fps: p.fps,
+        durationS: 0,
+        rawFrames: 0,
+        frameExact: false,
+        exactFrames: 0,
+        nearestDurationS: 0,
+        deltaS: 0,
+        estWebmMB: 0,
+        estMp4MB: 0,
+        summary: p.label + ' · ' + p.width + '×' + p.height + ' · ' + p.fps + ' fps · Add a clip to check export frame budget.',
+      };
+    }
+    const rawFrames = dur * p.fps;
+    const frameExact = Math.abs(Math.round(rawFrames) - rawFrames) <= 1e-6;
+    const q = exactFrameQuantum(p.fps);
+    const exactFrames = frameExact
+      ? Math.max(1, Math.round(rawFrames))
+      : Math.max(q, Math.round(rawFrames / q) * q);
+    const nearestDurationS = +(exactFrames / p.fps).toFixed(4);
+    const deltaS = +(nearestDurationS - dur).toFixed(4);
+    const estWebmMB = webmMegabytes(p.videoBitsPerSecond, dur);
+    const estMp4MB = estWebmMB;
+    const frameText = frameExact
+      ? exactFrames + ' exact frames'
+      : rawFrames.toFixed(2) + ' frames (snap to ' + exactFrames + 'f = ' + nearestDurationS.toFixed(4) + 's)';
+    return {
+      presetId: p.id,
+      presetLabel: p.label,
+      width: p.width,
+      height: p.height,
+      fps: p.fps,
+      durationS: +dur.toFixed(4),
+      rawFrames: +rawFrames.toFixed(4),
+      frameExact,
+      exactFrames,
+      nearestDurationS,
+      deltaS,
+      estWebmMB,
+      estMp4MB,
+      summary: p.label + ' · ' + p.width + '×' + p.height + ' · ' + p.fps + ' fps · ' + frameText + ' · ≈ ' + estWebmMB.toFixed(1) + ' MB',
+    };
+  }
+  function snapShowToFrameBoundary(atoms, fps, preferredIndex) {
+    if (!Array.isArray(atoms) || !atoms.length) throw new Error('Add a clip before snapping duration.');
+    if (!Number.isInteger(fps) || fps < 1 || fps > 60) throw new Error('fps must be 1–60.');
+    const next = JSON.parse(JSON.stringify(atoms));
+    const total = next.reduce((s, a) => s + (Number.isFinite(+a.duration_s) ? +a.duration_s : 0), 0);
+    const minTotal = Math.max(0.1, total);
+    let idx = Number.isInteger(preferredIndex) && preferredIndex >= 0 && preferredIndex < next.length ? preferredIndex : next.length - 1;
+    const otherDur = total - (+next[idx].duration_s || 0);
+    const q = exactFrameQuantum(fps);
+    const minSteps = Math.max(1, Math.ceil(((otherDur + 0.1) * fps - 1e-9) / q));
+    const exactFrames = Math.max(minSteps * q, Math.round((minTotal * fps) / q) * q);
+    const snappedTotal = +(exactFrames / fps).toFixed(4);
+    const newAtomDur = +(snappedTotal - otherDur).toFixed(4);
+    if (newAtomDur < 0.1 || snappedTotal > 120) {
+      throw new Error('Cannot snap selected clip cleanly within 0.1s–120s bounds.');
+    }
+    next[idx].duration_s = newAtomDur;
+    delete next[idx].timing_hold;
+    return {
+      atoms: next,
+      snappedDurationS: snappedTotal,
+      exactFrames,
+      deltaS: +(snappedTotal - total).toFixed(4),
+      adjustedIndex: idx,
+    };
   }
   function formatFfmpegCommand(argv) {
     if (!Array.isArray(argv)) return '';
@@ -297,7 +396,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, buildExportReceipt, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, webmMegabytes, bitrateHint, framePlan, sanitizeDownloadName, safeShowStem, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, preflightSummary, snapShowToFrameBoundary, buildExportReceipt, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

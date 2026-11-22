@@ -28,5 +28,15 @@ window.HMAssetStore = (() => {
       tx.onabort = () => reject(tx.error || new Error('Storage write aborted'));
     });
   }
-  return { get, put };
+  async function del(key) {
+    const database = await db();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction('projects', 'readwrite');
+      tx.objectStore('projects').delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Storage delete aborted'));
+    });
+  }
+  return { get, put, del };
 })();

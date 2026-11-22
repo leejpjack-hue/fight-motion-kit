@@ -6,12 +6,14 @@
 (function (global) {
   'use strict';
 
+  var sec = global.HMImportSecurity || (typeof require === 'function' ? require('./import-security.js') : null);
   var DRAFT_PREFIX = 'html-motion-composer:draft:';
   var PIN_KEY = 'hm.composer.pinPlatePack';
   var RECENT_KEY = 'hm.composer.recentPlatePack';
 
   function clone(value) {
-    return JSON.parse(JSON.stringify(value));
+    var raw = JSON.parse(JSON.stringify(value));
+    return sec && typeof sec.stripDangerousKeys === 'function' ? sec.stripDangerousKeys(raw, sec.LIMITS.MAX_JSON_DEPTH) : raw;
   }
 
   function showOf(input) {
@@ -111,14 +113,20 @@
 
   function asPortableProject(parsed, opts) {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-    if (global.HMComposeClient && typeof global.HMComposeClient.isPoseRefPlatePack === 'function' && global.HMComposeClient.isPoseRefPlatePack(parsed)) {
-      return global.HMComposeClient.normalizePoseRefPlatePack(parsed, opts);
+    var clean = sec && typeof sec.stripDangerousKeys === 'function' ? sec.stripDangerousKeys(parsed, sec.LIMITS.MAX_JSON_DEPTH) : parsed;
+    if (clean.assets && sec && typeof sec.assertProjectAssetBudget === 'function') {
+      sec.assertProjectAssetBudget(clean.assets);
     }
-    if (global.HMComposeClient && typeof global.HMComposeClient.isCostumeLockPackInput === 'function' && global.HMComposeClient.isCostumeLockPackInput(parsed)) {
-      return global.HMComposeClient.normalizeCostumeLockPack(parsed, opts);
+    var out = null;
+    if (global.HMComposeClient && typeof global.HMComposeClient.isPoseRefPlatePack === 'function' && global.HMComposeClient.isPoseRefPlatePack(clean)) {
+      out = global.HMComposeClient.normalizePoseRefPlatePack(clean, opts);
+    } else if (global.HMComposeClient && typeof global.HMComposeClient.isCostumeLockPackInput === 'function' && global.HMComposeClient.isCostumeLockPackInput(clean)) {
+      out = global.HMComposeClient.normalizeCostumeLockPack(clean, opts);
+    } else if (clean.show && typeof clean.show === 'object' && clean.show.show_id) {
+      out = clone(clean);
     }
-    if (!parsed.show || typeof parsed.show !== 'object' || !parsed.show.show_id) return null;
-    return clone(parsed);
+    if (!out) return null;
+    return sec && typeof sec.sanitizeProjectBounds === 'function' ? sec.sanitizeProjectBounds(out) : out;
   }
 
   function writeDraft(storage, project, scrub) {
@@ -140,7 +148,7 @@
     try { raw = storage.getItem(draftKey(showId)); } catch (e) { return null; }
     if (!raw) return null;
     try {
-      var parsed = JSON.parse(raw);
+      var parsed = sec && typeof sec.safeParseJson === 'function' ? sec.safeParseJson(raw) : JSON.parse(raw);
       if (!parsed || !parsed.show || !parsed.ts) return null;
       return parsed;
     } catch (e) {
@@ -152,7 +160,17 @@
     if (!project || !draft || !draft.show) throw new Error('No draft show.');
     var next = clone(project);
     next.show = clone(draft.show);
-    return next;
+    return sec && typeof sec.sanitizeProjectBounds === 'function' ? sec.sanitizeProjectBounds(next) : next;
+  }
+
+  function quarantineCorruptDraft(storage, rawDraft, reason) {
+    return sec && typeof sec.quarantineCorruptDraft === 'function' ? sec.quarantineCorruptDraft(storage, rawDraft, reason) : null;
+  }
+  function readQuarantinedDraft(storage) {
+    return sec && typeof sec.readQuarantinedDraft === 'function' ? sec.readQuarantinedDraft(storage) : null;
+  }
+  function clearQuarantinedDraft(storage) {
+    if (sec && typeof sec.clearQuarantinedDraft === 'function') sec.clearQuarantinedDraft(storage);
   }
 
   global.HMMotionSot = {
@@ -170,5 +188,8 @@
     writeDraft: writeDraft,
     readDraft: readDraft,
     applyDraftShow: applyDraftShow,
+    quarantineCorruptDraft: quarantineCorruptDraft,
+    readQuarantinedDraft: readQuarantinedDraft,
+    clearQuarantinedDraft: clearQuarantinedDraft,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
