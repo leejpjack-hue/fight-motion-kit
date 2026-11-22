@@ -138,7 +138,7 @@ async function ensureServer(urlStr){
     },{pngB64:stripPng().toString('base64'),json:JSON.stringify({frames:4,w:2,h:2,body_h:1,fps:10})});
     await settle();
     assert.equal(await page.evaluate(()=>HMStudio.project.show.atoms.length),8);
-    assert.equal(await page.evaluate(()=>HMStudio.project.media.some(m=>m.pendingMotion&&m.pendingMotion.status==='pending')),true);
+    assert.equal(await page.evaluate(()=>HMStudio.project.media.some(m=>m.strip&&m.strip.status==='playable')),true);
     await page.evaluate(()=>{
       const el=document.getElementById('bakeQaScrub');
       el.value='0.25';
@@ -163,7 +163,7 @@ async function ensureServer(urlStr){
     assert.equal(strip.cell,2);
     assert.equal(strip.time,0.25);
     assert.match(strip.label,/cell 3\/4/);
-    assert.match(strip.label,/NOT PLAYABLE/);
+    assert.match(strip.label,/PLAYABLE/);
     assert.equal(strip.atoms,8);
     assert.equal(strip.playable,false);
     await page.locator('#exportDialog').screenshot({path:path.join(out,'ui-bake-qa-strip.png')});

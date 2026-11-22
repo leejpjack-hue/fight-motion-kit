@@ -62,5 +62,5 @@ test('HM-PF-29: Workers UI documents the step 6 proof and leaves SG-01 not playa
   assert.equal(flow.includes('market-spritegen-proof.json'), true);
   assert.equal(app.includes('HMMarketSpritegenProof.matchesShow(sid)'), true);
   assert.equal(strip.includes('NOT PLAYABLE'), true);
-  assert.equal(html.includes('PENDING, NOT PLAYABLE until SG02'), true);
+  assert.equal(html.includes('PENDING, NOT PLAYABLE until SG03'), true);
 });
