@@ -247,6 +247,7 @@
       await writeSnapshot(copy(candidate));
       // A crash here can reopen the durable candidate. Memory + IDB are not ACID.
       project=candidate;history=nextHistory;historyIndex=history.length-1;projectRevision++;
+      if(project.show.atoms.length&&(selected<0||selected>=project.show.atoms.length)){selected=0;rangeAnchor=0;rangeEnd=0;time=0;}
     } finally {
       snapshotCommit=false;workspace.inert=false;controls.forEach((el,i)=>el.disabled=disabled[i]);
     }
@@ -472,7 +473,31 @@
   const MISSING_THUMB_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
   function mediaFor(a) {return project.media.find(m=>m.layoutSource===a?.hero?.layout_source&&m.plateId===a.hero.plates[0]);}
   function assetSrc(path) {return project.assets?.[path] || (/^(data:|blob:|\/)/.test(path)?path:'/'+path);}
-  function thumbnail(a) {const src=mediaFor(a)?.src;return src?assetSrc(src):MISSING_THUMB_DATA;}
+  const stripThumbCache = new Map();
+  function stripThumbUrl(m) {
+    const src = assetSrc(m.src);
+    if (!m.strip || typeof document === 'undefined') return src;
+    const g = m.strip.geometry || {};
+    const key = m.src + ':' + (g.w || 0) + 'x' + (g.h || 0);
+    if (stripThumbCache.has(key)) return stripThumbCache.get(key);
+    if (typeof Image === 'function' && g.w > 0 && g.h > 0) {
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = g.w; c.height = g.h;
+          const ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(im, 0, 0, g.w, g.h, 0, 0, g.w, g.h);
+          stripThumbCache.set(key, c.toDataURL('image/png'));
+          document.querySelectorAll(`img[data-strip-thumb="${m.id}"]`).forEach(el => { el.src = stripThumbCache.get(key); });
+        } catch (e) {}
+      };
+      im.src = src;
+    }
+    return src;
+  }
+  function thumbnail(a) {const m=mediaFor(a);if(!m?.src)return MISSING_THUMB_DATA;return m.strip?stripThumbUrl(m):assetSrc(m.src);}
   function updateOnionGhost() {
     const prevEl = $('onionPrev'), nextEl = $('onionNext');
     if (!prevEl || !nextEl) return;
@@ -499,7 +524,7 @@
     ['play','previous','next','restart','exportOpen','fitThree','fitFive','fitEight','fitTen','fightCamPack'].forEach(id=>{if($(id))$(id).disabled=!project.show.atoms.length||recording;});
     ['abToggle','abSource','abImport'].forEach(id=>{if($(id))$(id).disabled=recording;});
     if($('abSnapshot'))$('abSnapshot').disabled=!project.show.atoms.length||recording;
-    ['duplicate','delete','trimMinus','trimPlus','applyBeatBlock'].forEach(id=>{if($(id))$(id).disabled=!atom();});
+    ['splitClip','duplicate','delete','trimMinus','trimPlus','applyBeatBlock'].forEach(id=>{if($(id))$(id).disabled=!atom();});
     applyPickerChrome();renderMedia();renderTimeline();renderInspector();renderDirtyChecklist();renderShowLintPanel();renderCantoneseBoardSource();updateAbUI();updateTransport();renderPlateJump();syncFirstPath();window.dispatchEvent(new Event('hm:projectchange'));
   }
   function syncFirstPath() {
@@ -907,16 +932,22 @@
       const card=document.createElement('div');card.className='media-card'+(mediaFor(atom())?.id===m.id?' selected':'');
       if(m.pendingMotion){
         const name=document.createElement('strong'),note=document.createElement('p');name.textContent=m.name;
-        note.textContent='PENDING · NOT PLAYABLE until SG02. Original PNG + JSON saved; no plate, background or animation export.';
+        note.textContent='PENDING · NOT PLAYABLE until SG03. Original PNG + JSON saved; no plate, background or animation export.';
         card.dataset.pendingMotion='true';card.append(name,note);$('mediaGrid').append(card);return;
       }
-      card.innerHTML=`<button class="media-image" title="Use ${esc(m.name)} in selected clip" aria-label="Use ${esc(m.name)} in selected clip"><img alt="${esc(m.name)}"></button><div class="media-meta"><span>${esc(m.name)}</span><button class="media-add" title="Add ${esc(m.name)} to timeline" aria-label="Add ${esc(m.name)} to timeline">＋</button></div>`;
-      card.querySelector('img').src=assetSrc(m.src);
-      card.querySelector('.media-image').onclick=safe(()=>{if(!atom())return addMedia(m);edit(()=>{atom().hero={layout_source:m.layoutSource,plates:[m.plateId]};atom().plates_needed=1;});replacing=false;document.querySelector('.inspector').dataset.replacing='false';status('Replaced selected plate with '+m.name);});
+      if(m.strip)card.dataset.playableStrip='true';
+      const badge=m.strip?`<span class="media-strip-badge">STRIP · ${m.strip.geometry?.frames||1}f · ${esc(m.strip.policy?.kind||'repeat')}</span>`:'';
+      card.innerHTML=`<button class="media-image" title="Use ${esc(m.name)} in selected clip" aria-label="Use ${esc(m.name)} in selected clip"><img alt="${esc(m.name)}"${m.strip?` data-strip-thumb="${esc(m.id)}"`:''}>${badge}</button><div class="media-meta"><span>${esc(m.name)}</span><button class="media-add" title="Add ${esc(m.name)} to timeline" aria-label="Add ${esc(m.name)} to timeline">＋</button></div>`;
+      card.querySelector('img').src=m.strip?stripThumbUrl(m):assetSrc(m.src);
+      card.querySelector('.media-image').onclick=safe(()=>{if(!atom())return addMedia(m);edit(()=>{atom().hero={layout_source:m.layoutSource,plates:[m.plateId]};atom().plates_needed=1;if(m.strip)atom().strip_offset_s=0;else delete atom().strip_offset_s;});replacing=false;document.querySelector('.inspector').dataset.replacing='false';status('Replaced selected plate with '+m.name);});
       card.querySelector('.media-add').onclick=safe(()=>addMedia(m));$('mediaGrid').append(card);
     });
   }
-  function addMedia(m) {if(m.pendingMotion)throw Error('Pending strip is NOT PLAYABLE until SG02.');edit(()=>{project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:.5,plates_needed:1,pose_mode:'hero',motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=project.show.atoms.length-1;time=startOf(selected);});}
+  function addMedia(m) {
+    if(m.pendingMotion)throw Error('Pending atlas is NOT PLAYABLE until SG03.');
+    const dur=m.strip?Math.max(0.1,Math.min(120,+(m.strip.geometry.frames*m.strip.cadence.secondsPerCell).toFixed(4))):0.5;
+    edit(()=>{project.show.atoms.push({id:uid(),label:m.name,kind:'duo',duration_s:dur,plates_needed:1,pose_mode:'hero',...(m.strip?{strip_offset_s:0}:{}),motion:{family:'fight',beat_class:'straight'},hero:{layout_source:m.layoutSource,plates:[m.plateId]},camera:{preset:'static_hold'},fx_hooks:[]});selected=project.show.atoms.length-1;time=startOf(selected);});
+  }
   function beatTickMarkup(raw) {
     const hk=typeof raw==='string'?{type:raw}:(raw&&typeof raw==='object'?raw:null);
     if(!hk||!hk.type)return '';
@@ -969,6 +1000,9 @@
     renderCharHonesty();
     const a=atom();$('inspectorEmpty').hidden=!!a;$('inspectorContent').hidden=!a;$('clipIndex').textContent=a?`${String(selected+1).padStart(2,'0')} / ${String(project.show.atoms.length).padStart(2,'0')}`:'—';if(!a){syncFxProfileChips();syncCutInspector();return;}
     $('clipThumbnail').src=thumbnail(a);$('clipName').value=a.label||a.id;$('duration').value=+a.duration_s.toFixed(4);$('timingHint').textContent=`${startOf(selected).toFixed(2)}s → ${(startOf(selected)+a.duration_s).toFixed(2)}s`;
+    const isStripClip=!!mediaFor(a)?.strip||a.strip_offset_s!=null;
+    if($('stripOffsetRow'))$('stripOffsetRow').hidden=!isStripClip;
+    if($('stripOffset'))$('stripOffset').value=+(a.strip_offset_s||0).toFixed(4);
     const cam=a.camera||{};
     $('camera').value=cam.preset||cam.segments?.[0]?.preset||'static_hold';
     const inten=cam.intensity!=null?+cam.intensity:1;
@@ -1696,6 +1730,22 @@
     const stamped = indices.filter(i => i >= 1 && project.show.atoms[i]?.cut).map(i => project.show.atoms[i].cut.preset);
     status(`Cut pack · ${stamped.join(' → ')} on ${stamped.length} clip${stamped.length === 1 ? '' : 's'} · Undo restores`);
   }
+  function splitSelectedClip() {
+    const a=atom();
+    if(!a)return;
+    const clipStart=startOf(selected),clipEnd=clipStart+a.duration_s;
+    const rel=time>clipStart+0.1-1e-6&&time<clipEnd-0.1+1e-6?+(time-clipStart).toFixed(4):+(a.duration_s/2).toFixed(4);
+    const [left,right]=HMComposeClient.splitAtomAt(a,rel,uid());
+    edit(()=>{
+      project.show.atoms.splice(selected,1,left,right);
+      selected++;
+      rangeAnchor=selected;
+      rangeEnd=selected;
+      time=startOf(selected);
+      HMComposeClient.reflowAllCamChains(project.show.atoms);
+    });
+    status(`Split clip into ${left.duration_s.toFixed(2)}s + ${right.duration_s.toFixed(2)}s`);
+  }
   function duplicate() {if(!atom())return;edit(()=>{const a=HMComposeClient.assignCopiedBeatId(atom(),uid());a.label=(a.label||'Clip')+' copy';if(a.camera)HMComposeClient.detachCamChain(a.camera);project.show.atoms.splice(selected+1,0,a);selected++;rangeAnchor=selected;rangeEnd=selected;time=startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   function remove() {if(!atom())return;edit(()=>{project.show.atoms.splice(selected,1);selected=Math.min(selected,project.show.atoms.length-1);rangeAnchor=Math.max(0,selected);rangeEnd=rangeAnchor;time=selected<0?0:startOf(selected);HMComposeClient.reflowAllCamChains(project.show.atoms);});}
   async function importImages(files) {
@@ -2037,7 +2087,8 @@
   on('seekPreviewWarnDismiss',()=>clearSeekPreviewWarnings());
   on('fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('stage').requestFullscreen();});
   $('scrub').oninput=()=>{renderAt(+$('scrub').value,{source:'scrub'});};$('ruler').onclick=e=>{renderAt(duration()*Math.max(0,Math.min(1,(e.clientX-$('ruler').getBoundingClientRect().left)/$('ruler').clientWidth)),{source:'ruler-scrub'});};
-  on('undo',()=>restore(-1));on('redo',()=>restore(1));on('duplicate',duplicate);on('delete',remove);
+  on('undo',()=>restore(-1));on('redo',()=>restore(1));on('splitClip',splitSelectedClip);on('duplicate',duplicate);on('delete',remove);
+  if($('stripOffset'))$('stripOffset').onchange=safe(()=>{const v=+$('stripOffset').value;if(!Number.isFinite(v)||v<0)throw new Error('Use a non-negative strip offset.');edit(()=>{atom().strip_offset_s=+v.toFixed(4);});});
   on('trimMinus',()=>rippleTrim(-0.1));on('trimPlus',()=>rippleTrim(0.1));
   document.querySelectorAll('[data-fit]').forEach(b=>b.onclick=safe(()=>fitToSeconds(+b.dataset.fit)));
   $('projectTitle').onchange=safe(()=>edit(()=>{project.show.title=$('projectTitle').value.trim()||'Untitled exchange';}));
