@@ -163,7 +163,7 @@ async function ensureServer(urlStr){
     assert.equal(chained[0].camera.ease,'snap');
     assert.equal(chained[0].camera.snap_zoom,true);
     assert.equal(chained[2].camera.segments[0].ease,'snap');
-    assert.equal(chained[2].camera.snap_zoom,true);
+    assert.equal(chained[2].camera.segments[0].snap_zoom,true);
     const zoom=await p.evaluate(()=>{
       const c=HMStudio.composed;
       const seg=c.timeline.atoms[2].cam[0];
@@ -730,7 +730,7 @@ print(doc['show_id'])
     assert.equal(await p.locator('#fxHonestyBanner').isVisible(),false);
     assert.equal(await p.locator('#fxHonestyNote').getAttribute('data-fx-state'),'clean');
     const fxStandInSamples={};
-    for(const fxType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange']){
+    for(const fxType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange','hitstop_2f']){
       // Click chip WITHOUT awaiting settle()/compile() first to prove live visual stand-in renders immediately while editing
       await p.click(`[data-effect="${fxType}"]`);
       const liveSample=await sampleStageHash();
@@ -744,21 +744,22 @@ print(doc['show_id'])
       await settle();
       const postCompileSample=await sampleStageHash();
       assert.notEqual(postCompileSample.hash,cleanSample.hash,`FX chip ${fxType} stand-in remains visible after compose`);
+      if(fxType==='hitstop_2f')assert.equal((await state()).composed.timeline.fx.hitstop.length,1);
     }
     assert.notDeepEqual(fxStandInSamples.hit_pink.center,fxStandInSamples.flash_orange.center);
     assert.notEqual(fxStandInSamples.sparks.hash,fxStandInSamples.smear_trail.hash);
-    check('HM-P1-FX: live cheap visual stand-ins (hit_pink, flash_orange, speed_lines, smear_trail, sparks, hit_orange) render on #stage while editing');
-    // Compose-only chip (hitstop_2f) shows clear honesty banner/label and never silent no-ops
-    await p.click('[data-effect="hitstop_2f"]');
+    check('HM-P1-FX: live cheap visual stand-ins (hit_pink, flash_orange, speed_lines, smear_trail, sparks, hit_orange, hitstop_2f) render on #stage while editing');
+    // Compose-only hook (fence_shake) shows clear honesty banner/label and never silent no-ops
+    await p.evaluate(()=>{HMStudio.editProject(pr=>{pr.show.atoms[0].fx_hooks=[{type:'fence_shake',t_rel:0.08,t_rel_end:0.92,params:{k:1}}];return 0;});});
     assert.equal(await p.locator('#fxHonestyBanner').isVisible(),true);
     assert.equal(await p.locator('#fxHonestyBanner').getAttribute('data-honesty'),'compose-only');
-    assert.match(await p.locator('#fxHonestyBanner').textContent(),/Compose-only.*hitstop_2f/);
+    assert.match(await p.locator('#fxHonestyBanner').textContent(),/Compose-only.*fence_shake/);
     assert.equal(await p.locator('#fxPreviewBadge').isVisible(),true);
     assert.equal(await p.locator('#fxPreviewBadge').getAttribute('data-fx-mode'),'compose-only');
     assert.equal(await p.locator('#fxHonestyNote').getAttribute('data-fx-state'),'compose-only');
     assert.match(await p.locator('#fxHonestyNote').textContent(),/Compose-only/);
     await settle();
-    assert.equal((await state()).composed.timeline.fx.hitstop.length,1);
+    assert.equal((await state()).composed.timeline.fx.fence.length,1);
     // Verify Beat-focus / Play/Pause/scrub and plate/cam/timing edits still work without blocking
     await p.click('[data-effect="sparks"]');await settle();
     await p.selectOption('#camera','slow_push');await change('duration',0.6);
