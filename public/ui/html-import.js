@@ -253,16 +253,29 @@
 
     function registerMediaEntry(plateId, entry) {
       if (!entry) return;
-      var src = trimStr(entry.full) || trimStr(entry.parts && entry.parts[0] && entry.parts[0].src);
+      var src = trimStr(entry.strip && entry.strip.src) || trimStr(entry.full) || trimStr(entry.parts && entry.parts[0] && entry.parts[0].src);
       if (!src || Object.prototype.hasOwnProperty.call(mediaSeen, plateId)) return;
       mediaSeen[plateId] = true;
-      media.push({
+      var item = {
         id: 'm-' + (media.length + 1),
         name: plateId,
         src: src,
         layoutSource: LAYOUT_KEY,
         plateId: plateId,
-      });
+      };
+      if (entry.strip) {
+        item.strip = {
+          adapter: 'hm-sg01-body-strip',
+          version: 1,
+          status: 'playable',
+          geometry: clone(entry.strip.geometry || {}),
+          cadence: clone(entry.strip.cadence || {}),
+          policy: clone(entry.strip.policy || {}),
+          metadata: clone(entry.strip.metadata || {}),
+          warnings: [],
+        };
+      }
+      media.push(item);
     }
 
     var atoms = tlAtoms.map(function (a, i) {
@@ -274,6 +287,7 @@
       if (rawEntry) {
         var existing = layoutMap[plateId];
         var nextLayoutEntry = {};
+        if (rawEntry.strip) nextLayoutEntry.strip = clone(rawEntry.strip);
         if (rawEntry.full) nextLayoutEntry.full = rawEntry.full;
         if (Array.isArray(rawEntry.parts) && rawEntry.parts.length) nextLayoutEntry.parts = clone(rawEntry.parts);
         if (Array.isArray(rawEntry.shadows) && rawEntry.shadows.length) nextLayoutEntry.shadows = clone(rawEntry.shadows);
@@ -314,6 +328,11 @@
       if (a && a.caption_style) atomObj.caption_style = String(a.caption_style);
       if (a && a.cut) atomObj.cut = clone(a.cut);
       if (a && a.beat_id) atomObj.beat_id = String(a.beat_id);
+      if (rawEntry && rawEntry.strip && Number.isFinite(+rawEntry.strip.clip_offset_s)) {
+        atomObj.strip_offset_s = +rawEntry.strip.clip_offset_s;
+      } else if (a && a.strip && Number.isFinite(+a.strip.clip_offset_s)) {
+        atomObj.strip_offset_s = +a.strip.clip_offset_s;
+      }
       if (rawEntry && rawEntry.background && rawEntry.background.src) {
         atomObj.background = clone(rawEntry.background);
       }
@@ -330,11 +349,12 @@
       if (!layoutMap[pidName]) {
         var extraEntry = {};
         if (le.full) extraEntry.full = le.full;
+        if (le.strip) extraEntry.strip = clone(le.strip);
         if (Array.isArray(le.parts) && le.parts.length) extraEntry.parts = clone(le.parts);
         if (Array.isArray(le.shadows) && le.shadows.length) extraEntry.shadows = clone(le.shadows);
         if (le.floor != null) extraEntry.floor = le.floor;
         if (le.kind) extraEntry.kind = le.kind;
-        if (extraEntry.full || (extraEntry.parts && extraEntry.parts.length)) {
+        if (extraEntry.strip || extraEntry.full || (extraEntry.parts && extraEntry.parts.length)) {
           layoutMap[pidName] = extraEntry;
           registerMediaEntry(pidName, extraEntry);
         }
@@ -589,6 +609,7 @@
       Object.keys(lObj).forEach(function (pk) {
         var entry = lObj[pk];
         if (!entry || entry.pendingMotion) return;
+        if (entry.strip && entry.strip.src) checkRef(DATA_IMG_RE.test(entry.strip.src) || entry.strip.src.indexOf('/') === 0 ? entry.strip.src : dir + entry.strip.src);
         if (entry.full) checkRef(DATA_IMG_RE.test(entry.full) || entry.full.indexOf('/') === 0 ? entry.full : dir + entry.full);
         (entry.parts || []).forEach(function (part) {
           if (part && part.src) checkRef(DATA_IMG_RE.test(part.src) || part.src.indexOf('/') === 0 ? part.src : dir + part.src);

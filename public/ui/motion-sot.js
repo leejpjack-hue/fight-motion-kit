@@ -48,6 +48,7 @@
           duration_s: atom ? atom.duration_s : null,
           timing_hold: atom && atom.timing_hold ? clone(atom.timing_hold) : null,
           fx_hooks: clone(atom && atom.fx_hooks || []),
+          ...(atom && atom.strip_offset_s != null ? { strip_offset_s: atom.strip_offset_s } : {}),
           ...(atom && atom.camera_grammar ? { camera_grammar: clone(atom.camera_grammar) } : {}),
         };
       }),
