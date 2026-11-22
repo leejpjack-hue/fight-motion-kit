@@ -1691,12 +1691,14 @@
           prm.y = xf.y;
           prm.scale = xf.scale;
         }
+        const hasImpactMeta = ['x', 'y', 'at', 'angle', 'strength', 'dur', 'frames', 'hitstop_frames', 'hitstop', 'hitstop_dur', 'invert', 'contrast', 'tint', 'recoil', 'shake_dur'].some((k) => prm[k] !== undefined);
+        const impactMeta = hasImpactMeta ? deepClone(prm) : null;
         const paintPhoto = fxProfile !== 'comic' || !isPhotoFxChip(hk.type);
         if (paintPhoto) {
         for (const comp of p.components || []) {
-          if (comp === 'impact_burst') fx.hits.push([ht, col]);
+          if (comp === 'impact_burst') fx.hits.push(impactMeta ? [ht, col, impactMeta] : [ht, col]);
           else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push([ht, col]);
-          else if (comp === 'hitstop_2f' && (p.components || []).indexOf('impact_burst') < 0) fx.hitstop.push(ht);
+          else if (comp === 'hitstop_2f' && (p.components || []).indexOf('impact_burst') < 0) fx.hitstop.push(impactMeta ? [ht, impactMeta] : ht);
           else if (comp === 'shake' && (p.components || []).indexOf('impact_burst') < 0)
             fx.shake.push([ht, prm.amp, prm.dur]);
           else if (comp === 'tint') fx.bgflash.push([ht, col]);
@@ -1921,9 +1923,9 @@
   }
   const LIVE_FX_COMPONENTS = [
     'impact_burst', 'flash', 'shake', 'tint', 'trail', 'dust', 'speed', 'sparks', 'pink_cut',
-    'exposure_warm_crush', 'fist_pressure', 'leg_arc', 'tornado_spiral', 'pixelfx',
+    'hitstop_2f', 'exposure_warm_crush', 'fist_pressure', 'leg_arc', 'tornado_spiral', 'pixelfx',
   ];
-  const COMPOSE_ONLY_FX_COMPONENTS = ['hitstop_2f', 'fence'];
+  const COMPOSE_ONLY_FX_COMPONENTS = ['fence'];
   const DEFAULT_FX_PRESETS = {
     hit_orange: { id: 'hit_orange', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ff8a1e' },
     hit_pink: { id: 'hit_pink', components: ['hitstop_2f', 'flash', 'shake', 'impact_burst'], color: '#ff3fa4' },

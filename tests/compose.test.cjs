@@ -191,7 +191,7 @@ test('HM-P1-SCRUB: compareAt and inspectAt detect plate, camera, and timing edit
 
 test('HM-P1-FX: classifyFxHooks distinguishes live stand-in chips from Compose-only hooks with explicit honesty',async()=>{
   const fxPresets=read('presets/fx_presets.json');
-  for(const liveType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange','dust','shake']){
+  for(const liveType of ['hit_pink','flash_orange','speed_lines','smear_trail','sparks','hit_orange','dust','shake','hitstop_2f']){
     const info=HMComposeClient.classifyFxHooks([{type:liveType,t_rel:0.08}],fxPresets);
     assert.equal(info.hasLive,true,liveType);
     assert.equal(info.hasComposeOnly,false,liveType);
@@ -199,7 +199,7 @@ test('HM-P1-FX: classifyFxHooks distinguishes live stand-in chips from Compose-o
     assert.equal(info.live[0].type,liveType);
     assert.match(info.banner,/Live FX stand-in/);
   }
-  for(const composeOnlyType of ['hitstop_2f','fence_shake']){
+  for(const composeOnlyType of ['fence_shake']){
     const info=HMComposeClient.classifyFxHooks([{type:composeOnlyType,t_rel:0.08}],fxPresets);
     assert.equal(info.hasLive,false,composeOnlyType);
     assert.equal(info.hasComposeOnly,true,composeOnlyType);
@@ -210,17 +210,22 @@ test('HM-P1-FX: classifyFxHooks distinguishes live stand-in chips from Compose-o
   const s=demo();
   s.atoms[0].fx_hooks=[{type:'sparks',t_rel:0.08,params:{n:40}}];
   s.atoms[1].fx_hooks=[{type:'hitstop_2f',t_rel:0.08,params:{}}];
+  s.atoms[2].fx_hooks=[{type:'fence_shake',t_rel:0.08,params:{k:1}}];
   const r=await compose(s);
   assert.equal(r.ok,true);
   assert.equal(r.timeline.fx.sparks.length,1);
   assert.equal(r.timeline.fx.hitstop.length,1);
+  assert.equal(r.timeline.fx.fence.length,1);
   const at0=HMComposeClient.inspectAt(r,0.1);
   assert.equal(at0.fx_state.mode,'live');
   assert.equal(at0.fx_state.live[0].type,'sparks');
   const at1=HMComposeClient.inspectAt(r,0.6);
-  assert.equal(at1.fx_state.mode,'compose_only');
-  assert.equal(at1.fx_state.composeOnly[0].type,'hitstop_2f');
-  assert.match(at1.fx_state.banner,/Compose-only/);
+  assert.equal(at1.fx_state.mode,'live');
+  assert.equal(at1.fx_state.live[0].type,'hitstop_2f');
+  const at2=HMComposeClient.inspectAt(r,1.1);
+  assert.equal(at2.fx_state.mode,'compose_only');
+  assert.equal(at2.fx_state.composeOnly[0].type,'fence_shake');
+  assert.match(at2.fx_state.banner,/Compose-only/);
 });
 
 test('HM-P1-JUMP: plate catalog resolves ids, steps, and decade chips without moving the show',async()=>{
@@ -519,7 +524,9 @@ test('HM-EXPOSURE-PARAM-FX: warm crush duration and craft times are authorable, 
     assert.equal(info.hasComposeOnly,false,id);
   }
   const infoStop=HMComposeClient.classifyFxHooks([{type:'hitstop_2f',t_rel:0.2}],fx);
-  assert.equal(infoStop.mode,'compose_only');
+  assert.equal(infoStop.mode,'live');
+  const infoFence=HMComposeClient.classifyFxHooks([{type:'fence_shake',t_rel:0.2}],fx);
+  assert.equal(infoFence.mode,'compose_only');
   const plain=await compose(demo());
   assert.equal(plain.duration_s,5);
   assert.equal(plain.timeline.fx.exposure.length,0);

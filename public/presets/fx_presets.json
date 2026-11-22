@@ -17,7 +17,7 @@
     "impact_burst"
    ],
    "color": "#ff8a1e",
-   "source": "HITS[] orange",
+   "source": "HITS[] orange · optional params: x, y, angle, strength, dur, hitstop_frames, hitstop, invert, tint, recoil",
    "defaults": {}
   },
   {
@@ -29,7 +29,7 @@
     "impact_burst"
    ],
    "color": "#ff3fa4",
-   "source": "HITS[] pink",
+   "source": "HITS[] pink · optional params: x, y, angle, strength, dur, hitstop_frames, hitstop, invert, tint, recoil",
    "defaults": {}
   },
   {
@@ -37,7 +37,7 @@
    "components": [
     "hitstop_2f"
    ],
-   "source": "renderAt: grayscale(1) contrast(9) invert(1) for 2/24 s after each hit",
+   "source": "renderAt & live canvas: anime freeze + contrast/invert impact frame (default 2/24 s; optional params: frames, dur, invert, contrast, tint, strength)",
    "defaults": {}
   },
   {
