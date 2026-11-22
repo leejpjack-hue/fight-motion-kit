@@ -2,6 +2,7 @@
  * Cut resolve/paint lives in cut-transitions.js. This file only calls it. */
 if (typeof module === 'object' && module && module.exports && typeof require === 'function') {
   require('./cut-transitions.js');
+  require('./strip-sampler.js');
 }
 
 // HM-BG-MOTION: the crop rect is a window on the source.
@@ -554,7 +555,7 @@ backgroundLocationsBundle();
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null;
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -568,7 +569,7 @@ function createMotionRenderer(canvas, assets = {}) {
   async function load(data) {
     timeline = data.timeline; layout = data.layout;
     const paths = new Set();
-    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
+    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.strip?.src)paths.add(l.strip.src); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
     backgroundImageRefs(timeline.bg).forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
     (timeline.fg?.props || []).forEach(p => { if (p.src) paths.add(p.src); if (p.effect?.broken_src) paths.add(p.effect.broken_src); });
@@ -657,7 +658,9 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function drawScene(l, sampleT) {
     const b=backgroundAt(l,timeline.bg,sampleT);
-    if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
+    if (l.strip && l.strip.src && typeof drawStripFrame === 'function') {
+      lastStripSample = drawStripFrame(ctx, images.get(l.strip.src), l.strip, sampleT, timeline?.floor_y);
+    } else if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
     else {
       (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
       (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
@@ -761,12 +764,13 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
-    if (!timeline || !timeline.plates.length) { lastCut = null; ctx.restore(); return; }
+    if (!timeline || !timeline.plates.length) { lastCut = null; lastStripSample = null; ctx.restore(); return; }
     const clockT = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
     const heldCut = resolveCutTransition(timeline.cuts, clockT);
     const t = heldCut && heldCut.freeze ? Math.max(0, heldCut.t - 1e-4) : clockT;
     lastLayerMatrix = layerCamMatrix(timeline, t, layout);
     lastCut = heldCut ? Object.assign({ pictureT: t }, heldCut) : null;
+    lastStripSample = null;
     const pIdx = timeline.plates.findIndex(p => t >= p.t0 && t < p.t1);
     const plateIndex = pIdx >= 0 ? pIdx : timeline.plates.length - 1;
     const plate = timeline.plates[plateIndex];
@@ -1100,6 +1104,7 @@ function createMotionRenderer(canvas, assets = {}) {
     get lastPixelfx() { return lastPixelfx; },
     get lastCut() { return lastCut; },
     get lastLayerMatrix() { return lastLayerMatrix; },
+    get lastStripSample() { return lastStripSample; },
     set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
     get duration() { return timeline?.duration_s || 0; }
   };

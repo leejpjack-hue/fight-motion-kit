@@ -149,7 +149,7 @@ test('HM-PF-30 dialog renders structured rows, keeps commit gated on staging',as
   assert.equal(ui.element('commitStrip').disabled,false);
   assert.match(ui.element('stripQaSummary').textContent,/warning/); // source_fps 48 vs fps 24 mismatch
   assert.ok(ui.listed().some(t=>/differs from source_fps 48/.test(t)));
-  assert.match(ui.element('stripStatus').textContent,/PENDING, NOT PLAYABLE/);
+  assert.match(ui.element('stripStatus').textContent,/PLAYABLE on shared renderAt sampler/);
   // Malformed sidecar: fail-closed panel, commit stays disabled, no staged strip.
   await ui.element('stripInput').onchange({target:{files:files(raw({frames:'24'}))}});
   assert.equal(ui.element('stripQaPanel').hidden,false);

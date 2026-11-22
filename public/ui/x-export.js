@@ -51,7 +51,7 @@
     if (direct) return direct;
     const spc = positiveNum(item.cadence && item.cadence.secondsPerCell);
     if (spc) return 1 / spc;
-    const pm = item.pendingMotion;
+    const pm = item.strip || item.pendingMotion;
     if (pm && typeof pm === 'object') {
       const pmSpc = positiveNum(pm.cadence && pm.cadence.secondsPerCell);
       if (pmSpc) return 1 / pmSpc;
@@ -143,15 +143,68 @@
     for (let i = 0; i < n; i++) frames.push({ index: i, file: 'frames/' + String(i).padStart(6, '0') + '.png', t: i / fps });
     return frames;
   }
+  function safeShowStem(showId) {
+    return String(showId || 'motion').replace(/[^a-zA-Z0-9._-]+/g, '-') || 'motion';
+  }
   function ffmpegArgv(preset, durationS, outName) {
     const kbps = Math.round(preset.videoBitsPerSecond / 1000);
     return ['ffmpeg', '-y', '-framerate', String(preset.fps), '-start_number', '0', '-i', 'frames/%06d.png', '-an', '-c:v', 'libvpx', '-b:v', kbps + 'k', '-t', Number(durationS).toFixed(3), outName];
+  }
+  function ffmpegMp4Argv(preset, durationS, outName) {
+    const kbps = Math.round(preset.videoBitsPerSecond / 1000);
+    const stem = String(outName || 'motion').replace(/\.(webm|mp4)$/i, '');
+    const mp4Name = (stem || 'motion') + '.mp4';
+    return ['ffmpeg', '-y', '-framerate', String(preset.fps), '-start_number', '0', '-i', 'frames/%06d.png', '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-b:v', kbps + 'k', '-movflags', '+faststart', '-t', Number(durationS).toFixed(3), mp4Name];
+  }
+  function formatFfmpegCommand(argv) {
+    if (!Array.isArray(argv)) return '';
+    return argv.map(tok => {
+      const s = String(tok);
+      return /^[a-zA-Z0-9._/:%+-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'";
+    }).join(' ');
+  }
+  function buildExportReceipt(opts) {
+    const o = opts || {};
+    const preset = o.preset || presets[0];
+    const kind = String(o.kind || 'video');
+    const filename = String(o.filename || '');
+    const format = String(o.format || '');
+    const dur = Number.isFinite(+o.durationS) && +o.durationS > 0 ? +o.durationS : 0;
+    const width = positiveNum(o.width) || (preset && preset.width) || 1280;
+    const height = positiveNum(o.height) || (preset && preset.height) || 720;
+    const fps = positiveNum(o.fps) || (preset && preset.fps) || 30;
+    const stem = safeShowStem(o.showId);
+    const mp4Cmd = formatFfmpegCommand(ffmpegMp4Argv(preset, dur || 1, stem + '.mp4'));
+    const webmCmd = formatFfmpegCommand(ffmpegArgv(preset, dur || 1, stem + '.webm'));
+    const title = kind === 'frames'
+      ? 'PNG frame sequence ready'
+      : kind === 'html'
+        ? 'Playable HTML exported'
+        : 'Video exported (' + (format || 'video') + ')';
+    const parts = [filename, format || kind.toUpperCase(), width + '×' + height, (kind === 'html' ? 'canvas renderAt' : fps + ' fps'), dur.toFixed(2) + 's'];
+    if (o.note) parts.push(String(o.note));
+    return {
+      kind,
+      filename,
+      format,
+      width,
+      height,
+      fps,
+      duration_s: dur,
+      title,
+      summary: parts.filter(Boolean).join(' · '),
+      mp4Command: mp4Cmd,
+      webmCommand: webmCmd,
+    };
   }
   function timingDocument(opts) {
     const preset = opts.preset;
     const frames = opts.frames;
     const showId = String(opts.showId || 'motion');
-    const outName = showId.replace(/[^a-zA-Z0-9._-]+/g, '-') + '.webm';
+    const stem = safeShowStem(showId);
+    const outName = stem + '.webm';
+    const webmArgv = ffmpegArgv(preset, opts.durationS, outName);
+    const mp4Argv = ffmpegMp4Argv(preset, opts.durationS, stem + '.mp4');
     return {
       kind: 'html-motion-frame-sequence',
       version: 1,
@@ -168,10 +221,17 @@
       honesty: HONESTY,
       encode: 'local-skill',
       frames,
+      ffmpeg_webm_command: formatFfmpegCommand(webmArgv),
+      ffmpeg_mp4: {
+        where: 'local-skill',
+        note: 'Run locally after extracting frames for H.264 MP4 output (browser MP4 is not universal).',
+        argv: mp4Argv,
+        command: formatFfmpegCommand(mp4Argv),
+      },
       ffmpeg: {
         where: 'local-skill',
         note: HONESTY + ' This zip is frames plus timing JSON, not a video.',
-        argv: ffmpegArgv(preset, opts.durationS, outName),
+        argv: webmArgv,
       },
     };
   }
@@ -237,7 +297,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, webmMegabytes, bitrateHint, framePlan, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, buildExportReceipt, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

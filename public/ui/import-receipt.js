@@ -91,6 +91,7 @@
       for (var pk = 0; pk < plateIds.length; pk++) {
         var entry = lObj[plateIds[pk]];
         if (!entry || entry.pendingMotion) continue;
+        if (entry.strip && entry.strip.src) addRef(rawRefs, entry.strip.src, DATA_IMG_RE.test(entry.strip.src) ? '' : dir);
         if (entry.full) addRef(rawRefs, entry.full, DATA_IMG_RE.test(entry.full) ? '' : dir);
         var parts = Array.isArray(entry.parts) ? entry.parts : [];
         for (var pt = 0; pt < parts.length; pt++) {
