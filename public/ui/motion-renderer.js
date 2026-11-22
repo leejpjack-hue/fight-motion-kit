@@ -253,6 +253,347 @@ function exposureWarmCrushPixels(data, amount, bounds) {
     data[i + 2] = b0 + (nb - b0) * a;
   }
 }
+function normalizeImpactOpts(raw) {
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const at = Array.isArray(p.at) ? p.at : null;
+  const x = Number.isFinite(+p.x) ? +p.x : (at && Number.isFinite(+at[0]) ? +at[0] : 640);
+  const y = Number.isFinite(+p.y) ? +p.y : (at && Number.isFinite(+at[1]) ? +at[1] : 320);
+  const hasAngle = p.angle != null && p.angle !== '' && Number.isFinite(+p.angle);
+  const angle = hasAngle ? +p.angle : -0.35;
+  const strength = Number.isFinite(+p.strength) && +p.strength > 0 ? Math.max(0.2, Math.min(4, +p.strength)) : 1;
+  const dur = Number.isFinite(+p.dur) && +p.dur > 0 ? Math.max(0.05, Math.min(2, +p.dur)) : 0.24;
+  const rawFrames = p.hitstop_frames != null ? p.hitstop_frames : p.frames;
+  const frames = rawFrames != null && Number.isFinite(+rawFrames) ? Math.max(0, Math.min(12, +rawFrames)) : 2;
+  const hitstopDur = Number.isFinite(+p.hitstop_dur) && +p.hitstop_dur > 0 ? Math.max(0.01, Math.min(0.5, +p.hitstop_dur)) : (frames > 0 ? frames / 24 : 0);
+  const hitstop = p.hitstop !== false && frames > 0 && hitstopDur > 0;
+  const invert = p.invert === 'always' ? 'always' : (p.invert !== false);
+  const contrast = Number.isFinite(+p.contrast) && +p.contrast >= 0 ? Math.max(0.2, Math.min(3, +p.contrast)) : 1;
+  const tint = typeof p.tint === 'string' && /^#[0-9a-f]{6}$/i.test(p.tint.trim()) ? p.tint.trim() : null;
+  const recoil = p.recoil != null && Number.isFinite(+p.recoil) ? Math.max(0, Math.min(80, +p.recoil)) : 12 * strength;
+  const shakeDur = Number.isFinite(+p.shake_dur) && +p.shake_dur > 0 ? Math.max(0.05, Math.min(1.5, +p.shake_dur)) : 0.28;
+  return { x, y, angle, hasAngle, strength, dur, frames, hitstop_dur: hitstopDur, hitstop, invert, contrast, tint, recoil, shake_dur: shakeDur };
+}
+function normalizeHitstopEntry(entry, fromHit) {
+  if (entry == null) return null;
+  if (typeof entry === 'number') {
+    return Number.isFinite(entry) ? { h: entry, dur: 2 / 24, invert: true, contrast: 1, tint: null, strength: 1, explicit: true } : null;
+  }
+  if (!Array.isArray(entry) || !Number.isFinite(+entry[0])) return null;
+  const h = +entry[0];
+  if (fromHit) {
+    const o = normalizeImpactOpts(entry[2]);
+    if (!o.hitstop) return null;
+    return { h, dur: o.hitstop_dur, invert: o.invert, contrast: o.contrast, tint: o.tint, strength: Math.min(1, o.strength), explicit: false };
+  }
+  const raw = entry[1];
+  if (typeof raw === 'number') {
+    const dur = Number.isFinite(raw) && raw > 0 ? Math.max(0.01, Math.min(0.5, raw)) : 2 / 24;
+    return { h, dur, invert: true, contrast: 1, tint: null, strength: 1, explicit: true };
+  }
+  const p = raw && typeof raw === 'object' ? raw : {};
+  if (p.hitstop === false) return null;
+  const rawFrames = p.hitstop_frames != null ? p.hitstop_frames : p.frames;
+  const frames = rawFrames != null && Number.isFinite(+rawFrames) ? Math.max(0, Math.min(12, +rawFrames)) : 2;
+  const explicitDur = Number.isFinite(+p.hitstop_dur) && +p.hitstop_dur > 0 ? +p.hitstop_dur : (Number.isFinite(+p.dur) && +p.dur > 0 ? +p.dur : 0);
+  const dur = explicitDur > 0 ? Math.max(0.01, Math.min(0.5, explicitDur)) : (frames > 0 ? frames / 24 : 0);
+  if (!(dur > 0)) return null;
+  const invert = p.invert === 'always' ? 'always' : (p.invert !== false);
+  const contrast = Number.isFinite(+p.contrast) && +p.contrast >= 0 ? Math.max(0.2, Math.min(3, +p.contrast)) : 1;
+  const tint = typeof p.tint === 'string' && /^#[0-9a-f]{6}$/i.test(p.tint.trim()) ? p.tint.trim() : null;
+  const strength = Number.isFinite(+p.strength) ? Math.max(0, Math.min(1, +p.strength)) : 1;
+  return { h, dur, invert, contrast, tint, strength, explicit: true };
+}
+function resolveHitstopAt(fxSource, clockT, opts) {
+  const src = fxSource && typeof fxSource === 'object' ? fxSource : {};
+  const o = opts && typeof opts === 'object' ? opts : {};
+  const standIn = !!o.standIn;
+  const atomT0 = o.atomT0 != null ? +o.atomT0 : -Infinity;
+  const atomT1 = o.atomT1 != null ? +o.atomT1 : Infinity;
+  const events = [];
+  for (const raw of src.hitstop || []) {
+    const item = normalizeHitstopEntry(raw, false);
+    if (item) events.push(item);
+  }
+  for (const raw of src.hits || []) {
+    const item = normalizeHitstopEntry(raw, true);
+    if (item) events.push(item);
+  }
+  if (!events.length) return null;
+  let chosen = null;
+  for (const ev of events) {
+    const d = clockT - ev.h;
+    if (d >= -1e-6 && d < ev.dur - 1e-6) {
+      if (!chosen || ev.h > chosen.h + 1e-6 || (Math.abs(ev.h - chosen.h) <= 1e-6 && ev.explicit && !chosen.explicit)) {
+        chosen = ev;
+      }
+    }
+  }
+  if (chosen) {
+    const d = Math.max(0, clockT - chosen.h);
+    return {
+      active: true,
+      freeze: true,
+      holdT: chosen.h,
+      d,
+      dur: chosen.dur,
+      u: Math.min(1, Math.max(0, d / chosen.dur)),
+      invert: chosen.invert,
+      contrast: chosen.contrast,
+      tint: chosen.tint,
+      strength: chosen.strength,
+      isStandIn: false,
+    };
+  }
+  if (standIn) {
+    let standEvt = null;
+    for (const ev of events) {
+      if (ev.h >= atomT0 - 1e-4 && ev.h <= atomT1 + 1e-4) {
+        if (!standEvt || (ev.explicit && !standEvt.explicit)) standEvt = ev;
+      }
+    }
+    if (standEvt) {
+      return {
+        active: true,
+        freeze: false,
+        holdT: clockT,
+        d: standEvt.dur * 0.25,
+        dur: standEvt.dur,
+        u: 0.25,
+        invert: standEvt.invert,
+        contrast: standEvt.contrast,
+        tint: standEvt.tint,
+        strength: standEvt.strength,
+        isStandIn: true,
+      };
+    }
+  }
+  return null;
+}
+function applyHitstopPixels(data, u, opts) {
+  if (!data || !data.length) return;
+  const o = opts && typeof opts === 'object' ? opts : {};
+  const uu = u < 0 ? 0 : u > 1 ? 1 : +u || 0;
+  const amount = o.strength != null && Number.isFinite(+o.strength) ? Math.max(0, Math.min(1, +o.strength)) : 1;
+  if (!(amount > 0)) return;
+  const invertNow = o.invert === 'always' ? true : (o.invert !== false && uu < 0.45);
+  const contrast = Number.isFinite(+o.contrast) && +o.contrast > 0 ? Math.max(0.2, Math.min(3, +o.contrast)) : 1;
+  const slope = 4.5 * contrast;
+  let tr = 255, tg = 255, tb = 255, hasTint = false;
+  if (typeof o.tint === 'string' && /^#[0-9a-f]{6}$/i.test(o.tint)) {
+    const hex = parseInt(o.tint.slice(1), 16);
+    tr = (hex >> 16) & 255; tg = (hex >> 8) & 255; tb = hex & 255;
+    hasTint = true;
+  }
+  for (let i = 0; i < data.length; i += 4) {
+    const r0 = data[i], g0 = data[i + 1], b0 = data[i + 2];
+    const y = (0.2126 * r0 + 0.7152 * g0 + 0.0722 * b0) / 255;
+    const rawC = (y - 0.48) * slope + 0.5;
+    const clampedC = rawC < 0 ? 0 : rawC > 1 ? 1 : rawC;
+    const crisp = clampedC * clampedC * (3 - 2 * clampedC);
+    const mono = (invertNow ? 1 - crisp : crisp) * 255;
+    let nr = mono, ng = mono, nb = mono;
+    if (hasTint) {
+      nr = mono * 0.72 + tr * 0.28;
+      ng = mono * 0.72 + tg * 0.28;
+      nb = mono * 0.72 + tb * 0.28;
+    }
+    data[i] = Math.round(r0 + (nr - r0) * amount);
+    data[i + 1] = Math.round(g0 + (ng - g0) * amount);
+    data[i + 2] = Math.round(b0 + (nb - b0) * amount);
+  }
+}
+function impactBurstGeometry(u, opts) {
+  const o = normalizeImpactOpts(opts);
+  const uu = Math.max(0, Math.min(1, Number(u) || 0));
+  const easeOut = 1 - Math.pow(1 - uu, 3);
+  const decay = 1 - uu;
+  const s = o.strength;
+  const seed = (idx, salt) => {
+    const x = Math.sin(idx * 19.73 + salt * 7.13 + (o.hasAngle ? o.angle * 3.1 : 0)) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const rays = [];
+  const rayCount = 20;
+  for (let i = 0; i < rayCount; i++) {
+    const baseAngle = (i / rayCount) * Math.PI * 2 + (seed(i, 1) - 0.5) * 0.14;
+    const axisBias = o.hasAngle ? (0.85 + 0.75 * Math.pow(Math.abs(Math.cos(baseAngle - o.angle)), 1.6)) : 1;
+    const primary = i % 2 === 0;
+    const lengthScale = (primary ? 0.92 : 0.56) * (0.78 + 0.48 * seed(i, 2)) * axisBias;
+    const r0 = (6 + uu * 54) * s;
+    const r1 = (46 + easeOut * 255 * lengthScale) * s;
+    const halfWidth = (primary ? 10.5 : 5.5) * (0.8 + 0.35 * seed(i, 3)) * s * (0.45 + 0.65 * decay);
+    rays.push({ angle: baseAngle, r0, r1, halfWidth, primary });
+  }
+  const shards = [];
+  const shardCount = 14;
+  for (let i = 0; i < shardCount; i++) {
+    const spread = (seed(i, 4) - 0.5) * (o.hasAngle ? 1.55 : Math.PI * 2);
+    const baseA = o.hasAngle ? o.angle + (i % 3 === 0 ? Math.PI + spread * 0.5 : spread) : (i / shardCount) * Math.PI * 2 + spread * 0.35;
+    const speed = (180 + seed(i, 5) * 260) * s;
+    const dist = (14 + easeOut * speed * 0.85) * (0.4 + 0.6 * seed(i, 6));
+    const len = (14 + seed(i, 7) * 24) * s * (0.4 + 0.7 * decay);
+    shards.push({
+      x: o.x + Math.cos(baseA) * dist,
+      y: o.y + Math.sin(baseA) * dist,
+      angle: baseA,
+      len,
+      halfWidth: (2.2 + seed(i, 8) * 2.8) * s * (0.35 + 0.65 * decay),
+      alpha: Math.min(1, 0.92 * Math.pow(decay, 0.85)),
+    });
+  }
+  const u2 = Math.max(0, Math.min(1, (uu - 0.08) / 0.92));
+  const ease2 = 1 - Math.pow(1 - u2, 2.5);
+  return {
+    cx: o.x,
+    cy: o.y,
+    strength: s,
+    angle: o.angle,
+    hasAngle: o.hasAngle,
+    flashAlpha: (uu < 0.2 ? 0.24 : 0.14) * Math.pow(decay, 1.5),
+    coreRadius: (28 + Math.sin(Math.min(1, uu * 1.45) * Math.PI * 0.5) * 24) * s * (0.45 + 0.55 * decay),
+    coreAlpha: Math.min(1, 0.95 * Math.pow(decay, 0.7)),
+    ring1: {
+      radius: (22 + easeOut * 225) * s,
+      width: Math.max(1.5, (11 * decay + 1.5) * s),
+      alpha: 0.9 * Math.pow(decay, 1.15),
+    },
+    ring2: {
+      radius: uu > 0.08 ? (12 + ease2 * 165) * s : 0,
+      width: Math.max(1, (6.5 * (1 - u2) + 1) * s),
+      alpha: uu > 0.08 ? 0.72 * Math.pow(1 - u2, 1.1) : 0,
+    },
+    rays,
+    shards,
+  };
+}
+function drawImpactBurst(ctx, cx, cy, u, col = '#ff8a1e', opts = {}) {
+  const geom = impactBurstGeometry(u, Object.assign({}, opts, { x: cx, y: cy }));
+  ctx.save();
+  if (geom.flashAlpha > 0.01) {
+    ctx.fillStyle = col;
+    ctx.globalAlpha = geom.flashAlpha;
+    ctx.fillRect(0, 0, 1280, 720);
+  }
+  const haloR = Math.max(40, geom.ring1.radius * 0.92);
+  if (typeof ctx.createRadialGradient === 'function') {
+    const g = ctx.createRadialGradient(geom.cx, geom.cy, Math.max(2, geom.coreRadius * 0.2), geom.cx, geom.cy, haloR);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.35, col);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = Math.min(0.65, geom.coreAlpha * 0.65);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(geom.cx, geom.cy, haloR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const drawSpikePoly = (ray, radiusScale, widthScale, fillStyle, alpha) => {
+    const ca = Math.cos(ray.angle), sa = Math.sin(ray.angle);
+    const nx = -sa, ny = ca;
+    const hw = ray.halfWidth * widthScale;
+    const tipR = ray.r0 + (ray.r1 - ray.r0) * radiusScale;
+    const ax = geom.cx + ca * ray.r0, ay = geom.cy + sa * ray.r0;
+    const tx = geom.cx + ca * tipR, ty = geom.cy + sa * tipR;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.moveTo(ax + nx * hw, ay + ny * hw);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(ax - nx * hw, ay - ny * hw);
+    ctx.lineTo(geom.cx + ca * Math.max(0, ray.r0 - hw), geom.cy + sa * Math.max(0, ray.r0 - hw));
+    ctx.closePath();
+    ctx.fill();
+  };
+  for (const ray of geom.rays) {
+    drawSpikePoly(ray, 1, 1, col, geom.ring1.alpha * (ray.primary ? 0.95 : 0.78));
+    drawSpikePoly(ray, 0.72, 0.45, '#ffffff', geom.coreAlpha * 0.92);
+  }
+  if (geom.ring1.alpha > 0.01) {
+    ctx.globalAlpha = geom.ring1.alpha;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = geom.ring1.width;
+    ctx.beginPath();
+    ctx.arc(geom.cx, geom.cy, geom.ring1.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = geom.ring1.alpha * 0.85;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, geom.ring1.width * 0.35);
+    ctx.beginPath();
+    ctx.arc(geom.cx, geom.cy, geom.ring1.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  if (geom.ring2.radius > 0 && geom.ring2.alpha > 0.01) {
+    ctx.globalAlpha = geom.ring2.alpha;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = geom.ring2.width;
+    ctx.beginPath();
+    ctx.arc(geom.cx, geom.cy, geom.ring2.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (const sh of geom.shards) {
+    if (sh.alpha <= 0.01) continue;
+    const ca = Math.cos(sh.angle), sa = Math.sin(sh.angle);
+    const nx = -sa, ny = ca;
+    ctx.globalAlpha = sh.alpha;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(sh.x + ca * sh.len, sh.y + sa * sh.len);
+    ctx.lineTo(sh.x + nx * sh.halfWidth, sh.y + ny * sh.halfWidth);
+    ctx.lineTo(sh.x - ca * sh.len * 0.45, sh.y - sa * sh.len * 0.45);
+    ctx.lineTo(sh.x - nx * sh.halfWidth, sh.y - ny * sh.halfWidth);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = geom.coreAlpha;
+  ctx.beginPath();
+  ctx.arc(geom.cx, geom.cy, geom.coreRadius, 0, Math.PI * 2);
+  ctx.fill();
+  for (let k = 0; k < 4; k++) {
+    const ca = geom.angle + k * Math.PI * 0.5;
+    const len = geom.coreRadius * (k % 2 === 0 ? 3.2 : 2.1);
+    const cos = Math.cos(ca), sin = Math.sin(ca), nx = -sin, ny = cos;
+    ctx.beginPath();
+    ctx.moveTo(geom.cx + cos * len, geom.cy + sin * len);
+    ctx.lineTo(geom.cx + nx * geom.coreRadius * 0.28, geom.cy + ny * geom.coreRadius * 0.28);
+    ctx.lineTo(geom.cx - nx * geom.coreRadius * 0.28, geom.cy - ny * geom.coreRadius * 0.28);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+function computeCameraImpactShake(shakeList, hitList, t) {
+  let dx = 0, dy = 0, dr = 0, amp = 0;
+  for (const entry of shakeList || []) {
+    const h = +entry[0], a = Number.isFinite(+entry[1]) ? +entry[1] : 14, d = Number.isFinite(+entry[2]) && +entry[2] > 0 ? +entry[2] : 0.32;
+    const dt = t - h;
+    if (dt >= 0 && dt < d) {
+      const localAmp = a * Math.pow(1 - dt / d, 1.35);
+      if (localAmp > amp) {
+        amp = localAmp;
+        dx = Math.sin(t * 157) * localAmp;
+        dy = Math.cos(t * 131) * localAmp * 0.6;
+      }
+    }
+  }
+  for (let i = 0; i < (hitList || []).length; i++) {
+    const entry = hitList[i];
+    if (!Array.isArray(entry)) continue;
+    const h = +entry[0];
+    const o = normalizeImpactOpts(entry[2]);
+    const dt = t - h;
+    if (dt >= 0 && dt < o.shake_dur) {
+      const decay = Math.pow(1 - dt / o.shake_dur, 2);
+      const kick = o.recoil * decay * (dt < 0.055 ? -1 : Math.cos(dt * 92) * 0.72);
+      const ortho = Math.sin(t * 173 + i * 1.9) * o.recoil * 0.35 * decay;
+      const ca = Math.cos(o.angle), sa = Math.sin(o.angle);
+      dx += ca * kick - sa * ortho;
+      dy += sa * kick + ca * ortho * 0.75;
+      dr += Math.sin(dt * 85 + o.angle) * (1.35 * o.strength * decay);
+      amp = Math.max(amp, Math.hypot(dx, dy));
+    }
+  }
+  return { dx, dy, dr, amp };
+}
 function drawFistPressure(ctx, x, y, u, scale = 1) {
   const s = Number.isFinite(+scale) && +scale > 0 ? +scale : 1;
   const grow = 0.84 + 0.22 * Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
@@ -555,7 +896,7 @@ backgroundLocationsBundle();
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null;
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null, lastHitstop = null;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -680,7 +1021,8 @@ function createMotionRenderer(canvas, assets = {}) {
   }
   function hooksToFx(hooks, t0, t1) {
     const d = Math.max(0.05, t1 - t0);
-    const out = { hits: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [], pixelfx: [] };
+    const out = { hits: [], hitstop: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [], pixelfx: [] };
+    const hasImpactMeta = prm => prm && ['x', 'y', 'at', 'angle', 'strength', 'dur', 'frames', 'hitstop_frames', 'hitstop', 'hitstop_dur', 'invert', 'contrast', 'tint', 'recoil', 'shake_dur'].some(k => prm[k] !== undefined);
     for (const raw of hooks || []) {
       const type = typeof raw === 'string' ? raw : raw?.type;
       if (!type || type === 'none') continue;
@@ -695,9 +1037,10 @@ function createMotionRenderer(canvas, assets = {}) {
       }
       const he = t0 + tRelEnd * d;
       const span = Number.isFinite(+prm.dur) && +prm.dur > 0 ? +prm.dur : (raw?.t_rel_end != null ? Math.max(0.01, he - ht) : (type === 'exposure_warm_crush' ? 0.10 : type === 'leg_arc' ? 0.28 : type === 'tornado_spiral' ? 0.50 : 0.36));
-      if (type === 'hit_orange') out.hits.push([ht, prm.color || '#ff8a1e']);
-      else if (type === 'hit_pink') out.hits.push([ht, prm.color || '#ff3fa4']);
-      else if (type === 'impact_white') out.hits.push([ht, prm.color || '#ffffff']);
+      if (type === 'hit_orange') out.hits.push(hasImpactMeta(prm) ? [ht, prm.color || '#ff8a1e', prm] : [ht, prm.color || '#ff8a1e']);
+      else if (type === 'hit_pink') out.hits.push(hasImpactMeta(prm) ? [ht, prm.color || '#ff3fa4', prm] : [ht, prm.color || '#ff3fa4']);
+      else if (type === 'impact_white') out.hits.push(hasImpactMeta(prm) ? [ht, prm.color || '#ffffff', prm] : [ht, prm.color || '#ffffff']);
+      else if (type === 'hitstop_2f') out.hitstop.push(hasImpactMeta(prm) ? [ht, prm] : ht);
       else if (type === 'flash_orange') out.flash.push([ht, prm.color || '#ff8a1e']);
       else if (type === 'flash_pink') out.flash.push([ht, prm.color || '#ff3fa4']);
       else if (type === 'bg_flash_blue') out.bgflash.push([ht, prm.color || '#2f7bff']);
@@ -764,10 +1107,27 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
-    if (!timeline || !timeline.plates.length) { lastCut = null; lastStripSample = null; ctx.restore(); return; }
+    if (!timeline || !timeline.plates.length) { lastCut = null; lastStripSample = null; lastHitstop = null; ctx.restore(); return; }
     const clockT = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
     const heldCut = resolveCutTransition(timeline.cuts, clockT);
-    const t = heldCut && heldCut.freeze ? Math.max(0, heldCut.t - 1e-4) : clockT;
+    const cutT = heldCut && heldCut.freeze ? Math.max(0, heldCut.t - 1e-4) : clockT;
+    const atoms = timeline.atoms || [];
+    const cutAIdx = atoms.findIndex(a => cutT >= a.t0 && cutT < a.t1);
+    const cutAtom = cutAIdx >= 0 ? atoms[cutAIdx] : atoms.at(-1);
+    const cutAtomT0 = opts.atomWindow ? opts.atomWindow[0] : (cutAtom ? cutAtom.t0 : 0);
+    const cutAtomT1 = opts.atomWindow ? opts.atomWindow[1] : (cutAtom ? cutAtom.t1 : timeline.duration_s);
+    const standIn = !!opts.fxStandIn;
+    const fxSource = (standIn && Array.isArray(opts.liveHooks))
+      ? hooksToFx(opts.liveHooks, cutAtomT0, cutAtomT1)
+      : (standIn && cutAtom && Array.isArray(cutAtom.fx_hooks))
+        ? hooksToFx(cutAtom.fx_hooks, cutAtomT0, cutAtomT1)
+        : (timeline.fx || {});
+    const hitstopState = (heldCut && heldCut.freeze)
+      ? null
+      : resolveHitstopAt(fxSource, cutT, { standIn, atomT0: cutAtomT0, atomT1: cutAtomT1 });
+    lastHitstop = hitstopState;
+    const t = (hitstopState && hitstopState.freeze) ? hitstopState.holdT : cutT;
+    const fxT = cutT;
     lastLayerMatrix = layerCamMatrix(timeline, t, layout);
     lastCut = heldCut ? Object.assign({ pictureT: t }, heldCut) : null;
     lastStripSample = null;
@@ -775,20 +1135,13 @@ function createMotionRenderer(canvas, assets = {}) {
     const plateIndex = pIdx >= 0 ? pIdx : timeline.plates.length - 1;
     const plate = timeline.plates[plateIndex];
     const l = layout[plate.id]; if (!l) {ctx.restore(); return;}
-    const atoms = timeline.atoms || [];
     const aIdx = atoms.findIndex(a => t >= a.t0 && t < a.t1);
     const curAtom = aIdx >= 0 ? atoms[aIdx] : atoms.at(-1);
-    const atomT0 = opts.atomWindow ? opts.atomWindow[0] : (curAtom ? curAtom.t0 : plate.t0);
-    const atomT1 = opts.atomWindow ? opts.atomWindow[1] : (curAtom ? curAtom.t1 : plate.t1);
+    const atomT0 = cutAtom ? cutAtomT0 : (curAtom ? curAtom.t0 : plate.t0);
+    const atomT1 = cutAtom ? cutAtomT1 : (curAtom ? curAtom.t1 : plate.t1);
     const inAtom = h => h >= atomT0 - 1e-4 && h <= atomT1 + 1e-4;
-    const standIn = !!opts.fxStandIn;
-    const fxSource = (standIn && Array.isArray(opts.liveHooks))
-      ? hooksToFx(opts.liveHooks, atomT0, atomT1)
-      : (standIn && curAtom && Array.isArray(curAtom.fx_hooks))
-        ? hooksToFx(curAtom.fx_hooks, atomT0, atomT1)
-        : (timeline.fx || {});
     function fxDelta(h, span) {
-      const d = t - h;
+      const d = fxT - h;
       if (d >= 0 && d <= span) return standIn ? clamp(d, span * 0.15, span * 0.65) : d;
       if (standIn && inAtom(h)) return span * 0.25;
       return -1;
@@ -797,12 +1150,14 @@ function createMotionRenderer(canvas, assets = {}) {
     const seg = segments.find(s => t >= s.t0 && t < s.t1) || segments.at(-1);
     const camera = cameraPoseOnSegment(seg, t);
     const fx = timeline.fx || {};
-    let amp = 0;
-    (fx.shake || []).forEach(([h, a, d]) => { if (t >= h && t < h + d) amp = Math.max(amp, a * (1 - (t - h) / d)); });
-    (fx.hits || []).forEach(([h]) => { if (t >= h && t < h + .28) amp = Math.max(amp, 9 * (1 - (t - h) / .28)); });
+    const shake = computeCameraImpactShake(standIn ? fxSource.shake : fx.shake, standIn ? fxSource.hits : fx.hits, fxT);
+    const totalRot = camera.r + shake.dr;
+    const drawScale = shake.amp > 1e-4
+      ? Math.max(camera.s, 1 + Math.max(Math.abs(shake.dx) / 640, Math.abs(shake.dy) / 360) + Math.abs(Math.sin(totalRot * Math.PI / 180)) * 0.9)
+      : camera.s;
     const bgMotion=backgroundAt(l,timeline.bg,t).motion,independent=bgMotion&&bgMotion.preset!=='follow_camera';
     if(independent)drawBackground(l,t);
-    ctx.save(); ctx.translate(640 + camera.x + Math.sin(t * 157) * amp, 360 + camera.y + Math.cos(t * 131) * amp * .6); ctx.rotate(camera.r * Math.PI / 180); ctx.scale(camera.s, camera.s); ctx.translate(-640, -360);
+    ctx.save(); ctx.translate(640 + camera.x + shake.dx, 360 + camera.y + shake.dy); ctx.rotate(totalRot * Math.PI / 180); ctx.scale(drawScale, drawScale); ctx.translate(-640, -360);
     if(!independent)drawBackground(l,t);
     drawScene(l,t);
     if (opts.onion) {
@@ -814,6 +1169,20 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.restore();
     drawForeground(t);
+    const pinkOnPreview = fxSource.pink_cut != null && (fxT >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)));
+    if (!pinkOnPreview && hitstopState && hitstopState.active) {
+      if (typeof ctx.getImageData === 'function' && typeof ctx.putImageData === 'function') {
+        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        applyHitstopPixels(frame.data, hitstopState.u, hitstopState);
+        ctx.putImageData(frame, 0, 0);
+      } else {
+        ctx.save();
+        ctx.fillStyle = (hitstopState.invert === 'always' || (hitstopState.invert !== false && hitstopState.u < 0.45)) ? '#0b0e14' : (hitstopState.tint || '#ffffff');
+        ctx.globalAlpha = 0.72 * (hitstopState.strength ?? 1);
+        ctx.fillRect(0, 0, 1280, 720);
+        ctx.restore();
+      }
+    }
     // Deterministic particles & live stand-ins avoid a different random result on every frame/export.
     (fxSource.dust || []).forEach(([h, k = 1]) => {
       const d = fxDelta(h, 0.55);
@@ -828,36 +1197,11 @@ function createMotionRenderer(canvas, assets = {}) {
       }
       ctx.restore();
     });
-    (fxSource.hits || []).forEach(([h, col = '#ff8a1e']) => {
-      const d = fxDelta(h, 0.22);
+    (fxSource.hits || []).forEach(([h, col = '#ff8a1e', rawOpts]) => {
+      const hitOpts = normalizeImpactOpts(rawOpts);
+      const d = fxDelta(h, hitOpts.dur);
       if (d < 0) return;
-      const w = 1 - d / 0.22;
-      ctx.save();
-      ctx.fillStyle = col;
-      ctx.globalAlpha = 0.18 * w;
-      ctx.fillRect(0, 0, 1280, 720);
-      ctx.globalAlpha = 0.38 * w;
-      ctx.beginPath();
-      ctx.arc(640, 320, 44 + d * 240, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.65 * w;
-      ctx.beginPath();
-      ctx.arc(640, 320, 22 + d * 80, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 0.85 * w;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 4;
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * Math.PI * 2;
-        const r0 = 18 + d * 360;
-        const r1 = r0 + 52;
-        ctx.beginPath();
-        ctx.moveTo(640 + Math.cos(a) * r0, 320 + Math.sin(a) * r0);
-        ctx.lineTo(640 + Math.cos(a) * r1, 320 + Math.sin(a) * r1);
-        ctx.stroke();
-      }
-      ctx.restore();
+      drawImpactBurst(ctx, hitOpts.x, hitOpts.y, d / hitOpts.dur, col, hitOpts);
     });
     (fxSource.flash || []).concat(fxSource.bgflash || []).forEach(([h, col = '#ff8a1e']) => {
       const d = fxDelta(h, 0.22);
@@ -984,17 +1328,17 @@ function createMotionRenderer(canvas, assets = {}) {
       });
     }
     const paintOverlays = (timeline.overlays || []).filter(o => o.fx_paint !== false);
-    const overlayFx = collectProceduralOverlays(paintOverlays, t);
+    const overlayFx = collectProceduralOverlays(paintOverlays, fxT);
     // Inside the authored window, follow the path with real time (scrub and play).
     // Outside it, the editor stand-in still shows one representative frame.
     const phase = (h, dur) => {
-      const d = t - h;
+      const d = fxT - h;
       if (d >= 0 && d <= dur) return d;
       return fxDelta(h, dur);
     };
     drawParametric(fxSource, phase);
     drawParametric(overlayFx, phase);
-    const pinkOn = fxSource.pink_cut != null && (t >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)));
+    const pinkOn = pinkOnPreview;
     const liveExposures = activeExposures(fxSource.exposure, fxDelta).concat(activeExposures(overlayFx.exposure, fxDelta));
     if (!pinkOn && liveExposures.length) {
       const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -1029,7 +1373,7 @@ function createMotionRenderer(canvas, assets = {}) {
       const api = globalThis.HMPixelFx;
       const meta = api && typeof api.meta === 'function' ? api.meta(fxId) : null;
       const dur = meta && Number(meta.duration) > 0 ? Number(meta.duration) : 0.6;
-      const elapsed = t - hitT;
+      const elapsed = fxT - hitT;
       let local = -1;
       if (elapsed >= -1e-4 && elapsed <= dur + 1e-4) local = Math.min(dur, Math.max(0, elapsed));
       else if (standIn && inAtom(hitT)) local = Math.min(dur * 0.35, 0.2);
@@ -1065,7 +1409,7 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     paintCutOverlay(ctx, heldCut);
     if (heldCut && heldCut.whip) drawWhipCut(ctx, heldCut.whip);
-    paintOverlays.filter(o => t >= o.t_start && t < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
+    paintOverlays.filter(o => fxT >= o.t_start && fxT < o.t_end && o.kind !== 'exposure_warm_crush' && o.kind !== 'fist_pressure' && o.kind !== 'leg_arc' && o.kind !== 'tornado_spiral').sort((a,b)=>(a.z||0)-(b.z||0)).forEach(o=>{
       ctx.save();ctx.globalAlpha=clamp(o.opacity??1,0,1);ctx.translate(o.x??640,o.y??640);ctx.scale(o.scale||1,o.scale||1);
       if(o.kind==='text'||o.text){
         const style=o.style||{};
@@ -1105,6 +1449,7 @@ function createMotionRenderer(canvas, assets = {}) {
     get lastCut() { return lastCut; },
     get lastLayerMatrix() { return lastLayerMatrix; },
     get lastStripSample() { return lastStripSample; },
+    get lastHitstop() { return lastHitstop; },
     set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
     get duration() { return timeline?.duration_s || 0; }
   };
@@ -1127,6 +1472,13 @@ hmRoot.fxPlacementOf = fxPlacementOf;
 hmRoot.transformFxPath = transformFxPath;
 hmRoot.HMMotionFx = {
   exposureWarmCrushPixels,
+  normalizeImpactOpts,
+  normalizeHitstopEntry,
+  resolveHitstopAt,
+  applyHitstopPixels,
+  impactBurstGeometry,
+  drawImpactBurst,
+  computeCameraImpactShake,
   fxPathOrStock,
   fxPointOnPath,
   fxPlacementOf,
