@@ -155,7 +155,7 @@
      "description": "slice of a longer preset (e.g. 3 s pass_between split across two atoms)"
     },
     "ease": {
-     "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap"],
+     "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap", "spring", "whip", "punch_in", "recoil_settle"],
      "description": "segment timing. snap holds, then rushes. linear is a straight drift."
     },
     "snap_zoom": {
@@ -207,7 +207,7 @@
         "maxItems": 2
        },
        "ease": {
-        "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap"]
+        "enum": ["linear", "smooth", "sine", "ease_in", "ease_out", "snap", "spring", "whip", "punch_in", "recoil_settle"]
        },
        "snap_zoom": {
         "type": "boolean"

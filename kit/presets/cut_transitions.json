@@ -20,5 +20,27 @@
       "label": "Whip cut",
       "defaults": { "dur_s": 0.10, "hold_s": 0, "dir": 1 }
     }
+  ],
+  "extended_presets": [
+    {
+      "id": "slash_wipe",
+      "label": "Slash wipe",
+      "defaults": { "dur_s": 0.14, "hold_s": 0, "dir": 1 }
+    },
+    {
+      "id": "impact_invert_cut",
+      "label": "Impact B&W cut",
+      "defaults": { "dur_s": 0.10, "hold_s": 0, "dir": 1 }
+    },
+    {
+      "id": "zoom_smash",
+      "label": "Zoom smash",
+      "defaults": { "dur_s": 0.14, "hold_s": 0, "dir": 1 }
+    },
+    {
+      "id": "iris_focus",
+      "label": "Iris focus",
+      "defaults": { "dur_s": 0.16, "hold_s": 0, "dir": 1 }
+    }
   ]
 }
