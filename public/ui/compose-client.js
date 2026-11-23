@@ -2764,7 +2764,7 @@
             }
             const src = joinRel(dir, part.src);
             if (!assetResolved(project, src) && !assetResolved(project, part.src)) {
-              pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · plate ' + pid });
+              pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · ' + pid });
             }
           });
         } else {
