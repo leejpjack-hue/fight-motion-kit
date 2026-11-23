@@ -2084,7 +2084,7 @@
             clipsLoaded:0,
             imagesLoaded:0,
             missing:[e.message],
-            warnings:['Corrupt draft quarantined safely so the editor booted cleanly.'+(quarined?' You can download it for inspection.':'')],
+            warnings:['Corrupt draft quarantined safely so the editor booted cleanly.'+(quarantined?' You can download it for inspection.':'')],
             quarantineDraft:Boolean(quarantined),
             replaceProject:false,
             undoable:false
