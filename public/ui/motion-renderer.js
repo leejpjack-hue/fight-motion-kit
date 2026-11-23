@@ -191,6 +191,107 @@ function fgPassByInstances(prop, t, stageW, stageH, bgSpeedHint) {
   }
   return out;
 }
+function resolveMicroFrameAt(microFrames, localT, atomDur, fps) {
+  if (!Array.isArray(microFrames) || !microFrames.length) return null;
+  const dur = +atomDur || 0;
+  const lt = +localT;
+  if (!(dur > 0) || !Number.isFinite(lt) || lt < -1e-6 || lt >= dur + 1e-6) return null;
+  const rate = Number.isFinite(+fps) && +fps > 0 ? +fps : 24;
+  const frameDur = 1 / rate;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const round4 = v => Math.round((+v || 0) * 10000) / 10000;
+  for (let i = 0; i < microFrames.length; i++) {
+    const mf = microFrames[i];
+    if (!mf || typeof mf !== 'object') continue;
+    const frames = Math.min(3, Math.max(1, Math.round(+mf.frames || 2)));
+    const span = Math.min(frames * frameDur, dur * 0.45);
+    const maxW0 = Math.max(0, dur - span);
+    const at = mf.at;
+    let w0 = 0;
+    if (at === 'end') w0 = maxW0;
+    else if (at === 'mid') w0 = clamp(dur * 0.42 - span / 2, 0, maxW0);
+    else if (typeof at === 'number' && Number.isFinite(at)) w0 = clamp(at * dur, 0, maxW0);
+    else if (at != null && at !== 'start' && Number.isFinite(+at)) w0 = clamp(+at * dur, 0, maxW0);
+    const w1 = Math.min(dur, w0 + span);
+    if (lt < w0 - 1e-6 || lt >= w1 - 1e-6) continue;
+    const fIdx = Math.min(frames - 1, Math.max(0, Math.floor((lt - w0) / Math.max(1e-4, span / frames))));
+    const dir = +mf.dir < 0 ? -1 : 1;
+    const str = clamp(Number.isFinite(+mf.strength) ? +mf.strength : 1, 0.25, 2);
+    const stepW = fIdx === 0 ? 1 : fIdx === 1 ? 0.62 : 0.32;
+    let dx = 0, dy = 0, sx = 1, sy = 1, skewX = 0, rotDeg = 0, ghostDx = 0, ghostAlpha = 0;
+    const act = mf.action || 'anticipation';
+    if (act === 'anticipation') {
+      dx = -14 * dir * str * stepW;
+      dy = 9 * str * stepW;
+      sx = 1 + 0.055 * str * stepW;
+      sy = 1 - 0.06 * str * stepW;
+      skewX = -0.055 * dir * str * stepW;
+    } else if (act === 'smear_lunge') {
+      dx = 22 * dir * str * stepW;
+      dy = -4 * str * stepW;
+      sx = 1 + 0.1 * str * stepW;
+      sy = 1 - 0.075 * str * stepW;
+      skewX = 0.105 * dir * str * stepW;
+      ghostDx = -20 * dir * str * stepW;
+      ghostAlpha = Math.min(0.4, 0.28 * str * stepW);
+    } else if (act === 'squash_hit') {
+      if (fIdx === 0) {
+        dx = 6 * dir * str;
+        dy = 14 * str;
+        sx = 1 + 0.11 * str;
+        sy = 1 - 0.12 * str;
+        skewX = 0.03 * dir * str;
+      } else if (fIdx === 1) {
+        dx = -4 * dir * str;
+        dy = -6 * str;
+        sx = 1 - 0.05 * str;
+        sy = 1 + 0.065 * str;
+        skewX = -0.02 * dir * str;
+      } else {
+        dx = 2 * dir * str * 0.4;
+        dy = 3 * str * 0.4;
+        sx = 1.02;
+        sy = 0.98;
+      }
+    } else if (act === 'recoil_snap') {
+      dx = -12 * dir * str * stepW;
+      dy = 4 * str * stepW;
+      sx = 1 - 0.03 * str * stepW;
+      sy = 1 + 0.04 * str * stepW;
+      rotDeg = -2.2 * dir * str * stepW;
+    } else if (act === 'weight_shift') {
+      dx = 9 * dir * str * stepW;
+      dy = 6 * str * stepW;
+      sx = 1 + 0.03 * str * stepW;
+      sy = 1 - 0.03 * str * stepW;
+      skewX = 0.035 * dir * str * stepW;
+    } else if (act === 'cloth_tremor') {
+      const alt = fIdx % 2 === 0 ? 1 : -1;
+      dx = 5 * alt * dir * str;
+      dy = -3 * alt * str;
+      sx = 1 + 0.02 * str;
+      sy = 1 - 0.015 * str;
+      skewX = 0.025 * alt * dir * str;
+    }
+    return {
+      active: true,
+      id: mf.id || ('mf-' + (i + 1)),
+      action: act,
+      frameIndex: fIdx,
+      frameCount: frames,
+      dx: round4(dx),
+      dy: round4(dy),
+      sx: round4(sx),
+      sy: round4(sy),
+      skewX: round4(skewX),
+      rotDeg: round4(rotDeg),
+      ghostDx: round4(ghostDx),
+      ghostAlpha: round4(ghostAlpha),
+      src: mf.src || null,
+    };
+  }
+  return null;
+}
 // HM-COMPOSE-FG: foreground props are placed sprites with their own camera.
 // This transform does not read show.bg.motion or the character-stage camera.
 // `parallax` / pan_* slide the layer; `nudge` is a constant offset; `static` holds.
@@ -1235,7 +1336,8 @@ function createMotionRenderer(canvas, assets = {}) {
   async function load(data) {
     timeline = data.timeline; layout = data.layout;
     const paths = new Set();
-    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.strip?.src)paths.add(l.strip.src); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); });
+    Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.strip?.src)paths.add(l.strip.src); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); (l.micro_frames || []).forEach(mf => { if (mf && mf.src) paths.add(mf.src); }); });
+    (timeline.atoms || []).forEach(a => (a.micro_frames || []).forEach(mf => { if (mf && mf.src) paths.add(mf.src); }));
     backgroundImageRefs(timeline.bg).forEach(p => paths.add(p));
     (timeline.overlays || []).forEach(o => { if (o.src) paths.add(o.src); });
     (timeline.fg?.props || []).forEach(p => { if (p.src) paths.add(p.src); if (p.effect?.broken_src) paths.add(p.effect.broken_src); });
@@ -1251,7 +1353,7 @@ function createMotionRenderer(canvas, assets = {}) {
       if (imgCache) { if (imgCache.size > 200) imgCache.clear(); imgCache.set(resolved, im); }
       images.set(path, im);
     }));
-    for(const l of Object.values(layout)){const b=backgroundAt(l,timeline.bg,l.t||0);const owns=!!(l.background&&Object.hasOwn(l.background,'src'));const anyLoc=!owns&&Array.isArray(timeline.bg?.locations)&&timeline.bg.locations.some(row=>row&&row.src);if((b.src||anyLoc)&&b.key_white&&l.full&&!keyedImages.has(l.full)){const im=images.get(l.full);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}}
+    for(const l of Object.values(layout)){const b=backgroundAt(l,timeline.bg,l.t||0);const owns=!!(l.background&&Object.hasOwn(l.background,'src'));const anyLoc=!owns&&Array.isArray(timeline.bg?.locations)&&timeline.bg.locations.some(row=>row&&row.src);if((b.src||anyLoc)&&b.key_white&&l.full&&!keyedImages.has(l.full)){const im=images.get(l.full);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}if(b.key_white&&Array.isArray(l.micro_frames)){for(const mf of l.micro_frames){if(mf&&mf.src&&!keyedImages.has(mf.src)&&images.has(mf.src)){const im=images.get(mf.src);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(mf.src,keyed);}}}}
   }
   // Flood only edge-connected neutral whites, preserving enclosed white clothing/highlights.
   function removeWhiteBackdrop(im) {
@@ -1400,16 +1502,49 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.restore();
   }
-  function drawScene(l, sampleT) {
+  function drawScene(l, sampleT, microCtx) {
     const b=backgroundAt(l,timeline.bg,sampleT);
-    if (l.strip && l.strip.src && typeof drawStripFrame === 'function') {
-      lastStripSample = drawStripFrame(ctx, images.get(l.strip.src), l.strip, sampleT, timeline?.floor_y);
-    } else if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
-    else {
-      (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
-      (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
-      if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
+    const paintPlate = swapSrc => {
+      if (swapSrc && images.has(swapSrc)) {
+        image(swapSrc, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
+      } else if (l.strip && l.strip.src && typeof drawStripFrame === 'function') {
+        lastStripSample = drawStripFrame(ctx, images.get(l.strip.src), l.strip, sampleT, timeline?.floor_y);
+      } else if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
+      else {
+        (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
+        (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
+        if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
+      }
+    };
+    const list = (microCtx && Array.isArray(microCtx.micro_frames) && microCtx.micro_frames.length)
+      ? microCtx.micro_frames
+      : (Array.isArray(l.micro_frames) ? l.micro_frames : null);
+    if (list && list.length) {
+      const mT0 = microCtx && Number.isFinite(+microCtx.t0) ? +microCtx.t0 : (+l.t || 0);
+      const mDur = microCtx && Number.isFinite(+microCtx.t1) && microCtx.t1 > mT0 ? (microCtx.t1 - mT0) : 0.5;
+      const mf = resolveMicroFrameAt(list, sampleT - mT0, mDur, 24);
+      if (mf && mf.active) {
+        const px = 640;
+        const py = Number.isFinite(+timeline?.floor_y) ? +timeline.floor_y : 684;
+        if (mf.ghostAlpha > 0 && Math.abs(mf.ghostDx) > 0.5) {
+          ctx.save();
+          ctx.globalAlpha *= mf.ghostAlpha;
+          ctx.translate(mf.ghostDx, 0);
+          paintPlate(mf.src);
+          ctx.restore();
+        }
+        ctx.save();
+        ctx.translate(px + mf.dx, py + mf.dy);
+        if (mf.rotDeg) ctx.rotate(mf.rotDeg * Math.PI / 180);
+        if (mf.skewX && typeof ctx.transform === 'function') ctx.transform(1, 0, mf.skewX, 1, 0, 0);
+        ctx.scale(mf.sx, mf.sy);
+        ctx.translate(-px, -py);
+        paintPlate(mf.src);
+        ctx.restore();
+        return;
+      }
     }
+    paintPlate(null);
   }
   const PIXELFX_WAVE1_IDS = [
     'impacts/hit-spark', 'impacts/blunt-hit', 'impacts/crit-hit', 'impacts/hit-flash',
@@ -1571,17 +1706,18 @@ function createMotionRenderer(canvas, assets = {}) {
     const motionBlurOn = !(hitstopState && hitstopState.freeze) && (seg?.motion_blur === true || Number(seg?.motion_blur) > 0 || (dynamicCurve && camVel.speed > 18));
     ctx.save(); ctx.translate(640 + camera.x + shake.dx, 360 + camera.y + shake.dy); ctx.rotate(totalRot * Math.PI / 180); ctx.scale(drawScale, drawScale); ctx.translate(-640, -360);
     if(!independent)drawBackground(l,t,camera);
+    const microCtx = curAtom && Array.isArray(curAtom.micro_frames) && curAtom.micro_frames.length ? { t0: curAtom.t0, t1: curAtom.t1, micro_frames: curAtom.micro_frames } : null;
     if (motionBlurOn && (Math.abs(camVel.vx) > 0.5 || Math.abs(camVel.vy) > 0.5)) {
       const blurWeight = Number(seg?.motion_blur) > 0 ? Math.min(2, +seg.motion_blur) : 1;
       for (const [step, ga] of [[1, 0.14], [2, 0.07]]) {
         ctx.save();
         ctx.globalAlpha = ga;
         ctx.translate(-camVel.vx * step * 0.45 * blurWeight, -camVel.vy * step * 0.45 * blurWeight);
-        drawScene(l, t);
+        drawScene(l, t, microCtx);
         ctx.restore();
       }
     }
-    drawScene(l,t);
+    drawScene(l, t, microCtx);
     if (opts.onion) {
       const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
       ctx.save(); ctx.globalAlpha = 0.25;
@@ -1978,6 +2114,7 @@ hmRoot.backgroundMotionProgress = backgroundMotionProgress;
 hmRoot.backgroundMotionSupport = backgroundMotionSupport;
 hmRoot.backgroundScrollState = backgroundScrollState;
 hmRoot.fgPassByInstances = fgPassByInstances;
+hmRoot.resolveMicroFrameAt = resolveMicroFrameAt;
 hmRoot.FG_CAM_PRESETS = FG_CAM_PRESETS;
 hmRoot.FG_DEFAULT_PARALLAX = FG_DEFAULT_PARALLAX;
 hmRoot.FG_PARALLAX_PRESETS = FG_PARALLAX_PRESETS;
@@ -2020,6 +2157,7 @@ if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionSupport = backgroundMotionSupport;
   hmRoot.HMComposeClient.backgroundScrollState = backgroundScrollState;
   hmRoot.HMComposeClient.fgPassByInstances = fgPassByInstances;
+  hmRoot.HMComposeClient.resolveMicroFrameAt = resolveMicroFrameAt;
   hmRoot.HMComposeClient.fgCameraFrame = fgCameraFrame;
   hmRoot.HMComposeClient.fgPropPose = fgPropPose;
   hmRoot.HMComposeClient.fgBreakState = fgBreakState;
