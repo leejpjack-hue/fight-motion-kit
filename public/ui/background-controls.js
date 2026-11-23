@@ -2,6 +2,14 @@
 (() => {
   const S=window.HMStudio,{$,on,safe}=S,C=window.HMComposeClient;
   let spanOpenOverride=null,lastSpanScopeKey='',lastSpanAuthored=false,packsDoc=null;
+  const DEFAULT_RUN_PRESETS=[
+    {id:'city_jog',label:'City Jog',motion:{preset:'scroll_left',amount:0.35,clock:'show',speed_px_s:320,tile_mode:'mirror',stride_bob:{amp_px:5,freq_hz:2.2},motion_blur:0.1}},
+    {id:'full_sprint',label:'Full Sprint',motion:{preset:'scroll_left',amount:0.85,clock:'show',speed_px_s:920,tile_mode:'mirror',stride_bob:{amp_px:10,freq_hz:3.8},motion_blur:0.45}},
+    {id:'rooftop_dash',label:'Rooftop Dash',motion:{preset:'scroll_left',amount:0.65,clock:'show',speed_px_s:680,tile_mode:'mirror',stride_bob:{amp_px:7,freq_hz:3.0},motion_blur:0.25}},
+    {id:'vertical_drop',label:'Vertical Drop',motion:{preset:'scroll_up',amount:0.8,clock:'show',speed_px_s:850,tile_mode:'mirror',stride_bob:{amp_px:0,freq_hz:2.0},motion_blur:0.4}},
+  ];
+  const isScroll=preset=>String(preset||'').startsWith('scroll_');
+  const runPresetsList=()=>Array.isArray(packsDoc?.run_presets)&&packsDoc.run_presets.length?packsDoc.run_presets:DEFAULT_RUN_PRESETS;
   fetch('/presets/bg_motion_packs.json').then(r=>{if(!r.ok)throw Error('missing');return r.json();}).then(doc=>{packsDoc=doc;if(S.project)refresh();}).catch(()=>{packsDoc=null;});
   const resolve=(p,src)=>p.assets?.[src]||(/^(data:|blob:|\/)/.test(src)?src:'/'+src);
   let preferPlayhead=false;
@@ -121,6 +129,30 @@
     $('resetBackgroundSpan').disabled=!spanUi.authored;
     $('resetBackgroundMotion').disabled=!settings.motion;$('resetBackgroundMotion').textContent=clip?'Use project motion':'Reset motion';
     const note=motionCopy(cropNow,preset,spanUi.honestyLabel);$('backgroundMotionNote').textContent=note.text;$('backgroundMotionNote').classList.toggle('is-blocked',note.blocked);
+    const scrollOn=isScroll(preset);
+    if($('bgRunParams'))$('bgRunParams').hidden=!scrollOn;
+    const speedPx=m?.speed_px_s!=null?Math.round(+m.speed_px_s):Math.round(120+(m?.amount??.4)*980);
+    if($('bgRunSpeed')&&document.activeElement!==$('bgRunSpeed'))$('bgRunSpeed').value=String(speedPx);
+    if($('bgRunSpeedValue'))$('bgRunSpeedValue').textContent=speedPx+' px/s';
+    if($('bgRunTileMode'))$('bgRunTileMode').value=m?.tile_mode==='tile'?'tile':'mirror';
+    const bobOn=!!(m?.stride_bob&&+m.stride_bob.amp_px>0);
+    if($('bgRunBobEnabled'))$('bgRunBobEnabled').checked=bobOn;
+    if($('bgRunBobAmp')&&document.activeElement!==$('bgRunBobAmp'))$('bgRunBobAmp').value=String(m?.stride_bob?.amp_px??6);
+    if($('bgRunBobFreq')&&document.activeElement!==$('bgRunBobFreq'))$('bgRunBobFreq').value=String(m?.stride_bob?.freq_hz??2.8);
+    if($('bgRunBobAmp'))$('bgRunBobAmp').disabled=!bobOn;
+    if($('bgRunBobFreq'))$('bgRunBobFreq').disabled=!bobOn;
+    const blurAmt=m?.motion_blur!=null?+m.motion_blur:0.2;
+    if($('bgRunBlur')&&document.activeElement!==$('bgRunBlur'))$('bgRunBlur').value=String(blurAmt);
+    if($('bgRunBlurValue'))$('bgRunBlurValue').textContent=Math.round(blurAmt*100)+'%';
+    if($('bgRunPresetRow')){
+      const presets=runPresetsList();
+      $('bgRunPresetRow').querySelectorAll('[data-bg-run-preset]').forEach(btn=>{
+        const spec=presets.find(x=>x.id===btn.dataset.bgRunPreset);
+        const match=!!(scrollOn&&spec&&spec.motion.preset===preset&&Math.abs((spec.motion.speed_px_s||0)-speedPx)<=10);
+        btn.classList.toggle('active',match);
+        btn.setAttribute('aria-pressed',match?'true':'false');
+      });
+    }
     const library=$('backgroundLibrary');library.replaceChildren(new Option('Use library image…',''));
     p.media.forEach(m=>library.add(new Option(m.name,m.id)));
     const prefix=clip?(inherited?'Using project image. ':'Only clip '+(S.selectedIndex+1)+'. '):(schedule?'This time window for clips without their own image. ':'Project default for clips without an override. ');
@@ -206,7 +238,14 @@
     if(String(preset).startsWith('pan_'))return {blocked:false,text:'Slides the crop window across the source. Plates stay put.'+travel};
     if(preset==='push_in')return {blocked:false,text:'Zooms into the crop by tightening the window.'+travel};
     if(preset==='pull_out')return {blocked:false,text:'Zooms out by widening the window across the rest of the source.'+travel};
+    if(isScroll(preset))return {blocked:false,text:'Continuous loop: scrolls seamlessly behind plates.'+travel};
     return {blocked:false,text:''};
+  }
+  function applyMotionObj(motion){
+    const c=context();
+    if(c.scope==='clip')edit(c,s=>s.motion=motion);
+    else if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{motion}});
+    else writeProject(c,{op:'set-pair-motion',motion});
   }
   function changeMotion(){
     try{
@@ -217,10 +256,19 @@
         else if(clock==='span'){motion.clock='span';motion.span=spanFromFields();}
         else motion.clock='show';
       }
-      const c=context();
-      if(c.scope==='clip')edit(c,s=>s.motion=motion);
-      else if(locationList(S.project.show.bg||{}))writeProject(c,{op:'update-location',id:c.locationId,patch:{motion}});
-      else writeProject(c,{op:'set-pair-motion',motion});
+      if(isScroll(preset)){
+        const sp=Number($('bgRunSpeed')?.value);
+        motion.speed_px_s=Number.isFinite(sp)?Math.min(3000,Math.max(0,sp)):600;
+        motion.tile_mode=$('bgRunTileMode')?.value==='tile'?'tile':'mirror';
+        const bl=Number($('bgRunBlur')?.value);
+        if(Number.isFinite(bl))motion.motion_blur=Math.min(1,Math.max(0,bl));
+        if($('bgRunBobEnabled')?.checked){
+          const amp=Math.min(24,Math.max(0,Number($('bgRunBobAmp')?.value)||0));
+          const freq=Math.min(8,Math.max(0.5,Number($('bgRunBobFreq')?.value)||2.8));
+          if(amp>0)motion.stride_bob={amp_px:amp,freq_hz:freq};
+        }
+      }
+      applyMotionObj(motion);
     }catch(e){refresh();throw e;}
   }
   function changeSpan(){spanOpenOverride=true;$('backgroundMotionClock').value='span';changeMotion();}
@@ -241,9 +289,39 @@
       project.show.bg=next.bg;project.show.atoms=next.atoms;
     });
   });
-  $('backgroundMotion').onchange=safe(()=>{spanOpenOverride=null;changeMotion();});
+  $('backgroundMotion').onchange=safe(()=>{spanOpenOverride=null;if(isScroll($('backgroundMotion').value)&&$('backgroundMotionDetails'))$('backgroundMotionDetails').open=true;changeMotion();});
   $('backgroundMotionAmount').onchange=safe(changeMotion);
   $('backgroundMotionClock').onchange=safe(()=>{spanOpenOverride=$('backgroundMotionClock').value==='span'?true:false;changeMotion();});
+  if($('bgRunPresetRow')){
+    $('bgRunPresetRow').addEventListener('click',safe(e=>{
+      const btn=e.target.closest('[data-bg-run-preset]');
+      if(!btn)return;
+      const spec=runPresetsList().find(x=>x.id===btn.dataset.bgRunPreset);
+      if(!spec)return;
+      if($('backgroundMotionDetails'))$('backgroundMotionDetails').open=true;
+      applyMotionObj(JSON.parse(JSON.stringify(spec.motion)));
+      S.status('Applied running preset: '+spec.label);
+    }));
+  }
+  if($('bgRunSpeed')){
+    $('bgRunSpeed').oninput=()=>{if($('bgRunSpeedValue'))$('bgRunSpeedValue').textContent=Math.round(Number($('bgRunSpeed').value)||0)+' px/s';};
+    $('bgRunSpeed').onchange=safe(changeMotion);
+  }
+  if($('bgRunTileMode'))$('bgRunTileMode').onchange=safe(changeMotion);
+  if($('bgRunBobEnabled'))$('bgRunBobEnabled').onchange=safe(changeMotion);
+  if($('bgRunBobAmp'))$('bgRunBobAmp').onchange=safe(changeMotion);
+  if($('bgRunBobFreq'))$('bgRunBobFreq').onchange=safe(changeMotion);
+  if($('bgRunBlur')){
+    $('bgRunBlur').oninput=()=>{if($('bgRunBlurValue'))$('bgRunBlurValue').textContent=Math.round((Number($('bgRunBlur').value)||0)*100)+'%';};
+    $('bgRunBlur').onchange=safe(changeMotion);
+  }
+  window.addEventListener('hm:select-bg-target',e=>{
+    const d=e?.detail||{};
+    if(d.scope==='clip'||d.scope==='project')$('backgroundScope').value=d.scope;
+    if(d.key&&$('backgroundTarget'))$('backgroundTarget').value=d.key;
+    if(d.locationId&&$('backgroundLocation'))$('backgroundLocation').value=d.locationId;
+    refresh();
+  });
   $('backgroundSpanT0').onchange=safe(changeSpan);$('backgroundSpanT1').onchange=safe(changeSpan);
   function commitSpanRange(which){
     const rangeId=which==='t0'?'backgroundSpanT0Range':'backgroundSpanT1Range';

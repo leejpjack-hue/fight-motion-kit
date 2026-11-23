@@ -2,6 +2,7 @@
 (() => {
   const S = window.HMStudio, { $, on, safe } = S;
   let selectedId = null;
+  let pendingWindow = null;
   const round = v => Math.round(v * 10000) / 10000;
   const DEFAULT_FG_PARALLAX = window.HMComposeClient?.FG_DEFAULT_PARALLAX ?? 0.45;
   const FG_PARALLAX_PRESETS = window.HMComposeClient?.FG_PARALLAX_PRESETS || [0, DEFAULT_FG_PARALLAX, 1];
@@ -50,6 +51,10 @@
   function addProp(p, src, data, slot) {
     const fg = ensure(p);
     if (data) { p.assets || (p.assets = {}); p.assets[src] = data; }
+    const win = pendingWindow;
+    pendingWindow = null;
+    const t0 = win && Number.isFinite(+win.t_start) && +win.t_start >= 0 ? round(+win.t_start) : 0;
+    const t1Raw = win && Number.isFinite(+win.t_end) && +win.t_end > t0 ? round(+win.t_end) : Math.max(round(t0 + 0.1), round(S.duration || 5));
     const prop = {
       id: 'fg-' + crypto.randomUUID(),
       src,
@@ -57,8 +62,8 @@
       y: slot === 'overlay' ? 360 : 180,
       scale: 1,
       z: (fg.props.length + 1) * 10,
-      t_start: 0,
-      t_end: Math.max(0.1, round(S.duration || 5)),
+      t_start: t0,
+      t_end: Math.max(round(t0 + 0.1), t1Raw),
     };
     if (slot === 'overlay') prop.slot = 'overlay';
     fg.props.push(prop);
@@ -110,6 +115,7 @@
           row.setAttribute('aria-selected', active ? 'true' : 'false');
           const nameText = (i + 1) + ' · ' + (item.slot === 'overlay' ? 'overlay · ' : '') + item.id.slice(0, 14);
           const metaParts = [item.t_start + '–' + item.t_end + 's'];
+          if (item.pass_by?.enabled) metaParts.push('loop');
           if (item.effect?.type === 'break') metaParts.push('break@' + item.effect.t + 's');
           if (item.kf?.length) metaParts.push(item.kf.length + ' kf');
           row.children[0].textContent = nameText;
@@ -171,6 +177,8 @@
       $('fgBreakBox').hidden = false;
       $('fgOverlayLabel').hidden = true;
       $('fgBrokenLabel').textContent = 'No broken image — the prop splits on a crack at the break time.';
+      if ($('fgPassByEnabled')) $('fgPassByEnabled').checked = false;
+      if ($('fgPassByFields')) $('fgPassByFields').hidden = true;
       return;
     }
     setField('fgX', prop.x);
@@ -179,6 +187,22 @@
     setField('fgZ', prop.z);
     setField('fgT0', prop.t_start);
     setField('fgT1', prop.t_end);
+    const pb = prop.pass_by || {};
+    const pbOn = pb.enabled === true;
+    if ($('fgPassByEnabled')) $('fgPassByEnabled').checked = pbOn;
+    if ($('fgPassByFields')) $('fgPassByFields').hidden = !pbOn;
+    if ($('fgPassByDir')) $('fgPassByDir').value = ['left', 'right', 'up', 'down'].includes(pb.direction) ? pb.direction : 'left';
+    const mult = pb.parallax_mult != null ? +pb.parallax_mult : 1.8;
+    if ($('fgPassByMult')) setField('fgPassByMult', mult);
+    if ($('fgPassByMultValue')) $('fgPassByMultValue').textContent = mult.toFixed(2).replace(/\.00$/, '') + '×';
+    if ($('fgPassBySpeed')) setField('fgPassBySpeed', pb.speed_px_s != null ? String(pb.speed_px_s) : '');
+    const spacing = pb.spacing_px != null ? +pb.spacing_px : 1800;
+    if ($('fgPassBySpacing')) setField('fgPassBySpacing', spacing);
+    if ($('fgPassBySpacingValue')) $('fgPassBySpacingValue').textContent = Math.round(spacing) + ' px';
+    if ($('fgPassByPhase')) setField('fgPassByPhase', pb.phase_offset_px != null ? +pb.phase_offset_px : 0);
+    const pbBlur = pb.motion_blur != null ? +pb.motion_blur : 0.35;
+    if ($('fgPassByBlur')) setField('fgPassByBlur', pbBlur);
+    if ($('fgPassByBlurValue')) $('fgPassByBlurValue').textContent = Math.round(pbBlur * 100) + '%';
     const overlay = prop.slot === 'overlay';
     $('fgBreakBox').hidden = overlay;
     $('fgOverlayLabel').hidden = !overlay;
@@ -219,6 +243,48 @@
       if (!prop) throw Error('Select a foreground prop.');
       fn(prop, p);
     });
+  }
+  function writePassBy() {
+    writeProp(prop => {
+      if (!$('fgPassByEnabled')?.checked) {
+        delete prop.pass_by;
+        return;
+      }
+      const dir = $('fgPassByDir')?.value || 'left';
+      const mult = Number($('fgPassByMult')?.value);
+      const spRaw = $('fgPassBySpeed')?.value;
+      const spacing = Number($('fgPassBySpacing')?.value);
+      const phase = Number($('fgPassByPhase')?.value);
+      const blur = Number($('fgPassByBlur')?.value);
+      if (!Number.isFinite(mult) || mult < 0.25 || mult > 4) throw Error('Parallax multiplier must be between 0.25 and 4.');
+      if (spRaw !== '' && spRaw != null && (!Number.isFinite(+spRaw) || +spRaw < 50 || +spRaw > 4500)) throw Error('Pass-by speed must be between 50 and 4500 px/s.');
+      if (!Number.isFinite(spacing) || spacing < 240 || spacing > 6000) throw Error('Pass-by spacing must be between 240 and 6000 px.');
+      if (!Number.isFinite(phase)) throw Error('Phase offset must be a number.');
+      if (!Number.isFinite(blur) || blur < 0 || blur > 1) throw Error('Speed smear must be between 0 and 1.');
+      const next = {
+        enabled: true,
+        direction: ['left', 'right', 'up', 'down'].includes(dir) ? dir : 'left',
+        parallax_mult: round(mult),
+        spacing_px: round(spacing),
+        phase_offset_px: round(phase),
+        motion_blur: round(blur),
+      };
+      if (spRaw !== '' && spRaw != null) next.speed_px_s = round(+spRaw);
+      prop.pass_by = next;
+    });
+  }
+  function activeBgDirection() {
+    const show = S.project?.show;
+    if (!show) return 'left';
+    const atom = show.atoms?.[S.selectedIndex];
+    const t = S.time || 0;
+    const bg = show.bg || {};
+    const loc = Array.isArray(bg.locations) ? bg.locations.find(r => t >= r.t0 && t < r.t1) : null;
+    const preset = atom?.background?.motion?.preset || loc?.motion?.preset || bg.motion?.preset || '';
+    if (preset === 'scroll_right' || preset === 'pan_right') return 'right';
+    if (preset === 'scroll_up' || preset === 'pan_up') return 'up';
+    if (preset === 'scroll_down' || preset === 'pan_down') return 'down';
+    return 'left';
   }
   function writePlacement() {
     writeProp(prop => {
@@ -286,6 +352,40 @@
     });
   });
   ['fgX', 'fgY', 'fgScale', 'fgZ', 'fgT0', 'fgT1'].forEach(id => { $(id).onchange = safe(writePlacement); });
+  if ($('fgPassByEnabled')) $('fgPassByEnabled').onchange = safe(() => { if ($('fgPassByBox') && $('fgPassByEnabled').checked) $('fgPassByBox').open = true; writePassBy(); });
+  if ($('fgPassByDir')) $('fgPassByDir').onchange = safe(writePassBy);
+  if ($('fgPassByMult')) {
+    $('fgPassByMult').oninput = () => { if ($('fgPassByMultValue')) $('fgPassByMultValue').textContent = Number($('fgPassByMult').value).toFixed(2).replace(/\.00$/, '') + '×'; };
+    $('fgPassByMult').onchange = safe(writePassBy);
+  }
+  if ($('fgPassBySpeed')) $('fgPassBySpeed').onchange = safe(writePassBy);
+  if ($('fgPassBySpacing')) {
+    $('fgPassBySpacing').oninput = () => { if ($('fgPassBySpacingValue')) $('fgPassBySpacingValue').textContent = Math.round(Number($('fgPassBySpacing').value) || 0) + ' px'; };
+    $('fgPassBySpacing').onchange = safe(writePassBy);
+  }
+  if ($('fgPassByPhase')) $('fgPassByPhase').onchange = safe(writePassBy);
+  if ($('fgPassByBlur')) {
+    $('fgPassByBlur').oninput = () => { if ($('fgPassByBlurValue')) $('fgPassByBlurValue').textContent = Math.round((Number($('fgPassByBlur').value) || 0) * 100) + '%'; };
+    $('fgPassByBlur').onchange = safe(writePassBy);
+  }
+  if ($('fgPassByMatchBg')) {
+    on('fgPassByMatchBg', () => {
+      if ($('fgPassByEnabled')) $('fgPassByEnabled').checked = true;
+      if ($('fgPassByDir')) $('fgPassByDir').value = activeBgDirection();
+      if ($('fgPassByBox')) $('fgPassByBox').open = true;
+      writePassBy();
+    });
+  }
+  window.addEventListener('hm:select-fg-prop', e => {
+    const id = e?.detail?.id;
+    if (!id) return;
+    selectedId = id;
+    refresh();
+  });
+  window.addEventListener('hm:add-fg-prop-at-playhead', e => {
+    pendingWindow = e?.detail || { t_start: S.time || 0, t_end: Math.max((S.time || 0) + 0.1, S.duration || 5) };
+    $('fgInput').click();
+  });
   $('fgEffect').onchange = safe(writeEffect);
   $('fgEffectT').onchange = safe(writeEffect);
   on('fgBrokenAdd', () => $('fgBrokenInput').click());
