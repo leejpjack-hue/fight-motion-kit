@@ -32,6 +32,7 @@ function backgroundMotionFrame(crop, preset, amount, u) {
     push_in: 'Crop is already as tight as zoom-in allows. The crop holds still.',
   };
   if (p === 'follow_camera' || p === 'static') return { mode: 'hold', crop: home, reason: '' };
+  if (p === 'scroll_left' || p === 'scroll_right' || p === 'scroll_up' || p === 'scroll_down') return { mode: 'scroll', crop: home, reason: '' };
   const axis = { pan_left: 'left', pan_right: 'right', pan_up: 'up', pan_down: 'down' }[p];
   if (axis && !inset && slack[axis] < SLACK) return { mode: 'still', crop: home, reason: reasons[p] };
   if (p === 'push_in' && !inset && home.w <= MIN + 0.01 && home.h <= MIN + 0.01) return { mode: 'still', crop: home, reason: reasons.push_in };
@@ -84,9 +85,109 @@ function backgroundMotionProgress(motion, t, clock) {
 }
 function backgroundMotionSupport(crop) {
   const out = {};
-  for (const preset of ['follow_camera', 'static', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out']) {
+  for (const preset of ['follow_camera', 'static', 'pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out', 'scroll_left', 'scroll_right', 'scroll_up', 'scroll_down']) {
     const frame = backgroundMotionFrame(crop, preset, 1, 1);
     out[preset] = { ok: frame.mode !== 'still', reason: frame.reason || '' };
+  }
+  return out;
+}
+function backgroundScrollState(motion, t, clock, viewW, viewH) {
+  const m = motion && typeof motion === 'object' ? motion : {};
+  const c = clock && typeof clock === 'object' ? clock : {};
+  const round4 = v => Math.round((+v || 0) * 10000) / 10000;
+  const preset = m.preset || 'follow_camera';
+  const dirX = preset === 'scroll_left' ? -1 : preset === 'scroll_right' ? 1 : 0;
+  const dirY = preset === 'scroll_up' ? -1 : preset === 'scroll_down' ? 1 : 0;
+  if (!dirX && !dirY) {
+    return { active: false, preset, dirX: 0, dirY: 0, offsetX: 0, offsetY: 0, bobY: 0, tileMode: 'mirror', speedPxS: 0, blurAmount: 0, elapsedS: 0 };
+  }
+  const time = Number.isFinite(+t) ? +t : 0;
+  const atomT0 = Number.isFinite(+c.atomT0) ? +c.atomT0 : 0;
+  const span = m.span;
+  const s0 = Array.isArray(span) ? +span[0] : (span && typeof span === 'object' ? +span.t0 : +m.t0);
+  const s1 = Array.isArray(span) ? +span[1] : (span && typeof span === 'object' ? +span.t1 : +m.t1);
+  const mode = (m.clock === 'per_atom' || m.clock === 'legacy') ? 'per_atom'
+    : (m.clock === 'show' ? 'show' : (m.clock === 'span' || (Number.isFinite(s0) && Number.isFinite(s1) && s1 > s0) ? 'span' : 'show'));
+  let elapsedS = Math.max(0, time);
+  if (mode === 'per_atom') {
+    elapsedS = Math.max(0, time - atomT0);
+  } else if (mode === 'span' && Number.isFinite(s0) && Number.isFinite(s1) && s1 > s0) {
+    elapsedS = Math.max(0, Math.min(s1, time) - s0);
+  }
+  const amount = Number.isFinite(+m.amount) ? Math.min(1, Math.max(0, +m.amount)) : 0.4;
+  const speedPxS = (m.speed_px_s != null && Number.isFinite(+m.speed_px_s))
+    ? Math.min(3000, Math.max(0, +m.speed_px_s))
+    : (120 + amount * 980);
+  const tileMode = m.tile_mode === 'tile' ? 'tile' : 'mirror';
+  const dist = elapsedS * speedPxS;
+  let bobY = 0;
+  const bob = m.stride_bob;
+  if (bob && typeof bob === 'object' && +bob.amp_px > 0 && speedPxS > 0 && elapsedS > 0) {
+    const amp = Math.min(24, Math.max(0, +bob.amp_px));
+    const freq = Math.min(8, Math.max(0.5, Number.isFinite(+bob.freq_hz) ? +bob.freq_hz : 2.8));
+    bobY = round4((Math.abs(Math.sin(Math.PI * elapsedS * freq)) - 0.5) * 2 * amp);
+  }
+  const blurAmount = m.motion_blur != null && Number.isFinite(+m.motion_blur) ? Math.min(1, Math.max(0, +m.motion_blur)) : 0;
+  return {
+    active: true,
+    preset,
+    dirX,
+    dirY,
+    offsetX: round4(dirX * dist),
+    offsetY: round4(dirY * dist),
+    bobY,
+    tileMode,
+    speedPxS: round4(speedPxS),
+    blurAmount: round4(blurAmount),
+    elapsedS: round4(elapsedS),
+    viewW: +viewW || 1280,
+    viewH: +viewH || 720,
+  };
+}
+function fgPassByInstances(prop, t, stageW, stageH, bgSpeedHint) {
+  const pb = prop && prop.pass_by;
+  if (!pb || pb.enabled !== true) return [];
+  const time = Number.isFinite(+t) ? +t : 0;
+  const t0 = Number.isFinite(+prop.t_start) ? +prop.t_start : 0;
+  const t1 = prop.t_end != null && Number.isFinite(+prop.t_end) ? +prop.t_end : Infinity;
+  if (time < t0 || time >= t1) return [];
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const round4 = v => Math.round((+v || 0) * 10000) / 10000;
+  const dir = ['left', 'right', 'up', 'down'].includes(pb.direction) ? pb.direction : 'left';
+  const mult = Number.isFinite(+pb.parallax_mult) ? clamp(+pb.parallax_mult, 0.25, 4) : 1.8;
+  const bgHint = Number.isFinite(+bgSpeedHint) && +bgSpeedHint > 0 ? +bgSpeedHint : 0;
+  const speed = (pb.speed_px_s != null && pb.speed_px_s !== '' && Number.isFinite(+pb.speed_px_s) && +pb.speed_px_s > 0)
+    ? clamp(+pb.speed_px_s, 50, 4500)
+    : (bgHint > 0 ? bgHint * mult : 900 * mult);
+  const spacing = Number.isFinite(+pb.spacing_px) ? clamp(+pb.spacing_px, 240, 6000) : 1800;
+  const phase = Number.isFinite(+pb.phase_offset_px) ? +pb.phase_offset_px : 0;
+  const blur = Number.isFinite(+pb.motion_blur) ? clamp(+pb.motion_blur, 0, 1) : 0.35;
+  const w = +stageW || 1280, h = +stageH || 720;
+  const baseX = Number.isFinite(+prop.x) ? +prop.x : 640;
+  const baseY = Number.isFinite(+prop.y) ? +prop.y : 560;
+  const scale = Number.isFinite(+prop.scale) ? clamp(+prop.scale, 0.05, 8) : 1;
+  const isHoriz = dir === 'left' || dir === 'right';
+  const sign = (dir === 'left' || dir === 'up') ? -1 : 1;
+  const axisSpan = isHoriz ? w : h;
+  const cycleLen = Math.max(axisSpan + 480, spacing);
+  const startMin = -320, endMax = axisSpan + 320;
+  const elapsed = Math.max(0, time - t0);
+  const rawPos = (isHoriz ? baseX : baseY) + sign * (elapsed * speed + phase);
+  const wrapped = (((rawPos - startMin) % cycleLen) + cycleLen) % cycleLen + startMin;
+  const smearDist = blur * Math.min(42, speed * 0.025);
+  const blurDx = isHoriz ? round4(-sign * smearDist) : 0;
+  const blurDy = isHoriz ? 0 : round4(-sign * smearDist);
+  const out = [];
+  for (let pos = wrapped; pos <= endMax; pos += cycleLen) {
+    out.push({
+      x: round4(isHoriz ? pos : baseX),
+      y: round4(isHoriz ? baseY : pos),
+      scale: round4(scale),
+      alpha: 1,
+      blurDx,
+      blurDy,
+      speedPxS: round4(speed),
+    });
   }
   return out;
 }
@@ -1120,6 +1221,7 @@ function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
   const images = new Map(), keyedImages = new Map();
   let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null, lastHitstop = null;
+  let activeMuteBg = false, activeMuteFg = false, lastBgScrollSpeed = 0;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
     if (assets[path]) return assets[path];
@@ -1172,13 +1274,65 @@ function createMotionRenderer(canvas, assets = {}) {
   function paintBackground(path, crop, x, y, s) {
     ctx.save(); ctx.translate(640 + x, 360 + y); ctx.scale(s, s); ctx.translate(-640, -360); backgroundImage(path, crop); ctx.restore();
   }
+  function drawScrollingBackground(path, crop, scroll, pxOff, zoom) {
+    const im = images.get(path);
+    if (!im) return;
+    const c = crop && [crop.x, crop.y, crop.w, crop.h].every(Number.isFinite) ? crop : { x: 0, y: 0, w: 1, h: 1 };
+    const sx = Math.max(0, c.x) * im.width, sy = Math.max(0, c.y) * im.height;
+    const sw = Math.max(1, Math.min(im.width - sx, c.w * im.width)), sh = Math.max(1, Math.min(im.height - sy, c.h * im.height));
+    const coverScale = Math.max(1280 / sw, 720 / sh);
+    const tileW = Math.max(1, sw * coverScale), tileH = Math.max(1, sh * coverScale);
+    const stageScale = Math.max(zoom, pxOff.minScale * zoom);
+    const baseAnchorX = (1280 - tileW) / 2 + scroll.offsetX;
+    const baseAnchorY = (720 - tileH) / 2 + scroll.offsetY;
+    const paintTiles = (dxExtra, dyExtra, alpha) => {
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.translate(640 + pxOff.dx + dxExtra, 360 + pxOff.dy + scroll.bobY + dyExtra);
+      ctx.scale(stageScale, stageScale);
+      ctx.translate(-640, -360);
+      const minIx = scroll.dirX !== 0 ? Math.floor((-240 - baseAnchorX) / tileW) : 0;
+      const maxIx = scroll.dirX !== 0 ? Math.floor((1520 - baseAnchorX) / tileW) : 0;
+      const minIy = scroll.dirY !== 0 ? Math.floor((-240 - baseAnchorY) / tileH) : 0;
+      const maxIy = scroll.dirY !== 0 ? Math.floor((960 - baseAnchorY) / tileH) : 0;
+      for (let iy = minIy; iy <= maxIy; iy++) {
+        const py = baseAnchorY + iy * tileH;
+        const flipY = scroll.tileMode === 'mirror' && scroll.dirY !== 0 && (Math.abs(iy) % 2 === 1);
+        for (let ix = minIx; ix <= maxIx; ix++) {
+          const px = baseAnchorX + ix * tileW;
+          const flipX = scroll.tileMode === 'mirror' && scroll.dirX !== 0 && (Math.abs(ix) % 2 === 1);
+          if (flipX || flipY) {
+            ctx.save();
+            ctx.translate(px + (flipX ? tileW : 0), py + (flipY ? tileH : 0));
+            ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+            ctx.drawImage(im, sx, sy, sw, sh, -0.5, -0.5, tileW + 1, tileH + 1);
+            ctx.restore();
+          } else {
+            ctx.drawImage(im, sx, sy, sw, sh, px - 0.5, py - 0.5, tileW + 1, tileH + 1);
+          }
+        }
+      }
+      ctx.restore();
+    };
+    paintTiles(0, 0, 1);
+    if (scroll.blurAmount > 0.02 && scroll.speedPxS > 200) {
+      const smear = Math.min(28, scroll.speedPxS * 0.022);
+      paintTiles(-scroll.dirX * smear, -scroll.dirY * smear, 0.14 * scroll.blurAmount);
+      paintTiles(-scroll.dirX * smear * 2, -scroll.dirY * smear * 2, 0.07 * scroll.blurAmount);
+    }
+  }
   function drawBackground(l, t, parallaxCam) {
     const b=backgroundAt(l,timeline.bg,t);if(!b.src)return;
     const a=timeline.atoms.find(a=>a.id===l.atom),m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
     const ratio=timeline.bg?.parallax_ratio??m.parallax_ratio??0;
     const pxOff=computeBgParallaxOffset(parallaxCam,ratio);
-    const u=backgroundMotionProgress(m,t,a?{duration:timeline.duration_s,atomT0:a.t0,atomT1:a.t1}:{duration:timeline.duration_s,atomT0:t,atomT1:t});
+    const clock=a?{duration:timeline.duration_s,atomT0:a.t0,atomT1:a.t1}:{duration:timeline.duration_s,atomT0:t,atomT1:t};
+    const scroll=backgroundScrollState(m,t,clock,1280,720);
+    lastBgScrollSpeed=scroll.active?scroll.speedPxS:0;
+    if(activeMuteBg)return;
+    const u=backgroundMotionProgress(m,t,clock);
     const frame=backgroundMotionFrame(b.crop,preset,amount,u);
+    if(scroll.active){drawScrollingBackground(b.src,frame.crop,scroll,pxOff,zoom);return;}
     if(frame.mode==='inset'){
       const extra=amount*.25;let s=1,x=0,y=0;
       if(preset==='push_in')s=1+extra*u;
@@ -1199,6 +1353,7 @@ function createMotionRenderer(canvas, assets = {}) {
     ctx.fillRect(-seam / 2, -h / 2, seam, h);
   }
   function drawForeground(t) {
+    if (activeMuteFg) return;
     const fg = timeline.fg;
     if (!fg || !fg.props || !fg.props.length) return;
     const cam = fgCameraFrame(fg.cam, t, { duration: timeline.duration_s, atomT0: 0, atomT1: timeline.duration_s });
@@ -1209,10 +1364,33 @@ function createMotionRenderer(canvas, assets = {}) {
     ctx.scale(cam.s, cam.s);
     ctx.translate(-640, -360);
     for (const p of list) {
-      const pose = fgPropPose(p, t);
       const br = fgBreakState(p, t);
       const im = images.get(br.src);
       if (!im) continue;
+      if (p.pass_by && p.pass_by.enabled) {
+        const instances = fgPassByInstances(p, t, 1280, 720, lastBgScrollSpeed);
+        for (const inst of instances) {
+          if (Math.abs(inst.blurDx) > 0.5 || Math.abs(inst.blurDy) > 0.5) {
+            for (const [step, ga] of [[1, 0.22], [2, 0.1]]) {
+              ctx.save();
+              ctx.globalAlpha *= ga;
+              ctx.translate(inst.x + inst.blurDx * step, inst.y + inst.blurDy * step);
+              ctx.scale(inst.scale || 1, inst.scale || 1);
+              if (br.procedural) drawFgBreak(im, br.age);
+              else ctx.drawImage(im, -im.width / 2, -im.height / 2);
+              ctx.restore();
+            }
+          }
+          ctx.save();
+          ctx.translate(inst.x, inst.y);
+          ctx.scale(inst.scale || 1, inst.scale || 1);
+          if (br.procedural) drawFgBreak(im, br.age);
+          else ctx.drawImage(im, -im.width / 2, -im.height / 2);
+          ctx.restore();
+        }
+        continue;
+      }
+      const pose = fgPropPose(p, t);
       ctx.save();
       ctx.translate(pose.x, pose.y);
       ctx.scale(pose.scale || 1, pose.scale || 1);
@@ -1334,6 +1512,9 @@ function createMotionRenderer(canvas, assets = {}) {
       try { onRenderHook(time, opts); } catch (_) {}
     }
     ctx.save(); ctx.setTransform(canvas.width / 1280, 0, 0, canvas.height / 720, 0, 0);
+    activeMuteBg = !!opts.muteBg;
+    activeMuteFg = !!opts.muteFg;
+    lastBgScrollSpeed = 0;
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
     if (!timeline || !timeline.plates.length) { lastCut = null; lastStripSample = null; lastHitstop = null; ctx.restore(); return; }
     const clockT = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
@@ -1795,6 +1976,8 @@ const hmRoot = typeof globalThis !== 'undefined' ? globalThis : window;
 hmRoot.backgroundMotionFrame = backgroundMotionFrame;
 hmRoot.backgroundMotionProgress = backgroundMotionProgress;
 hmRoot.backgroundMotionSupport = backgroundMotionSupport;
+hmRoot.backgroundScrollState = backgroundScrollState;
+hmRoot.fgPassByInstances = fgPassByInstances;
 hmRoot.FG_CAM_PRESETS = FG_CAM_PRESETS;
 hmRoot.FG_DEFAULT_PARALLAX = FG_DEFAULT_PARALLAX;
 hmRoot.FG_PARALLAX_PRESETS = FG_PARALLAX_PRESETS;
@@ -1835,6 +2018,8 @@ if (hmRoot.HMComposeClient) {
   hmRoot.HMComposeClient.backgroundMotionFrame = backgroundMotionFrame;
   hmRoot.HMComposeClient.backgroundMotionProgress = backgroundMotionProgress;
   hmRoot.HMComposeClient.backgroundMotionSupport = backgroundMotionSupport;
+  hmRoot.HMComposeClient.backgroundScrollState = backgroundScrollState;
+  hmRoot.HMComposeClient.fgPassByInstances = fgPassByInstances;
   hmRoot.HMComposeClient.fgCameraFrame = fgCameraFrame;
   hmRoot.HMComposeClient.fgPropPose = fgPropPose;
   hmRoot.HMComposeClient.fgBreakState = fgBreakState;
