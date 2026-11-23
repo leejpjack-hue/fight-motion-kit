@@ -1455,6 +1455,128 @@
     return { preset, dur_s, hold_s, dir };
   }
 
+  // HM-DENS-01: Per-clip 1-2f stepped 24fps micro-action inserts + 1-click film motion density.
+  const MICRO_FRAME_ACTIONS = Object.freeze([
+    'anticipation', 'smear_lunge', 'squash_hit', 'recoil_snap', 'weight_shift', 'cloth_tremor', 'swap_plate',
+  ]);
+  const FILM_DENSITY_PROFILES = Object.freeze(['subtle_1f', 'anime_2f', 'sakuga_dense', 'clear']);
+
+  function normalizeMicroFrames(rawList, label, errors) {
+    if (rawList == null) return null;
+    if (!Array.isArray(rawList)) {
+      if (errors) errors.push(label + ': micro_frames must be a list');
+      return null;
+    }
+    if (rawList.length > 4) {
+      if (errors) errors.push(label + ': at most 4 micro_frames per clip');
+      return null;
+    }
+    const out = [];
+    for (let i = 0; i < rawList.length; i++) {
+      const raw = rawList[i];
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        if (errors) errors.push(label + ': invalid micro_frame #' + (i + 1));
+        continue;
+      }
+      const action = raw.action;
+      if (MICRO_FRAME_ACTIONS.indexOf(action) < 0) {
+        if (errors) errors.push(label + ': unknown micro_frame action ' + action);
+        continue;
+      }
+      const frames = raw.frames == null ? 2 : +raw.frames;
+      if (!Number.isInteger(frames) || frames < 1 || frames > 3) {
+        if (errors) errors.push(label + ': micro_frame frames must be 1, 2, or 3');
+        continue;
+      }
+      const rawAt = raw.at == null ? 'start' : raw.at;
+      const validNamed = rawAt === 'start' || rawAt === 'mid' || rawAt === 'end';
+      const validNum = typeof rawAt === 'number' && Number.isFinite(rawAt) && rawAt >= 0 && rawAt <= 1;
+      if (!validNamed && !validNum) {
+        if (errors) errors.push(label + ': invalid micro_frame placement');
+        continue;
+      }
+      if (raw.dir !== undefined && +raw.dir !== -1 && +raw.dir !== 1) {
+        if (errors) errors.push(label + ': micro_frame dir must be -1 or 1');
+        continue;
+      }
+      const dir = +raw.dir < 0 ? -1 : 1;
+      const strength = raw.strength == null ? 1 : +raw.strength;
+      if (!Number.isFinite(strength) || strength < 0.25 || strength > 2) {
+        if (errors) errors.push(label + ': micro_frame strength must be between 0.25 and 2');
+        continue;
+      }
+      let src = null;
+      if (raw.src !== undefined && raw.src !== null && raw.src !== '') {
+        if (typeof raw.src !== 'string') {
+          if (errors) errors.push(label + ': micro_frame src must be a string path');
+          continue;
+        }
+        src = raw.src;
+      }
+      if (action === 'swap_plate' && !src) {
+        if (errors) errors.push(label + ': swap_plate micro_frame needs src');
+        continue;
+      }
+      out.push({
+        id: typeof raw.id === 'string' && raw.id ? raw.id : ('mf-' + (i + 1)),
+        at: validNum ? round4(rawAt) : rawAt,
+        frames,
+        action,
+        dir,
+        strength: round4(strength),
+        ...(src ? { src } : {}),
+      });
+    }
+    return out.length ? out : null;
+  }
+
+  function applyFilmMotionDensity(show, profileId) {
+    if (!show || !Array.isArray(show.atoms)) throw new Error('Film motion density needs a show.');
+    if (FILM_DENSITY_PROFILES.indexOf(profileId) < 0) throw new Error('Unknown motion density profile: ' + profileId);
+    const next = deepClone(show);
+    const IMPACT_HOOKS = new Set(['hit_orange', 'hit_pink', 'impact_white', 'hitstop_2f', 'shake']);
+    for (let i = 0; i < next.atoms.length; i++) {
+      const atom = next.atoms[i];
+      if (!atom || typeof atom !== 'object') continue;
+      if (profileId === 'clear') {
+        delete atom.micro_frames;
+        continue;
+      }
+      const dir = i % 2 === 0 ? 1 : -1;
+      const dur = +atom.duration_s || 0.5;
+      const impact = isFightImpact(atom) || (Array.isArray(atom.fx_hooks) && atom.fx_hooks.some(h => IMPACT_HOOKS.has(typeof h === 'string' ? h : h?.type)));
+      if (profileId === 'subtle_1f') {
+        atom.micro_frames = [
+          { id: 'mf-1', at: 'start', frames: 1, action: dur >= 0.9 ? 'weight_shift' : 'anticipation', dir, strength: 0.75 },
+        ];
+      } else if (profileId === 'anime_2f') {
+        if (dur >= 1.2 && !impact) {
+          atom.micro_frames = [
+            { id: 'mf-1', at: 'mid', frames: 2, action: 'cloth_tremor', dir, strength: 0.9 },
+          ];
+        } else {
+          atom.micro_frames = [
+            { id: 'mf-1', at: 'start', frames: 2, action: 'anticipation', dir, strength: 1.0 },
+            { id: 'mf-2', at: 'end', frames: 1, action: 'recoil_snap', dir, strength: 0.85 },
+          ];
+        }
+      } else if (profileId === 'sakuga_dense') {
+        if (impact) {
+          atom.micro_frames = [
+            { id: 'mf-1', at: 'start', frames: 2, action: 'smear_lunge', dir, strength: 1.25 },
+            { id: 'mf-2', at: 'mid', frames: 2, action: 'squash_hit', dir, strength: 1.3 },
+          ];
+        } else {
+          atom.micro_frames = [
+            { id: 'mf-1', at: 'start', frames: 2, action: 'anticipation', dir, strength: 1.05 },
+            { id: 'mf-2', at: 'end', frames: 2, action: 'recoil_snap', dir, strength: 1.0 },
+          ];
+        }
+      }
+    }
+    return next;
+  }
+
   async function composeShow(show, opts) {
     opts = opts || {};
     const allowSoftLint = opts.allowSoftLint === true;
@@ -1564,6 +1686,7 @@
       const plateDuration = d / npl;
       const t0 = t;
       const t1 = t + d;
+      const normMicro = normalizeMicroFrames(a.micro_frames, a.id, errors);
       const cam = a.camera || {};
       const segs = Array.isArray(cam.segments) && cam.segments.length
         ? cam.segments.map((s) => Object.assign({}, s))
@@ -1734,6 +1857,7 @@
         }
         applyLayoutTransforms(entry, show, a, warns);
         if (a.background) entry.background = deepClone(a.background);
+        if (normMicro) entry.micro_frames = deepClone(normMicro);
         layout[pid] = entry;
         plates.push({
           id: pid,
@@ -1882,6 +2006,7 @@
         ...(stripSummary ? { strip: stripSummary } : {}),
         ...(holdMeta ? { timing_hold: holdMeta } : {}),
         ...(cutMeta ? { cut: cutMeta } : {}),
+        ...(normMicro ? { micro_frames: deepClone(normMicro) } : {}),
         ...(a.mood && typeof a.mood === 'object' ? { mood: deepClone(a.mood) } : typeof a.mood === 'string' && a.mood ? { mood: { id: a.mood } } : {}),
       });
       t = t1;
@@ -2639,7 +2764,7 @@
             }
             const src = joinRel(dir, part.src);
             if (!assetResolved(project, src) && !assetResolved(project, part.src)) {
-              pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · ' + pid });
+              pushChecklist(blocks, { kind: 'asset', level: 'block', atom_id: atom.id || null, text: 'Unresolved asset · ' + where + ' · plate ' + pid });
             }
           });
         } else {
@@ -4357,5 +4482,9 @@
     FG_PARALLAX_PRESETS,
     fgBrokenCutoutSrc,
     normalizeFgCam,
+    MICRO_FRAME_ACTIONS,
+    FILM_DENSITY_PROFILES,
+    normalizeMicroFrames,
+    applyFilmMotionDensity,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
