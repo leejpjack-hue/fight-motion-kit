@@ -50,6 +50,16 @@ node /path/to/skill/scripts/export-project.cjs --repo /path/to/fight-motion-kit 
 
 `BROWSER_CHANNEL=chrome` selects installed Chrome; otherwise Playwright's installed Chromium is used. `FFMPEG` can select a binary. Discover bundled dependency paths when applicable; do not hardcode another user's runtime paths. The helper starts a temporary loopback-only static server and shuts it down. If deterministic encoding is unavailable, export playable HTML and report the missing prerequisite; do not relabel a file as a different video format.
 
+To emit an offline Playable **and re-openable** Motion HTML directly from `build-project.cjs` without running a browser, pass `--emit-html`:
+
+```sh
+node /path/to/skill/scripts/build-project.cjs --repo /path/to/fight-motion-kit \
+  --show path/to/show.json --out path/to/project.motion.json \
+  --emit-html path/to/playable.html
+```
+
+The emitted HTML carries `<meta http-equiv="Content-Security-Policy" ...>`, `<script id="hm-project-data" type="application/json">` (omitting duplicate base64 assets), and `const DATA=...` so it both plays offline and re-opens cleanly in `/ui/` via `HMHtmlImport.parseMotionHtml()`.
+
 ## Frame-QA loop
 
 After a structural edit (atoms, plates, camera, FX hooks, durations, or layouts), the order is lint → peek → claim. Finish that order before you say the edit is done. The command is `skills/html-motion-composer/scripts/frame-qa.cjs`. It loads the checkout's `HMComposeClient` (the same engine `build-project.cjs` uses). It does not start a second renderer, a compose API, or a video encoder. Pixel export stays on `export-project.cjs` or the editor.

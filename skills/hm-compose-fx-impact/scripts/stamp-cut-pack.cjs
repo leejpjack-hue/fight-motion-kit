@@ -27,8 +27,12 @@ function usage() {
     '  [--atoms <ids|indices>] e.g. --atoms beat-02,beat-04 or --atoms 1,3',
     '  [--all] stamp every atom i >= 1 (the first atom has no incoming cut)',
     '  [--pack cycle] (default) cycle freeze_hold -> white_flash -> whip_cut',
-    '  [--preset <id>] stamp one gold preset on all selected i >= 1 atoms:',
-    '    freeze_hold, white_flash, whip_cut'
+    '  [--preset <id>] stamp one cut preset on all selected i >= 1 atoms:',
+    '    gold: freeze_hold, white_flash, whip_cut',
+    '    extended: slash_wipe, impact_invert_cut, zoom_smash, iris_focus',
+    '  [--dur-s <0.02..0.5>] override cut duration seconds',
+    '  [--hold-s <0..0.5>] override hold_s on freeze_hold',
+    '  [--dir <-1|1>] override transition direction'
   ].join('\n');
 }
 
@@ -79,7 +83,9 @@ function loadCatalog(root) {
   const doc = readJson(file, 'cut catalog');
   const presets = Array.isArray(doc && doc.presets) ? doc.presets.filter(p => p && p.id) : [];
   if (!presets.length) fail(5, 'cut catalog has no presets: ' + file);
-  return { file, doc, presets };
+  const extendedPresets = Array.isArray(doc && doc.extended_presets) ? doc.extended_presets.filter(p => p && p.id) : [];
+  const allPresets = presets.concat(extendedPresets);
+  return { file, doc, presets, extendedPresets, allPresets };
 }
 
 // Mode: { cycle: true } or { cycle: false, preset }.
@@ -89,9 +95,10 @@ function resolveMode(catalog, args) {
   if (pack !== undefined && pack !== CYCLE) fail(3, 'unknown pack "' + pack + '". Only --pack cycle is shipped.');
   const value = args['preset'];
   if (value === undefined) return { cycle: true };
-  const preset = catalog.presets.find(p => p.id === value);
+  const list = catalog.allPresets || catalog.presets;
+  const preset = list.find(p => p.id === value);
   if (!preset) {
-    fail(3, 'unknown cut preset "' + value + '". Known ids:\n  ' + catalog.presets.map(p => p.id).join('\n  '));
+    fail(3, 'unknown cut preset "' + value + '". Known ids:\n  ' + list.map(p => p.id).join('\n  '));
   }
   return { cycle: false, preset };
 }
@@ -102,11 +109,24 @@ function cycleOrder(catalog) {
 
 // The cut field the per-clip Cut-in form writes: catalog defaults, hold_s only
 // meaningful on freeze_hold (0 elsewhere), dir ±1.
-function cutFromPreset(preset) {
+function cutFromPreset(preset, overrides) {
   const d = preset.defaults || {};
-  const dur = Number.isFinite(+d.dur_s) ? +d.dur_s : 0.08;
-  const hold = preset.id === 'freeze_hold' ? (Number.isFinite(+d.hold_s) ? +d.hold_s : dur) : 0;
-  const dir = d.dir < 0 ? -1 : 1;
+  const o = overrides || {};
+  const rawDur = o.dur_s != null ? Number(o.dur_s) : (Number.isFinite(+d.dur_s) ? +d.dur_s : 0.08);
+  if (!Number.isFinite(rawDur) || rawDur < 0.02 || rawDur > 0.5) fail(3, '--dur-s must be between 0.02 and 0.5');
+  const dur = Math.round(rawDur * 10000) / 10000;
+  let hold = 0;
+  if (preset.id === 'freeze_hold') {
+    const rawHold = o.hold_s != null ? Number(o.hold_s) : (Number.isFinite(+d.hold_s) ? +d.hold_s : dur);
+    if (!Number.isFinite(rawHold) || rawHold < 0 || rawHold > 0.5) fail(3, '--hold-s must be between 0 and 0.5');
+    hold = Math.round(rawHold * 10000) / 10000;
+  }
+  let dir = d.dir < 0 ? -1 : 1;
+  if (o.dir != null) {
+    const nDir = Number(o.dir);
+    if (nDir !== -1 && nDir !== 1) fail(3, '--dir must be -1 or 1');
+    dir = nDir;
+  }
   return { preset: preset.id, dur_s: dur, hold_s: hold, dir: dir };
 }
 
@@ -156,15 +176,20 @@ function main() {
     fail(4, 'zero targets: the first atom has no incoming cut, so cuts land on atoms i >= 1 only.');
   }
 
+  const overrides = {};
+  if (args['dur-s'] != null) overrides.dur_s = args['dur-s'];
+  if (args['hold-s'] != null) overrides.hold_s = args['hold-s'];
+  if (args.dir != null) overrides.dir = args.dir;
+
   const byId = {};
-  catalog.presets.forEach(p => { byId[p.id] = p; });
+  (catalog.allPresets || catalog.presets).forEach(p => { byId[p.id] = p; });
   const lines = [];
   targets.skipped.forEach(i => {
     lines.push('  ' + describeAtom(show, i) + ': skipped — first atom has no incoming boundary');
   });
   targets.picked.forEach((i, k) => {
     const preset = byId[order[k % order.length]];
-    show.atoms[i].cut = cutFromPreset(preset);
+    show.atoms[i].cut = cutFromPreset(preset, overrides);
     lines.push('  ' + describeAtom(show, i) + ': ' + show.atoms[i].cut.preset +
       ' (dur ' + show.atoms[i].cut.dur_s + 's, hold ' + show.atoms[i].cut.hold_s + 's, dir ' + show.atoms[i].cut.dir + ')');
   });

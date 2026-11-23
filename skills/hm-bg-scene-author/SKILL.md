@@ -67,6 +67,25 @@ Open the `.motion.json` in the composer. **Background** (`#backgroundMotionDetai
 
 Span t0-t1 stays on that panel. This skill does not write a span. Set one there after open.
 
+## Running Scroll & Speed Presets (`--run-preset` / `scroll_*`)
+
+To stamp an opt-in continuous running background without touching character
+cameras, use `--run-preset <id>` (defined in `public/presets/bg_motion_packs.json#run_presets`:
+`city_jog`, `full_sprint`, `rooftop_dash`, `vertical_drop`) or `--preset scroll_left|scroll_right|scroll_up|scroll_down`:
+
+- `--speed-px-s <0..3000>`: continuous scroll speed in stage px/s
+- `--tile-mode <mirror|tile>`: horizontal/vertical edge wrap mode
+- `--stride-bob <amp_px,freq_hz>`: subtle camera-plane vertical stride bob (`amp_px` `0..24`, `freq_hz` `0.5..8`)
+- `--motion-blur <0..1>`: directional motion blur strength
+- Supports pair `bg` (`base`/`swap`) or multi-location `bg.locations[]` windows, plus optional `bg.parallax_ratio` (`0..1`).
+
+```bash
+node skills/hm-bg-scene-author/scripts/author.cjs \
+  --project path/to/project.motion.json \
+  --out path/to/project.run.motion.json \
+  --run-preset full_sprint --speed-px-s 1100 --tile-mode tile --stride-bob 8,3.2 --motion-blur 0.5
+```
+
 ## Anti-jobs
 
 - Do not add background keys, a second pan channel, or a new renderer.

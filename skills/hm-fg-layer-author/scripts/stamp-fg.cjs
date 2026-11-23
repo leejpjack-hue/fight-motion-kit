@@ -116,7 +116,7 @@ function parsePropSpec(spec) {
     if (eq < 1) throw coded(1, '--prop needs key=value pairs: ' + spec);
     const key = part.slice(0, eq).trim();
     const value = part.slice(eq + 1).trim();
-    if (['x', 'y', 'scale', 'z', 't_start', 't_end', 'break'].includes(key)) raw[key] = Number(value);
+    if (['x', 'y', 'scale', 'z', 't_start', 't_end', 'break', 'speed_px_s', 'parallax_mult', 'spacing_px', 'phase_offset_px', 'motion_blur'].includes(key)) raw[key] = Number(value);
     else raw[key] = value;
   }
   return raw;
@@ -206,6 +206,67 @@ function normalizeEffect(raw, slot, label) {
   return out;
 }
 
+function normalizePassBy(raw, id) {
+  const flatKeys = ['speed_px_s', 'parallax_mult', 'spacing_px', 'phase_offset_px', 'motion_blur'];
+  const hasFlat = flatKeys.some(k => raw[k] != null && raw[k] !== '');
+  if (raw.pass_by == null && !hasFlat) return null;
+  let pb = {};
+  if (raw.pass_by != null) {
+    if (typeof raw.pass_by === 'boolean') {
+      if (!raw.pass_by) return null;
+      pb.enabled = true;
+    } else if (typeof raw.pass_by === 'string') {
+      const s = raw.pass_by.trim();
+      if (!s || s === 'false' || s === 'off' || s === 'none') return null;
+      pb.enabled = true;
+      if (s !== 'true') pb.direction = s;
+    } else if (typeof raw.pass_by === 'object' && !Array.isArray(raw.pass_by)) {
+      rejectHold(raw.pass_by, id + ' pass_by');
+      pb = { ...raw.pass_by };
+      if (pb.enabled !== undefined && typeof pb.enabled !== 'boolean') {
+        throw coded(3, id + ': pass_by enabled must be boolean');
+      }
+      if (pb.enabled === false) return null;
+      pb.enabled = true;
+    } else {
+      throw coded(3, id + ': invalid pass_by');
+    }
+  } else {
+    pb.enabled = true;
+  }
+  const dir = pb.direction != null ? pb.direction : (raw.pass_by_dir != null ? raw.pass_by_dir : 'left');
+  if (!['left', 'right', 'up', 'down'].includes(dir)) throw coded(3, id + ': invalid pass_by direction');
+  const speedRaw = pb.speed_px_s !== undefined && pb.speed_px_s !== null && pb.speed_px_s !== '' ? pb.speed_px_s : raw.speed_px_s;
+  let hasSpeed = false;
+  let speed = 0;
+  if (speedRaw !== undefined && speedRaw !== null && speedRaw !== '') {
+    speed = Number(speedRaw);
+    if (!Number.isFinite(speed) || speed < 50 || speed > 4500) throw coded(3, id + ': invalid pass_by speed_px_s');
+    hasSpeed = true;
+  }
+  const multRaw = pb.parallax_mult != null ? pb.parallax_mult : raw.parallax_mult;
+  const mult = multRaw == null ? 1.8 : Number(multRaw);
+  if (!Number.isFinite(mult) || mult < 0.25 || mult > 4) throw coded(3, id + ': invalid pass_by parallax_mult');
+  const spacingRaw = pb.spacing_px != null ? pb.spacing_px : raw.spacing_px;
+  const spacing = spacingRaw == null ? 1800 : Number(spacingRaw);
+  if (!Number.isFinite(spacing) || spacing < 240 || spacing > 6000) throw coded(3, id + ': invalid pass_by spacing_px');
+  const phaseRaw = pb.phase_offset_px != null ? pb.phase_offset_px : raw.phase_offset_px;
+  const phase = phaseRaw == null ? 0 : Number(phaseRaw);
+  if (!Number.isFinite(phase)) throw coded(3, id + ': invalid pass_by phase_offset_px');
+  const blurRaw = pb.motion_blur != null ? pb.motion_blur : raw.motion_blur;
+  const blur = blurRaw == null ? 0.35 : Number(blurRaw);
+  if (!Number.isFinite(blur) || blur < 0 || blur > 1) throw coded(3, id + ': invalid pass_by motion_blur');
+  return {
+    enabled: true,
+    direction: dir,
+    ...(hasSpeed ? { speed_px_s: round4(speed) } : {}),
+    parallax_mult: round4(mult),
+    spacing_px: round4(spacing),
+    phase_offset_px: round4(phase),
+    motion_blur: round4(blur),
+  };
+}
+
 function normalizeProp(raw, index, dur) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw coded(3, 'prop ' + (index + 1) + ': invalid');
   rejectHold(raw, 'prop ' + (index + 1));
@@ -255,6 +316,8 @@ function normalizeProp(raw, index, dur) {
   const effectRaw = raw.effect != null ? raw.effect : (raw.break != null ? { type: 'break', t: raw.break, broken_src: raw.broken || raw.broken_src } : null);
   const effect = normalizeEffect(effectRaw, slot, id);
   if (effect) prop.effect = effect;
+  const passBy = normalizePassBy(raw, id);
+  if (passBy) prop.pass_by = passBy;
   return prop;
 }
 

@@ -89,6 +89,23 @@ The entry written is the panel shape, for example:
 clamped to that length, which is what compose already does. Omitted `x` / `y`
 use the panel's Add-prop start (`980,180` for a prop, `640,360` for overlay).
 
+## Running Pass-By Loops (`pass_by`)
+
+Props can also carry an opt-in high-speed foreground pass-by loop (`pass_by`) so
+streetlights, guardrails, speed streaks, or pillars stream continuously past the
+camera independently of character plates:
+
+- `--prop` inline fields: `pass_by=left|right|up|down`, `parallax_mult=<0.25..4>`
+  (default `1.8`), `spacing_px=<240..6000>` (default `1800`), `speed_px_s=<50..4500>`,
+  `phase_offset_px=<n>`, `motion_blur=<0..1>` (default `0.35`).
+- `--brief` JSON: nested `pass_by: { enabled: true, direction, speed_px_s, parallax_mult, spacing_px, phase_offset_px, motion_blur }` on any entry in `props[]`.
+
+```bash
+node skills/hm-fg-layer-author/scripts/stamp-fg.cjs \
+  --show path/to/show.json --out path/to/show.fg.json \
+  --prop id=lamp,src=assets/fg/lamp.png,pass_by=left,parallax_mult=2.2,spacing_px=1400,speed_px_s=950,motion_blur=0.4
+```
+
 ## FE handoff — where Jack breaks it
 
 After stamping, open the composer at `/ui/` (loopback static server, e.g.
