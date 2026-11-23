@@ -519,6 +519,14 @@
     }
    },
    "additionalProperties": false
+  },
+  "micro_frames": {
+   "type": "array",
+   "maxItems": 4,
+   "description": "HM-DENS-01: Per-clip 1-2 frame stepped 24fps micro-action inserts for movement density (no duration drift).",
+   "items": {
+    "$ref": "#/$defs/micro_frame"
+   }
   }
  },
  "allOf": [
@@ -552,6 +560,27 @@
   }
  ],
  "$defs": {
+  "micro_frame": {
+   "type": "object",
+   "required": ["action"],
+   "properties": {
+    "id": { "type": "string" },
+    "at": {
+     "oneOf": [
+      { "enum": ["start", "mid", "end"] },
+      { "type": "number", "minimum": 0, "maximum": 1 }
+     ]
+    },
+    "frames": { "type": "integer", "enum": [1, 2, 3], "default": 2 },
+    "action": {
+     "type": "string",
+     "enum": ["anticipation", "smear_lunge", "squash_hit", "recoil_snap", "weight_shift", "cloth_tremor", "swap_plate"]
+    },
+    "dir": { "type": "integer", "enum": [-1, 1], "default": 1 },
+    "strength": { "type": "number", "minimum": 0.25, "maximum": 2, "default": 1 },
+    "src": { "type": ["string", "null"] }
+   }
+  },
   "pose_ref": {
    "oneOf": [
     {

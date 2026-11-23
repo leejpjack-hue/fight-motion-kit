@@ -648,6 +648,20 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
 .fg-passby-fields{margin-top:6px;display:flex;flex-direction:column;gap:4px}
 .fg-passby-dir-row{align-items:end}
 @media(max-width:600px){.timeline-headers{flex:0 0 82px}.timeline-multitrack{min-width:560px}.timeline-lanes-col{min-width:470px}}
+.film-density-bar{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:4px 0 8px}
+.film-density-bar button{font-size:10px;padding:5px 6px}
+.micro-frame-head{margin:6px 0}
+.micro-frame-list{display:flex;flex-direction:column;gap:6px}
+.micro-frame-slot{padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--shell-bg);display:flex;flex-direction:column;gap:5px}
+.micro-frame-slot-head{display:flex;align-items:center;gap:6px}
+.micro-frame-slot-head select{flex:1;min-width:0;font-size:10.5px}
+.micro-frame-grid{display:grid;grid-template-columns:52px 62px 76px minmax(0,1fr);gap:4px;align-items:center}
+.micro-frame-grid select,.micro-frame-swap-row select{font-size:10px;padding:3px 4px;min-width:0}
+.micro-frame-swap-row{display:flex;gap:4px;align-items:center}
+.micro-frame-swap-row select{flex:1}
+.micro-frame-swap-row button{font-size:10px;padding:3px 7px}
+.micro-frame-tick{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#3bf0ff;pointer-events:none;z-index:2;opacity:.9}
+.micro-frame-tick::before{content:'';position:absolute;bottom:2px;left:-1.5px;width:6px;height:6px;border-radius:1px;background:#3bf0ff}
 
 
 

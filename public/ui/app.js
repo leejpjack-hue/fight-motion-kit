@@ -964,7 +964,10 @@
       const b=document.createElement('button');b.className='timeline-clip'+(selected===i?' active':'')+(run.length>1&&run.includes(i)?' in-range':'')+(a.camera?.chain?' chained':'');b.style.flex=a.duration_s+' 0 0';b.draggable=true;b.dataset.index=i;
       if(a.camera?.chain)b.title=`Camera chain ${a.camera.chain.index+1} of ${a.camera.chain.count}`;
       b.setAttribute('aria-label',`${i+1}. ${a.label||a.id}, ${a.duration_s.toFixed(2)} seconds`);b.setAttribute('aria-pressed',String(i===selected));
-      const ticks=(a.fx_hooks||[]).map(beatTickMarkup).join('');
+      const ticks=(a.fx_hooks||[]).map(beatTickMarkup).join('')+(a.micro_frames||[]).map(mf=>{
+        const pct=window.HMMicroFramesUi?HMMicroFramesUi.microFrameMarkerPct(mf,a.duration_s):(mf.at==='end'?94:mf.at==='mid'?42:6);
+        return `<span class="micro-frame-tick" data-micro-frame="true" data-action="${esc(mf.action)}" style="left:${pct}%" title="Micro-action: ${esc(mf.action)} (${mf.frames||2}f)"></span>`;
+      }).join('');
       b.innerHTML=`${ticks}<img alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
       b.querySelector('img').src=thumbnail(a);
       b.onclick=e=>{if(e.shiftKey)selectRange(i);else select(i);};b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
