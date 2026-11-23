@@ -338,12 +338,21 @@
   function isFullBackgroundCrop(c) {
     return !c || (Math.abs(c.x) < 1e-4 && Math.abs(c.y) < 1e-4 && Math.abs(c.w - 1) < 1e-4 && Math.abs(c.h - 1) < 1e-4);
   }
-  const BACKGROUND_MOVES = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out'];
+  const BG_SCROLL_PRESETS = Object.freeze(['scroll_left', 'scroll_right', 'scroll_up', 'scroll_down']);
+  const BACKGROUND_MOVES = ['follow_camera','static','pan_left','pan_right','pan_up','pan_down','push_in','pull_out','scroll_left','scroll_right','scroll_up','scroll_down'];
   function validBackgroundMotion(m) {
     if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
     if (!BACKGROUND_MOVES.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1) return false;
     if (m.clock !== undefined && !['show','per_atom','legacy','span'].includes(m.clock)) return false;
     if (m.parallax_ratio !== undefined && (!Number.isFinite(+m.parallax_ratio) || +m.parallax_ratio < 0 || +m.parallax_ratio > 1)) return false;
+    if (m.speed_px_s !== undefined && (!Number.isFinite(+m.speed_px_s) || +m.speed_px_s < 0 || +m.speed_px_s > 3000)) return false;
+    if (m.tile_mode !== undefined && m.tile_mode !== 'tile' && m.tile_mode !== 'mirror') return false;
+    if (m.motion_blur !== undefined && (!Number.isFinite(+m.motion_blur) || +m.motion_blur < 0 || +m.motion_blur > 1)) return false;
+    if (m.stride_bob !== undefined) {
+      if (!m.stride_bob || typeof m.stride_bob !== 'object' || Array.isArray(m.stride_bob)) return false;
+      if (m.stride_bob.amp_px !== undefined && (!Number.isFinite(+m.stride_bob.amp_px) || +m.stride_bob.amp_px < 0 || +m.stride_bob.amp_px > 24)) return false;
+      if (m.stride_bob.freq_hz !== undefined && (!Number.isFinite(+m.stride_bob.freq_hz) || +m.stride_bob.freq_hz < 0.5 || +m.stride_bob.freq_hz > 8)) return false;
+    }
     const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
     if (m.span !== undefined) {
       const span = m.span;
@@ -544,6 +553,12 @@
     } else if (op === 'set-key-white') {
       if (typeof command.value !== 'boolean') throw new Error('White-backdrop setting must be true or false.');
       next.key_white = command.value;
+    } else if (op === 'set-swap-t') {
+      if (hadLocations) throw new Error('Background locations replace the base and swap images.');
+      if (!next.swap) throw new Error('The swap image is not on this project.');
+      const swapT = +command.swap_t;
+      if (!Number.isFinite(swapT) || swapT < 0) throw new Error('Background swap time must be 0 or later.');
+      next.swap_t = round4(swapT);
     } else throw new Error('Unknown background edit.');
     if (command && command.ensureKeyWhite === true && next.key_white == null) next.key_white = true;
     show.bg = next;
@@ -566,9 +581,12 @@
     return ((timelineBg && timelineBg.crops) || {})[(entry && entry.bg) || 'base'] || null;
   }
   // HM-PAN-SPAN-UI: optional t0–t1 span helpers for continuous background pan.
-  const BG_TRAVEL_PRESETS = Object.freeze(['pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out']);
+  const BG_TRAVEL_PRESETS = Object.freeze(['pan_left', 'pan_right', 'pan_up', 'pan_down', 'push_in', 'pull_out', 'scroll_left', 'scroll_right', 'scroll_up', 'scroll_down']);
   function isTravelingBackgroundPreset(preset) {
     return BG_TRAVEL_PRESETS.indexOf(String(preset || 'follow_camera')) >= 0;
+  }
+  function isScrollBackgroundPreset(preset) {
+    return BG_SCROLL_PRESETS.indexOf(String(preset || '')) >= 0;
   }
   function readBackgroundSpan(motion) {
     if (!motion || typeof motion !== 'object') return null;
@@ -1338,6 +1356,36 @@
             if (!cutout) { errors.push(label + ': broken image must be a PNG or WebP'); failed = true; return; }
             prop.effect.broken_src = cutout;
           }
+        }
+      }
+      if (raw.pass_by != null) {
+        const pb = raw.pass_by;
+        if (!pb || typeof pb !== 'object' || Array.isArray(pb)) { errors.push(label + ': invalid pass_by'); failed = true; return; }
+        if (pb.enabled !== undefined && typeof pb.enabled !== 'boolean') { errors.push(label + ': pass_by enabled must be boolean'); failed = true; return; }
+        const dir = pb.direction == null ? 'left' : pb.direction;
+        if (!['left', 'right', 'up', 'down'].includes(dir)) { errors.push(label + ': invalid pass_by direction'); failed = true; return; }
+        if (pb.speed_px_s !== undefined && pb.speed_px_s !== null && pb.speed_px_s !== '') {
+          const sp = +pb.speed_px_s;
+          if (!Number.isFinite(sp) || sp < 50 || sp > 4500) { errors.push(label + ': invalid pass_by speed_px_s'); failed = true; return; }
+        }
+        const mult = pb.parallax_mult == null ? 1.8 : +pb.parallax_mult;
+        if (!Number.isFinite(mult) || mult < 0.25 || mult > 4) { errors.push(label + ': invalid pass_by parallax_mult'); failed = true; return; }
+        const spacing = pb.spacing_px == null ? 1800 : +pb.spacing_px;
+        if (!Number.isFinite(spacing) || spacing < 240 || spacing > 6000) { errors.push(label + ': invalid pass_by spacing_px'); failed = true; return; }
+        const phase = pb.phase_offset_px == null ? 0 : +pb.phase_offset_px;
+        if (!Number.isFinite(phase)) { errors.push(label + ': invalid pass_by phase_offset_px'); failed = true; return; }
+        const blur = pb.motion_blur == null ? 0.35 : +pb.motion_blur;
+        if (!Number.isFinite(blur) || blur < 0 || blur > 1) { errors.push(label + ': invalid pass_by motion_blur'); failed = true; return; }
+        if (pb.enabled === true) {
+          prop.pass_by = {
+            enabled: true,
+            direction: dir,
+            ...(pb.speed_px_s != null && pb.speed_px_s !== '' ? { speed_px_s: round4(+pb.speed_px_s) } : {}),
+            parallax_mult: round4(mult),
+            spacing_px: round4(spacing),
+            phase_offset_px: round4(phase),
+            motion_blur: round4(blur),
+          };
         }
       }
       props.push(prop);
@@ -4270,7 +4318,9 @@
     lockBackgroundCropAspect,
     resolveBackgroundCrop,
     BG_TRAVEL_PRESETS,
+    BG_SCROLL_PRESETS,
     isTravelingBackgroundPreset,
+    isScrollBackgroundPreset,
     readBackgroundSpan,
     resolveBackgroundSpanUi,
     normalizeFxPlacement,
