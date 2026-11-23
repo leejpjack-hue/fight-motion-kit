@@ -52,6 +52,7 @@
     "base": {"type": "string", "description": "image path relative to kit root"},
     "swap": {"type": "string"},
     "swap_t": {"type": "number", "minimum": 0},
+    "motion": {"$ref": "#/$defs/bgMotion"},
     "locations": {
      "type": "array",
      "minItems": 1,
@@ -74,7 +75,7 @@
          "h": {"type": "number"}
         }
        },
-       "motion": {"type": "object"}
+       "motion": {"$ref": "#/$defs/bgMotion"}
       }
      }
     }
@@ -161,7 +162,44 @@
     "t_end": {"type": "number", "minimum": 0},
     "slot": {"type": "string", "enum": ["prop", "overlay"], "description": "overlay art shows between t_start and t_end and does not break"},
     "kf": {"type": "array", "items": {"$ref": "#/$defs/fgKeyframe"}},
-    "effect": {"$ref": "#/$defs/fgBreak"}
+    "effect": {"$ref": "#/$defs/fgBreak"},
+    "pass_by": {"$ref": "#/$defs/fgPassBy"}
+   }
+  },
+  "fgPassBy": {
+   "type": "object",
+   "description": "HM-RUN-02 opt-in repeating high-speed foreground pass-by loop.",
+   "properties": {
+    "enabled": {"type": "boolean", "default": false},
+    "direction": {"type": "string", "enum": ["left", "right", "up", "down"], "default": "left"},
+    "speed_px_s": {"type": "number", "minimum": 50, "maximum": 4500},
+    "parallax_mult": {"type": "number", "minimum": 0.25, "maximum": 4, "default": 1.8},
+    "spacing_px": {"type": "number", "minimum": 240, "maximum": 6000, "default": 1800},
+    "phase_offset_px": {"type": "number", "default": 0},
+    "motion_blur": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.35}
+   }
+  },
+  "bgMotion": {
+   "type": "object",
+   "description": "Background window pan or continuous running scroll motion.",
+   "properties": {
+    "preset": {"type": "string", "enum": ["follow_camera", "static", "pan_left", "pan_right", "pan_up", "pan_down", "push_in", "pull_out", "scroll_left", "scroll_right", "scroll_up", "scroll_down"]},
+    "amount": {"type": "number", "minimum": 0, "maximum": 1},
+    "clock": {"type": "string", "enum": ["show", "per_atom", "legacy", "span"]},
+    "span": {},
+    "t0": {"type": "number"},
+    "t1": {"type": "number"},
+    "parallax_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+    "speed_px_s": {"type": "number", "minimum": 0, "maximum": 3000},
+    "tile_mode": {"type": "string", "enum": ["tile", "mirror"], "default": "mirror"},
+    "stride_bob": {
+     "type": "object",
+     "properties": {
+      "amp_px": {"type": "number", "minimum": 0, "maximum": 24},
+      "freq_hz": {"type": "number", "minimum": 0.5, "maximum": 8}
+     }
+    },
+    "motion_blur": {"type": "number", "minimum": 0, "maximum": 1}
    }
   },
   "transform": {
