@@ -264,7 +264,7 @@ function resolveMicroFrameAt(microFrames, localT, atomDur, fps) {
       dy = 6 * str * stepW;
       sx = 1 + 0.03 * str * stepW;
       sy = 1 - 0.03 * str * stepW;
-      skewX = 0.035 * dir * str * stepW;
+      skewX = 0.035 * dir * stepW;
     } else if (act === 'cloth_tremor') {
       const alt = fIdx % 2 === 0 ? 1 : -1;
       dx = 5 * alt * dir * str;
