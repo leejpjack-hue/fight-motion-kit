@@ -22,5 +22,54 @@
       "aligns": "impact_hold",
       "motion": { "preset": "pan_left", "amount": 0.7, "clock": "per_atom" }
     }
+  ],
+  "scene_recipes": [
+    {
+      "id": "high_speed_chase",
+      "label": "High-Speed Chase",
+      "bg_motion": { "preset": "pan_right", "amount": 0.75, "clock": "show" },
+      "parallax_ratio": 0.38,
+      "camera_preset": "eye_orbit",
+      "camera_ease": "whip",
+      "mood": "sunset_clash",
+      "fx_cue": "speed_lines"
+    },
+    {
+      "id": "final_standoff",
+      "label": "Final Standoff",
+      "bg_motion": { "preset": "push_in", "amount": 0.35, "clock": "per_atom" },
+      "parallax_ratio": 0.25,
+      "camera_preset": "eye_push",
+      "camera_ease": "smooth",
+      "mood": "night_neon",
+      "fx_cue": null
+    },
+    {
+      "id": "aerial_clash",
+      "label": "Aerial Clash",
+      "bg_motion": { "preset": "pan_up", "amount": 0.65, "clock": "per_atom" },
+      "parallax_ratio": 0.45,
+      "camera_preset": "low_rise",
+      "camera_ease": "spring",
+      "mood": "cold_steel",
+      "fx_cue": "speed_lines"
+    },
+    {
+      "id": "cornered_pressure",
+      "label": "Cornered Pressure",
+      "bg_motion": { "preset": "pull_out", "amount": 0.45, "clock": "per_atom" },
+      "parallax_ratio": 0.22,
+      "camera_preset": "ecu_jitter",
+      "camera_ease": "punch_in",
+      "mood": "crimson_fury",
+      "fx_cue": "shake"
+    }
+  ],
+  "mood_presets": [
+    { "id": "neutral", "label": "Neutral", "intensity": 0, "motes": false },
+    { "id": "sunset_clash", "label": "Sunset Clash", "intensity": 0.55, "motes": true },
+    { "id": "night_neon", "label": "Night Neon / Moonlight", "intensity": 0.55, "motes": true },
+    { "id": "crimson_fury", "label": "Crimson Fury", "intensity": 0.6, "motes": true },
+    { "id": "cold_steel", "label": "Cold Steel", "intensity": 0.5, "motes": false }
   ]
 }

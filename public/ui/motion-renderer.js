@@ -561,14 +561,134 @@ function drawImpactBurst(ctx, cx, cy, u, col = '#ff8a1e', opts = {}) {
   }
   ctx.restore();
 }
+function normalizeFxLayerOpts(raw) {
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const x = Number.isFinite(+p.x) ? +p.x : 0;
+  const y = Number.isFinite(+p.y) ? +p.y : 0;
+  const scale = Number.isFinite(+p.scale) && +p.scale > 0 ? Math.max(0.05, Math.min(8, +p.scale)) : 1;
+  const rotation = Number.isFinite(+p.rotation) ? +p.rotation : 0;
+  const color = typeof p.color === 'string' && p.color.trim() ? p.color.trim() : null;
+  const opacity = p.opacity != null && Number.isFinite(+p.opacity) ? Math.max(0, Math.min(1, +p.opacity)) : 1;
+  const allowedBlends = ['source-over', 'screen', 'lighter', 'multiply', 'overlay'];
+  const blend = typeof p.blend === 'string' && allowedBlends.includes(p.blend) ? p.blend : null;
+  const angle = p.angle != null && p.angle !== '' && Number.isFinite(+p.angle) ? +p.angle : null;
+  return { x, y, scale, rotation, color, opacity, blend, angle };
+}
+function taperedArcPolygon(pts, maxWidth) {
+  if (!Array.isArray(pts) || pts.length < 2) return null;
+  const wMax = Math.max(1, Number(maxWidth) || 24);
+  const left = [];
+  const right = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(pts.length - 1, i + 1)];
+    let tx = next[0] - prev[0];
+    let ty = next[1] - prev[1];
+    const mag = Math.hypot(tx, ty) || 1;
+    tx /= mag; ty /= mag;
+    const nx = -ty, ny = tx;
+    const u = i / (pts.length - 1);
+    const taper = Math.sin(u * Math.PI) * 0.88 + 0.12 * u;
+    const hw = wMax * 0.5 * taper;
+    left.push([p[0] + nx * hw, p[1] + ny * hw]);
+    right.push([p[0] - nx * hw, p[1] - ny * hw]);
+  }
+  return left.concat(right.reverse());
+}
+function computeCameraVelocity(seg, t, dt = 1 / 24) {
+  if (!seg || typeof cameraPoseOnSegment !== 'function') return { vx: 0, vy: 0, vs: 0, vr: 0, speed: 0 };
+  const cur = cameraPoseOnSegment(seg, t);
+  const prevT = Math.max(seg.t0 || 0, (+t || 0) - dt);
+  const prev = cameraPoseOnSegment(seg, prevT);
+  const span = Math.max(1e-4, (+t || 0) - prevT);
+  const vx = ((cur.x - prev.x) / span) * (1 / 24);
+  const vy = ((cur.y - prev.y) / span) * (1 / 24);
+  const vs = ((cur.s - prev.s) / span) * (1 / 24);
+  const vr = ((cur.r - prev.r) / span) * (1 / 24);
+  const speed = Math.hypot(vx, vy) + Math.abs(vr) * 2.5 + Math.abs(vs) * 180;
+  return { vx, vy, vs, vr, speed };
+}
+function computeBgParallaxOffset(camera, parallaxRatio) {
+  const ratio = Number.isFinite(+parallaxRatio) ? Math.max(0, Math.min(1, +parallaxRatio)) : 0;
+  if (!(ratio > 0) || !camera) return { dx: 0, dy: 0, minScale: 1 };
+  const dx = Math.max(-180, Math.min(180, -(Number(camera.x) || 0) * ratio));
+  const dy = Math.max(-110, Math.min(110, -(Number(camera.y) || 0) * ratio));
+  const camS = Math.max(1, Number(camera.s) || 1);
+  const minScale = Math.max(1, 1 + Math.max(Math.abs(dx) / 640, Math.abs(dy) / 360) + (camS - 1) * ratio * 0.25);
+  return { dx, dy, minScale };
+}
+function drawSceneAtmosphereMood(ctx, mood, t) {
+  const m = typeof mood === 'string' ? { id: mood } : mood;
+  if (!m || !m.id || m.id === 'neutral') return;
+  const palettes = {
+    sunset_clash: { top: '#ff7b2b', bottom: '#2b103a', rim: '#ffb347', mote: '#ffd27d' },
+    night_neon: { top: '#0c1f3d', bottom: '#170d2c', rim: '#19e0d0', mote: '#7ef9ff' },
+    crimson_fury: { top: '#5a070b', bottom: '#140305', rim: '#ff2b3d', mote: '#ff7066' },
+    cold_steel: { top: '#1d3247', bottom: '#0e1720', rim: '#9fd4ff', mote: '#e3f4ff' },
+  };
+  const pal = palettes[m.id];
+  if (!pal) return;
+  const intensity = m.intensity != null && Number.isFinite(+m.intensity) ? Math.max(0, Math.min(1, +m.intensity)) : 0.55;
+  if (!(intensity > 0)) return;
+  ctx.save();
+  if (typeof ctx.createLinearGradient === 'function') {
+    const lg = ctx.createLinearGradient(0, 0, 0, 720);
+    lg.addColorStop(0, pal.top);
+    lg.addColorStop(1, pal.bottom);
+    ctx.fillStyle = lg;
+  } else {
+    ctx.fillStyle = pal.top;
+  }
+  ctx.globalAlpha = 0.24 * intensity;
+  ctx.fillRect(0, 0, 1280, 720);
+  if (typeof ctx.createRadialGradient === 'function') {
+    const vg = ctx.createRadialGradient(640, 360, 260, 640, 360, 780);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, pal.bottom);
+    ctx.fillStyle = vg;
+    ctx.globalAlpha = 0.34 * intensity;
+    ctx.fillRect(0, 0, 1280, 720);
+  }
+  if (m.motes !== false) {
+    const time = Number(t) || 0;
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const s1 = Math.sin(i * 17.31 + 1.1) * 43758.5453; const f1 = s1 - Math.floor(s1);
+      const s2 = Math.sin(i * 29.73 + 2.3) * 43758.5453; const f2 = s2 - Math.floor(s2);
+      const mx = ((f1 * 1280 + time * (22 + f2 * 38)) % 1300) - 10;
+      const my = ((f2 * 720 - time * (18 + f1 * 32) + 720 * 10) % 720);
+      const rad = 1.6 + (i % 3) * 1.1;
+      ctx.fillStyle = i % 2 === 0 ? pal.mote : pal.rim;
+      ctx.globalAlpha = (0.38 + 0.35 * Math.sin(time * 3 + i)) * intensity;
+      ctx.beginPath();
+      ctx.arc(mx, my, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
 function computeCameraImpactShake(shakeList, hitList, t) {
   let dx = 0, dy = 0, dr = 0, amp = 0;
-  for (const entry of shakeList || []) {
+  for (let i = 0; i < (shakeList || []).length; i++) {
+    const entry = shakeList[i];
+    if (!Array.isArray(entry)) continue;
     const h = +entry[0], a = Number.isFinite(+entry[1]) ? +entry[1] : 14, d = Number.isFinite(+entry[2]) && +entry[2] > 0 ? +entry[2] : 0.32;
+    const opts = entry[3] && typeof entry[3] === 'object' ? entry[3] : null;
     const dt = t - h;
     if (dt >= 0 && dt < d) {
-      const localAmp = a * Math.pow(1 - dt / d, 1.35);
-      if (localAmp > amp) {
+      const decayPow = opts && Number.isFinite(+opts.decay) && +opts.decay > 0 ? +opts.decay : 1.35;
+      const localAmp = a * Math.pow(1 - dt / d, decayPow);
+      if (opts && (opts.angle != null || opts.rot_amp != null)) {
+        const ang = Number.isFinite(+opts.angle) ? +opts.angle : 0;
+        const rotAmp = Number.isFinite(+opts.rot_amp) ? +opts.rot_amp : 0.8;
+        const bias = Math.cos(dt * 96) * localAmp;
+        const jitter = Math.sin(t * 163 + i * 2.1) * localAmp * 0.45;
+        dx += Math.cos(ang) * bias - Math.sin(ang) * jitter;
+        dy += Math.sin(ang) * bias + Math.cos(ang) * jitter * 0.7;
+        dr += Math.sin(dt * 88 + ang) * rotAmp * (1 - dt / d);
+        amp = Math.max(amp, Math.hypot(dx, dy));
+      } else if (localAmp > amp) {
         amp = localAmp;
         dx = Math.sin(t * 157) * localAmp;
         dy = Math.cos(t * 131) * localAmp * 0.6;
@@ -594,85 +714,164 @@ function computeCameraImpactShake(shakeList, hitList, t) {
   }
   return { dx, dy, dr, amp };
 }
-function drawFistPressure(ctx, x, y, u, scale = 1) {
-  const s = Number.isFinite(+scale) && +scale > 0 ? +scale : 1;
-  const grow = 0.84 + 0.22 * Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
-  const R = 268 * grow * s;
+function drawFistPressure(ctx, x, y, u, scale = 1, opts = {}) {
+  const lay = normalizeFxLayerOpts(opts);
+  const s = (Number.isFinite(+scale) && +scale > 0 ? +scale : 1) * (opts?.scale ? 1 : lay.scale);
+  const uu = Math.min(1, Math.max(0, Number(u) || 0));
+  const ang = lay.angle != null ? lay.angle : (lay.rotation * Math.PI / 180 || -0.35);
+  const primaryCol = lay.color || '#e10600';
+  const grow = 0.84 + 0.24 * Math.sin(uu * Math.PI);
+  const R = 250 * grow * s;
   ctx.save();
-  const g = ctx.createRadialGradient(x, y, R * 0.05, x, y, R);
-  g.addColorStop(0, 'rgba(70, 0, 0, 0.2)');
-  g.addColorStop(0.4, 'rgba(176, 8, 8, 0.62)');
-  g.addColorStop(0.68, 'rgba(12, 0, 0, 0.82)');
-  g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = g;
+  ctx.globalAlpha = lay.opacity;
+  if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  if (typeof ctx.createRadialGradient === 'function') {
+    const g = ctx.createRadialGradient(0, 0, R * 0.05, 0, 0, R);
+    g.addColorStop(0, 'rgba(90, 0, 0, 0.28)');
+    g.addColorStop(0.45, 'rgba(176, 8, 8, 0.65)');
+    g.addColorStop(0.75, 'rgba(16, 0, 0, 0.78)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Directional sonic vapor shock-cone sweeping along strike axis
+  for (let shell = 0; shell < 2; shell++) {
+    const spread = (0.58 - shell * 0.18);
+    const backX = -R * (0.35 + shell * 0.22);
+    const wingY = R * Math.sin(spread) * (0.95 - shell * 0.22);
+    const frontX = R * (0.85 - shell * 0.18);
+    ctx.fillStyle = shell === 0 ? '#120000' : primaryCol;
+    ctx.globalAlpha = lay.opacity * (shell === 0 ? 0.78 : 0.72);
+    ctx.beginPath();
+    ctx.moveTo(frontX, 0);
+    ctx.quadraticCurveTo(0, -wingY * 0.9, backX, -wingY);
+    ctx.quadraticCurveTo(-R * 0.08, 0, backX, wingY);
+    ctx.quadraticCurveTo(0, wingY * 0.9, frontX, 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Fractured high-contrast pressure arcs & crimson ink ribs
+  ctx.globalAlpha = lay.opacity * 0.92;
+  ctx.strokeStyle = primaryCol;
+  ctx.lineWidth = Math.max(2, 16 * s * (1 - uu * 0.35));
+  for (let i = 0; i < 3; i++) {
+    const rad = R * (0.42 + i * 0.18);
+    const gap = i * 0.28;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad, -0.85 + gap, 0.85 + gap);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = lay.opacity * 0.95;
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(x, y, R, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.95;
-  ctx.strokeStyle = '#ff1a1a';
-  ctx.lineWidth = 24 * s;
-  ctx.beginPath();
-  ctx.arc(x, y, R * 0.56, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#120000';
-  ctx.beginPath();
-  ctx.arc(x, y, 58 * s, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#e10600';
-  ctx.beginPath();
-  ctx.arc(x - 8 * s, y - 10 * s, 36 * s, 0, Math.PI * 2);
+  ctx.arc(14 * s, 0, 32 * s * (1 - uu * 0.3), 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 function drawLegArc(ctx, path, u, xf) {
-  const { scale: s } = fxPlacementOf(xf);
-  const pts = transformFxPath(path, xf);
-  const uu = Math.max(0.08, Math.min(1, Number(u) || 0));
-  const steps = 32;
-  function stroke(width, color, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width * s;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    for (let i = 0; i <= steps; i++) {
-      const p = fxPointOnPath(pts, (i / steps) * uu);
-      if (i === 0) ctx.moveTo(p[0], p[1]);
-      else ctx.lineTo(p[0], p[1]);
-    }
-    ctx.stroke();
-    ctx.restore();
+  const lay = normalizeFxLayerOpts(xf);
+  const s = lay.scale;
+  let pts = transformFxPath(path, xf);
+  if (Math.abs(lay.rotation) > 1e-4 && pts.length) {
+    const rad = lay.rotation * Math.PI / 180;
+    const mid = pts[Math.floor(pts.length / 2)];
+    const cr = Math.cos(rad), sr = Math.sin(rad);
+    pts = pts.map(([px, py]) => {
+      const dx = px - mid[0], dy = py - mid[1];
+      return [mid[0] + dx * cr - dy * sr, mid[1] + dx * sr + dy * cr];
+    });
   }
-  stroke(30, '#b9dcff', 0.96);
-  stroke(10, '#f4fbff', 1);
-}
-function drawTornado(ctx, x, y, u, scale = 1) {
-  const s = Number.isFinite(+scale) && +scale > 0 ? +scale : 1;
+  const uu = Math.max(0.1, Math.min(1, Number(u) || 0));
+  const steps = 28;
+  const sampled = [];
+  for (let i = 0; i <= steps; i++) sampled.push(fxPointOnPath(pts, (i / steps) * uu));
+  const outerPoly = taperedArcPolygon(sampled, 34 * s);
+  const corePoly = taperedArcPolygon(sampled, 12 * s);
+  if (!outerPoly || !corePoly) return;
+  const tracePoly = (poly) => {
+    ctx.beginPath();
+    ctx.moveTo(poly[0][0], poly[0][1]);
+    for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+    ctx.closePath();
+  };
   ctx.save();
+  ctx.globalAlpha = lay.opacity;
+  if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+  // Dark ink rim for sakuga sharpness
+  tracePoly(outerPoly);
+  ctx.strokeStyle = '#0e1b2a';
+  ctx.lineWidth = Math.max(1.5, 4 * s);
+  ctx.stroke();
+  ctx.fillStyle = lay.color || '#b9dcff';
+  ctx.globalAlpha = lay.opacity * 0.94;
+  ctx.fill();
+  // Razor white-hot leading inner crescent
+  tracePoly(corePoly);
+  ctx.fillStyle = '#f4fbff';
+  ctx.globalAlpha = lay.opacity;
+  ctx.fill();
+  ctx.restore();
+}
+function drawTornado(ctx, x, y, u, scale = 1, opts = {}) {
+  const lay = normalizeFxLayerOpts(opts);
+  const s = (Number.isFinite(+scale) && +scale > 0 ? +scale : 1) * (opts?.scale ? 1 : lay.scale);
+  const uu = Math.max(0, Math.min(1, Number(u) || 0));
+  const spin = uu * Math.PI * 5;
+  const primaryCol = lay.color || '#f4fbff';
+  ctx.save();
+  ctx.globalAlpha = lay.opacity;
+  if (lay.blend) ctx.globalCompositeOperation = lay.blend;
   ctx.translate(x, y);
+  if (Math.abs(lay.rotation) > 1e-4) ctx.rotate(lay.rotation * Math.PI / 180);
   ctx.scale(s, s);
-  const spin = (Number(u) || 0) * Math.PI * 5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (let arm = 0; arm < 2; arm++) {
-    ctx.beginPath();
-    ctx.globalAlpha = arm === 0 ? 0.95 : 0.8;
-    ctx.strokeStyle = arm === 0 ? '#f4fbff' : '#9fd4ff';
-    ctx.lineWidth = arm === 0 ? 6 : 3.5;
-    const steps = 72;
+  // Back shaded funnel arms -> Foreground bright tapered wind bands
+  const bands = [
+    { off: Math.PI * 0.5, col: '#4a85b5', alpha: 0.48, wMax: 12 },
+    { off: Math.PI * 1.5, col: '#69a8d8', alpha: 0.54, wMax: 10 },
+    { off: 0, col: primaryCol, alpha: 0.95, wMax: 13 },
+    { off: Math.PI, col: '#9fd4ff', alpha: 0.85, wMax: 9 },
+  ];
+  for (let b = 0; b < bands.length; b++) {
+    const band = bands[b];
+    const pts = [];
+    const steps = 48;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      const ang = spin + arm * Math.PI + t * Math.PI * 2 * 3.4;
-      const rad = 14 + t * 220;
-      const px = Math.cos(ang) * rad;
-      const py = Math.sin(ang) * rad * 0.4 - t * 210;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+      const ang = spin + band.off + t * Math.PI * 2 * 3.1;
+      const rad = 12 + t * 215;
+      pts.push([Math.cos(ang) * rad, Math.sin(ang) * rad * 0.38 - t * 215]);
     }
-    ctx.stroke();
+    const poly = taperedArcPolygon(pts, band.wMax);
+    if (!poly) continue;
+    ctx.globalAlpha = lay.opacity * band.alpha;
+    ctx.fillStyle = band.col;
+    ctx.beginPath();
+    ctx.moveTo(poly[0][0], poly[0][1]);
+    for (let k = 1; k < poly.length; k++) ctx.lineTo(poly[k][0], poly[k][1]);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Orbiting sharp angular wind shards
+  for (let d = 0; d < 10; d++) {
+    const td = 0.18 + (d / 10) * 0.78;
+    const da = spin * 1.3 + d * 1.9;
+    const dr = (18 + td * 205);
+    const sx = Math.cos(da) * dr;
+    const sy = Math.sin(da) * dr * 0.38 - td * 210;
+    ctx.fillStyle = d % 2 ? primaryCol : '#132638';
+    ctx.globalAlpha = lay.opacity * 0.82;
+    ctx.beginPath();
+    ctx.moveTo(sx + Math.cos(da + 1.4) * 14, sy + Math.sin(da + 1.4) * 6);
+    ctx.lineTo(sx - Math.cos(da) * 6, sy + 5);
+    ctx.lineTo(sx - Math.cos(da + 1.4) * 12, sy - Math.sin(da + 1.4) * 5);
+    ctx.closePath();
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -701,6 +900,30 @@ function cameraEase(kind, u) {
     if (u <= hold) return 0;
     const t = (u - hold) / (1 - hold);
     return t * t * (3 - 2 * t);
+  }
+  if (kind === 'spring') {
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    return 1 - Math.exp(-6.2 * u) * Math.cos(Math.PI * 2.5 * u);
+  }
+  if (kind === 'whip' || kind === 'expo_in_out') {
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    return u < 0.5 ? Math.pow(2, 16 * u - 8) / 2 : 1 - Math.pow(2, -16 * u + 8) / 2;
+  }
+  if (kind === 'punch_in') {
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    const fast = 1 - Math.pow(1 - Math.min(1, u * 1.65), 3);
+    const kick = Math.sin(Math.min(1, u * 1.45) * Math.PI) * 0.12 * (1 - u);
+    return fast + kick;
+  }
+  if (kind === 'recoil_settle') {
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    const settle = 1 - Math.pow(1 - u, 2.5);
+    const dip = -0.18 * Math.sin(u * Math.PI * 1.8) * Math.exp(-3.4 * u);
+    return settle + dip;
   }
   return u * u * (3 - 2 * u);
 }
@@ -949,9 +1172,11 @@ function createMotionRenderer(canvas, assets = {}) {
   function paintBackground(path, crop, x, y, s) {
     ctx.save(); ctx.translate(640 + x, 360 + y); ctx.scale(s, s); ctx.translate(-640, -360); backgroundImage(path, crop); ctx.restore();
   }
-  function drawBackground(l, t) {
+  function drawBackground(l, t, parallaxCam) {
     const b=backgroundAt(l,timeline.bg,t);if(!b.src)return;
     const a=timeline.atoms.find(a=>a.id===l.atom),m=b.motion||{},preset=m.preset||'follow_camera',amount=m.amount??.4,zoom=l.bg_zoom||1;
+    const ratio=timeline.bg?.parallax_ratio??m.parallax_ratio??0;
+    const pxOff=computeBgParallaxOffset(parallaxCam,ratio);
     const u=backgroundMotionProgress(m,t,a?{duration:timeline.duration_s,atomT0:a.t0,atomT1:a.t1}:{duration:timeline.duration_s,atomT0:t,atomT1:t});
     const frame=backgroundMotionFrame(b.crop,preset,amount,u);
     if(frame.mode==='inset'){
@@ -959,8 +1184,8 @@ function createMotionRenderer(canvas, assets = {}) {
       if(preset==='push_in')s=1+extra*u;
       if(preset==='pull_out')s=1+extra*(1-u);
       if(preset.startsWith('pan_')){s=1+extra;const v=1-2*u;if(preset==='pan_left')x=640*extra*v;if(preset==='pan_right')x=-640*extra*v;if(preset==='pan_up')y=360*extra*v;if(preset==='pan_down')y=-360*extra*v;}
-      paintBackground(b.src,frame.crop,x,y,s*zoom);
-    }else paintBackground(b.src,frame.crop,0,0,zoom);
+      paintBackground(b.src,frame.crop,x+pxOff.dx,y+pxOff.dy,Math.max(s*zoom,pxOff.minScale*zoom));
+    }else paintBackground(b.src,frame.crop,pxOff.dx,pxOff.dy,Math.max(zoom,pxOff.minScale*zoom));
   }
   function drawFgBreak(im, age) {
     const w = im.width, h = im.height, mid = Math.max(1, Math.floor(w / 2));
@@ -1023,16 +1248,19 @@ function createMotionRenderer(canvas, assets = {}) {
     const d = Math.max(0.05, t1 - t0);
     const out = { hits: [], hitstop: [], flash: [], bgflash: [], shake: [], trails: [], dust: [], speed: [], sparks: [], pink_cut: null, exposure: [], fist: [], leg: [], tornado: [], pixelfx: [] };
     const hasImpactMeta = prm => prm && ['x', 'y', 'at', 'angle', 'strength', 'dur', 'frames', 'hitstop_frames', 'hitstop', 'hitstop_dur', 'invert', 'contrast', 'tint', 'recoil', 'shake_dur'].some(k => prm[k] !== undefined);
+    const hasLayerMeta = prm => prm && ['x', 'y', 'scale', 'rotation', 'color', 'opacity', 'blend', 'angle', 'dur'].some(k => prm[k] !== undefined);
+    const hasShakeMeta = prm => prm && ['angle', 'rot_amp', 'decay'].some(k => prm[k] !== undefined);
     for (const raw of hooks || []) {
       const type = typeof raw === 'string' ? raw : raw?.type;
       if (!type || type === 'none') continue;
+      if (raw && (raw.muted === true || raw.params?.muted === true)) continue;
       if (timeline && timeline.fx_profile === 'comic' && PHOTO_FX_CHIP_SET.has(type)) continue;
       const prm = (raw && raw.params) || {};
       const tRel = raw?.t_rel != null ? +raw.t_rel : 0.08;
       const tRelEnd = raw?.t_rel_end != null ? +raw.t_rel_end : 0.92;
       const ht = t0 + tRel * d;
       if (isPixelfxHook(raw, type)) {
-        out.pixelfx.push([ht, type]);
+        out.pixelfx.push(hasLayerMeta(prm) ? [ht, type, prm] : [ht, type]);
         continue;
       }
       const he = t0 + tRelEnd * d;
@@ -1041,28 +1269,26 @@ function createMotionRenderer(canvas, assets = {}) {
       else if (type === 'hit_pink') out.hits.push(hasImpactMeta(prm) ? [ht, prm.color || '#ff3fa4', prm] : [ht, prm.color || '#ff3fa4']);
       else if (type === 'impact_white') out.hits.push(hasImpactMeta(prm) ? [ht, prm.color || '#ffffff', prm] : [ht, prm.color || '#ffffff']);
       else if (type === 'hitstop_2f') out.hitstop.push(hasImpactMeta(prm) ? [ht, prm] : ht);
-      else if (type === 'flash_orange') out.flash.push([ht, prm.color || '#ff8a1e']);
-      else if (type === 'flash_pink') out.flash.push([ht, prm.color || '#ff3fa4']);
-      else if (type === 'bg_flash_blue') out.bgflash.push([ht, prm.color || '#2f7bff']);
-      else if (type === 'bg_flash_teal') out.bgflash.push([ht, prm.color || '#19e0d0']);
-      else if (type === 'shake') out.shake.push([ht, prm.amp ?? 14, prm.dur ?? 0.32]);
-      else if (type === 'smear_trail') out.trails.push([ht, prm.dir ?? 1]);
-      else if (type === 'dust') out.dust.push([ht, prm.k ?? 1]);
-      else if (type === 'speed_lines') out.speed.push([ht, he, prm.mode || 'up', prm.k0 ?? 0, prm.k1 ?? 1]);
-      else if (type === 'sparks') out.sparks.push([ht, prm.n ?? 40, prm.at]);
+      else if (type === 'flash_orange') out.flash.push(hasLayerMeta(prm) ? [ht, prm.color || '#ff8a1e', prm] : [ht, prm.color || '#ff8a1e']);
+      else if (type === 'flash_pink') out.flash.push(hasLayerMeta(prm) ? [ht, prm.color || '#ff3fa4', prm] : [ht, prm.color || '#ff3fa4']);
+      else if (type === 'bg_flash_blue') out.bgflash.push(hasLayerMeta(prm) ? [ht, prm.color || '#2f7bff', prm] : [ht, prm.color || '#2f7bff']);
+      else if (type === 'bg_flash_teal') out.bgflash.push(hasLayerMeta(prm) ? [ht, prm.color || '#19e0d0', prm] : [ht, prm.color || '#19e0d0']);
+      else if (type === 'shake') out.shake.push(hasShakeMeta(prm) ? [ht, prm.amp ?? 14, prm.dur ?? 0.32, prm] : [ht, prm.amp ?? 14, prm.dur ?? 0.32]);
+      else if (type === 'smear_trail') out.trails.push(hasLayerMeta(prm) ? [ht, prm.dir ?? 1, prm] : [ht, prm.dir ?? 1]);
+      else if (type === 'dust') out.dust.push(hasLayerMeta(prm) ? [ht, prm.k ?? 1, prm] : [ht, prm.k ?? 1]);
+      else if (type === 'speed_lines') out.speed.push(hasLayerMeta(prm) ? [ht, he, prm.mode || 'up', prm.k0 ?? 0, prm.k1 ?? 1, prm] : [ht, he, prm.mode || 'up', prm.k0 ?? 0, prm.k1 ?? 1]);
+      else if (type === 'sparks') out.sparks.push(hasLayerMeta(prm) ? [ht, prm.n ?? 40, prm.at, prm] : [ht, prm.n ?? 40, prm.at]);
       else if (type === 'pink_cut') out.pink_cut = ht;
       else if (type === 'exposure_warm_crush') {
         const xf = fxPlacementOf(prm);
         out.exposure.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, xf] : [ht, span]);
-      } else if (type === 'fist_pressure') {
+      } else if (['fist_pressure', 'leg_arc', 'tornado_spiral'].includes(type)) {
         const xf = fxPlacementOf(prm);
-        out.fist.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('fist_pressure', prm.path), xf] : [ht, span, fxPathOrStock('fist_pressure', prm.path)]);
-      } else if (type === 'leg_arc') {
-        const xf = fxPlacementOf(prm);
-        out.leg.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('leg_arc', prm.path), xf] : [ht, span, fxPathOrStock('leg_arc', prm.path)]);
-      } else if (type === 'tornado_spiral') {
-        const xf = fxPlacementOf(prm);
-        out.tornado.push(Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 ? [ht, span, fxPathOrStock('tornado_spiral', prm.path), xf] : [ht, span, fxPathOrStock('tornado_spiral', prm.path)]);
+        const lay = normalizeFxLayerOpts(prm);
+        const hasExtra = lay.rotation !== 0 || lay.color != null || lay.opacity !== 1 || lay.blend != null || lay.angle != null;
+        const payload = hasExtra ? Object.assign({}, xf, { rotation: lay.rotation, ...(lay.color ? { color: lay.color } : {}), opacity: lay.opacity, ...(lay.blend ? { blend: lay.blend } : {}), ...(lay.angle != null ? { angle: lay.angle } : {}) }) : xf;
+        const targetArr = type === 'fist_pressure' ? out.fist : type === 'leg_arc' ? out.leg : out.tornado;
+        targetArr.push((Math.abs(xf.x) > 1e-6 || Math.abs(xf.y) > 1e-6 || Math.abs(xf.scale - 1) > 1e-6 || hasExtra) ? [ht, span, fxPathOrStock(type, prm.path), payload] : [ht, span, fxPathOrStock(type, prm.path)]);
       }
     }
     return out;
@@ -1075,7 +1301,7 @@ function createMotionRenderer(canvas, assets = {}) {
       const p = fxPlacementOf(xf);
       const pts = transformFxPath(path, p);
       const at = fxPointOnPath(pts, u);
-      drawTornado(ctx, at[0], at[1], u, p.scale);
+      drawTornado(ctx, at[0], at[1], u, p.scale, xf);
     });
     (fxSource.leg || []).forEach(([h, dur = 0.28, path, xf]) => {
       const d = delta(h, dur);
@@ -1089,7 +1315,9 @@ function createMotionRenderer(canvas, assets = {}) {
       const p = fxPlacementOf(xf);
       const pts = transformFxPath(path, p);
       const at = fxPointOnPath(pts, u);
-      drawFistPressure(ctx, at[0], at[1], u, p.scale);
+      const firstPt = pts[0] || at, lastPt = pts[pts.length - 1] || at;
+      const pathAngle = Math.hypot(lastPt[0] - firstPt[0], lastPt[1] - firstPt[1]) > 1e-3 ? Math.atan2(lastPt[1] - firstPt[1], lastPt[0] - firstPt[0]) : -0.35;
+      drawFistPressure(ctx, at[0], at[1], u, p.scale, Object.assign({ angle: pathAngle }, xf || {}));
     });
   }
   function activeExposures(list, delta) {
@@ -1156,9 +1384,22 @@ function createMotionRenderer(canvas, assets = {}) {
       ? Math.max(camera.s, 1 + Math.max(Math.abs(shake.dx) / 640, Math.abs(shake.dy) / 360) + Math.abs(Math.sin(totalRot * Math.PI / 180)) * 0.9)
       : camera.s;
     const bgMotion=backgroundAt(l,timeline.bg,t).motion,independent=bgMotion&&bgMotion.preset!=='follow_camera';
-    if(independent)drawBackground(l,t);
+    if(independent)drawBackground(l,t,camera);
+    const camVel = computeCameraVelocity(seg, t);
+    const dynamicCurve = seg && ['whip', 'expo_in_out', 'spring', 'punch_in', 'recoil_settle'].includes(seg.ease);
+    const motionBlurOn = !(hitstopState && hitstopState.freeze) && (seg?.motion_blur === true || Number(seg?.motion_blur) > 0 || (dynamicCurve && camVel.speed > 18));
     ctx.save(); ctx.translate(640 + camera.x + shake.dx, 360 + camera.y + shake.dy); ctx.rotate(totalRot * Math.PI / 180); ctx.scale(drawScale, drawScale); ctx.translate(-640, -360);
-    if(!independent)drawBackground(l,t);
+    if(!independent)drawBackground(l,t,camera);
+    if (motionBlurOn && (Math.abs(camVel.vx) > 0.5 || Math.abs(camVel.vy) > 0.5)) {
+      const blurWeight = Number(seg?.motion_blur) > 0 ? Math.min(2, +seg.motion_blur) : 1;
+      for (const [step, ga] of [[1, 0.14], [2, 0.07]]) {
+        ctx.save();
+        ctx.globalAlpha = ga;
+        ctx.translate(-camVel.vx * step * 0.45 * blurWeight, -camVel.vy * step * 0.45 * blurWeight);
+        drawScene(l, t);
+        ctx.restore();
+      }
+    }
     drawScene(l,t);
     if (opts.onion) {
       const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
@@ -1169,6 +1410,8 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.restore();
     drawForeground(t);
+    const activeMood = (cutAtom && cutAtom.mood) || (curAtom && curAtom.mood) || timeline.mood;
+    if (activeMood) drawSceneAtmosphereMood(ctx, activeMood, fxT);
     const pinkOnPreview = fxSource.pink_cut != null && (fxT >= fxSource.pink_cut || (standIn && inAtom(fxSource.pink_cut)));
     if (!pinkOnPreview && hitstopState && hitstopState.active) {
       if (typeof ctx.getImageData === 'function' && typeof ctx.putImageData === 'function') {
@@ -1184,15 +1427,30 @@ function createMotionRenderer(canvas, assets = {}) {
       }
     }
     // Deterministic particles & live stand-ins avoid a different random result on every frame/export.
-    (fxSource.dust || []).forEach(([h, k = 1]) => {
-      const d = fxDelta(h, 0.55);
+    (fxSource.dust || []).forEach(([h, k = 1, rawOpts]) => {
+      const lay = normalizeFxLayerOpts(rawOpts);
+      const span = rawOpts && Number.isFinite(+rawOpts.dur) && +rawOpts.dur > 0 ? +rawOpts.dur : 0.55;
+      const d = fxDelta(h, span);
       if (d < 0) return;
+      const fade = 1 - d / span;
+      const baseX = (rawOpts && rawOpts.x != null ? +rawOpts.x : 640);
+      const baseY = (rawOpts && rawOpts.y != null ? +rawOpts.y : 680);
       ctx.save();
-      ctx.fillStyle = `rgba(120,138,134,${0.36 * (1 - d / 0.55)})`;
-      for (let i = 0; i < 18; i++) {
+      if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+      for (let i = 0; i < 16; i++) {
         const v = Math.sin(i * 17.31);
+        const px = baseX + v * (90 + d * 430) * k * lay.scale;
+        const py = baseY - Math.abs(Math.cos(i * 4.2)) * d * 115 * lay.scale;
+        const rad = (10 + d * 26) * lay.scale;
+        ctx.fillStyle = lay.color ? lay.color : `rgba(88,104,102,${0.32 * fade * lay.opacity})`;
+        ctx.globalAlpha = (lay.color ? 0.32 * fade * lay.opacity : 1);
         ctx.beginPath();
-        ctx.arc(640 + v * (90 + d * 430) * k, 680 - Math.abs(Math.cos(i * 4.2)) * d * 110, 8 + d * 25, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.14, py + rad * 0.14, rad * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = lay.color ? '#ffffff' : `rgba(195,212,208,${0.44 * fade * lay.opacity})`;
+        ctx.globalAlpha = (lay.color ? 0.44 * fade * lay.opacity : 1);
+        ctx.beginPath();
+        ctx.arc(px, py, rad * 0.82, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
@@ -1203,111 +1461,172 @@ function createMotionRenderer(canvas, assets = {}) {
       if (d < 0) return;
       drawImpactBurst(ctx, hitOpts.x, hitOpts.y, d / hitOpts.dur, col, hitOpts);
     });
-    (fxSource.flash || []).concat(fxSource.bgflash || []).forEach(([h, col = '#ff8a1e']) => {
-      const d = fxDelta(h, 0.22);
+    (fxSource.flash || []).concat(fxSource.bgflash || []).forEach(([h, col = '#ff8a1e', rawOpts]) => {
+      const lay = normalizeFxLayerOpts(rawOpts);
+      const span = rawOpts && Number.isFinite(+rawOpts.dur) && +rawOpts.dur > 0 ? +rawOpts.dur : 0.22;
+      const d = fxDelta(h, span);
       if (d < 0) return;
-      const w = 1 - d / 0.22;
+      const w = 1 - d / span;
+      const fxCx = rawOpts && rawOpts.x != null ? +rawOpts.x : 640;
+      const fxCy = rawOpts && rawOpts.y != null ? +rawOpts.y : 320;
       ctx.save();
+      if (lay.blend) ctx.globalCompositeOperation = lay.blend;
       ctx.fillStyle = col;
-      ctx.globalAlpha = 0.28 * w;
+      ctx.globalAlpha = 0.28 * w * lay.opacity;
       ctx.fillRect(0, 0, 1280, 720);
       ctx.strokeStyle = col;
-      ctx.globalAlpha = 0.6 * w;
-      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.6 * w * lay.opacity;
+      ctx.lineWidth = 3 * lay.scale;
       for (let i = 0; i < 12; i++) {
-        const a = (i / 12) * Math.PI * 2 + 0.13;
+        const a = (i / 12) * Math.PI * 2 + 0.13 + (lay.rotation * Math.PI / 180);
         ctx.beginPath();
-        ctx.moveTo(640 + Math.cos(a) * 60, 320 + Math.sin(a) * 60);
-        ctx.lineTo(640 + Math.cos(a) * 240, 320 + Math.sin(a) * 240);
+        ctx.moveTo(fxCx + Math.cos(a) * 60 * lay.scale, fxCy + Math.sin(a) * 60 * lay.scale);
+        ctx.lineTo(fxCx + Math.cos(a) * 240 * lay.scale, fxCy + Math.sin(a) * 240 * lay.scale);
         ctx.stroke();
       }
       ctx.restore();
     });
-    (fxSource.trails || []).forEach(([h, dir = 1]) => {
-      const d = fxDelta(h, 0.18);
+    (fxSource.trails || []).forEach(([h, dir = 1, rawOpts]) => {
+      const lay = normalizeFxLayerOpts(rawOpts);
+      const span = rawOpts && Number.isFinite(+rawOpts.dur) && +rawOpts.dur > 0 ? +rawOpts.dur : 0.18;
+      const d = fxDelta(h, span);
       if (d < 0) return;
-      const w = 1 - d / 0.18;
+      const w = 1 - d / span;
+      const cx = rawOpts && rawOpts.x != null ? +rawOpts.x : 640 - dir * 36;
+      const cyBase = rawOpts && rawOpts.y != null ? +rawOpts.y : 320;
       ctx.save();
+      if (lay.blend) ctx.globalCompositeOperation = lay.blend;
       const a0 = dir > 0 ? Math.PI * 1.12 : -Math.PI * 0.18;
       const a1 = dir > 0 ? Math.PI * 1.72 : Math.PI * 0.42;
+      const ribbonCol = lay.color || '#19e0d0';
       for (let i = 0; i < 4; i++) {
-        const r = 95 + i * 24;
-        const cy = 320 + (i - 1) * 14;
-        ctx.globalAlpha = 0.72 * w;
-        ctx.strokeStyle = '#19e0d0';
-        ctx.lineWidth = 9 - i * 1.5;
-        ctx.beginPath();
-        ctx.arc(640 - dir * 36, cy, r, a0, a1);
-        ctx.stroke();
-        ctx.globalAlpha = 0.9 * w;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4.5 - i * 0.7;
-        ctx.beginPath();
-        ctx.arc(640 - dir * 36, cy, r, a0, a1);
-        ctx.stroke();
+        const r = (95 + i * 24) * lay.scale;
+        const cy = cyBase + (i - 1) * 14 * lay.scale;
+        const pts = [];
+        for (let st = 0; st <= 16; st++) {
+          const ang = a0 + (a1 - a0) * (st / 16) + (lay.rotation * Math.PI / 180);
+          pts.push([cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]);
+        }
+        const outer = taperedArcPolygon(pts, (14 - i * 2) * lay.scale);
+        const core = taperedArcPolygon(pts, (6 - i * 0.8) * lay.scale);
+        if (outer) {
+          ctx.globalAlpha = 0.78 * w * lay.opacity;
+          ctx.fillStyle = ribbonCol;
+          ctx.beginPath();
+          ctx.moveTo(outer[0][0], outer[0][1]);
+          for (let k = 1; k < outer.length; k++) ctx.lineTo(outer[k][0], outer[k][1]);
+          ctx.closePath();
+          ctx.fill();
+        }
+        if (core) {
+          ctx.globalAlpha = 0.94 * w * lay.opacity;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(core[0][0], core[0][1]);
+          for (let k = 1; k < core.length; k++) ctx.lineTo(core[k][0], core[k][1]);
+          ctx.closePath();
+          ctx.fill();
+        }
       }
       ctx.restore();
     });
-    (fxSource.speed || []).forEach(([a, b, mode, k0 = 0, k1 = 1]) => {
-      const inSpan = t >= a && t < b;
+    (fxSource.speed || []).forEach(([a, b, mode, k0 = 0, k1 = 1, rawOpts]) => {
+      const inSpan = fxT >= a && fxT < b;
       const standInSpan = standIn && a < atomT1 + 1e-4 && b > atomT0 - 1e-4;
       if (!inSpan && !standInSpan) return;
-      const u = inSpan ? (t - a) / Math.max(1e-6, b - a) : 0.5;
+      const lay = normalizeFxLayerOpts(rawOpts);
+      const u = inSpan ? (fxT - a) / Math.max(1e-6, b - a) : 0.5;
       const k = k0 + (k1 - k0) * u;
+      const focalX = rawOpts && rawOpts.x != null ? +rawOpts.x : 640;
+      const focalY = rawOpts && rawOpts.y != null ? +rawOpts.y : 360;
       ctx.save();
+      if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+      const colCore = lay.color || '#77ffdd';
       for (let i = 0; i < 46; i++) {
-        const angle = (i / 46) * Math.PI * 2 + t * 0.1;
-        ctx.beginPath();
+        const angle = (i / 46) * Math.PI * 2 + fxT * 0.1 + (lay.rotation * Math.PI / 180);
+        const jitter = Math.sin(i * 13.7) * 0.5 + 0.5;
         if (mode === 'radial') {
-          ctx.moveTo(640 + Math.cos(angle) * (420 - k * 160), 360 + Math.sin(angle) * (320 - k * 120));
-          ctx.lineTo(640 + Math.cos(angle) * 780, 360 + Math.sin(angle) * 620);
+          const rIn = (280 + jitter * 140 - k * 140) * lay.scale;
+          const rOut = 840 * lay.scale;
+          const hw = (0.012 + jitter * 0.012) * lay.scale;
+          ctx.fillStyle = '#122926';
+          ctx.globalAlpha = 0.55 * lay.opacity;
+          ctx.beginPath();
+          ctx.moveTo(focalX + Math.cos(angle) * rIn, focalY + Math.sin(angle) * rIn);
+          ctx.lineTo(focalX + Math.cos(angle - hw) * rOut, focalY + Math.sin(angle - hw) * rOut);
+          ctx.lineTo(focalX + Math.cos(angle + hw) * rOut, focalY + Math.sin(angle + hw) * rOut);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = colCore;
+          ctx.globalAlpha = 0.78 * lay.opacity;
+          ctx.beginPath();
+          ctx.moveTo(focalX + Math.cos(angle) * (rIn + 18), focalY + Math.sin(angle) * (rIn + 18));
+          ctx.lineTo(focalX + Math.cos(angle - hw * 0.45) * rOut, focalY + Math.sin(angle - hw * 0.45) * rOut);
+          ctx.lineTo(focalX + Math.cos(angle + hw * 0.45) * rOut, focalY + Math.sin(angle + hw * 0.45) * rOut);
+          ctx.closePath();
+          ctx.fill();
         } else {
           const x = 90 + ((i * 177.3) % 1100);
-          const y = 60 + ((i * 98.1 + t * 300) % 560);
-          ctx.moveTo(x, y);
-          ctx.lineTo(x, y + (mode === 'up' ? -1 : 1) * (75 + k * 75));
+          const y = 60 + ((i * 98.1 + fxT * 300) % 560);
+          const dy = (mode === 'up' ? -1 : 1) * (80 + jitter * 60 + k * 75) * lay.scale;
+          ctx.fillStyle = '#1b3b36';
+          ctx.globalAlpha = 0.6 * lay.opacity;
+          ctx.beginPath();
+          ctx.moveTo(x - 3 * lay.scale, y);
+          ctx.lineTo(x + 3 * lay.scale, y);
+          ctx.lineTo(x, y + dy);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = colCore;
+          ctx.globalAlpha = 0.84 * lay.opacity;
+          ctx.beginPath();
+          ctx.moveTo(x - 1.5 * lay.scale, y);
+          ctx.lineTo(x + 1.5 * lay.scale, y);
+          ctx.lineTo(x, y + dy);
+          ctx.closePath();
+          ctx.fill();
         }
-        ctx.strokeStyle = '#1b3b3699';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.strokeStyle = '#77ffddcc';
-        ctx.lineWidth = 2;
-        ctx.stroke();
       }
       ctx.restore();
     });
-    (fxSource.sparks || []).forEach(([h, n = 40, at]) => {
-      const rawD = fxDelta(h, 0.4);
+    (fxSource.sparks || []).forEach(([h, n = 40, at, rawOpts]) => {
+      const lay = normalizeFxLayerOpts(rawOpts);
+      const span = rawOpts && Number.isFinite(+rawOpts.dur) && +rawOpts.dur > 0 ? +rawOpts.dur : 0.4;
+      const rawD = fxDelta(h, span);
       if (rawD < 0) return;
       const d = Math.max(0.05, rawD);
-      const w = 1 - rawD / 0.4;
-      const cx = at?.[0] ?? 640, cy = at?.[1] ?? 320;
+      const w = 1 - rawD / span;
+      const cx = (rawOpts && rawOpts.x != null ? +rawOpts.x : at?.[0] ?? 640);
+      const cy = (rawOpts && rawOpts.y != null ? +rawOpts.y : at?.[1] ?? 320);
+      const col = lay.color || '#ff6d00';
       ctx.save();
-      ctx.globalAlpha = 0.55 * w;
-      ctx.fillStyle = '#ff9800';
+      if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+      ctx.globalAlpha = 0.55 * w * lay.opacity;
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 20 * lay.scale, 0, Math.PI * 2);
       ctx.fill();
       for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + (i % 3) * 0.14;
-        const speed = 260 + ((i * 73) % 420);
+        const a = (i / n) * Math.PI * 2 + (i % 3) * 0.14 + (lay.rotation * Math.PI / 180);
+        const speed = (260 + ((i * 73) % 420)) * lay.scale;
         const x = cx + Math.cos(a) * d * speed;
-        const y = cy + Math.sin(a) * d * speed + d * d * 360;
-        const tx = x - Math.cos(a) * 22;
-        const ty = y - Math.sin(a) * 22;
-        ctx.globalAlpha = 0.85 * w;
-        ctx.strokeStyle = '#ff6d00';
-        ctx.lineWidth = 3.5;
+        const y = cy + Math.sin(a) * d * speed + d * d * 360 * lay.scale;
+        const tx = x - Math.cos(a) * 26 * lay.scale;
+        const ty = y - Math.sin(a) * 26 * lay.scale;
+        const nx = -Math.sin(a) * 2.8 * lay.scale, ny = Math.cos(a) * 2.8 * lay.scale;
+        ctx.globalAlpha = 0.88 * w * lay.opacity;
+        ctx.fillStyle = col;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
-        ctx.strokeStyle = '#ffe082';
-        ctx.lineWidth = 1.8;
+        ctx.lineTo(tx + nx, ty + ny);
+        ctx.lineTo(tx - nx, ty - ny);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.95 * w * lay.opacity;
+        ctx.fillStyle = '#ffe082';
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
+        ctx.arc(x, y, 2 * lay.scale, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     });
@@ -1369,10 +1688,13 @@ function createMotionRenderer(canvas, assets = {}) {
       const entry = pixelfxList[pi];
       const hitT = entry[0];
       const fxId = entry[1];
+      const rawOpts = entry[2];
       if (hitT == null || !fxId) continue;
       const api = globalThis.HMPixelFx;
       const meta = api && typeof api.meta === 'function' ? api.meta(fxId) : null;
-      const dur = meta && Number(meta.duration) > 0 ? Number(meta.duration) : 0.6;
+      const dur = rawOpts && Number.isFinite(+rawOpts.dur) && +rawOpts.dur > 0
+        ? Number(rawOpts.dur)
+        : (meta && Number(meta.duration) > 0 ? Number(meta.duration) : 0.6);
       const elapsed = fxT - hitT;
       let local = -1;
       if (elapsed >= -1e-4 && elapsed <= dur + 1e-4) local = Math.min(dur, Math.max(0, elapsed));
@@ -1383,7 +1705,22 @@ function createMotionRenderer(canvas, assets = {}) {
         continue;
       }
       try {
-        const res = api.paint(fxId, local, ctx);
+        const lay = rawOpts ? normalizeFxLayerOpts(rawOpts) : null;
+        const hasXf = lay && (lay.x !== 0 || lay.y !== 0 || lay.scale !== 1 || lay.rotation !== 0 || lay.opacity !== 1 || lay.blend != null);
+        let res;
+        if (hasXf) {
+          ctx.save();
+          ctx.globalAlpha = lay.opacity;
+          if (lay.blend) ctx.globalCompositeOperation = lay.blend;
+          ctx.translate(640 + lay.x, 360 + lay.y);
+          if (lay.rotation) ctx.rotate(lay.rotation * Math.PI / 180);
+          if (lay.scale !== 1) ctx.scale(lay.scale, lay.scale);
+          ctx.translate(-640, -360);
+          res = api.paint(fxId, local, ctx);
+          ctx.restore();
+        } else {
+          res = api.paint(fxId, local, ctx);
+        }
         if (res && res.drew) pixelfxDrawn.push(fxId);
         else pixelfxMissed.push(fxId);
       } catch (_) {
@@ -1478,6 +1815,11 @@ hmRoot.HMMotionFx = {
   applyHitstopPixels,
   impactBurstGeometry,
   drawImpactBurst,
+  normalizeFxLayerOpts,
+  taperedArcPolygon,
+  computeCameraVelocity,
+  computeBgParallaxOffset,
+  drawSceneAtmosphereMood,
   computeCameraImpactShake,
   fxPathOrStock,
   fxPointOnPath,
