@@ -343,6 +343,7 @@
     if (!m || typeof m !== 'object' || Array.isArray(m)) return false;
     if (!BACKGROUND_MOVES.includes(m.preset) || !Number.isFinite(m.amount) || m.amount < 0 || m.amount > 1) return false;
     if (m.clock !== undefined && !['show','per_atom','legacy','span'].includes(m.clock)) return false;
+    if (m.parallax_ratio !== undefined && (!Number.isFinite(+m.parallax_ratio) || +m.parallax_ratio < 0 || +m.parallax_ratio > 1)) return false;
     const pairOk = (t0, t1) => Number.isFinite(+t0) && Number.isFinite(+t1) && +t1 > +t0;
     if (m.span !== undefined) {
       const span = m.span;
@@ -637,7 +638,7 @@
     return i < 0 ? b : b.slice(0, i);
   }
 
-  const CAM_EASES = ['linear', 'smooth', 'sine', 'ease_in', 'ease_out', 'snap'];
+  const CAM_EASES = ['linear', 'smooth', 'sine', 'ease_in', 'ease_out', 'snap', 'spring', 'whip', 'punch_in', 'recoil_settle'];
   const SNAP_ZOOM = 0.18;
 
   function ease(kind, u) {
@@ -651,6 +652,30 @@
       if (u <= hold) return 0;
       const t = (u - hold) / (1 - hold);
       return t * t * (3 - 2 * t);
+    }
+    if (kind === 'spring') {
+      if (u <= 0) return 0;
+      if (u >= 1) return 1;
+      return 1 - Math.exp(-6.2 * u) * Math.cos(Math.PI * 2.5 * u);
+    }
+    if (kind === 'whip' || kind === 'expo_in_out') {
+      if (u <= 0) return 0;
+      if (u >= 1) return 1;
+      return u < 0.5 ? Math.pow(2, 16 * u - 8) / 2 : 1 - Math.pow(2, -16 * u + 8) / 2;
+    }
+    if (kind === 'punch_in') {
+      if (u <= 0) return 0;
+      if (u >= 1) return 1;
+      const fast = 1 - Math.pow(1 - Math.min(1, u * 1.65), 3);
+      const kick = Math.sin(Math.min(1, u * 1.45) * Math.PI) * 0.12 * (1 - u);
+      return fast + kick;
+    }
+    if (kind === 'recoil_settle') {
+      if (u <= 0) return 0;
+      if (u >= 1) return 1;
+      const settle = 1 - Math.pow(1 - u, 2.5);
+      const dip = -0.18 * Math.sin(u * Math.PI * 1.8) * Math.exp(-3.4 * u);
+      return settle + dip;
     }
     return u * u * (3 - 2 * u);
   }
@@ -957,7 +982,7 @@
   function setCamEase(cam, easeName) {
     if (!cam || typeof cam !== 'object') throw new Error('Choose a clip before setting camera easing.');
     const name = easeName || '';
-    if (name && CAM_EASES.indexOf(name) < 0) throw new Error('Use linear, smooth, sine, ease in, ease out, or snap zoom.');
+    if (name && CAM_EASES.indexOf(name) < 0) throw new Error('Use linear, smooth, sine, ease in, ease out, snap, spring, whip, punch_in, or recoil_settle.');
     const snap = name === 'snap';
     if (!name) {
       delete cam.ease;
@@ -1335,13 +1360,21 @@
     white_flash: { id: 'white_flash', label: 'White flash', dur_s: 0.08, hold_s: 0, dir: 1 },
     whip_cut: { id: 'whip_cut', label: 'Whip cut', dur_s: 0.10, hold_s: 0, dir: 1 },
   };
+  const EXTENDED_CUT_TRANSITION_IDS = ['slash_wipe', 'impact_invert_cut', 'zoom_smash', 'iris_focus'];
+  const EXTENDED_CUT_TRANSITION_DEFAULTS = {
+    slash_wipe: { id: 'slash_wipe', label: 'Slash wipe', dur_s: 0.14, hold_s: 0, dir: 1 },
+    impact_invert_cut: { id: 'impact_invert_cut', label: 'Impact B&W cut', dur_s: 0.10, hold_s: 0, dir: 1 },
+    zoom_smash: { id: 'zoom_smash', label: 'Zoom smash', dur_s: 0.14, hold_s: 0, dir: 1 },
+    iris_focus: { id: 'iris_focus', label: 'Iris focus', dur_s: 0.16, hold_s: 0, dir: 1 },
+  };
 
   function cutPresetTable(raw) {
-    const list = Array.isArray(raw) ? raw : (raw && raw.presets) || [];
+    const list = Array.isArray(raw) ? raw : ((raw && raw.presets) || []).concat((raw && raw.extended_presets) || []);
     const table = {};
     CUT_TRANSITION_IDS.forEach((id) => { table[id] = Object.assign({}, CUT_TRANSITION_DEFAULTS[id]); });
+    EXTENDED_CUT_TRANSITION_IDS.forEach((id) => { table[id] = Object.assign({}, EXTENDED_CUT_TRANSITION_DEFAULTS[id]); });
     list.forEach((p) => {
-      if (!p || CUT_TRANSITION_IDS.indexOf(p.id) < 0) return;
+      if (!p || !table[p.id]) return;
       const d = p.defaults || {};
       table[p.id] = {
         id: p.id,
@@ -1537,12 +1570,14 @@
             else errors.push(a.id + ': unknown camera micro_move ' + microMoveId);
           }
         }
+        const motionBlur = s.motion_blur !== undefined ? s.motion_blur : cam.motion_blur;
         cs.push({
           t0: Math.round(st * 10000) / 10000,
           t1: Math.round((st + s.dur_s) * 10000) / 10000,
           u0, u1, preset: segPresetName, curves,
           ...(segEase ? { ease: segEase } : {}),
           ...(snapZoom ? { snap_zoom: true } : {}),
+          ...(motionBlur != null && motionBlur !== false ? { motion_blur: motionBlur } : {}),
           ...(microSpec ? {
             micro_move: microMoveId,
             micro_curves: deepClone(microSpec.curves),
@@ -1691,28 +1726,43 @@
           prm.y = xf.y;
           prm.scale = xf.scale;
         }
+        const styleKeys = ['x', 'y', 'scale', 'rotation', 'color', 'opacity', 'blend', 'angle'];
+        const hasStyleMeta = styleKeys.some((k) => prm[k] !== undefined);
+        const procXf = (prm.rotation !== undefined || prm.color !== undefined || prm.opacity !== undefined || prm.blend !== undefined || prm.angle !== undefined)
+          ? Object.assign({}, xf, {
+              ...(prm.rotation !== undefined ? { rotation: +prm.rotation || 0 } : {}),
+              ...(prm.color !== undefined ? { color: prm.color } : {}),
+              ...(prm.opacity !== undefined ? { opacity: +prm.opacity } : {}),
+              ...(prm.blend !== undefined ? { blend: prm.blend } : {}),
+              ...(prm.angle !== undefined ? { angle: +prm.angle || 0 } : {}),
+            })
+          : xf;
+        const hasProcXf = hasFxPlacement(xf) || procXf !== xf;
+        const isMuted = hk.muted === true || (hk.params && hk.params.muted === true);
         const hasImpactMeta = ['x', 'y', 'at', 'angle', 'strength', 'dur', 'frames', 'hitstop_frames', 'hitstop', 'hitstop_dur', 'invert', 'contrast', 'tint', 'recoil', 'shake_dur'].some((k) => prm[k] !== undefined);
         const impactMeta = hasImpactMeta ? deepClone(prm) : null;
-        const paintPhoto = fxProfile !== 'comic' || !isPhotoFxChip(hk.type);
+        const hasShakeMeta = ['angle', 'rot_amp', 'decay'].some((k) => prm[k] !== undefined);
+        const layerMeta = (hasStyleMeta || Number.isFinite(+prm.dur)) ? deepClone(prm) : null;
+        const paintPhoto = !isMuted && (fxProfile !== 'comic' || !isPhotoFxChip(hk.type));
         if (paintPhoto) {
         for (const comp of p.components || []) {
           if (comp === 'impact_burst') fx.hits.push(impactMeta ? [ht, col, impactMeta] : [ht, col]);
-          else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push([ht, col]);
+          else if (comp === 'flash' && (p.components || []).indexOf('impact_burst') < 0) fx.flash.push(layerMeta ? [ht, col, layerMeta] : [ht, col]);
           else if (comp === 'hitstop_2f' && (p.components || []).indexOf('impact_burst') < 0) fx.hitstop.push(impactMeta ? [ht, impactMeta] : ht);
           else if (comp === 'shake' && (p.components || []).indexOf('impact_burst') < 0)
-            fx.shake.push([ht, prm.amp, prm.dur]);
-          else if (comp === 'tint') fx.bgflash.push([ht, col]);
-          else if (comp === 'trail') fx.trails.push([ht, prm.dir]);
-          else if (comp === 'dust') fx.dust.push([ht, prm.k]);
-          else if (comp === 'speed') fx.speed.push([ht, he, prm.mode, prm.k0, prm.k1]);
-          else if (comp === 'sparks') fx.sparks.push([ht, prm.n, prm.at]);
+            fx.shake.push(hasShakeMeta ? [ht, prm.amp, prm.dur, deepClone(prm)] : [ht, prm.amp, prm.dur]);
+          else if (comp === 'tint') fx.bgflash.push(layerMeta ? [ht, col, layerMeta] : [ht, col]);
+          else if (comp === 'trail') fx.trails.push(layerMeta ? [ht, prm.dir, layerMeta] : [ht, prm.dir]);
+          else if (comp === 'dust') fx.dust.push(layerMeta ? [ht, prm.k, layerMeta] : [ht, prm.k]);
+          else if (comp === 'speed') fx.speed.push(layerMeta ? [ht, he, prm.mode, prm.k0, prm.k1, layerMeta] : [ht, he, prm.mode, prm.k0, prm.k1]);
+          else if (comp === 'sparks') fx.sparks.push(layerMeta ? [ht, prm.n, prm.at, layerMeta] : [ht, prm.n, prm.at]);
           else if (comp === 'fence') fx.fence.push([ht, he, prm.k]);
           else if (comp === 'pink_cut') fx.pink_cut = ht;
           else if (comp === 'exposure_warm_crush') fx.exposure.push(hasFxPlacement(xf) ? [ht, span, xf] : [ht, span]);
-          else if (comp === 'fist_pressure') fx.fist.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('fist_pressure', prm.path), xf] : [ht, span, resolveFxPath('fist_pressure', prm.path)]);
-          else if (comp === 'leg_arc') fx.leg.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('leg_arc', prm.path), xf] : [ht, span, resolveFxPath('leg_arc', prm.path)]);
-          else if (comp === 'tornado_spiral') fx.tornado.push(hasFxPlacement(xf) ? [ht, span, resolveFxPath('tornado_spiral', prm.path), xf] : [ht, span, resolveFxPath('tornado_spiral', prm.path)]);
-          else if (comp === 'pixelfx') fx.pixelfx.push([ht, hk.type]);
+          else if (comp === 'fist_pressure') fx.fist.push(hasProcXf ? [ht, span, resolveFxPath('fist_pressure', prm.path), procXf] : [ht, span, resolveFxPath('fist_pressure', prm.path)]);
+          else if (comp === 'leg_arc') fx.leg.push(hasProcXf ? [ht, span, resolveFxPath('leg_arc', prm.path), procXf] : [ht, span, resolveFxPath('leg_arc', prm.path)]);
+          else if (comp === 'tornado_spiral') fx.tornado.push(hasProcXf ? [ht, span, resolveFxPath('tornado_spiral', prm.path), procXf] : [ht, span, resolveFxPath('tornado_spiral', prm.path)]);
+          else if (comp === 'pixelfx') fx.pixelfx.push(layerMeta ? [ht, hk.type, layerMeta] : [ht, hk.type]);
         }
         }
         const cls = classifyFxHook(hk, fxp);
@@ -1721,6 +1771,7 @@
           t_rel: tRel,
           ...(hk.source === 'pixelfx' || isPixelfxHook(hk) ? { source: 'pixelfx' } : {}),
           ...(hk.t_rel_end != null ? { t_rel_end: tRelEnd } : {}),
+          ...(isMuted ? { muted: true } : {}),
           params: prm,
           mode: cls.mode,
           compose_only: cls.composeOnly,
@@ -1783,6 +1834,7 @@
         ...(stripSummary ? { strip: stripSummary } : {}),
         ...(holdMeta ? { timing_hold: holdMeta } : {}),
         ...(cutMeta ? { cut: cutMeta } : {}),
+        ...(a.mood && typeof a.mood === 'object' ? { mood: deepClone(a.mood) } : typeof a.mood === 'string' && a.mood ? { mood: { id: a.mood } } : {}),
       });
       t = t1;
     }
@@ -1856,14 +1908,17 @@
       bg: hasLocations ? {
         key_white: bg.key_white === true,
         locations: deepClone(bg.locations),
+        ...(bg.parallax_ratio != null ? { parallax_ratio: +bg.parallax_ratio } : {}),
       } : {
         base: bg.base,
         swap: bg.swap || null,
         swap_t: swapT,
         key_white: bg.key_white === true,
+        ...(bg.parallax_ratio != null ? { parallax_ratio: +bg.parallax_ratio } : {}),
         ...(bg.motion ? {motion: deepClone(bg.motion)} : {}),
         ...(bg.crops ? {crops: deepClone(bg.crops)} : {}),
       },
+      ...(show.mood && typeof show.mood === 'object' ? { mood: deepClone(show.mood) } : typeof show.mood === 'string' && show.mood ? { mood: { id: show.mood } } : {}),
       chars: show.chars,
       atoms: tlAtoms,
       plates,
@@ -4153,6 +4208,7 @@
   global.HMComposeClient = {
     composeShow,
     CUT_TRANSITION_IDS,
+    EXTENDED_CUT_TRANSITION_IDS,
     cutPresetTable,
     normalizeAtomCut,
     applyTimingPack,
