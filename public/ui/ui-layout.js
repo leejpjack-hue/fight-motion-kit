@@ -74,7 +74,7 @@
   }
 
   function mountGroupDrawer(id, sectionEl, headSelector, opts = {}) {
-    if (!sectionEl) return;
+    if (!sectionEl || drawers.has(id)) return;
     const head = headSelector ? sectionEl.querySelector(headSelector) : sectionEl.firstElementChild;
     if (!head) return;
     const btn = makeToggleButton('drawerToggle_' + id, sectionEl.id || '');
@@ -85,6 +85,25 @@
       btn.click();
     });
     registerDrawer(id, sectionEl, btn, opts);
+  }
+
+  function mountDynamicDrawers() {
+    mountGroupDrawer('microFrames', $('microFramesGroup'), '.group-title', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: true
+    });
+    mountGroupDrawer('camActionPicker', $('camActionPicker'), '.dual-cam-head', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: true
+    });
+    mountGroupDrawer('fxStack', $('fxStackPanel'), '.dual-cam-head', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: true
+    });
+    mountGroupDrawer('impactStudio', $('impactStudioPanel'), '.dual-cam-head', {
+      mobileDefaultOpen: false,
+      desktopDefaultOpen: true
+    });
   }
 
   function mountDrawers() {
@@ -168,6 +187,7 @@
         labels: { open: 'Hide QA ▴', closed: 'Preset · Matrix · QA ▾' }
       });
     }
+    mountDynamicDrawers();
   }
 
   function mountFilterBars() {
@@ -441,6 +461,12 @@
   syncLintAutoDisclosure();
   wireCrossPanelShortcuts();
   syncViewportMode();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      mountDynamicDrawers();
+      syncAllDrawersForViewport();
+    }, { once: true });
+  }
 
   if (MOBILE_MQ?.addEventListener) {
     MOBILE_MQ.addEventListener('change', syncViewportMode);

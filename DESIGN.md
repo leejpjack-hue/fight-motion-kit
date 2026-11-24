@@ -33,20 +33,24 @@ Extracted directly from [`public/ui/styles.css`](public/ui/styles.css) and [`pub
 
 ## 3. Typography Rules
 - **Base Sans Stack**: `14px / 1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` (100% offline system fonts — zero external font CDNs).
-- **Monospace Telemetry**: `ui-monospace, SFMono-Regular, monospace` with `font-variant-numeric: tabular-nums` for `#timecode`, `#projectTitle`, clip durations (`9px–11px`), playhead pills, show IDs, and `#exportFfmpegCmd`.
-- **Hierarchy**:
-  - Studio Heading (`h1`): `25px`, weight `550`, tracking `-0.8px` (`18px` on compact `<1150px` viewports)
-  - Modal / Preview Headings (`h2`): `17px–24px`, weight `500`, tracking `-0.2px` to `-0.7px`
-  - Eyebrow Kickers (`.eyebrow`): `10px`, weight `650`, uppercase tracking `1.6px`, `--muted`
-  - Inspector Group Titles (`.group-title`): `10px`, weight `650`, uppercase tracking `1.1px`
-  - Field Hints (`.field-hint`): `10px`, line-height `1.5`, `--shell-muted`
+- **CSS Type Scale Tokens (`public/ui/styles.css` `:root`)**:
+  - `--fs-2xs`: `10px` (compact monospace telemetry badges only; raised to `11px` at `<= 600px`)
+  - `--fs-xs`: `11px` (card headers, sub-headers, form labels, field hints, compact chip buttons)
+  - `--fs-sm`: `12px` (standard buttons, desktop inputs/selects; mobile label/hint floor)
+  - `--fs-md`: `13px` (mobile inputs/selects at `<= 900px` for comfortable legibility)
+  - `--fs-h2`: `16px` / `--fs-h1`: `18px` (compact pane headers aligned cleanly with action rows)
+- **Monospace Telemetry**: `ui-monospace, SFMono-Regular, monospace` with `font-variant-numeric: tabular-nums` for `#timecode`, `#projectTitle`, clip durations (`10px–11px`), playhead pills, show IDs, and `#exportFfmpegCmd`.
+- **Three-Tier Header Hierarchy**:
+  - **Tier 1 — Pane Headers** (`.panel-heading`, `.preview-heading`, `.timeline-heading`): `.eyebrow` (`11px`, weight `700`, tracking `1.4px`) paired with balanced `h1`/`h2` (`16px–18px`, weight `600`).
+  - **Tier 2 — Card / Section Headers** (`.group-title`, `.background-heading`): `11px` uppercase weight `700`, `--shell-text` ink, right-aligned collapsible toggle pills (`.ui-drawer-toggle`).
+  - **Tier 3 — Sub-Headers** (`.dual-cam-head.sub-header`): `11px` uppercase weight `650` (`--shell-text`) unifying Impact Studio, FX Layer Stack, Cam Action Fight Grammar, Scene Action & Mood, Clip Small Actions, and Cam Chain.
 
 ## 4. Component Stylings
-- **Buttons (`button`)**: Border radius `7px`, padding `8px 12px`, `--surface` fill with `1px solid var(--border)`. Primary CTAs (`.primary`) use `--accent` fill with `--shell-accent-ink` weight `650`.
+- **Buttons (`button`)**: Border radius `--radius-md` (`6px`–`7px`), `--surface` fill with `1px solid var(--border)`. Primary CTAs (`.primary`) use `--accent` fill with `--shell-accent-ink` weight `650`. Compact chip grids (`.effect-options`, `.impact-archetypes`, `.scene-recipe-grid`, `.extended-cut-bar`, `.film-density-bar`, `.bg-run-presets`, `.fg-parallax-presets`) share `--fs-xs` (`11px` desktop, `12px` mobile) and `--btn-h-sm` (`28px` desktop, `36px` mobile).
 - **Focus Ring (`:focus-visible`)**: Explicit `2px solid var(--accent)` outline with `2px` offset across buttons, links, inputs, selects, textareas, summaries, and focusable controls.
 - **Stage Surround (`.stage-surround`)**: `10px` radius framed with radial vignette `#1A2432` to `#0E141C` and corner viewfinder hairlines around the `1280×720` (`16:9`) canvas. Non-canvas DOM overlays (`#stageMissingOverlay`, `#safeGuidesOverlay`) layer above without polluting exported video frames.
 - **Timeline Clip Cards (`.timeline-clip`)**: Height `91px`, `5px` radius, left `3px` inset spine in `--shell-accent-2`, thumbnail box + monospaced duration badge + direct right-edge `.clip-trim-handle`.
-- **Modals & Drawers (`dialog`)**: `15px` radius, `#121821` surface with `#070B0DBB` backdrop blur. Desktop `#exportDialog` uses a two-column grid separating primary export actions (`310px`) from Bake QA & `ffmpeg` handoff (`1fr`).
+- **Modals & Drawers (`dialog`)**: `15px` radius, `#121821` surface with `#070B0DBB` backdrop blur. Desktop `#exportDialog` uses a two-column grid separating primary export actions (`310px`) from Bake QA & `ffmpeg` handoff (`1fr`). Mobile (`<= 600px`) reflows dense 3–4 column inspector detail grids (`.micro-frame-grid`, `.paired-fields-3`, `.bg-crop-fields`, `.fg-grid-3`) into 2-column readable grids (`36px` controls).
 
 ## 5. Layout Principles
 - **Desktop 3-Pane NLE Deck (`>1150px`, validated at `1440×900`)**:

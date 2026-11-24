@@ -129,7 +129,7 @@
       panel.className = 'fx-stack-panel';
       panel.setAttribute('aria-label', 'Layered FX stack');
       panel.innerHTML =
-        '<div class="dual-cam-head"><span class="small-muted">FX LAYER STACK</span><span id="fxStackCount" class="small-muted">0 layers</span></div>' +
+        '<div class="dual-cam-head sub-header"><span class="small-muted">FX LAYER STACK</span><span id="fxStackCount" class="small-muted">0 layers</span></div>' +
         '<div class="fx-stack-add-row"><select id="fxStackAddSelect" aria-label="Choose FX layer to add"></select><button type="button" id="fxStackAddBtn" class="text-button">＋ Add layer</button></div>' +
         '<ul id="fxStackList" class="fx-stack-list" aria-label="Active FX layers"></ul>';
       const readout = document.getElementById('fxHookReadout');
