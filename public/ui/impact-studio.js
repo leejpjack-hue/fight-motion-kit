@@ -109,7 +109,7 @@
       panel.className = 'impact-studio-panel';
       panel.setAttribute('aria-label', 'Impact Studio');
       panel.innerHTML =
-        '<div class="dual-cam-head"><span class="small-muted">IMPACT STUDIO</span><button type="button" id="impactPickToggle" class="macro-button" aria-pressed="false">◎ Pick target</button></div>' +
+        '<div class="dual-cam-head sub-header"><span class="small-muted">IMPACT STUDIO</span><button type="button" id="impactPickToggle" class="macro-button" aria-pressed="false">◎ Pick target</button></div>' +
         '<div class="impact-archetypes">' +
         Object.values(IMPACT_ARCHETYPES).map((a) => `<button type="button" data-impact-archetype="${a.id}">${a.label}</button>`).join('') +
         '</div>' +

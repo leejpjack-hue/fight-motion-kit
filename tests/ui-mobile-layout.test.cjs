@@ -57,3 +57,30 @@ test('HM-UI-REDESIGN: ui-layout.js stays strictly local FE-only with zero backen
   assert.doesNotMatch(uiLayout, /\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource|api\.teqcon|wrangler|:8770/);
   assert.match(uiLayout, /window\.HMUiLayout\s*=/);
 });
+
+
+test('HM-UI-03: unified typography tokens, clean palette variables, and ordered micro-frames panel', () => {
+  for (const token of ['--fs-2xs', '--fs-xs', '--fs-sm', '--fs-md', '--fs-h2', '--fs-h1', '--btn-h-sm']) {
+    assert.ok(css.includes(token), `missing typography/button token ${token}`);
+  }
+  assert.equal(/--shell-border\b/.test(css), false, 'no undefined --shell-border variable');
+  assert.equal(/#1b291f\b/i.test(css), false, 'no off-palette #1b291f active color');
+  assert.match(css, /#microFramesGroup\{order:3\}/);
+  assert.match(css, /aside\.inspector\[data-section-filter="advanced"\]\s+#microFramesGroup\{display:none\}/);
+});
+
+test('HM-UI-03: sub-headers, drawer registration, slider markup, and mobile 2-col detail grid reflows', () => {
+  for (const file of ['public/ui/fx-stack.js', 'public/ui/impact-studio.js', 'public/ui/cam-action-picker.js', 'public/ui/scene-action-ui.js', 'public/ui/micro-frames-ui.js']) {
+    const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.match(src, /sub-header/, `${file} uses unified sub-header class`);
+  }
+  const sceneUi = fs.readFileSync(path.join(ROOT, 'public/ui/scene-action-ui.js'), 'utf8');
+  assert.match(sceneUi, /class="slider-label"[^>]*for="sceneMoodIntensity"/);
+  assert.doesNotMatch(sceneUi, /class="paired-fields"[^>]*>Mood glow/);
+
+  for (const drawerKey of ['microFrames', 'camActionPicker', 'fxStack', 'impactStudio']) {
+    assert.match(uiLayout, new RegExp(`'${drawerKey}'`), `ui-layout registers ${drawerKey} drawer`);
+  }
+  assert.match(css, /\.micro-frame-grid,\.paired-fields-3,\.bg-crop-fields,\.fg-grid-3\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.fx-stack-title\{[^}]*overflow:hidden;text-overflow:ellipsis/);
+});

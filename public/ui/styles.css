@@ -578,20 +578,20 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
 .import-receipt-ready-badge{padding:1px 6px;border-radius:4px;font:600 9px ui-monospace,SFMono-Regular,monospace}
 .import-receipt-ready-badge.is-ready{background:var(--shell-accent-dim);color:var(--accent);border:1px solid var(--shell-shot-line)}
 .import-receipt-ready-badge.is-needs-fix{background:#332815;color:var(--warn-ink);border:1px solid var(--warn-line)}
-.fx-stack-panel,.impact-studio-panel,.cam-action-picker,.scene-action-panel,.extended-cut-bar{margin-top:8px;padding:8px;border:1px solid var(--shell-border,#2a3533);border-radius:6px;background:color-mix(in srgb,var(--shell-bg,#101315) 85%,#1b2624)}
+.fx-stack-panel,.impact-studio-panel,.cam-action-picker,.scene-action-panel,.extended-cut-bar{margin-top:8px;padding:8px 9px;border:1px solid var(--border);border-radius:var(--radius-lg,8px);background:var(--shell-bg)}
 .fx-stack-add-row{display:flex;gap:6px;margin:6px 0}
 .fx-stack-add-row select{flex:1;min-width:0}
 .fx-stack-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.fx-stack-item{border:1px solid var(--shell-border,#2a3533);border-radius:4px;padding:4px 6px}
+.fx-stack-item{border:1px solid var(--border);border-radius:var(--radius-sm,5px);padding:5px 7px;background:var(--shell-panel)}
 .fx-stack-item.is-muted{opacity:0.55}
-.fx-stack-row{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.fx-stack-btns{display:flex;gap:3px}
-.fx-stack-editor{margin-top:6px;padding-top:6px;border-top:1px dashed var(--shell-border,#2a3533)}
-.impact-archetypes,.scene-recipe-grid,.extended-cut-bar{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
-.impact-reticle-overlay{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border:2px solid #ff8a1e;border-radius:50%;box-shadow:0 0 0 2px #0009,0 0 12px #ff8a1e;pointer-events:none;z-index:5}
+.fx-stack-row{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.fx-stack-btns{display:flex;gap:3px;flex-shrink:0}
+.fx-stack-editor{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)}
+.impact-archetypes,.scene-recipe-grid,.extended-cut-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:6px 0}
+.impact-reticle-overlay{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border:2px solid var(--hit);border-radius:50%;box-shadow:0 0 0 2px #0009,0 0 12px var(--hit);pointer-events:none;z-index:5}
 .cam-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0}
-.cam-action-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px;border:1px solid var(--shell-border,#2a3533);border-radius:5px;text-align:left}
-.cam-action-card.active,.extended-cut-bar button.active,#impactPickToggle.active{border-color:var(--accent,#ccf17b);background:#1b291f}
+.cam-action-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:6px 7px;border:1px solid var(--border);border-radius:var(--radius-md,6px);background:var(--shell-raised);text-align:left;min-width:0}
+.cam-action-card.active,.extended-cut-bar button.active,#impactPickToggle.active{border-color:var(--accent);background:var(--shell-accent-dim);color:var(--accent)}
 
 /* HM-RUN & HM-TL Separate Multi-Track Timeline + Running BG/FG Controls */
 .timeline-multitrack{display:flex;align-items:stretch;gap:6px;min-width:650px}
@@ -665,3 +665,71 @@ aside.library[data-section-filter="starters"] #mediaGrid{display:none}
 
 
 
+
+/* === HM-UI-03: Unified Typography, Header/Button Alignment & Mobile Detail Readability === */
+:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-base:14px;--fs-h3:14px;--fs-h2:16px;--fs-h1:18px;--radius-sm:5px;--radius-md:6px;--radius-lg:8px;--btn-h-sm:28px;--btn-h-md:32px}
+
+/* 1. Inspector Card Ordering, Filter & Drawer Sync */
+#microFramesGroup{order:3}
+aside.inspector[data-section-filter="advanced"] #microFramesGroup{display:none}
+#microFramesGroup[data-ui-collapsed="true"]>:not(.group-title),
+#camActionPicker[data-ui-collapsed="true"]>:not(.dual-cam-head),
+#fxStackPanel[data-ui-collapsed="true"]>:not(.dual-cam-head),
+#impactStudioPanel[data-ui-collapsed="true"]>:not(.dual-cam-head){display:none!important}
+#microFramesGroup[data-ui-collapsed="true"] .group-title{margin-bottom:0}
+
+/* 2. Three-Tier Header & Sub-Header Scale */
+.panel-heading,.preview-heading,.timeline-heading{align-items:center;gap:8px}
+.eyebrow,.panel-heading .eyebrow,.preview-heading .eyebrow,.timeline-heading .eyebrow{font-size:var(--fs-xs);font-weight:700;letter-spacing:1.4px;line-height:1.25;color:var(--muted)}
+.library h1{font-size:var(--fs-h1);font-weight:600;line-height:1.25;letter-spacing:-.35px}
+.preview-heading h2,.timeline-heading h2{font-size:var(--fs-h2);font-weight:600;line-height:1.25;letter-spacing:-.2px}
+.group-title,.background-heading .eyebrow{font-size:var(--fs-xs);font-weight:700;letter-spacing:.9px;line-height:1.3;color:var(--text)}
+.group-title{gap:6px;margin-bottom:8px}
+.small-muted,.timeline-heading h2 span{font-size:var(--fs-xs);color:var(--muted);font-weight:500;line-height:1.3}
+.dual-cam-head,.sub-header{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:22px;margin:0 0 6px}
+.sub-header .small-muted,.dual-cam-head .small-muted{font-size:var(--fs-xs);font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:var(--text)}
+.field-label,.background-label,.slider-label{font-size:var(--fs-xs);font-weight:600;line-height:1.35;color:var(--muted)}
+.field-label{letter-spacing:.9px}
+.field-hint,.background-panel .field-hint,.library-bottom>p.muted,#charHonesty .field-hint{font-size:var(--fs-xs);line-height:1.45;color:var(--muted)}
+.fg-grid label,.bg-crop-fields label,.bg-span-fields label,.bg-window-fields label,.bg-run-bob-fields label,.paired-fields label,.fx-path-points label{font-size:var(--fs-xs);line-height:1.3;color:var(--muted)}
+.pill,.clip-duration,.track-bar-badge,.track-badge,.track-count,.timeline-ruler-spacer,.ab-pane-head,.ab-compare-bar,.app-footer{font-size:var(--fs-2xs)}
+
+/* 3. Form Controls & Unified Button Tiers */
+.settings-group select,.settings-group input,.foreground-panel select,.foreground-panel input,.background-panel select,.background-panel input{font-size:var(--fs-sm);line-height:1.3}
+.micro-frame-grid select,.micro-frame-swap-row select{font-size:var(--fs-xs);min-height:var(--btn-h-sm);padding:4px 6px}
+button{font-size:var(--fs-sm);border-radius:var(--radius-md)}
+.macro-button,.ui-drawer-toggle,.library-bottom .ui-drawer-toggle{font-size:var(--fs-xs);font-weight:600;min-height:24px;padding:3px 9px;border-radius:999px}
+.section-filter-bar button{font-size:var(--fs-xs);min-height:26px;padding:4px 6px;border-radius:var(--radius-sm)}
+.effect-options button,.impact-archetypes button,.scene-recipe-grid button,.extended-cut-bar button,.film-density-bar button,.bg-run-presets button,.fg-parallax-presets button{font-size:var(--fs-xs);font-weight:600;line-height:1.25;min-height:var(--btn-h-sm);padding:5px 8px;border-radius:var(--radius-md);background:var(--surface);border:1px solid var(--border);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:4px;text-align:center}
+.extended-cut-bar>.small-muted{grid-column:1/-1}
+.fx-stack-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-size:var(--fs-xs);font-weight:600;color:var(--text);padding:3px 0}
+.fx-stack-btns button{font-size:var(--fs-xs);min-width:24px;min-height:24px;padding:2px 6px;border-radius:var(--radius-sm)}
+.cam-action-card svg{display:block;width:100%;height:auto;max-height:46px}
+.cam-action-card strong{font-size:var(--fs-xs);font-weight:650;line-height:1.25;color:var(--text)}
+.cam-action-card small{font-size:var(--fs-2xs);line-height:1.3;color:var(--muted)}
+#sceneActionPanel .slider-label{margin:8px 0 4px}
+#sceneActionPanel input[type="range"]{width:100%;display:block}
+@media(max-width:1360px){.first-path{flex-wrap:wrap}.first-path ol{flex-wrap:wrap;justify-content:flex-start}}
+
+/* 4. Tablet & Mobile Typography, Header, Button & Detail Grid Readability */
+@media(max-width:900px){
+  .eyebrow,.group-title,.background-heading .eyebrow,.sub-header .small-muted,.dual-cam-head .small-muted{font-size:var(--fs-sm)}
+  .field-label,.background-label,.slider-label,.field-hint,.fg-grid label,.bg-crop-fields label,.paired-fields label{font-size:var(--fs-sm)}
+  .settings-group select,.settings-group input,.foreground-panel select,.foreground-panel input,.background-panel select,.background-panel input{font-size:var(--fs-md);min-height:36px}
+  input[type="checkbox"],input[type="range"]{min-height:0}
+  .section-filter-bar button{font-size:11.5px;min-height:34px;padding:5px 8px}
+  .ui-drawer-toggle,.library-bottom .ui-drawer-toggle,.macro-button{font-size:var(--fs-xs);min-height:28px;padding:4px 10px}
+  .track-mini-btn{font-size:var(--fs-xs);min-width:28px;min-height:28px;padding:3px 7px}
+}
+@media(max-width:600px){
+  .topbar{min-height:50px;height:auto;padding:6px 10px;gap:6px}
+  #projectTitle{font-size:var(--fs-sm);min-height:34px}
+  #openProject,#saveProject,#exportOpen{font-size:var(--fs-xs);min-height:34px;padding:6px 9px}
+  .timeline-headers{flex:0 0 94px}
+  .micro-frame-grid,.paired-fields-3,.bg-crop-fields,.fg-grid-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .micro-frame-grid select,.paired-fields-3 input,.bg-crop-fields input,.fg-grid-3 input{font-size:var(--fs-md);min-height:36px;padding:6px 8px}
+  .effect-options button,.impact-archetypes button,.scene-recipe-grid button,.extended-cut-bar button,.film-density-bar button,.bg-run-presets button,.fg-parallax-presets button,.fx-stack-add-row button{min-height:36px;font-size:var(--fs-sm);padding:6px 9px}
+  .fx-stack-btns button{min-width:30px;min-height:30px;font-size:var(--fs-sm);padding:4px 8px}
+  .timeline-actions button,.fit-chips button,.plate-jump button{min-height:34px;font-size:var(--fs-xs);padding:6px 9px}
+  #timecode,.duration-literacy,.track-bar-badge,.clip-duration,.ab-pane-head,.ab-diff-chip{font-size:var(--fs-xs)}
+}

@@ -76,7 +76,7 @@
     }
 
     const slotHead = document.createElement('div');
-    slotHead.className = 'dual-cam-head micro-frame-head';
+    slotHead.className = 'dual-cam-head sub-header micro-frame-head';
     slotHead.innerHTML = '<span class="small-muted">CLIP SMALL ACTIONS</span><button type="button" class="text-button" id="addMicroFrame">＋ Add 1–2f action</button>';
 
     const slotList = document.createElement('div');

@@ -137,7 +137,7 @@
       box.className = 'cam-action-picker';
       box.setAttribute('aria-label', 'Visual Cam Action Picker');
       box.innerHTML =
-        `<div class="dual-cam-head"><span class="small-muted">CAM ACTION FIGHT GRAMMAR</span></div>` +
+        `<div class="dual-cam-head sub-header"><span class="small-muted">CAM ACTION FIGHT GRAMMAR</span></div>` +
         `<div class="cam-action-grid">` +
         CAM_ACTION_CARDS.map((card) =>
           `<button type="button" class="cam-action-card" data-cam-card="${card.id}" title="${card.desc}">` +

@@ -180,7 +180,7 @@
       panel.className = 'scene-action-panel';
       panel.setAttribute('aria-label', 'Scene Action and Atmosphere');
       panel.innerHTML =
-        `<div class="dual-cam-head"><span class="small-muted">SCENE ACTION &amp; MOOD</span></div>` +
+        `<div class="dual-cam-head sub-header"><span class="small-muted">Scene action &amp; mood</span></div>` +
         `<div class="scene-recipe-grid">` +
         Object.values(SCENE_RECIPES).map((r) => `<button type="button" data-scene-recipe="${r.id}">${r.label}</button>`).join('') +
         `</div>` +
@@ -188,7 +188,8 @@
         `<label>Parallax <span id="sceneParallaxValue">0%</span><input id="sceneParallaxRatio" type="range" min="0" max="0.8" step="0.05" value="0"></label>` +
         `<label>Mood<select id="sceneMoodSelect">${MOOD_PRESETS.map((m) => `<option value="${m.id}">${m.label}</option>`).join('')}</select></label>` +
         `</div>` +
-        `<label class="paired-fields">Mood glow <input id="sceneMoodIntensity" type="range" min="0" max="1" step="0.05" value="0.55"></label>`;
+        `<label class="slider-label" for="sceneMoodIntensity">Mood glow <output id="sceneMoodIntensityValue">55%</output></label>` +
+        `<input id="sceneMoodIntensity" type="range" min="0" max="1" step="0.05" value="0.55">`;
       bgSection.append(panel);
 
       panel.addEventListener('click', (e) => {
@@ -206,12 +207,18 @@
         S.editProject((proj) => { setSceneParallax(proj.show, S.selectedIndex, v); });
       });
 
+      const syncMoodVal = (v) => {
+        const valEl = document.getElementById('sceneMoodIntensityValue');
+        if (valEl) valEl.textContent = Math.round((Number.isFinite(+v) ? +v : 0.55) * 100) + '%';
+      };
       const writeMood = () => {
         const id = document.getElementById('sceneMoodSelect')?.value || 'neutral';
         const intensity = Number(document.getElementById('sceneMoodIntensity')?.value);
+        syncMoodVal(intensity);
         S.editProject((proj) => { applySceneMood(proj.show, id, { intensity }); });
       };
       document.getElementById('sceneMoodSelect')?.addEventListener('change', writeMood);
+      document.getElementById('sceneMoodIntensity')?.addEventListener('input', (e) => syncMoodVal(e.target.value));
       document.getElementById('sceneMoodIntensity')?.addEventListener('change', writeMood);
     }
 
@@ -237,7 +244,10 @@
       const moodSel = document.getElementById('sceneMoodSelect');
       if (moodSel && document.activeElement !== moodSel) moodSel.value = mood?.id || 'neutral';
       const moodInt = document.getElementById('sceneMoodIntensity');
-      if (moodInt && document.activeElement !== moodInt) moodInt.value = String(mood?.intensity ?? 0.55);
+      const mv = mood?.intensity ?? 0.55;
+      if (moodInt && document.activeElement !== moodInt) moodInt.value = String(mv);
+      const moodIntVal = document.getElementById('sceneMoodIntensityValue');
+      if (moodIntVal) moodIntVal.textContent = Math.round(mv * 100) + '%';
     };
     root.addEventListener('hm:projectchange', refresh);
     if (root.ready && typeof root.ready.then === 'function') root.ready.then(refresh);
