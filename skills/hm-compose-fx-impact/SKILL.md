@@ -82,7 +82,20 @@ node skills/hm-compose-fx-impact/scripts/stamp-cut-pack.cjs \
 
 - `--pack cycle` (default): cycle `freeze_hold` → `white_flash` → `whip_cut`
   across the selected atoms, using catalog defaults per preset.
-- `--preset <id>`: stamp one gold preset onto all selected atoms.
+- `--preset <id>`: stamp one cut preset onto all selected atoms.
+  - Gold presets: `freeze_hold`, `white_flash`, `whip_cut`.
+  - Extended presets (`cut_transitions.json#extended_presets`): `slash_wipe`,
+    `impact_invert_cut`, `zoom_smash`, `iris_focus`.
+- `--dur-s <0.02..0.5>`, `--hold-s <0..0.5>`, `--dir <-1|1>`: optional overrides
+  over the catalog defaults.
+- Wave1 `stamp-wave1-fx.cjs` also accepts optional per-hook layer flags:
+  `--t-rel <0..1>`, `--x <px>`, `--y <px>`, `--scale <0.05..8>`, `--color <#RRGGBB>`,
+  `--opacity <0..1>`, `--blend <source-over|screen|lighter|multiply|overlay>`,
+  `--rotation <deg>`, `--angle <rad>`, and `--hitstop <0..12>` (0 disables,
+  1–12 sets `hitstop_frames`; omit flags to write the catalog defaults).
+- Impact Studio hooks (`hit_orange`, `hit_pink`, `impact_white`, `hitstop_2f`)
+  additionally accept `invert`, `contrast`, `tint`, `recoil`, and `shake_dur`
+  in `params` when authoring JSON directly.
 - Targets: `--atoms beat-02,beat-04` (ids) or `--atoms 1,3` (0-based indices),
   or `--all` for every atom `i >= 1`. Atom `0` never gets a cut — no incoming
   boundary — it is skipped and reported.

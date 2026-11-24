@@ -75,3 +75,53 @@ Load preset IDs from `public/presets/camera_presets.json` and hook IDs from `fx_
 Overlays use `{id,kind:"text",text,t_start,t_end,x,y,style:{fontSize,fill,stroke,strokeWidth}}`. Keep preserved overlays unchanged when extending. Editor atom `caption` is converted into timeline overlays when compiled by the UI. The build helper materializes captions in its validation compose so reports match the editor.
 
 Portable export embeds images. Browser-recorded video is real-time MediaRecorder output and may vary by a frame. Deterministic export renders `total_seconds * fps` frames at `i/fps`, then encodes at that fps; verify the actual file metadata. WebM is video, not MP4.
+
+## Full Composer Extensions (`#276` / `HM-AI-01`)
+
+The fields below extend the base show/atom schemas above and map 1:1 to `kit/schema/show.schema.json`, `kit/schema/atom.schema.json`, and `public/ui/compose-client.js`.
+
+### 1. Impact Engine (`hit_orange`, `hit_pink`, `impact_white`, `hitstop_2f`)
+Attach to `show.atoms[i].fx_hooks[]`. Impact Studio `params` keys:
+- `x`, `y` (1280×720 stage coords) or `at: [x, y]`
+- `angle` (radians, default `-0.35`), `strength` (`0.2..4`, default `1`), `dur` (`0.05..2`s, default `0.24`)
+- `hitstop_frames` (or `frames`, `0..12`, default `2`), `hitstop` (`false` disables freeze), `hitstop_dur` (`0.01..0.5`s)
+- `invert` (`true | false | "always"`), `contrast` (`0.2..3`), `tint` (`#RRGGBB`), `recoil` (`0..80`), `shake_dur` (`0.05..1.5`s)
+
+### 2. Cam Action Eases (`show.atoms[i].cam`)
+All `CAM_EASES` supported by `camera_presets.json` and `compose-client.js`:
+`linear`, `smooth`, `sine`, `ease_in`, `ease_out`, `snap`, `spring`, `whip`, `punch_in`, `recoil_settle`.
+Each channel in `cam.curves.{x,y,s,r}` accepts `{ type: "<ease>", ... }` or inline keyframe ease hints.
+
+### 3. Scene Action, Mood, Multi-Location BG & Extended Cuts
+- `show.mood` / `atom.mood`: string mood id or `{ id: "neutral|sunset_clash|night_neon|cold_steel|crimson_fury", intensity?: 0..1 }`.
+- `show.bg.parallax_ratio` (`0..1`) & `show.bg.locations[]`: ordered non-overlapping windows `[{ id, src, t0, t1, crop?, motion? }]`.
+- `atom.cut` (`presets/cut_transitions.json`, `i >= 1` only):
+  - Gold presets: `freeze_hold`, `white_flash`, `whip_cut`
+  - Extended presets: `slash_wipe`, `impact_invert_cut`, `zoom_smash`, `iris_focus`
+  - Fields: `{ preset, dur_s?: 0.02..0.5, hold_s?: 0..0.5, dir?: -1|1 }`
+
+### 4. Multi-Layer FX Stack (`atom.fx_hooks[]`)
+Per-hook styling & stack control fields inside `fx_hooks[i]` and `fx_hooks[i].params`:
+- `t_rel` (`0..1`), `t_rel_end` (`0..1`), `muted` (`boolean`)
+- `params`: `{ x, y, scale (0.05..8), color (#RRGGBB), opacity (0..1), blend ("source-over"|"screen"|"lighter"|"multiply"|"overlay"), rotation (deg), angle (rad), dur }`
+
+### 5. Running Background Scroll & Foreground Pass-By Parallax
+- **Running BG (`bg.motion` or `bg.locations[k].motion`)**:
+  - Presets: `scroll_left`, `scroll_right`, `scroll_up`, `scroll_down` (plus window presets `follow_camera`, `static`, `pan_*`, `push_in`, `pull_out`)
+  - Fields: `speed_px_s` (`0..3000`), `tile_mode` (`"mirror" | "tile"`), `stride_bob: { amp_px: 0..24, freq_hz: 0.5..8 }`, `motion_blur` (`0..1`), `parallax_ratio` (`0..1`)
+  - Presets catalog (`bg_motion_packs.json#run_presets`): `city_jog`, `full_sprint`, `rooftop_dash`, `vertical_drop` (CLI: `author.cjs --run-preset <id>`).
+- **FG Pass-By (`show.fg.props[k].pass_by`)**:
+  - `{ enabled: true, direction: "left|right|up|down", speed_px_s?: 50..4500, parallax_mult?: 0.25..4, spacing_px?: 240..6000, phase_offset_px?: number, motion_blur?: 0..1 }`
+  - CLI: `stamp-fg.cjs --prop id=...,src=...,pass_by=left,parallax_mult=2.2,spacing_px=1400,speed_px_s=950,motion_blur=0.4`
+
+### 6. Per-Clip 1–2f Movement Density (`atom.micro_frames[]`)
+- At most **4** `micro_frames` per clip (`kit/schema/atom.schema.json#micro_frames`), adding 24fps stepped accents without changing clip duration:
+  - `at`: `"start" | "mid" | "end" | 0..1`
+  - `frames`: `1 | 2 | 3` (default `2`)
+  - `action`: `"anticipation" | "smear_lunge" | "squash_hit" | "recoil_snap" | "weight_shift" | "cloth_tremor" | "swap_plate"`
+  - `dir`: `-1 | 1` (default `1`)
+  - `strength`: `0.25..2` (default `1`)
+  - `src`: optional replacement image path (used by `swap_plate`)
+
+### 7. Playable & Re-openable Motion HTML (`--emit-html`)
+- `build-project.cjs --emit-html <out.html>` bundles the deterministic player (`const DATA=...`) **and** `<script id="hm-project-data" type="application/json">` (produced by `HMHtmlImport.embedProjectScript(project, { omitAssets: true })` under a locked-down CSP meta header) so exported HTML both plays offline and re-opens cleanly in `/ui/`.

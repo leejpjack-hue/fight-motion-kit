@@ -16,6 +16,7 @@ const path = require('node:path');
 const T_REL = 0.08;
 const SOURCE = 'pixelfx';
 const ROLES = ['Action', 'Reaction', 'Aftermath'];
+const BLEND_MODES = new Set(['source-over', 'screen', 'lighter', 'multiply', 'overlay']);
 // Beats that land a hit; --all-action-beats stamps only these.
 const ACTION_BEAT_CLASSES = new Set([
   'clash', 'straight', 'jab', 'hook', 'uppercut', 'elbow',
@@ -33,6 +34,9 @@ function usage() {
     '  [--out <file>] (default: overwrite show in place, first run saves <show>.bak)',
     '  [--atoms <ids|indices>] e.g. --atoms beat-01,beat-03 or --atoms 0,2',
     '  [--fx <wave1-id>|Action|Reaction|Aftermath] (default: first Action id)',
+    '  [--t-rel <0..1>] [--x <px>] [--y <px>] [--scale <0.05..8>]',
+    '  [--color <#RRGGBB>] [--opacity <0..1>] [--blend <source-over|screen|lighter|multiply|overlay>]',
+    '  [--rotation <deg>] [--angle <rad>] [--hitstop <0..12>]',
     '  [--all-action-beats] stamp every atom whose motion.beat_class is a strike:',
     '    ' + [...ACTION_BEAT_CLASSES].join(', ')
   ].join('\n');
@@ -131,6 +135,71 @@ function selectAtoms(show, args) {
   return picked;
 }
 
+function round4(n) {
+  return Math.round(n * 10000) / 10000;
+}
+
+function buildHook(fx, args) {
+  const a = args || {};
+  let tRel = T_REL;
+  if (a['t-rel'] != null) {
+    const n = Number(a['t-rel']);
+    if (!Number.isFinite(n) || n < 0 || n > 1) fail(3, '--t-rel must be between 0 and 1');
+    tRel = round4(n);
+  }
+  let x = 0;
+  if (a.x != null) {
+    const n = Number(a.x);
+    if (!Number.isFinite(n)) fail(3, '--x must be a number');
+    x = round4(n);
+  }
+  let y = 0;
+  if (a.y != null) {
+    const n = Number(a.y);
+    if (!Number.isFinite(n)) fail(3, '--y must be a number');
+    y = round4(n);
+  }
+  let scale = 1;
+  if (a.scale != null) {
+    const n = Number(a.scale);
+    if (!Number.isFinite(n) || n < 0.05 || n > 8) fail(3, '--scale must be between 0.05 and 8');
+    scale = round4(n);
+  }
+  const params = { x, y, scale };
+  if (a.color != null) {
+    const c = String(a.color).trim();
+    if (!/^#[0-9a-f]{6}$/i.test(c)) fail(3, '--color must be #RRGGBB');
+    params.color = c;
+  }
+  if (a.opacity != null) {
+    const op = Number(a.opacity);
+    if (!Number.isFinite(op) || op < 0 || op > 1) fail(3, '--opacity must be between 0 and 1');
+    params.opacity = round4(op);
+  }
+  if (a.blend != null) {
+    const b = String(a.blend).trim();
+    if (!BLEND_MODES.has(b)) fail(3, '--blend must be one of: ' + [...BLEND_MODES].join(', '));
+    params.blend = b;
+  }
+  if (a.rotation != null) {
+    const rot = Number(a.rotation);
+    if (!Number.isFinite(rot)) fail(3, '--rotation must be a number');
+    params.rotation = round4(rot);
+  }
+  if (a.angle != null) {
+    const ang = Number(a.angle);
+    if (!Number.isFinite(ang)) fail(3, '--angle must be a number');
+    params.angle = round4(ang);
+  }
+  if (a.hitstop != null) {
+    const hs = Number(a.hitstop);
+    if (!Number.isInteger(hs) || hs < 0 || hs > 12) fail(3, '--hitstop must be an integer from 0 to 12');
+    if (hs === 0) params.hitstop = false;
+    else params.hitstop_frames = hs;
+  }
+  return { type: fx.id, t_rel: tRel, source: SOURCE, params };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || !args.show) {
@@ -146,13 +215,16 @@ function main() {
 
   const added = [];
   const present = [];
+  let sampleHook = null;
   for (const atom of atoms) {
     if (!Array.isArray(atom.fx_hooks)) atom.fx_hooks = [];
     if (atom.fx_hooks.some(hook => hookKey(hook) === fx.id)) {
       present.push(atom.id);
       continue;
     }
-    atom.fx_hooks.push({ type: fx.id, t_rel: T_REL, source: SOURCE, params: { x: 0, y: 0, scale: 1 } });
+    const hook = buildHook(fx, args);
+    sampleHook = hook;
+    atom.fx_hooks.push(hook);
     added.push(atom.id);
   }
 
@@ -166,7 +238,10 @@ function main() {
   fs.writeFileSync(outPath, JSON.stringify(show, null, 2) + '\n');
 
   const lines = [];
-  for (const id of added) lines.push('  ' + id + ': added ' + fx.id + ' (t_rel ' + T_REL + ', ' + SOURCE + ', params x/y/scale 0/0/1)');
+  for (const id of added) {
+    const h = sampleHook || { t_rel: T_REL, params: { x: 0, y: 0, scale: 1 } };
+    lines.push('  ' + id + ': added ' + fx.id + ' (t_rel ' + h.t_rel + ', ' + SOURCE + ', params x/y/scale ' + h.params.x + '/' + h.params.y + '/' + h.params.scale + ')');
+  }
   for (const id of present) lines.push('  ' + id + ': ' + fx.id + ' already present, left untouched');
   process.stdout.write([
     'Wave1 catalog: ' + catalog.file,
@@ -179,4 +254,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { ACTION_BEAT_CLASSES, ROLES, parseArgs, resolveFx, selectAtoms, hookKey };
+module.exports = { ACTION_BEAT_CLASSES, ROLES, parseArgs, resolveFx, selectAtoms, hookKey, buildHook };
