@@ -365,6 +365,12 @@
       if (fp.t1 !== undefined && (!Number.isFinite(+fp.t1) || +fp.t1 < (+fp.t0 || 0) || +fp.t1 > 120)) {
         throw new Error('Foreground prop ' + fi + ' has invalid t1.');
       }
+      if (fp.t_start !== undefined && (!Number.isFinite(+fp.t_start) || +fp.t_start < 0 || +fp.t_start > 120)) {
+        throw new Error('Foreground prop ' + fi + ' has invalid t_start.');
+      }
+      if (fp.t_end !== undefined && (!Number.isFinite(+fp.t_end) || +fp.t_end < (+fp.t_start || 0) || +fp.t_end > 120)) {
+        throw new Error('Foreground prop ' + fi + ' has invalid t_end.');
+      }
       if (fp.x !== undefined && !Number.isFinite(+fp.x)) throw new Error('Foreground prop ' + fi + ' has non-finite x.');
       if (fp.y !== undefined && !Number.isFinite(+fp.y)) throw new Error('Foreground prop ' + fi + ' has non-finite y.');
       if (fp.scale !== undefined && (!Number.isFinite(+fp.scale) || +fp.scale <= 0 || +fp.scale > 20)) {
