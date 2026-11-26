@@ -733,3 +733,15 @@ button{font-size:var(--fs-sm);border-radius:var(--radius-md)}
   .timeline-actions button,.fit-chips button,.plate-jump button{min-height:34px;font-size:var(--fs-xs);padding:6px 9px}
   #timecode,.duration-literacy,.track-bar-badge,.clip-duration,.ab-pane-head,.ab-diff-chip{font-size:var(--fs-xs)}
 }
+
+/* === Week-1 (#285/#286): Empty-stage start actions & honest export receipt === */
+#emptyStage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 20px}
+#emptyStage[hidden]{display:none}
+.empty-stage-title{font-size:20px;font-weight:650;letter-spacing:-.2px;color:var(--text)}
+.empty-stage-desc{max-width:480px;margin:0;color:var(--muted);font-size:var(--fs-sm);line-height:1.5}
+.empty-stage-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px}
+.empty-stage-actions button{min-height:var(--btn-h-md);padding:7px 14px;font-size:var(--fs-sm);font-weight:600}
+.empty-stage-hint{max-width:440px;margin:0;color:var(--muted);font-size:var(--fs-xs);line-height:1.4}
+.export-receipt-honesty{margin:4px 0 0;color:var(--text)}
+.export-receipt-cmd{display:block;margin:6px 0;padding:6px 8px;border-radius:var(--radius-sm);background:var(--shell-bg);border:1px solid var(--border);font:11px/1.4 ui-monospace,SFMono-Regular,monospace;word-break:break-all;user-select:all}
+@media(max-width:600px){.empty-stage-actions{width:100%}.empty-stage-actions button{flex:1 1 160px;min-height:36px}}
