@@ -80,7 +80,7 @@
     if(busy)return;busy=true;document.querySelector('.workspace').inert=true;$('projectTitle').disabled=true;$('exportPreset').disabled=true;if($('exportFormat'))$('exportFormat').disabled=true;
     exportIds.forEach(id=>{if($(id))$(id).disabled=true;});
     await new Promise(resolve=>setTimeout(resolve,25));
-    try {await fn();} catch(e){report(e.message,true);throw e;}finally{busy=false;activeCancel=null;clearProgress();document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});paintExportHints();applyExportGate();}
+    try {await fn();} catch(e){hideReceipt();report(e.message,true);throw e;}finally{busy=false;activeCancel=null;clearProgress();document.querySelector('.workspace').inert=false;$('projectTitle').disabled=false;$('exportPreset').disabled=false;S.recording=false;S.update();['saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'].forEach(id=>{if($(id))$(id).disabled=false;});paintExportHints();applyExportGate();}
   }
   on('cancelExport',()=>{if(typeof activeCancel==='function')activeCancel();});
   $('exportDialog')?.addEventListener('close',()=>{if(typeof activeCancel==='function')activeCancel();});
@@ -322,16 +322,38 @@
     }
     return '';
   }
+  function assertNonEmptyBlob(blob, label) {
+    if (!blob || !(blob.size > 0)) {
+      hideReceipt();
+      throw new Error((label || 'Export') + ' produced an empty file (0 bytes). Nothing was saved.');
+    }
+    return blob;
+  }
   function hideReceipt() {
     const box=$('exportReceipt');
-    if(box)box.hidden=true;
+    if(box){box.hidden=true;delete box.dataset.kind;delete box.dataset.mime;delete box.dataset.bytes;}
+    if($('exportReceiptHonesty')){$('exportReceiptHonesty').hidden=true;$('exportReceiptHonesty').textContent='';}
+    if($('exportReceiptCmd')){$('exportReceiptCmd').hidden=true;$('exportReceiptCmd').textContent='';}
     if($('exportReceiptCopyMp4'))$('exportReceiptCopyMp4').hidden=true;
   }
   function showReceipt(receipt) {
     const box=$('exportReceipt');
-    if(!box||!receipt)return;
+    if(!box||!receipt||(receipt.bytes!=null&&!(receipt.bytes>0))){hideReceipt();return;}
+    box.dataset.kind=String(receipt.kind||'');
+    box.dataset.mime=String(receipt.mime||'');
+    box.dataset.bytes=receipt.bytes!=null?String(receipt.bytes):'';
     if($('exportReceiptTitle'))$('exportReceiptTitle').textContent=receipt.title||'Export ready';
     if($('exportReceiptMeta'))$('exportReceiptMeta').textContent=receipt.summary||'';
+    if($('exportReceiptHonesty')){
+      const h=String(receipt.honestyNote||'');
+      $('exportReceiptHonesty').textContent=h;
+      $('exportReceiptHonesty').hidden=!h;
+    }
+    if($('exportReceiptCmd')){
+      const cmd=receipt.kind==='frames'?String(receipt.ffmpegCommand||receipt.mp4Command||''):'';
+      $('exportReceiptCmd').textContent=cmd;
+      $('exportReceiptCmd').hidden=!cmd;
+    }
     if($('exportReceiptCopyMp4'))$('exportReceiptCopyMp4').hidden=receipt.kind!=='frames';
     box.hidden=false;
   }
@@ -554,7 +576,17 @@
   });
   on('exportOpen',openExportDialog);
   on('openBakeQa',openBakeQa);
-  on('exportFrame',()=>task(async()=>{assertExportAllowed();await S.compile();const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not export frame.');download(safeName(S.project.show.show_id,'-'+S.time.toFixed(2)+'s.png'),blob);report('Current frame downloaded.');}));
+  on('exportFrame',()=>task(async()=>{
+    assertExportAllowed();await S.compile();
+    const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
+    const renderer=HMMotion(canvas,S.project.assets||{});await renderer.load(S.composed);
+    S.sampleStageFrameAt(S.time,{renderer,standIn:false,onion:false,source:'bake-export-frame'});
+    const rawBlob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    const blob=assertNonEmptyBlob(rawBlob,'Current frame PNG');
+    const frameFile=safeName(S.project.show.show_id,'-'+S.time.toFixed(2)+'s.png');
+    download(frameFile,blob);report('Current frame downloaded.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frame',filename:frameFile,format:'PNG frame',mime:blob.type||'image/png',bytes:blob.size,width:canvas.width,height:canvas.height,durationS:S.duration,showId:S.project.show.show_id,note:'at '+S.time.toFixed(2)+'s'}));
+  }));
   on('exportTiming',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();
@@ -562,8 +594,11 @@
     const presets=S.timingPacks;
     if(!presets?.packs?.length)throw new Error('Timing packs are not loaded.');
     const dump=HMComposeClient.timingExport(presets,S.composed,24);
-    download(safeName(S.project.show.show_id,'-timing.json'),new Blob([JSON.stringify(dump)],{type:'application/json'}));
+    const timingFile=safeName(S.project.show.show_id,'-timing.json');
+    const blob=assertNonEmptyBlob(new Blob([JSON.stringify(dump)],{type:'application/json'}),'Timing pack JSON');
+    download(timingFile,blob);
     report('Timing presets and frame sequence downloaded.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'timing',filename:timingFile,format:'Timing pack JSON',mime:blob.type||'application/json',bytes:blob.size,durationS:S.duration,showId:S.project.show.show_id,note:(dump.frames?.length||0)+' timing rows'}));
   }));
   async function pixelfxExportBundle(project) {
     const atoms = project && project.show && project.show.atoms || [];
@@ -589,8 +624,10 @@
     const cspMeta='<meta http-equiv="Content-Security-Policy" content="'+"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"+'">';
     const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${cspMeta}<title>HTML Motion</title><style>body{margin:0;background:#101315;color:#edf1e9;font:14px system-ui;min-height:100vh;display:grid;place-content:center}main{width:min(100vw,1280px)}canvas{display:block;width:100%;height:auto;background:white}nav{display:flex;gap:16px;align-items:center;padding:16px}button{background:#ccf17b;border:0;border-radius:6px;padding:9px 18px;cursor:pointer}input{accent-color:#ccf17b;flex:1;min-width:50px}output{font-size:12px;white-space:nowrap}h1{font-size:16px;font-weight:500;padding:0 16px}p{font-size:11px;color:#98a699;padding:0 16px}#pixelfxHonesty{margin:0 16px 12px;padding:8px 10px;background:#2f1c0fee;border:1px solid #ff9e44;color:#ffe4bf;font:600 12px/1.4 ui-monospace,monospace}</style><main><h1 id="title"></h1><canvas id="stage" width="1280" height="720"></canvas><p id="pixelfxHonesty" hidden></p><nav><button id="play" disabled>Loading…</button><input id="seek" aria-label="Seek" type="range" min="0" step="0.01" value="0"><output id="time"></output></nav><p>HTML Motion · Plate animation · Plays offline</p><p id="layers"></p></main>${hmProjectScript}${pxScript}<script>${backgroundMotionFrame.toString()}\n${backgroundMotionProgress.toString()}\n${backgroundScrollState.toString()}\n${fgPassByInstances.toString()}\n${resolveMicroFrameAt.toString()}\n${fgCameraFrame.toString()}\n${fgPropPose.toString()}\n${fgBrokenCutoutSrc.toString()}\n${fgBreakState.toString()}\nconst FX_FIST_PATH=${JSON.stringify(globalThis.FX_FIST_PATH)};\nconst FX_LEG_PATH=${JSON.stringify(globalThis.FX_LEG_PATH)};\nconst FX_TORNADO_PATH=${JSON.stringify(globalThis.FX_TORNADO_PATH)};\n${fxPathOrStock.toString()}\n${fxPointOnPath.toString()}\n${fxPlacementOf.toString()}\n${transformFxPath.toString()}\n${exposureWarmCrushPixels.toString()}\n${normalizeImpactOpts.toString()}\n${normalizeHitstopEntry.toString()}\n${resolveHitstopAt.toString()}\n${applyHitstopPixels.toString()}\n${impactBurstGeometry.toString()}\n${drawImpactBurst.toString()}\n${normalizeFxLayerOpts.toString()}\n${taperedArcPolygon.toString()}\n${computeCameraVelocity.toString()}\n${computeBgParallaxOffset.toString()}\n${drawSceneAtmosphereMood.toString()}\n${computeCameraImpactShake.toString()}\n${drawFistPressure.toString()}\n${drawLegArc.toString()}\n${drawTornado.toString()}\n${collectProceduralOverlays.toString()}\n${cameraEase.toString()}\n${cameraChannel.toString()}\n${cameraPoseOnSegment.toString()}\n${cutTransitionsBundle.toString()}\ncutTransitionsBundle();\n${backgroundLocationsBundle.toString()}\nbackgroundLocationsBundle();\n${typeof stripSamplerBundle==='function'?stripSamplerBundle.toString()+'\nstripSamplerBundle();\n':''}${layerCamMatrix.toString()}\n${layerCamsIndependent.toString()}\n${layerCamMatrixText.toString()}\n${createMotionRenderer.toString()}\n${typeof createHMTeachingFilm==='function'?createHMTeachingFilm.toString()+'\nconst HMTeachingFilm=createHMTeachingFilm();\n':''}const DATA=${data};\n(${standalonePlayer.toString()})(DATA);<\/script></html>`;
     const htmlFile=safeName(project.show.show_id,'.html');
-    download(htmlFile,new Blob([html],{type:'text/html'}));report('Playable HTML downloaded. All images are embedded.');
-    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'html',filename:htmlFile,format:'Offline HTML + Project SoT',durationS:result.timeline?.duration_s||S.duration,showId:project.show.show_id,note:'All images embedded'}));
+    const htmlBlob=assertNonEmptyBlob(new Blob([html],{type:'text/html'}),'Playable HTML');
+    const htmlMime=htmlBlob.type||'text/html';
+    download(htmlFile,htmlBlob);report('Playable HTML downloaded. All images are embedded.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'html',filename:htmlFile,format:'Offline HTML + Project SoT',mime:htmlMime,bytes:htmlBlob.size,width:1280,height:720,durationS:result.timeline?.duration_s||S.duration,showId:project.show.show_id,note:'All images embedded'}));
   }));
   function standalonePlayer(data) {
     const get=id=>document.getElementById(id);const r=createMotionRenderer(get('stage'),data.assets);let t=0,playing=false,start=0,offset=0;
@@ -623,25 +660,27 @@
     const files=[];let cancelled=false;activeCancel=()=>{cancelled=true;};
     setProgress(0,'Frame 0 / '+plan.length+' (0%)',true);
     for(let i=0;i<plan.length;i++){
-      if(cancelled){report('Export cancelled.');return;}
+      if(cancelled){hideReceipt();report('Export cancelled.');return;}
       S.sampleStageFrameAt(plan[i].t,{renderer:r,standIn:false,onion:false,source:'bake-export-frames'});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
-      if(cancelled){report('Export cancelled.');return;}
-      if(!blob)throw new Error('Could not export frame '+(i+1)+'.');
+      if(cancelled){hideReceipt();report('Export cancelled.');return;}
+      if(!blob||!(blob.size>0))throw new Error('Could not export frame '+(i+1)+'.');
       files.push({name:plan[i].file,data:new Uint8Array(await blob.arrayBuffer())});
       const pct=(i+1)/plan.length;
       setProgress(pct,'Frame '+(i+1)+' / '+plan.length+' ('+Math.round(pct*100)+'%)',true);
       report('Frame '+(i+1)+' / '+plan.length+' · '+preset.label);
       await new Promise(resolve=>setTimeout(resolve,0));
     }
-    if(cancelled){report('Export cancelled.');return;}
+    if(cancelled){hideReceipt();report('Export cancelled.');return;}
     const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
     files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
     const zip=HMXExport.zipStore(files);
     const zipFile=safeName(S.project.show.show_id,'-'+preset.id+'-frames.zip');
-    download(zipFile,new Blob([zip],{type:'application/zip'}));
+    const zipBlob=assertNonEmptyBlob(new Blob([zip],{type:'application/zip'}),'Frame sequence ZIP');
+    const zipMime=zipBlob.type||'application/zip';
+    download(zipFile,zipBlob);
     report('Frame sequence downloaded ('+plan.length+' frames · '+preset.label+'). Copy the local ffmpeg MP4 command below to encode H.264.');
-    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',preset,durationS:duration,showId:S.project.show.show_id,note:plan.length+' frames'}));
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',mime:zipMime,bytes:zipBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,ffmpegCommand:timing.ffmpeg_mp4?.command||currentFfmpegCommand('mp4'),note:plan.length+' frames'}));
   }));
   on('exportVideo',()=>task(async()=>{
     const choice=recorderChoice();
@@ -667,11 +706,13 @@
       if(recorder.state!=='inactive')recorder.stop();
       await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
       if(recorderError)throw recorderError;
-      if(cancelled){report('Export cancelled.');return;}
-      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:choice.mime,width:preset.width,height:preset.height});
+      if(cancelled){hideReceipt();report('Export cancelled.');return;}
+      const vidBlob=assertNonEmptyBlob(new Blob(chunks,{type:choice.mime}),'Video recording');
+      const actualMime=vidBlob.type||choice.mime;
+      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:canvas.width,height:canvas.height});
       const vidFile=safeName(S.project.show.show_id,'.'+choice.ext);
-      download(vidFile,new Blob(chunks,{type:choice.mime}));report(telemetry.summary,false,telemetry.significant_drop);
-      if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:choice.mime,preset,durationS:duration,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'}));
+      download(vidFile,vidBlob);report(telemetry.summary,false,telemetry.significant_drop);
+      if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'}));
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));
 })();
