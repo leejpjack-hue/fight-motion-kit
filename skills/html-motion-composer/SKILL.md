@@ -60,6 +60,15 @@ node /path/to/skill/scripts/build-project.cjs --repo /path/to/fight-motion-kit \
 
 The emitted HTML carries `<meta http-equiv="Content-Security-Policy" ...>`, `<script id="hm-project-data" type="application/json">` (omitting duplicate base64 assets), and `const DATA=...` so it both plays offline and re-opens cleanly in `/ui/` via `HMHtmlImport.parseMotionHtml()`.
 
+To prove that file opens in the composer as an editable film and can trigger Export Video, run:
+
+```sh
+npm run dev
+node scripts/proof-authored-motion-html.cjs
+```
+
+The command authors one beat from `public/shows/daiyu-wang-five-seconds.json` without writing that file. It opens the HTML at `http://127.0.0.1:8765/ui/` through the same project file input as any other AI motion HTML, changes the first clip from 0.50s to 0.75s, and clicks Export Video. `COMPOSER_URL` points at another composer, including `https://html-motion-composer.leejpjack.workers.dev/ui/`. `--via mcp` authors with `hm_export_editable_html` instead of `--emit-html`. If the composer or browser cannot run, the command exits 2 and prints JSON `reason`. It does not deploy and does not start a skill host. `--author-only` writes the HTML and stops before the browser.
+
 ## Frame-QA loop
 
 After a structural edit (atoms, plates, camera, FX hooks, durations, or layouts), the order is lint → peek → claim. Finish that order before you say the edit is done. The command is `skills/html-motion-composer/scripts/frame-qa.cjs`. It loads the checkout's `HMComposeClient` (the same engine `build-project.cjs` uses). It does not start a second renderer, a compose API, or a video encoder. Pixel export stays on `export-project.cjs` or the editor.
