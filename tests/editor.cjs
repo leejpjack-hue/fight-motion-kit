@@ -252,7 +252,15 @@ print(doc['show_id'])
     assert.match(zipListing,/x-export-probe/);
     const png=fs.readFileSync(path.join(out,'x-export-frame.png'));
     assert.equal(png.readUInt32BE(16),1920);assert.equal(png.readUInt32BE(20),1080);
-    const shortVideo=await downloadFrom('exportVideo','x-export-probe.webm');assert.ok(fs.statSync(shortVideo).size>50);
+    await p.waitForFunction(()=>!document.getElementById('exportVideo').disabled);
+    let shortDownloads=0;
+    const countShort=()=>{shortDownloads+=1;};
+    p.on('download',countShort);
+    await p.click('#exportVideo');
+    await p.waitForFunction(()=>/Recording did not produce a playable video file/.test(document.getElementById('exportStatus').textContent));
+    p.off('download',countShort);
+    assert.equal(shortDownloads,0);
+    assert.equal(await p.locator('#exportReceipt').isHidden(),true);
     const rec=await p.evaluate(()=>({capture:window.__hmCapture,rec:window.__hmRec}));
     assert.deepEqual(rec.capture,{width:1920,height:1080,fps:30});
     assert.equal(rec.rec.videoBitsPerSecond,8000000);

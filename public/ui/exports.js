@@ -329,9 +329,49 @@
     }
     return blob;
   }
+  function probePlayableVideo(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const video = document.createElement('video');
+      let settled = false;
+      let timer = 0;
+      const finish = (err, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        URL.revokeObjectURL(url);
+        video.removeAttribute('src');
+        if (err) reject(err);
+        else resolve(value);
+      };
+      timer = setTimeout(() => finish(new Error('Recording did not produce a playable video file. Nothing was saved.')), 8000);
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      video.onerror = () => finish(new Error('Recording did not produce a playable video file. Nothing was saved.'));
+      video.onloadedmetadata = () => {
+        const durationS = video.duration;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (!Number.isFinite(durationS) || durationS <= 0 || !(width > 0) || !(height > 0)) {
+          finish(new Error('Recording did not produce a playable video file. Nothing was saved.'));
+          return;
+        }
+        finish(null, { durationS, width, height });
+      };
+      video.src = url;
+    });
+  }
+  async function playableVideoFile(chunks, declaredMime) {
+    const bytes = new Uint8Array(await new Blob(chunks).arrayBuffer());
+    const container = HMXExport.inspectPlayableContainer(bytes, declaredMime);
+    const blob = assertNonEmptyBlob(new Blob([bytes], { type: container.mime }), 'Video recording');
+    const probed = await probePlayableVideo(blob);
+    return { blob, container, width: probed.width, height: probed.height, durationS: probed.durationS };
+  }
   function hideReceipt() {
     const box=$('exportReceipt');
-    if(box){box.hidden=true;delete box.dataset.kind;delete box.dataset.mime;delete box.dataset.bytes;}
+    if(box){box.hidden=true;delete box.dataset.kind;delete box.dataset.mime;delete box.dataset.bytes;delete box.dataset.filename;delete box.dataset.width;delete box.dataset.height;delete box.dataset.duration;}
     if($('exportReceiptHonesty')){$('exportReceiptHonesty').hidden=true;$('exportReceiptHonesty').textContent='';}
     if($('exportReceiptCmd')){$('exportReceiptCmd').hidden=true;$('exportReceiptCmd').textContent='';}
     if($('exportReceiptCopyMp4'))$('exportReceiptCopyMp4').hidden=true;
@@ -342,6 +382,10 @@
     box.dataset.kind=String(receipt.kind||'');
     box.dataset.mime=String(receipt.mime||'');
     box.dataset.bytes=receipt.bytes!=null?String(receipt.bytes):'';
+    box.dataset.filename=String(receipt.filename||'');
+    box.dataset.width=receipt.width?String(receipt.width):'';
+    box.dataset.height=receipt.height?String(receipt.height):'';
+    box.dataset.duration=receipt.duration_s?String(receipt.duration_s):'';
     if($('exportReceiptTitle'))$('exportReceiptTitle').textContent=receipt.title||'Export ready';
     if($('exportReceiptMeta'))$('exportReceiptMeta').textContent=receipt.summary||'';
     if($('exportReceiptHonesty')){
@@ -707,12 +751,15 @@
       await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
       if(recorderError)throw recorderError;
       if(cancelled){hideReceipt();report('Export cancelled.');return;}
-      const vidBlob=assertNonEmptyBlob(new Blob(chunks,{type:choice.mime}),'Video recording');
-      const actualMime=vidBlob.type||choice.mime;
-      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:canvas.width,height:canvas.height});
-      const vidFile=safeName(S.project.show.show_id,'.'+choice.ext);
+      const packed=await playableVideoFile(chunks, recorder.mimeType||choice.mime);
+      const vidBlob=packed.blob;
+      const actualMime=packed.container.mime;
+      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:packed.width,height:packed.height});
+      const vidFile=safeName(S.project.show.show_id,'.'+packed.container.ext);
+      const receipt=HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:packed.width,height:packed.height,durationS:packed.durationS,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'});
+      HMXExport.receiptMatchesPlayableFile(receipt,{filename:vidFile,mime:actualMime,bytes:vidBlob.size,width:packed.width,height:packed.height,durationS:packed.durationS});
       download(vidFile,vidBlob);report(telemetry.summary,false,telemetry.significant_drop);
-      if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'}));
+      showReceipt(receipt);
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));
 })();

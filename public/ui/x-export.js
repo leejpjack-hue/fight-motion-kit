@@ -270,6 +270,79 @@
     if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(2) + ' MB';
     return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   }
+  const EMPTY_RECORDING = 'Video recording produced an empty file (0 bytes). Nothing was saved.';
+  const UNPLAYABLE_RECORDING = 'Recording did not produce a playable video file. Nothing was saved.';
+  const CLUSTER_ID = [0x1f, 0x43, 0xb6, 0x75];
+  const FTYP = [0x66, 0x74, 0x79, 0x70];
+  const MOOV = [0x6d, 0x6f, 0x6f, 0x76];
+  const MDAT = [0x6d, 0x64, 0x61, 0x74];
+  function asBytes(input) {
+    if (input instanceof Uint8Array) return input;
+    if (input instanceof ArrayBuffer) return new Uint8Array(input);
+    throw new Error(UNPLAYABLE_RECORDING);
+  }
+  function indexOfBytes(bytes, needle) {
+    if (!needle.length || bytes.length < needle.length) return -1;
+    const last = bytes.length - needle.length;
+    for (let i = 0; i <= last; i++) {
+      let ok = true;
+      for (let j = 0; j < needle.length; j++) {
+        if (bytes[i + j] !== needle[j]) { ok = false; break; }
+      }
+      if (ok) return i;
+    }
+    return -1;
+  }
+  function containerMime(kind, declared) {
+    const raw = String(declared || '').trim();
+    const lower = raw.toLowerCase();
+    if (kind === 'webm') return lower.indexOf('video/webm') === 0 ? raw : 'video/webm';
+    if (kind === 'mp4') return lower.indexOf('video/mp4') === 0 ? raw : 'video/mp4';
+    return raw || 'application/octet-stream';
+  }
+  function inspectPlayableContainer(bytes, declaredMime) {
+    const u8 = asBytes(bytes);
+    if (!u8.length) throw new Error(EMPTY_RECORDING);
+    const declared = String(declaredMime || '');
+    const webm = u8.length >= 4 && u8[0] === 0x1a && u8[1] === 0x45 && u8[2] === 0xdf && u8[3] === 0xa3 && indexOfBytes(u8, CLUSTER_ID) >= 0;
+    const head = u8.subarray(0, Math.min(64, u8.length));
+    const mp4 = indexOfBytes(head, FTYP) >= 0 && (indexOfBytes(u8, MOOV) >= 0 || indexOfBytes(u8, MDAT) >= 0);
+    const preferMp4 = /mp4/i.test(declared) && !/webm/i.test(declared);
+    if (preferMp4 && mp4) return { ext: 'mp4', mime: containerMime('mp4', declared), bytes: u8.length };
+    if (webm) return { ext: 'webm', mime: containerMime('webm', declared), bytes: u8.length };
+    if (mp4) return { ext: 'mp4', mime: containerMime('mp4', declared), bytes: u8.length };
+    throw new Error(UNPLAYABLE_RECORDING);
+  }
+  function roundPlayableDuration(seconds) {
+    const n = Number(seconds);
+    if (!Number.isFinite(n) || n <= 0) throw new Error(UNPLAYABLE_RECORDING);
+    const value = Number(n.toFixed(3));
+    if (!(value > 0)) throw new Error(UNPLAYABLE_RECORDING);
+    return value;
+  }
+  function receiptMatchesPlayableFile(receipt, file) {
+    const f = file || {};
+    const problems = [];
+    if (!receipt || receipt.kind !== 'video') problems.push('kind');
+    else {
+      const played = roundPlayableDuration(f.durationS);
+      const summary = String(receipt.summary || '');
+      if (receipt.filename !== f.filename) problems.push('filename');
+      if (receipt.bytes !== f.bytes) problems.push('bytes');
+      if (String(receipt.mime || '') !== String(f.mime || '')) problems.push('mime');
+      if (receipt.width !== f.width || receipt.height !== f.height) problems.push('resolution');
+      if (receipt.duration_s !== played) problems.push('duration');
+      if (!summary.includes(String(f.filename || ''))) problems.push('summary filename');
+      if (!summary.includes(String(f.width) + '×' + String(f.height))) problems.push('summary resolution');
+      if (!summary.includes(played.toFixed(3) + 's')) problems.push('summary duration');
+      if (receipt.size_label && !summary.includes(receipt.size_label)) problems.push('summary size');
+      if (f.mime && !summary.includes(String(f.mime))) problems.push('summary mime');
+    }
+    if (problems.length) {
+      throw new Error('Export receipt does not match the playable file (' + problems.join(', ') + '). Nothing was saved.');
+    }
+    return true;
+  }
   function buildExportReceipt(opts) {
     const o = opts || {};
     const preset = o.preset || presets[0];
@@ -292,7 +365,8 @@
             ? 'application/json'
             : (format || '');
     const mime = String(o.mime || '').trim() || defaultMime;
-    const dur = Number.isFinite(+o.durationS) && +o.durationS > 0 ? +o.durationS : 0;
+    const rawDur = Number.isFinite(+o.durationS) && +o.durationS > 0 ? +o.durationS : 0;
+    const dur = kind === 'video' && rawDur > 0 ? Number(rawDur.toFixed(3)) : rawDur;
     const width = positiveNum(o.width) || (preset && preset.width) || 1280;
     const height = positiveNum(o.height) || (preset && preset.height) || 720;
     const resolution = kind === 'timing' ? '' : (width + '×' + height);
@@ -319,8 +393,8 @@
           : kind === 'timing'
             ? 'Timing preset and frame-sequence JSON for local verification.'
             : (/mp4/i.test(mime || format)
-              ? 'Recorded as ' + (mime || format) + ' in this browser only (MP4 is not universal).'
-              : 'Recorded as WebM (' + (mime || format || 'video/webm') + '). For H.264 MP4, export PNG frames and run local ffmpeg (MP4 is not universal).');
+              ? 'Recorded as ' + (mime || format) + ' in this browser only. Duration, size, and picture size are this file. MP4 is not universal.'
+              : 'Recorded as WebM (' + (mime || format || 'video/webm') + '). Duration, size, and picture size are this file. For H.264 MP4, export PNG frames and run local ffmpeg (MP4 is not universal).');
     const formatDisplay = format && mime && format !== mime ? (format + ' (' + mime + ')') : (mime || format || kind.toUpperCase());
     const timingLabel = kind === 'html'
       ? 'canvas renderAt'
@@ -329,7 +403,7 @@
         : kind === 'timing'
           ? 'timing JSON'
           : (fps + ' fps');
-    const parts = [filename, formatDisplay, sizeLabel, resolution, timingLabel, dur.toFixed(2) + 's'];
+    const parts = [filename, formatDisplay, sizeLabel, resolution, timingLabel, (kind === 'video' ? dur.toFixed(3) : dur.toFixed(2)) + 's'];
     if (o.note) parts.push(String(o.note));
     return {
       kind,
@@ -451,7 +525,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, formatBytes, webmMegabytes, bitrateHint, framePlan, sanitizeDownloadName, safeShowStem, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, preflightSummary, snapShowToFrameBoundary, buildExportReceipt, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, formatBytes, webmMegabytes, bitrateHint, framePlan, sanitizeDownloadName, safeShowStem, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, preflightSummary, snapShowToFrameBoundary, inspectPlayableContainer, roundPlayableDuration, receiptMatchesPlayableFile, buildExportReceipt, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
