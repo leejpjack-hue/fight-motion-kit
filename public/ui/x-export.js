@@ -109,10 +109,12 @@
     const significantDrop = droppedFrames >= 2 && dropRatio > 0.15;
     const mime = String(o.mime || 'video/webm');
     const res = (positiveNum(o.width) || 1280) + '×' + (positiveNum(o.height) || 720);
+    const droppedIndexes = Array.isArray(o.droppedIndexes) ? o.droppedIndexes.filter(n => Number.isInteger(n) && n >= 0) : [];
+    const droppedLine = ' Dropped ' + droppedFrames + ' of ' + expectedFrames + ' frames.';
     const droppedWarning = significantDrop
       ? ' Cadence warning: dropped ' + droppedFrames + ' of ' + expectedFrames + ' expected frames (real-time lossy capture); use PNG frames for deterministic timing.'
       : '';
-    const summary = 'Video downloaded · ' + mime + ' · ' + res + ' · target ' + targetFps + ' fps · measured ' + measuredFps.toFixed(1) + ' fps (' + renderedFrames + '/' + expectedFrames + ' frames).' + droppedWarning;
+    const summary = 'Video downloaded · ' + mime + ' · ' + res + ' · target ' + targetFps + ' fps · measured ' + measuredFps.toFixed(1) + ' fps (' + renderedFrames + '/' + expectedFrames + ' frames).' + droppedLine + droppedWarning;
     return {
       mime,
       width: positiveNum(o.width) || 1280,
@@ -121,6 +123,7 @@
       expected_frames: expectedFrames,
       rendered_frames: renderedFrames,
       dropped_frames: droppedFrames,
+      dropped_indexes: droppedIndexes,
       measured_fps: measuredFps,
       significant_drop: significantDrop,
       dropped_warning: droppedWarning,
@@ -142,6 +145,141 @@
     const frames = [];
     for (let i = 0; i < n; i++) frames.push({ index: i, file: 'frames/' + String(i).padStart(6, '0') + '.png', t: i / fps });
     return frames;
+  }
+  function round4(v) { return Math.round((+v || 0) * 10000) / 10000; }
+  function pushCut(cuts, t, dur, track, id, edge) {
+    const time = round4(t);
+    if (!(time > 0) || !(time < dur)) return;
+    cuts.push({ role: 'cut', t: time, track: track, id: String(id || track), edge: edge });
+  }
+  function timelineBoundaries(show, durationS) {
+    const showObj = show && typeof show === 'object' ? show : {};
+    const atoms = Array.isArray(showObj.atoms) ? showObj.atoms : [];
+    let cursor = 0;
+    const cuts = [];
+    for (let i = 0; i < atoms.length; i++) {
+      const d = Number.isFinite(+atoms[i].duration_s) ? +atoms[i].duration_s : 0;
+      const t0 = round4(cursor);
+      cursor = round4(cursor + d);
+      if (i > 0) pushCut(cuts, t0, Infinity, 'character', atoms[i].id || ('atom-' + (i + 1)), 'in');
+    }
+    const dur = Number.isFinite(+durationS) && +durationS > 0 ? +durationS : round4(cursor);
+    cuts.forEach(cut => { if (!(cut.t < dur)) cut.drop = true; });
+    const kept = cuts.filter(cut => !cut.drop);
+    const fg = Array.isArray(showObj.fg && showObj.fg.props) ? showObj.fg.props : [];
+    fg.forEach(prop => {
+      if (!prop) return;
+      const id = prop.id || 'fg';
+      pushCut(kept, +prop.t_start || 0, dur, 'fg', id, 'in');
+      pushCut(kept, Number.isFinite(+prop.t_end) ? +prop.t_end : dur, dur, 'fg', id, 'out');
+    });
+    const bg = showObj.bg && typeof showObj.bg === 'object' ? showObj.bg : {};
+    if (Array.isArray(bg.locations)) {
+      bg.locations.forEach(loc => {
+        if (!loc) return;
+        pushCut(kept, +loc.t0 || 0, dur, 'bg', loc.id || 'bg', 'in');
+      });
+    } else if (bg.swap && Number.isFinite(+bg.swap_t)) {
+      pushCut(kept, +bg.swap_t, dur, 'bg', 'swap', 'in');
+    }
+    kept.sort((a, b) => a.t - b.t || a.track.localeCompare(b.track));
+    return {
+      duration_s: dur,
+      marks: [
+        { role: 'start', t: 0, track: 'show', id: 'start', edge: 'in' },
+        ...kept,
+        { role: 'end', t: dur, track: 'show', id: 'end', edge: 'out' },
+      ],
+    };
+  }
+  function playbackFrames(durationS, fps) {
+    if (!Number.isFinite(durationS) || durationS <= 0) throw new Error('Add a clip before exporting.');
+    if (!Number.isInteger(fps) || fps < 1 || fps > 60) throw new Error('fps must be 1–60.');
+    const count = durationS * fps;
+    const frameExact = Math.abs(Math.round(count) - count) <= 1e-6;
+    const n = Math.max(1, Math.round(count));
+    const frames = [];
+    for (let i = 0; i < n; i++) frames.push({ index: i, file: 'frames/' + String(i).padStart(6, '0') + '.png', t: i / fps });
+    return {
+      frames,
+      frameExact,
+      expectedFrames: n,
+      remainder: frameExact ? '' : 'Duration × fps is ' + count.toFixed(2) + ' frames. Sampled ' + n + ' frames and kept the remainder visible.',
+    };
+  }
+  function alignExportFrames(frames, boundaryPlan, fps) {
+    const list = (Array.isArray(frames) ? frames : []).map(frame => ({
+      index: frame.index,
+      file: frame.file,
+      t: frame.t,
+      sample_t: frame.t,
+    }));
+    const n = list.length;
+    const marks = boundaryPlan && Array.isArray(boundaryPlan.marks) ? boundaryPlan.marks : [];
+    const rate = positiveNum(fps) || 30;
+    if (!n) return { frames: list, checks: [], shared: [] };
+    const owners = new Map();
+    const checks = [];
+    marks.forEach(mark => {
+      let index;
+      if (mark.role === 'end') index = n - 1;
+      else index = Math.min(n - 1, Math.max(0, Math.floor((+mark.t || 0) * rate + 1e-9)));
+      if (!owners.has(index)) owners.set(index, []);
+      owners.get(index).push(mark);
+      checks.push({
+        role: mark.role,
+        track: mark.track,
+        id: mark.id,
+        edge: mark.edge,
+        t: mark.t,
+        frame_index: index,
+        frame_t: list[index].t,
+      });
+    });
+    const shared = [];
+    owners.forEach((group, index) => {
+      let winner = group[0];
+      for (let i = 1; i < group.length; i++) if (group[i].t >= winner.t) winner = group[i];
+      list[index].sample_t = winner.t;
+      if (group.length > 1) {
+        shared.push({
+          frame_index: index,
+          sample_t: winner.t,
+          marks: group.map(mark => ({ role: mark.role, t: mark.t, track: mark.track, id: mark.id })),
+        });
+      }
+    });
+    checks.forEach(row => {
+      row.sample_t = list[row.frame_index].sample_t;
+      row.shift_s = Math.round((row.sample_t - row.t) * 1e6) / 1e6;
+      row.matches_preview = Math.abs(row.shift_s) <= 1e-4;
+    });
+    return { frames: list, checks, shared };
+  }
+  function boundaryHonesty(aligned) {
+    const rows = aligned && Array.isArray(aligned.checks) ? aligned.checks : [];
+    const shared = aligned && Array.isArray(aligned.shared) ? aligned.shared : [];
+    const lines = [];
+    const missed = rows.filter(row => !row.matches_preview);
+    if (missed.length) {
+      lines.push(missed.map(row => row.role + ' ' + Number(row.t).toFixed(3) + 's shares frame ' + row.frame_index + ' sampled at ' + Number(row.sample_t).toFixed(3) + 's').join('. ') + '.');
+    }
+    const inside = rows.filter(row => row.matches_preview && row.role === 'cut' && Math.abs(row.sample_t - row.frame_t) > 1e-4);
+    if (inside.length) {
+      const seen = new Set();
+      const bits = [];
+      inside.forEach(row => {
+        const line = 'Cut ' + Number(row.t).toFixed(3) + 's is frame ' + row.frame_index + ' sampled at the cut (frame clock ' + Number(row.frame_t).toFixed(3) + 's).';
+        if (seen.has(line)) return;
+        seen.add(line);
+        bits.push(line);
+      });
+      lines.push(bits.join(' '));
+    }
+    if (!missed.length && rows.some(row => row.role === 'cut')) {
+      lines.unshift('Preview and export sample the same time at start, cut, and end.');
+    }
+    return lines.filter(Boolean).join(' ');
   }
   function sanitizeDownloadName(stem, suffix) {
     var s = String(stem == null ? '' : stem)
@@ -384,7 +522,11 @@
           : kind === 'timing'
             ? 'Timing pack JSON exported'
             : 'Video exported (' + (format || mime || 'video') + ')';
-    const honestyNote = kind === 'frames'
+    const droppedCount = o.droppedFrames != null && Number.isFinite(+o.droppedFrames) ? Math.max(0, Math.round(+o.droppedFrames)) : null;
+    const expectedCount = o.expectedFrames != null && Number.isFinite(+o.expectedFrames) ? Math.max(0, Math.round(+o.expectedFrames)) : null;
+    const droppedHonesty = droppedCount == null ? '' : ' Dropped ' + droppedCount + ' of ' + (expectedCount == null ? '?' : expectedCount) + ' frames.';
+    const boundaryNote = String(o.boundaryNote || '').trim();
+    const honestyBase = kind === 'frames'
       ? 'PNG frame ZIP + timing.json. Run local ffmpeg below for H.264 MP4 or WebM (browser MP4 is not universal).'
       : kind === 'html'
         ? 'Offline HTML with embedded images and project source (not a video file; MP4 is not universal).'
@@ -395,6 +537,7 @@
             : (/mp4/i.test(mime || format)
               ? 'Recorded as ' + (mime || format) + ' in this browser only. Duration, size, and picture size are this file. MP4 is not universal.'
               : 'Recorded as WebM (' + (mime || format || 'video/webm') + '). Duration, size, and picture size are this file. For H.264 MP4, export PNG frames and run local ffmpeg (MP4 is not universal).');
+    const honestyNote = honestyBase + droppedHonesty + (boundaryNote ? ' ' + boundaryNote : '');
     const formatDisplay = format && mime && format !== mime ? (format + ' (' + mime + ')') : (mime || format || kind.toUpperCase());
     const timingLabel = kind === 'html'
       ? 'canvas renderAt'
@@ -420,6 +563,9 @@
       title,
       summary: parts.filter(Boolean).join(' · '),
       honestyNote,
+      dropped_frames: droppedCount,
+      expected_frames: expectedCount,
+      boundary_note: boundaryNote,
       ffmpegCommand,
       mp4Command: mp4Cmd,
       webmCommand: webmCmd,
@@ -448,6 +594,8 @@
       bitrate_hint: bitrateHint(preset),
       honesty: HONESTY,
       encode: 'local-skill',
+      boundary_checks: Array.isArray(opts.boundaryChecks) ? opts.boundaryChecks : [],
+      boundary_note: String(opts.boundaryNote || ''),
       frames,
       ffmpeg_webm_command: formatFfmpegCommand(webmArgv),
       ffmpeg_mp4: {
@@ -525,7 +673,7 @@
     parts.forEach(part => { out.set(part, p); p += part.length; });
     return out;
   }
-  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, formatBytes, webmMegabytes, bitrateHint, framePlan, sanitizeDownloadName, safeShowStem, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, preflightSummary, snapShowToFrameBoundary, inspectPlayableContainer, roundPlayableDuration, receiptMatchesPlayableFile, buildExportReceipt, timingDocument, zipStore, crc32 };
+  const api = { presets, presetById, HINT_SECONDS, HONESTY, RECORDER_MIME, availableRecorderFormats, pickRecorderMime, detectCadenceMismatch, cadenceTelemetry, formatMbps, formatBytes, webmMegabytes, bitrateHint, framePlan, playbackFrames, timelineBoundaries, alignExportFrames, boundaryHonesty, sanitizeDownloadName, safeShowStem, ffmpegArgv, ffmpegMp4Argv, formatFfmpegCommand, preflightSummary, snapShowToFrameBoundary, inspectPlayableContainer, roundPlayableDuration, receiptMatchesPlayableFile, buildExportReceipt, timingDocument, zipStore, crc32 };
   root.HMXExport = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
