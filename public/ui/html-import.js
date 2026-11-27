@@ -1,4 +1,6 @@
-/* Issue #239 & #238 — FE-only AI motion HTML parser, lossless embed helper, and missing-asset relink. */
+/* Issue #239 & #238 — FE-only AI motion HTML parser, lossless embed helper, and missing-asset relink.
+ * Issue #289 — reopened motion HTML keeps authored timing, camera, FX, and captions.
+ * A missing one of those fields fails closed. It is not filled with a stand-in edit. */
 (function (root) {
   'use strict';
 
@@ -217,48 +219,93 @@
     return plates[atomIndex] || plates[0] || null;
   }
 
-  function cameraFromTimelineAtom(tlAtom) {
-    var segs = Array.isArray(tlAtom && tlAtom.cam) ? tlAtom.cam : [];
-    if (!segs.length) return { preset: 'static_hold' };
-    if (segs.length === 1) {
-      var s0 = segs[0] || {};
-      var cam = { preset: trimStr(s0.preset) || 'static_hold' };
-      if (s0.nudge && typeof s0.nudge === 'object') cam.nudge = clone(s0.nudge);
-      if (s0.intensity != null) cam.intensity = s0.intensity;
-      if (trimStr(s0.ease)) cam.ease = trimStr(s0.ease);
-      if (s0.snap_zoom === true) cam.snap_zoom = true;
-      if (trimStr(s0.micro_move)) cam.micro_move = trimStr(s0.micro_move);
-      if (s0.motion_blur !== undefined && s0.motion_blur !== false) cam.motion_blur = clone(s0.motion_blur);
-      return cam;
+  var CLOSED_IMPORT = /nesting depth|Unsafe asset|blocked|decompression|memory budget|duration_s|missing a timing|missing a camera|missing FX|FX hook is missing/i;
+
+  function cameraIsAuthored(cam) {
+    if (!cam || typeof cam !== 'object') return false;
+    if (trimStr(cam.preset)) return true;
+    return Array.isArray(cam.segments) && cam.segments.length > 0 && cam.segments.every(function (s) {
+      return s && trimStr(s.preset) && Number.isFinite(+s.dur_s) && +s.dur_s > 0;
+    });
+  }
+
+  function authoringGap(show) {
+    var atoms = show && Array.isArray(show.atoms) ? show.atoms : null;
+    if (!atoms || !atoms.length) throw new Error('Motion HTML is missing clip timing.');
+    for (var i = 0; i < atoms.length; i++) {
+      var a = atoms[i];
+      var id = (a && trimStr(a.id)) || ('clip ' + (i + 1));
+      if (!a || !Number.isFinite(+a.duration_s) || +a.duration_s < 0.1) {
+        throw new Error('Clip ' + id + ' is missing a timing duration.');
+      }
+      if (!cameraIsAuthored(a.camera)) throw new Error('Clip ' + id + ' is missing a camera setting.');
+      if (!Array.isArray(a.fx_hooks)) throw new Error('Clip ' + id + ' is missing FX settings.');
     }
-    var durTotal = segs.reduce(function (sum, s) {
-      var d = Number(s && s.t1) - Number(s && s.t0);
-      return sum + (Number.isFinite(d) && d > 0 ? d : 0.25);
-    }, 0) || 0.5;
-    return {
-      preset: trimStr(segs[0] && segs[0].preset) || 'static_hold',
-      segments: segs.map(function (s) {
-        var d = Number(s && s.t1) - Number(s && s.t0);
-        return {
-          preset: trimStr(s && s.preset) || 'static_hold',
-          dur_s: Number.isFinite(d) && d > 0 ? +d.toFixed(4) : +(durTotal / segs.length).toFixed(4),
-          ...(s && s.nudge ? { nudge: clone(s.nudge) } : {}),
-          ...(s && s.intensity != null ? { intensity: s.intensity } : {}),
-          ...(s && s.ease ? { ease: trimStr(s.ease) } : {}),
-          ...(s && s.snap_zoom === true ? { snap_zoom: true } : {}),
-          ...(s && trimStr(s.micro_move) ? { micro_move: trimStr(s.micro_move) } : {}),
-          ...(s && s.motion_blur !== undefined && s.motion_blur !== false ? { motion_blur: clone(s.motion_blur) } : {}),
-        };
-      }),
-    };
+  }
+
+  function segmentSpan(seg) {
+    var d = Number(seg && seg.t1) - Number(seg && seg.t0);
+    if (!Number.isFinite(d) || d <= 0) throw new Error('Clip camera segment is missing a timing duration.');
+    return +d.toFixed(4);
+  }
+
+  function cameraFieldsFromSegment(seg) {
+    var preset = trimStr(seg && seg.preset);
+    if (!preset) throw new Error('Clip is missing a camera setting.');
+    var cam = { preset: preset };
+    if (seg.nudge && typeof seg.nudge === 'object') cam.nudge = clone(seg.nudge);
+    if (seg.intensity != null && Number.isFinite(+seg.intensity)) cam.intensity = +seg.intensity;
+    if (trimStr(seg.ease)) cam.ease = trimStr(seg.ease);
+    if (seg.snap_zoom === true) cam.snap_zoom = true;
+    if (trimStr(seg.micro_move)) cam.micro_move = trimStr(seg.micro_move);
+    if (seg.motion_blur !== undefined && seg.motion_blur !== false) cam.motion_blur = clone(seg.motion_blur);
+    if (seg.curves && typeof seg.curves === 'object') cam.params = clone(seg.curves);
+    else if (seg.params && typeof seg.params === 'object') cam.params = clone(seg.params);
+    return cam;
+  }
+
+  function cameraFromTimelineAtom(tlAtom) {
+    var segs = Array.isArray(tlAtom && tlAtom.cam) ? tlAtom.cam : null;
+    if (!segs || !segs.length) return null;
+    if (segs.length === 1) return cameraFieldsFromSegment(segs[0] || {});
+    var segments = segs.map(function (s) {
+      var fields = cameraFieldsFromSegment(s || {});
+      fields.dur_s = segmentSpan(s);
+      return fields;
+    });
+    return { preset: segments[0].preset, segments: segments };
   }
 
   function fxHooksFromTimelineAtom(tlAtom) {
-    var hooks = Array.isArray(tlAtom && tlAtom.fx_hooks) ? tlAtom.fx_hooks : [];
-    return hooks.map(function (hk) {
-      if (typeof hk === 'string') return { type: hk, t_rel: 0.08, params: {} };
-      return clone(hk);
+    if (!tlAtom || !Array.isArray(tlAtom.fx_hooks)) return null;
+    return tlAtom.fx_hooks.map(function (hk) {
+      if (typeof hk === 'string' || !hk || typeof hk !== 'object' || !trimStr(hk.type)) {
+        throw new Error('Clip FX hook is missing its settings.');
+      }
+      var next = { type: trimStr(hk.type) };
+      if (hk.t_rel != null) {
+        if (!Number.isFinite(+hk.t_rel)) throw new Error('Clip FX hook is missing its settings.');
+        next.t_rel = +hk.t_rel;
+      }
+      if (hk.t_rel_end != null) {
+        if (!Number.isFinite(+hk.t_rel_end)) throw new Error('Clip FX hook is missing its settings.');
+        next.t_rel_end = +hk.t_rel_end;
+      }
+      if (trimStr(hk.source)) next.source = trimStr(hk.source);
+      if (hk.muted === true) next.muted = true;
+      if (hk.params && typeof hk.params === 'object' && !Array.isArray(hk.params)) next.params = clone(hk.params);
+      return next;
     });
+  }
+
+  function timingHoldFromTimelineAtom(tlAtom) {
+    var hold = tlAtom && tlAtom.timing_hold;
+    if (!hold || typeof hold !== 'object' || !trimStr(hold.pack)) return null;
+    var next = { pack: trimStr(hold.pack) };
+    if (trimStr(hold.kind)) next.kind = trimStr(hold.kind);
+    if (hold.soft_cam === true || hold.soft_cam === false) next.soft_cam = hold.soft_cam === true;
+    if (trimStr(hold.preset)) next.preset = trimStr(hold.preset);
+    return next;
   }
 
   function reconstructProjectFromData(data, fileName, localFiles) {
@@ -330,7 +377,14 @@
         }
       }
       var dur = Number(a && a.t1) - Number(a && a.t0);
-      var cleanDur = Number.isFinite(dur) && dur >= 0.1 ? +dur.toFixed(4) : 0.5;
+      if (!Number.isFinite(dur) || dur < 0.1) {
+        throw new Error('Clip ' + atomIds[i] + ' is missing a timing duration.');
+      }
+      var cleanDur = +dur.toFixed(4);
+      var cam = cameraFromTimelineAtom(a);
+      if (!cam) throw new Error('Clip ' + atomIds[i] + ' is missing a camera setting.');
+      var hooks = fxHooksFromTimelineAtom(a);
+      if (!hooks) throw new Error('Clip ' + atomIds[i] + ' is missing FX settings.');
       var atomObj = {
         id: atomIds[i],
         label: trimStr(a && a.label) || ('Beat ' + (i + 1)),
@@ -346,11 +400,13 @@
           layout_source: LAYOUT_KEY,
           plates: rawEntry ? [plateId] : [],
         },
-        camera: cameraFromTimelineAtom(a),
-        fx_hooks: fxHooksFromTimelineAtom(a),
+        camera: cam,
+        fx_hooks: hooks,
       };
       if (a && a.caption) atomObj.caption = String(a.caption);
       if (a && a.caption_style) atomObj.caption_style = String(a.caption_style);
+      var hold = timingHoldFromTimelineAtom(a);
+      if (hold) atomObj.timing_hold = hold;
       if (a && a.cut) atomObj.cut = clone(a.cut);
       if (a && a.beat_id) atomObj.beat_id = String(a.beat_id);
       if (Array.isArray(a && a.micro_frames) && a.micro_frames.length) {
@@ -438,7 +494,9 @@
       var a = show.atoms[i];
       if (!a) continue;
       if (!a.id) a.id = 'beat-' + String(i + 1).padStart(2, '0');
-      if (!Number.isFinite(a.duration_s) || a.duration_s < 0.1) a.duration_s = 0.5;
+      if (!Number.isFinite(+a.duration_s) || +a.duration_s < 0.1) {
+        throw new Error('Clip ' + (a.id || ('clip ' + (i + 1))) + ' is missing a timing duration.');
+      }
       if (!Number.isInteger(a.plates_needed) || a.plates_needed < 1) a.plates_needed = 1;
       a.pose_mode = 'hero';
       if (!a.hero || typeof a.hero !== 'object') {
@@ -555,10 +613,11 @@
             p1.assets = mergeAssets(baseAssets1, p1.assets, localFiles);
             p1.layouts = p1.layouts || {};
             p1.media = Array.isArray(p1.media) ? p1.media : [];
+            authoringGap(p1.show);
             return { kind: 'hm-project-data', project: sec ? sec.sanitizeProjectBounds(p1) : p1, warnings: [] };
           }
         } catch (e) {
-          if (e && /nesting depth|Unsafe asset|blocked|decompression|memory budget|duration_s/i.test(e.message)) throw e;
+          if (e && CLOSED_IMPORT.test(e.message)) throw e;
         }
       }
     }
@@ -578,6 +637,7 @@
             p2.assets = mergeAssets(baseAssets2, p2.assets, localFiles);
             p2.layouts = p2.layouts || {};
             p2.media = Array.isArray(p2.media) ? p2.media : [];
+            authoringGap(p2.show);
             return { kind: 'json-script', project: sec ? sec.sanitizeProjectBounds(p2) : p2, warnings: [] };
           }
           if (json.show_id && Array.isArray(json.atoms)) {
@@ -591,7 +651,7 @@
           }
         }
       } catch (e) {
-        if (e && /nesting depth|Unsafe asset|blocked|decompression|memory budget|duration_s/i.test(e.message)) throw e;
+        if (e && CLOSED_IMPORT.test(e.message)) throw e;
       }
     }
 
