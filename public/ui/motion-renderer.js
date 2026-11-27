@@ -1278,7 +1278,12 @@ function backgroundLocationsBundle() {
       layerMotion = loc && loc.motion;
       layerCrop = loc && loc.crop;
     } else {
-      const key = (entry && entry.bg) || 'base';
+      let key = (entry && entry.bg) || 'base';
+      // A pair switch is a timeline cut. The plate stamp follows the plate start,
+      // which leaves the old picture up after swap_t. The playhead time wins.
+      if (global.swap && Number.isFinite(+global.swap_t) && (key === 'base' || key === 'swap')) {
+        key = (+t || 0) >= +global.swap_t ? 'swap' : 'base';
+      }
       layerSrc = global[key];
       layerMotion = global.motion;
       layerCrop = global.crops && global.crops[key];

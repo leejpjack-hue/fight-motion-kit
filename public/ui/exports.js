@@ -695,57 +695,84 @@
       applyExportGate();
     }
   });
+  function exportAlignment(duration, fps) {
+    const bounds = HMXExport.timelineBoundaries(S.project && S.project.show, duration);
+    const playback = HMXExport.playbackFrames(duration, fps);
+    const aligned = HMXExport.alignExportFrames(playback.frames, bounds, fps);
+    const note = [HMXExport.boundaryHonesty(aligned), playback.remainder].filter(Boolean).join(' ');
+    return { aligned, note };
+  }
   on('exportFrames',()=>task(async()=>{
     assertExportAllowed();
     S.pause();await S.compile();if(!S.composed)throw new Error('Add a clip before exporting a frame sequence.');
     const preset=selectedPreset();const duration=S.duration;const plan=HMXExport.framePlan(duration,preset.fps);
+    const aligned=HMXExport.alignExportFrames(plan,HMXExport.timelineBoundaries(S.project&&S.project.show,duration),preset.fps);
+    const frames=aligned.frames;
+    const boundaryNote=HMXExport.boundaryHonesty(aligned);
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
     const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);
     const files=[];let cancelled=false;activeCancel=()=>{cancelled=true;};
-    setProgress(0,'Frame 0 / '+plan.length+' (0%)',true);
-    for(let i=0;i<plan.length;i++){
+    setProgress(0,'Frame 0 / '+frames.length+' (0%)',true);
+    for(let i=0;i<frames.length;i++){
       if(cancelled){hideReceipt();report('Export cancelled.');return;}
-      S.sampleStageFrameAt(plan[i].t,{renderer:r,standIn:false,onion:false,source:'bake-export-frames'});
+      S.sampleStageFrameAt(frames[i].sample_t,{renderer:r,standIn:false,onion:false,source:'bake-export-frames'});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       if(cancelled){hideReceipt();report('Export cancelled.');return;}
       if(!blob||!(blob.size>0))throw new Error('Could not export frame '+(i+1)+'.');
-      files.push({name:plan[i].file,data:new Uint8Array(await blob.arrayBuffer())});
-      const pct=(i+1)/plan.length;
-      setProgress(pct,'Frame '+(i+1)+' / '+plan.length+' ('+Math.round(pct*100)+'%)',true);
-      report('Frame '+(i+1)+' / '+plan.length+' · '+preset.label);
+      files.push({name:frames[i].file,data:new Uint8Array(await blob.arrayBuffer())});
+      const pct=(i+1)/frames.length;
+      setProgress(pct,'Frame '+(i+1)+' / '+frames.length+' ('+Math.round(pct*100)+'%)',true);
+      report('Frame '+(i+1)+' / '+frames.length+' · '+preset.label);
       await new Promise(resolve=>setTimeout(resolve,0));
     }
     if(cancelled){hideReceipt();report('Export cancelled.');return;}
-    const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames:plan});
+    const timing=HMXExport.timingDocument({showId:S.project.show.show_id,preset,durationS:duration,frames,boundaryChecks:aligned.checks,boundaryNote});
     files.unshift({name:'timing.json',data:new TextEncoder().encode(JSON.stringify(timing,null,2)+'\n')});
     const zip=HMXExport.zipStore(files);
     const zipFile=safeName(S.project.show.show_id,'-'+preset.id+'-frames.zip');
     const zipBlob=assertNonEmptyBlob(new Blob([zip],{type:'application/zip'}),'Frame sequence ZIP');
     const zipMime=zipBlob.type||'application/zip';
     download(zipFile,zipBlob);
-    report('Frame sequence downloaded ('+plan.length+' frames · '+preset.label+'). Copy the local ffmpeg MP4 command below to encode H.264.');
-    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',mime:zipMime,bytes:zipBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,ffmpegCommand:timing.ffmpeg_mp4?.command||currentFfmpegCommand('mp4'),note:plan.length+' frames'}));
+    report('Frame sequence downloaded ('+frames.length+' frames · '+preset.label+').'+(boundaryNote?' '+boundaryNote:'')+' Copy the local ffmpeg MP4 command below to encode H.264.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',mime:zipMime,bytes:zipBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,ffmpegCommand:timing.ffmpeg_mp4?.command||currentFfmpegCommand('mp4'),droppedFrames:0,expectedFrames:frames.length,boundaryNote,note:frames.length+' frames'}));
   }));
   on('exportVideo',()=>task(async()=>{
     const choice=recorderChoice();
     if(!choice)throw new Error('This browser cannot record canvas video. Export playable HTML or a frame sequence instead.');
     if(document.hidden)throw new Error('Recording needs this tab visible. Keep this tab visible and retry.');
     assertExportAllowed();
-    S.pause();await S.compile();S.recording=true;const preset=selectedPreset();
+    S.pause();await S.compile();S.recording=true;const preset=selectedPreset();const duration=S.duration;
+    const clock=exportAlignment(duration,preset.fps);const plan=clock.aligned.frames;
     const canvas=document.createElement('canvas');canvas.width=preset.width;canvas.height=preset.height;
-    const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);S.sampleStageFrameAt(0,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
-    const stream=canvas.captureStream(preset.fps);const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:choice.mime,videoBitsPerSecond:preset.videoBitsPerSecond});
+    const r=HMMotion(canvas,S.project.assets||{});await r.load(S.composed);S.sampleStageFrameAt(plan[0]?plan[0].sample_t:0,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
+    const stream=canvas.captureStream(preset.fps);const track=stream.getVideoTracks()[0];
+    if(!track||typeof track.requestFrame!=='function'){stream.getTracks().forEach(t=>t.stop());throw new Error('This browser cannot capture one canvas frame at a time. Export a frame sequence so each cut stays on its timestamp.');}
+    const chunks=[];const recorder=new MediaRecorder(stream,{mimeType:choice.mime,videoBitsPerSecond:preset.videoBitsPerSecond});
     let resolveStop=()=>{};
     let cancelled=false,visibilityChanged=false,recorderError=null,renderedFrames=0,resolveLoop=()=>{};
+    const droppedIndexes=[];
     const done=new Promise(resolve=>{resolveStop=resolve;recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=resolve;});
     const stopLoop=()=>{if(recorder.state!=='inactive'){try{recorder.stop();}catch(err){resolveStop();}}else resolveStop();resolveLoop();};
     recorder.onerror=e=>{recorderError=e?.error||new Error('Video recorder failed');stopLoop();};
     activeCancel=()=>{cancelled=true;stopLoop();};
     const interrupted=()=>{if(document.hidden){visibilityChanged=true;stopLoop();}};document.addEventListener('visibilitychange',interrupted);
+    const frameWait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     try{
-      recorder.start();const start=performance.now(),duration=S.duration;
-      setProgress(0,'0.0 / '+duration.toFixed(1)+'s · '+choice.label+' '+preset.label,true);
-      await new Promise(resolve=>{resolveLoop=resolve;const frame=now=>{if(visibilityChanged||cancelled||recorderError){resolve();return;}const t=Math.min(duration,(now-start)/1000);S.sampleStageFrameAt(t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});renderedFrames++;const pct=duration>0?Math.min(1,t/duration):1;setProgress(pct,t.toFixed(1)+' / '+duration.toFixed(1)+'s · '+choice.label+' '+preset.label,true);report(`Recording ${t.toFixed(1)} / ${duration.toFixed(1)}s · Keep this tab visible`);if(t>=duration||visibilityChanged||cancelled||recorderError)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
+      recorder.start();const start=performance.now();const frameMs=1000/preset.fps;
+      setProgress(0,'0 / '+plan.length+' · '+choice.label+' '+preset.label,true);
+      for(let i=0;i<plan.length;i++){
+        if(visibilityChanged||cancelled||recorderError||document.hidden){if(document.hidden)visibilityChanged=true;break;}
+        try{
+          S.sampleStageFrameAt(plan[i].sample_t,{renderer:r,standIn:false,onion:false,source:'bake-record-video'});
+          track.requestFrame();
+          renderedFrames++;
+        }catch(err){droppedIndexes.push(i);}
+        const pct=plan.length?(i+1)/plan.length:1;
+        setProgress(pct,'Frame '+(i+1)+' / '+plan.length+' at '+plan[i].sample_t.toFixed(3)+'s · '+choice.label+' '+preset.label,true);
+        report('Recording frame '+(i+1)+' / '+plan.length+' at '+plan[i].sample_t.toFixed(3)+'s · Keep this tab visible');
+        await frameWait(frameMs);
+      }
+      if(!cancelled&&!visibilityChanged&&!recorderError)await frameWait(frameMs);
       const elapsedMs=performance.now()-start;
       if(recorder.state!=='inactive')recorder.stop();
       await done;if(visibilityChanged)throw new Error('Recording interrupted because the tab was hidden. Keep this tab visible and retry.');
@@ -754,11 +781,11 @@
       const packed=await playableVideoFile(chunks, recorder.mimeType||choice.mime);
       const vidBlob=packed.blob;
       const actualMime=packed.container.mime;
-      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:packed.width,height:packed.height});
+      const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:packed.width,height:packed.height,droppedIndexes});
       const vidFile=safeName(S.project.show.show_id,'.'+packed.container.ext);
-      const receipt=HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:packed.width,height:packed.height,durationS:packed.durationS,showId:S.project.show.show_id,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'});
+      const receipt=HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:packed.width,height:packed.height,durationS:packed.durationS,showId:S.project.show.show_id,droppedFrames:telemetry.dropped_frames,expectedFrames:telemetry.expected_frames,boundaryNote:clock.note,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'});
       HMXExport.receiptMatchesPlayableFile(receipt,{filename:vidFile,mime:actualMime,bytes:vidBlob.size,width:packed.width,height:packed.height,durationS:packed.durationS});
-      download(vidFile,vidBlob);report(telemetry.summary,false,telemetry.significant_drop);
+      download(vidFile,vidBlob);report(telemetry.summary+(clock.note?' '+clock.note:''),false,telemetry.significant_drop);
       showReceipt(receipt);
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));
