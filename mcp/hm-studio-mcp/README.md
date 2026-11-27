@@ -43,6 +43,8 @@ Supports both standard newline-delimited JSON-RPC 2.0 (`\n`) and `Content-Length
 | `hm_show_patch` | Atomically applies `set_bg_motion`, `set_bg_locations`, `upsert_fg_prop`, `set_fg_cam`, `set_clip_camera`, `set_clip_cut`, `add_clip_fx`, `set_mood`, `apply_scene_recipe`, and `apply_motion_density`, running `composeShow()` BEFORE writing (`out_path`, or in-place `.bak` guarded when omitted). |
 | `hm_export_editable_html` | Validates with `composeShow()`, embeds local images within `HMImportSecurity` asset budgets, and writes a CSP-hardened offline Playable + Re-openable Motion HTML containing `<script id="hm-project-data" type="application/json">`. |
 
+`node scripts/proof-authored-motion-html.cjs --via mcp` writes that HTML, opens it in the local composer (`npm run dev`, or `COMPOSER_URL`), edits the first clip, and triggers Export Video. The same command with `--via skill` uses `build-project.cjs --emit-html`. Exit 2 is a recorded failure. The command does not add an HTTP server to this MCP process.
+
 ## Security & Scope Guardrails
 
 - **FE/CLI-only & Offline**: Zero HTTP servers, zero sockets, zero `api.teqcon.uk`, zero `:8770`, zero `wrangler deploy`.
