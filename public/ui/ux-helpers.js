@@ -76,63 +76,195 @@
     return false;
   }
 
-  function missingAssetsForActiveClip(project, timeS) {
+  function toFailedSet(raw) {
+    var set = Object.create(null);
+    if (!raw) return set;
+    var list = Array.isArray(raw) ? raw : (typeof raw.forEach === 'function' ? Array.from(raw) : []);
+    for (var i = 0; i < list.length; i++) {
+      var k = typeof list[i] === 'string' ? list[i].trim() : '';
+      if (k) set[k] = true;
+    }
+    return set;
+  }
+
+  function missingAssetsForAtomIndex(project, idx, opts) {
     var show = project && project.show;
     var atoms = show && Array.isArray(show.atoms) ? show.atoms : [];
-    if (!atoms.length) return { atomIndex: -1, clipLabel: '', missingRefs: [] };
-    var idx = activeAtomIndexAt(atoms, timeS);
-    if (idx < 0) return { atomIndex: -1, clipLabel: '', missingRefs: [] };
+    if (idx < 0 || idx >= atoms.length) {
+      return { atomIndex: -1, clipLabel: '', missingRefs: [], emptyPlates: [], brokenRefs: [], hasMissing: false };
+    }
     var atom = atoms[idx];
     var label = (atom && (atom.label || atom.id)) || ('Clip ' + (idx + 1));
     var layouts = (project && project.layouts) || {};
     var assets = (project && project.assets) || {};
+    var failedSet = toFailedSet(opts && opts.failedAssets);
     var missing = [];
+    var emptyPlates = [];
+    var brokenRefs = [];
     var seen = Object.create(null);
+
+    function addMissing(ref) {
+      var trimmed = typeof ref === 'string' ? ref.trim() : '';
+      if (!trimmed || Object.prototype.hasOwnProperty.call(seen, trimmed)) return;
+      seen[trimmed] = true;
+      missing.push(trimmed);
+    }
 
     function check(ref, lsrc) {
       if (!ref || typeof ref !== 'string') return;
       var trimmed = ref.trim();
-      if (!trimmed || Object.prototype.hasOwnProperty.call(seen, trimmed)) return;
-      seen[trimmed] = true;
-      if (!isResolvedRef(trimmed, assets, lsrc)) missing.push(trimmed);
+      if (!trimmed) return;
+      if (Object.prototype.hasOwnProperty.call(failedSet, trimmed)) {
+        brokenRefs.push(trimmed);
+        addMissing(trimmed);
+        return;
+      }
+      if (!isResolvedRef(trimmed, assets, lsrc)) addMissing(trimmed);
     }
 
     var hero = atom && atom.hero;
-    if (hero && hero.layout_source) {
+    var plates = hero && Array.isArray(hero.plates) ? hero.plates : [];
+    var need = atom && Number.isInteger(atom.plates_needed) && atom.plates_needed > 0 ? atom.plates_needed : 1;
+    if (!plates.length) {
+      var noPlateMsg = 'no plate assigned';
+      emptyPlates.push(noPlateMsg);
+      addMissing(noPlateMsg);
+    } else if (!hero || !hero.layout_source) {
+      var noLayoutMsg = 'plate ' + plates[0] + ' (missing layout)';
+      emptyPlates.push(noLayoutMsg);
+      addMissing(noLayoutMsg);
+    } else {
       var lsrc = hero.layout_source;
       var slash = lsrc.lastIndexOf('/');
       var dir = slash >= 0 ? lsrc.slice(0, slash + 1) : '';
-      var map = layouts[lsrc] || {};
-      var plates = Array.isArray(hero.plates) ? hero.plates : [];
-      for (var pi = 0; pi < plates.length; pi++) {
-        var entry = map[plates[pi]];
-        if (!entry || entry.pendingMotion) continue;
-        if (entry.strip && entry.strip.src) {
-          var sRef = DATA_IMG_RE.test(entry.strip.src) || entry.strip.src.indexOf('/') === 0 ? entry.strip.src : dir + entry.strip.src;
-          check(sRef, lsrc);
-        }
-        if (entry.full) {
-          var fRef = DATA_IMG_RE.test(entry.full) || entry.full.indexOf('/') === 0 ? entry.full : dir + entry.full;
-          check(fRef, lsrc);
-        }
-        if (Array.isArray(entry.parts)) {
-          for (var j = 0; j < entry.parts.length; j++) {
-            var part = entry.parts[j];
-            if (part && part.src) {
-              var pRef = DATA_IMG_RE.test(part.src) || part.src.indexOf('/') === 0 ? part.src : dir + part.src;
-              check(pRef, lsrc);
+      var map = layouts[lsrc] || null;
+      if (!map || typeof map !== 'object') {
+        var missingMapMsg = 'layout ' + lsrc + ' (missing)';
+        emptyPlates.push(missingMapMsg);
+        addMissing(missingMapMsg);
+      } else {
+        for (var pi = 0; pi < plates.length; pi++) {
+          var pid = plates[pi];
+          var entry = map[pid];
+          if (!entry) {
+            var missEntryMsg = 'plate ' + pid + ' (missing from layout)';
+            emptyPlates.push(missEntryMsg);
+            addMissing(missEntryMsg);
+            continue;
+          }
+          if (entry.pendingMotion) continue;
+          var hasAnyArt = false;
+          if (entry.strip && entry.strip.src) {
+            hasAnyArt = true;
+            var sRef = DATA_IMG_RE.test(entry.strip.src) || entry.strip.src.indexOf('/') === 0 ? entry.strip.src : dir + entry.strip.src;
+            check(sRef, lsrc);
+          }
+          if (entry.full) {
+            hasAnyArt = true;
+            var fRef = DATA_IMG_RE.test(entry.full) || entry.full.indexOf('/') === 0 ? entry.full : dir + entry.full;
+            check(fRef, lsrc);
+          }
+          if (Array.isArray(entry.parts) && entry.parts.length) {
+            for (var j = 0; j < entry.parts.length; j++) {
+              var part = entry.parts[j];
+              if (part && part.src) {
+                hasAnyArt = true;
+                var pRef = DATA_IMG_RE.test(part.src) || part.src.indexOf('/') === 0 ? part.src : dir + part.src;
+                check(pRef, lsrc);
+              }
             }
           }
+          if (!hasAnyArt) {
+            var emptyEntryMsg = 'plate ' + pid + ' (empty)';
+            emptyPlates.push(emptyEntryMsg);
+            addMissing(emptyEntryMsg);
+          }
+        }
+        if (plates.length < need) {
+          var shortMsg = 'missing ' + (need - plates.length) + ' of ' + need + ' plate(s)';
+          emptyPlates.push(shortMsg);
+          addMissing(shortMsg);
         }
       }
     }
     if (atom && atom.background && atom.background.src) {
       check(atom.background.src, '');
     }
+    if (atom && Array.isArray(atom.micro_frames)) {
+      for (var mi = 0; mi < atom.micro_frames.length; mi++) {
+        var mf = atom.micro_frames[mi];
+        if (mf && mf.src) check(mf.src, '');
+      }
+    }
     return {
       atomIndex: idx,
       clipLabel: label,
       missingRefs: missing,
+      emptyPlates: emptyPlates,
+      brokenRefs: brokenRefs,
+      hasMissing: missing.length > 0,
+    };
+  }
+
+  function missingAssetsForActiveClip(project, timeS, opts) {
+    var show = project && project.show;
+    var atoms = show && Array.isArray(show.atoms) ? show.atoms : [];
+    if (!atoms.length) return { atomIndex: -1, clipLabel: '', missingRefs: [], emptyPlates: [], brokenRefs: [], hasMissing: false };
+    var idx = activeAtomIndexAt(atoms, timeS);
+    return missingAssetsForAtomIndex(project, idx, opts);
+  }
+
+  function auditProjectMissingAssets(project, opts) {
+    var show = project && project.show;
+    var atoms = show && Array.isArray(show.atoms) ? show.atoms : [];
+    var assets = (project && project.assets) || {};
+    var failedSet = toFailedSet(opts && opts.failedAssets);
+    var missingClips = [];
+    var allMissing = [];
+    var seen = Object.create(null);
+
+    function addGlobal(ref) {
+      var trimmed = typeof ref === 'string' ? ref.trim() : '';
+      if (!trimmed || Object.prototype.hasOwnProperty.call(seen, trimmed)) return;
+      seen[trimmed] = true;
+      allMissing.push(trimmed);
+    }
+
+    for (var i = 0; i < atoms.length; i++) {
+      var info = missingAssetsForAtomIndex(project, i, opts);
+      if (info.hasMissing) {
+        missingClips.push(Object.assign({ atomId: (atoms[i] && atoms[i].id) || ('clip-' + (i + 1)) }, info));
+        for (var j = 0; j < info.missingRefs.length; j++) addGlobal(info.missingRefs[j]);
+      }
+    }
+
+    function checkShowRef(ref) {
+      if (!ref || typeof ref !== 'string') return;
+      var trimmed = ref.trim();
+      if (!trimmed) return;
+      if (Object.prototype.hasOwnProperty.call(failedSet, trimmed) || !isResolvedRef(trimmed, assets, '')) {
+        addGlobal(trimmed);
+      }
+    }
+
+    var bg = (show && show.bg) || {};
+    if (bg.base) checkShowRef(bg.base);
+    if (bg.swap) checkShowRef(bg.swap);
+    if (Array.isArray(bg.locations)) {
+      for (var bi = 0; bi < bg.locations.length; bi++) {
+        if (bg.locations[bi] && bg.locations[bi].src) checkShowRef(bg.locations[bi].src);
+      }
+    }
+    var fgProps = show && show.fg && Array.isArray(show.fg.props) ? show.fg.props : [];
+    for (var fi = 0; fi < fgProps.length; fi++) {
+      if (fgProps[fi] && fgProps[fi].src) checkShowRef(fgProps[fi].src);
+      if (fgProps[fi] && fgProps[fi].effect && fgProps[fi].effect.broken_src) checkShowRef(fgProps[fi].effect.broken_src);
+    }
+
+    return {
+      hasMissing: allMissing.length > 0,
+      missingClips: missingClips,
+      missingRefs: allMissing,
     };
   }
 
@@ -142,6 +274,7 @@
     resolveNleShortcut: resolveNleShortcut,
     activeAtomIndexAt: activeAtomIndexAt,
     missingAssetsForActiveClip: missingAssetsForActiveClip,
+    auditProjectMissingAssets: auditProjectMissingAssets,
   };
 
   root.HMUxHelpers = api;
