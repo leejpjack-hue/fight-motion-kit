@@ -92,7 +92,7 @@ test('#286 export receipt reports actual MIME, byte size, resolution, duration, 
   assert.match(webmReceipt.summary, /video\/webm;codecs=vp9/);
   assert.match(webmReceipt.summary, /2\.34 MB/);
   assert.match(webmReceipt.summary, /1280×720/);
-  assert.match(webmReceipt.summary, /5\.00s/);
+  assert.match(webmReceipt.summary, /5\.000s/);
   assert.match(webmReceipt.honestyNote, /WebM/);
   assertNoUniversalMp4Claim(webmReceipt.honestyNote + ' ' + webmReceipt.summary);
 
