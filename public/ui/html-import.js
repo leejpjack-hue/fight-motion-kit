@@ -228,6 +228,7 @@
       if (trimStr(s0.ease)) cam.ease = trimStr(s0.ease);
       if (s0.snap_zoom === true) cam.snap_zoom = true;
       if (trimStr(s0.micro_move)) cam.micro_move = trimStr(s0.micro_move);
+      if (s0.motion_blur !== undefined && s0.motion_blur !== false) cam.motion_blur = clone(s0.motion_blur);
       return cam;
     }
     var durTotal = segs.reduce(function (sum, s) {
@@ -242,8 +243,11 @@
           preset: trimStr(s && s.preset) || 'static_hold',
           dur_s: Number.isFinite(d) && d > 0 ? +d.toFixed(4) : +(durTotal / segs.length).toFixed(4),
           ...(s && s.nudge ? { nudge: clone(s.nudge) } : {}),
+          ...(s && s.intensity != null ? { intensity: s.intensity } : {}),
           ...(s && s.ease ? { ease: trimStr(s.ease) } : {}),
           ...(s && s.snap_zoom === true ? { snap_zoom: true } : {}),
+          ...(s && trimStr(s.micro_move) ? { micro_move: trimStr(s.micro_move) } : {}),
+          ...(s && s.motion_blur !== undefined && s.motion_blur !== false ? { motion_blur: clone(s.motion_blur) } : {}),
         };
       }),
     };
@@ -349,6 +353,12 @@
       if (a && a.caption_style) atomObj.caption_style = String(a.caption_style);
       if (a && a.cut) atomObj.cut = clone(a.cut);
       if (a && a.beat_id) atomObj.beat_id = String(a.beat_id);
+      if (Array.isArray(a && a.micro_frames) && a.micro_frames.length) {
+        atomObj.micro_frames = clone(a.micro_frames);
+      } else if (rawEntry && Array.isArray(rawEntry.micro_frames) && rawEntry.micro_frames.length) {
+        atomObj.micro_frames = clone(rawEntry.micro_frames);
+      }
+      if (a && a.mood) atomObj.mood = clone(a.mood);
       if (rawEntry && rawEntry.strip && Number.isFinite(+rawEntry.strip.clip_offset_s)) {
         atomObj.strip_offset_s = +rawEntry.strip.clip_offset_s;
       } else if (a && a.strip && Number.isFinite(+a.strip.clip_offset_s)) {
@@ -385,16 +395,23 @@
     var overlays = Array.isArray(tl.overlays)
       ? clone(tl.overlays.filter(function (o) { return o && !o.editor_caption; }))
       : [];
+    var bgCopy = tl.bg ? clone(tl.bg) : {};
+    if (!Object.prototype.hasOwnProperty.call(bgCopy, 'locations')) {
+      if (bgCopy.swap == null) delete bgCopy.swap;
+      if (bgCopy.swap_t == null) delete bgCopy.swap_t;
+      if (bgCopy.base === undefined) delete bgCopy.base;
+    }
     var show = {
       show_id: showId,
       title: trimStr(tl.title) || showId,
       atoms: atoms,
-      bg: tl.bg ? clone(tl.bg) : {},
+      bg: bgCopy,
       overlays: overlays,
     };
     if (tl.chars) show.chars = clone(tl.chars);
     if (tl.fg) show.fg = clone(tl.fg);
     if (tl.fx_profile) show.fx_profile = tl.fx_profile;
+    if (tl.mood) show.mood = clone(tl.mood);
 
     var layouts = {};
     layouts[LAYOUT_KEY] = layoutMap;
@@ -667,6 +684,9 @@
     });
     (show.atoms || []).forEach(function (a) {
       if (a && a.background && a.background.src) checkRef(a.background.src);
+      (a && a.micro_frames || []).forEach(function (mf) {
+        if (mf && mf.src) checkRef(mf.src);
+      });
     });
     ((show.fg && show.fg.props) || []).forEach(function (prop) {
       if (prop && prop.src) checkRef(prop.src);

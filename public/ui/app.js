@@ -537,7 +537,8 @@
     const beats = atoms.map(a => a.label).filter(Boolean);
     const eightPlate = atoms.length === 8 && Math.abs(duration() - 5) < 0.001;
     const beatLine = beats.join(' → ');
-    if (teaching && eightPlate) film.textContent = '5.00s eight-plate teaching film. ' + beatLine;
+    if (!atoms.length) film.textContent = 'Empty timeline (0 clips). Open an AI Motion HTML, load the 5.00s starter fight, or import images to edit and export.';
+    else if (teaching && eightPlate) film.textContent = '5.00s eight-plate teaching film. ' + beatLine;
     else if (teaching) film.textContent = 'Teaching film is open. ' + duration().toFixed(2) + 's. ' + beatLine;
     else film.textContent = 'Opened ' + (project.show.title || project.show.show_id) + '. Open demo returns to the 5.00s eight-plate teaching film.';
     const openBtn = $('firstPathOpen');
@@ -2164,7 +2165,7 @@
     if(!confirmReplaceOpenProject('New project'))return false;
     return load({version:1,show:{show_id:'motion-'+Date.now(),title:'Untitled exchange',venue:'street',fx_profile:HMComposeClient.defaultFxProfileFor('street'),compose_mode:'parity',parity_mode:true,chars:{L:{name:'Left'},R:{name:'Right'}},bg:{},atoms:[],overlays:[]},layouts:copy(project.layouts),media:copy(project.media),assets:copy(project.assets||{})});
   });
-  on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());$('imageInput').onchange=safe(e=>importImages(e.target.files));
+  on('importImages',()=>$('imageInput').click());on('emptyAdd',()=>$('imageInput').click());on('emptyOpenHtml',()=>firstPathStep('import-html'));on('emptyLoadDemo',()=>firstPathStep('open'));$('imageInput').onchange=safe(e=>importImages(e.target.files));
   $('mediaSearch').oninput=renderMedia;
   on('play',play);on('restart',()=>{pause();time=0;draw();});on('previous',()=>select(Math.max(0,(activeAt(Math.min(time,duration()-.0001))) - 1)));on('next',()=>select(Math.min(project.show.atoms.length-1,activeAt(Math.min(time,duration()-.0001))+1)));
   on('platePrev',()=>jumpToPlate({step:-1}));on('plateNext',()=>jumpToPlate({step:1}));
