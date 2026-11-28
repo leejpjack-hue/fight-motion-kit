@@ -55,15 +55,30 @@
   }
   function dataUrl(blob) {return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob);});}
   async function embeddedAsset(path, project) {
-    if (project.assets?.[path]) return project.assets[path];
-    if (path.startsWith('data:image/')) return path;
+    if (project.assets?.[path]) {
+      if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(project.assets[path])) return project.assets[path];
+      throw new Error('Invalid image data: ' + path);
+    }
+    if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(path)) return path;
     const response=await fetch(path.startsWith('/')?path:'/'+path);
     if(!response.ok)throw new Error('Missing image: '+path);
     const blob=await response.blob();if(!blob.type.startsWith('image/'))throw new Error('Not an image: '+path);
     return dataUrl(blob);
   }
-  async function portable() {
+  function missingAssetsNote(project, extraFailed) {
+    const set = new Set();
+    if (window.HMUxHelpers && typeof HMUxHelpers.auditProjectMissingAssets === 'function') {
+      const audit = HMUxHelpers.auditProjectMissingAssets(project, { failedAssets: extraFailed });
+      (audit.missingRefs || []).forEach(ref => set.add(ref));
+    }
+    (Array.isArray(extraFailed) ? extraFailed : []).forEach(ref => { if (ref) set.add(ref); });
+    if (!set.size) return '';
+    return set.size + ' missing/broken asset' + (set.size === 1 ? '' : 's') + ' left empty (no stand-in art)';
+  }
+  async function portable(opts = {}) {
+    const allowMissing = opts.allowMissing !== false;
     const project=S.project; const assets={...(project.assets||{})};
+    const missingAssets=[];
     // Include library images as well as timeline assets so a project is editable offline.
     const paths=new Set(project.media.map(m=>m.src));
     backgroundImageRefs(project.show.bg).forEach(p=>paths.add(p));
@@ -71,9 +86,18 @@
     (project.show.fg?.props||[]).forEach(p=>{if(p.src)paths.add(p.src);if(p.effect?.broken_src)paths.add(p.effect.broken_src);});
     const result=project.show.atoms.length?await S.compile():null;
     if(result){Object.values(result.layout).forEach(l=>{if(l.full)paths.add(l.full);if(l.strip?.src)paths.add(l.strip.src);if(l.background?.src)paths.add(l.background.src);(l.parts||[]).forEach(p=>paths.add(p.src));(l.micro_frames||[]).forEach(mf=>{if(mf?.src)paths.add(mf.src);});});backgroundImageRefs(result.timeline.bg).forEach(p=>paths.add(p));(result.timeline.atoms||[]).forEach(a=>(a.micro_frames||[]).forEach(mf=>{if(mf?.src)paths.add(mf.src);}));(result.timeline.overlays||[]).forEach(o=>{if(o.src)paths.add(o.src);});(result.timeline.fg?.props||[]).forEach(p=>{if(p.src)paths.add(p.src);if(p.effect?.broken_src)paths.add(p.effect.broken_src);});}
-    await Promise.all([...paths].map(async p=>{if(!p.startsWith('data:image/'))assets[p]=await embeddedAsset(p,project);}));
+    await Promise.all([...paths].map(async p=>{
+      if(!p||p.startsWith('data:image/'))return;
+      try {
+        assets[p]=await embeddedAsset(p,project);
+      } catch (err) {
+        if (!allowMissing) throw err;
+        delete assets[p];
+        missingAssets.push(p);
+      }
+    }));
     project.assets=assets;
-    return {project,result,assets};
+    return {project,result,assets,missingAssets};
   }
   const exportIds = ['exportHtml','exportVideo','exportFrames','exportFrame','exportTiming','saveProject','openProject','loadDemo','loadExtended','loadOriginal','loadStreet','loadCostumeLock','loadPoseRefPack','newProject','importImages','changeBackground'];
   async function task(fn) {
@@ -657,7 +681,8 @@
   }
   on('exportHtml',()=>task(async()=>{
     assertExportAllowed();
-    report('Embedding images for offline playback…');S.pause();const {project,result,assets}=await portable();if(!result)throw new Error('Add a clip before exporting.');
+    report('Embedding images for offline playback…');S.pause();const {project,result,assets,missingAssets}=await portable({allowMissing:true});if(!result)throw new Error('Add a clip before exporting.');
+    const gapNote=missingAssetsNote(project,missingAssets);
     const rawData=JSON.stringify({...result,assets});
     const data=(window.HMImportSecurity&&typeof HMImportSecurity.escapeScriptJson==='function')
       ?HMImportSecurity.escapeScriptJson(rawData)
@@ -670,14 +695,14 @@
     const htmlFile=safeName(project.show.show_id,'.html');
     const htmlBlob=assertNonEmptyBlob(new Blob([html],{type:'text/html'}),'Playable HTML');
     const htmlMime=htmlBlob.type||'text/html';
-    download(htmlFile,htmlBlob);report('Playable HTML downloaded. All images are embedded.');
-    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'html',filename:htmlFile,format:'Offline HTML + Project SoT',mime:htmlMime,bytes:htmlBlob.size,width:1280,height:720,durationS:result.timeline?.duration_s||S.duration,showId:project.show.show_id,note:'All images embedded'}));
+    download(htmlFile,htmlBlob);report(gapNote?`Playable HTML downloaded · ${gapNote}.`:'Playable HTML downloaded. All images are embedded.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'html',filename:htmlFile,format:'Offline HTML + Project SoT',mime:htmlMime,bytes:htmlBlob.size,width:1280,height:720,durationS:result.timeline?.duration_s||S.duration,showId:project.show.show_id,note:gapNote||'All images embedded'}));
   }));
   function standalonePlayer(data) {
     const get=id=>document.getElementById(id);const r=createMotionRenderer(get('stage'),data.assets);let t=0,playing=false,start=0,offset=0;
     const duration=data.timeline.duration_s;get('seek').max=duration;get('title').textContent=data.timeline.title;document.title=data.timeline.title;
     const updateHud=typeof HMTeachingFilm!=='undefined'&&HMTeachingFilm.mountTeachingHud(get('stage').parentElement,data,value=>{playing=false;t=Math.max(0,Math.min(duration,value));draw();})||null;
-    function draw(){r.render(t,{viaSoT:true,source:'standalone-player'});get('seek').value=t;get('time').textContent=t.toFixed(2)+' / '+duration.toFixed(2)+'s';get('play').textContent=playing?'Pause':'Play';if(updateHud)updateHud(t);const layers=get('layers');if(layers){const row=r.lastLayerMatrix;layers.dataset.state=row&&layerCamsIndependent(row)?'independent':'idle';layers.textContent=layerCamMatrixText(row);}}
+    function draw(){r.render(t,{viaSoT:true,source:'standalone-player'});get('seek').value=t;get('time').textContent=t.toFixed(2)+' / '+duration.toFixed(2)+'s';get('play').textContent=playing?'Pause':'Play';if(updateHud)updateHud(t);const layers=get('layers');if(layers){const row=r.lastLayerMatrix;layers.dataset.state=row&&layerCamsIndependent(row)?'independent':'idle';const miss=r.missingAssets&&r.missingAssets.length?(' · '+r.missingAssets.length+' missing asset(s) left empty'):'';layers.textContent=layerCamMatrixText(row)+miss;}}
     function tick(now){if(!playing)return;t=Math.min(duration,offset+(now-start)/1000);if(t>=duration)playing=false;draw();if(playing)requestAnimationFrame(tick);}
     function toggle(){if(playing)playing=false;else{if(t>=duration)t=0;offset=t;start=performance.now();playing=true;requestAnimationFrame(tick);}draw();}
     get('play').onclick=toggle;get('seek').oninput=()=>{playing=false;t=+get('seek').value;draw();};document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();toggle();}});
@@ -733,8 +758,9 @@
     const zipBlob=assertNonEmptyBlob(new Blob([zip],{type:'application/zip'}),'Frame sequence ZIP');
     const zipMime=zipBlob.type||'application/zip';
     download(zipFile,zipBlob);
-    report('Frame sequence downloaded ('+frames.length+' frames · '+preset.label+').'+(boundaryNote?' '+boundaryNote:'')+' Copy the local ffmpeg MP4 command below to encode H.264.');
-    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',mime:zipMime,bytes:zipBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,ffmpegCommand:timing.ffmpeg_mp4?.command||currentFfmpegCommand('mp4'),droppedFrames:0,expectedFrames:frames.length,boundaryNote,note:frames.length+' frames'}));
+    const gapNote=missingAssetsNote(S.project,r.missingAssets);
+    report('Frame sequence downloaded ('+frames.length+' frames · '+preset.label+').'+(boundaryNote?' '+boundaryNote:'')+(gapNote?' '+gapNote+'.':'')+' Copy the local ffmpeg MP4 command below to encode H.264.');
+    if(typeof HMXExport.buildExportReceipt==='function')showReceipt(HMXExport.buildExportReceipt({kind:'frames',filename:zipFile,format:'PNG + timing.json',mime:zipMime,bytes:zipBlob.size,preset,width:canvas.width,height:canvas.height,durationS:duration,showId:S.project.show.show_id,ffmpegCommand:timing.ffmpeg_mp4?.command||currentFfmpegCommand('mp4'),droppedFrames:0,expectedFrames:frames.length,boundaryNote,note:[frames.length+' frames',gapNote].filter(Boolean).join(' · ')}));
   }));
   on('exportVideo',()=>task(async()=>{
     const choice=recorderChoice();
@@ -782,10 +808,11 @@
       const vidBlob=packed.blob;
       const actualMime=packed.container.mime;
       const telemetry=HMXExport.cadenceTelemetry({durationS:duration,targetFps:preset.fps,renderedFrames,actualElapsedMs:elapsedMs,mime:actualMime,width:packed.width,height:packed.height,droppedIndexes});
+      const gapNote=missingAssetsNote(S.project,r.missingAssets);
       const vidFile=safeName(S.project.show.show_id,'.'+packed.container.ext);
-      const receipt=HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:packed.width,height:packed.height,durationS:packed.durationS,showId:S.project.show.show_id,droppedFrames:telemetry.dropped_frames,expectedFrames:telemetry.expected_frames,boundaryNote:clock.note,note:'measured '+telemetry.measured_fps.toFixed(1)+' fps'});
+      const receipt=HMXExport.buildExportReceipt({kind:'video',filename:vidFile,format:actualMime,mime:actualMime,bytes:vidBlob.size,preset,width:packed.width,height:packed.height,durationS:packed.durationS,showId:S.project.show.show_id,droppedFrames:telemetry.dropped_frames,expectedFrames:telemetry.expected_frames,boundaryNote:clock.note,note:['measured '+telemetry.measured_fps.toFixed(1)+' fps',gapNote].filter(Boolean).join(' · ')});
       HMXExport.receiptMatchesPlayableFile(receipt,{filename:vidFile,mime:actualMime,bytes:vidBlob.size,width:packed.width,height:packed.height,durationS:packed.durationS});
-      download(vidFile,vidBlob);report(telemetry.summary+(clock.note?' '+clock.note:''),false,telemetry.significant_drop);
+      download(vidFile,vidBlob);report(telemetry.summary+(clock.note?' '+clock.note:'')+(gapNote?' · '+gapNote:''),false,telemetry.significant_drop||Boolean(gapNote));
       showReceipt(receipt);
     }finally{document.removeEventListener('visibilitychange',interrupted);if(recorder.state!=='inactive')recorder.stop();stream.getTracks().forEach(t=>t.stop());}
   }));

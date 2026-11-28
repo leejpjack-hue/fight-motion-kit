@@ -278,9 +278,11 @@
       const next=HMMotion($('stage'),snapshot.assets||{});await next.load(r);
       next.onRenderHook=(t,opts)=>recordSeekPreviewCall(t,opts,'stage');
       if(v!==compileVersion)return null;
-      result=r;renderer=next;renderedVersion=v;renderFramePeekStrip();renderShowLintPanel();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
+      result=r;renderer=next;renderedVersion=v;renderTimeline();renderFramePeekStrip();renderShowLintPanel();draw();renderPlateJump();window.dispatchEvent(new Event('hm:projectchange'));
       const warns=HMComposeClient.parityDirtyChecklist(snapshot);
-      if(warns.active&&warns.warns.length)status('Checklist · '+warns.warns.map(row=>row.text).join(' · '),true);
+      const missingCount=Array.isArray(next.missingAssets)?next.missingAssets.length:0;
+      if(missingCount)status(`Loaded with ${missingCount} missing/broken asset${missingCount===1?'':'s'} — no stand-in art generated. Relink or export what is present.`,true);
+      else if(warns.active&&warns.warns.length)status('Checklist · '+warns.warns.map(row=>row.text).join(' · '),true);
       else status(`Ready · ${r.duration_s.toFixed(2)}s · ${r.stats.plates} plates · All processing stays in your browser`);
       return r;
     }catch(e){if(v===compileVersion){result=null;renderer=null;renderPlateJump();renderFramePeekStrip();renderShowLintPanel();status('Preview unavailable: '+e.message,true);}throw e;}
@@ -969,7 +971,15 @@
         const pct=window.HMMicroFramesUi?HMMicroFramesUi.microFrameMarkerPct(mf,a.duration_s):(mf.at==='end'?94:mf.at==='mid'?42:6);
         return `<span class="micro-frame-tick" data-micro-frame="true" data-action="${esc(mf.action)}" style="left:${pct}%" title="Micro-action: ${esc(mf.action)} (${mf.frames||2}f)"></span>`;
       }).join('');
-      b.innerHTML=`${ticks}<img alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
+      const clipMissing=(project&&window.HMUxHelpers&&typeof HMUxHelpers.missingAssetsForActiveClip==='function')
+        ?HMUxHelpers.missingAssetsForActiveClip(project,startOf(i)+1e-4,{failedAssets:renderer?.missingAssets})
+        :{missingRefs:[]};
+      if(clipMissing.missingRefs&&clipMissing.missingRefs.length){
+        b.dataset.missingAsset='true';
+        b.title='Missing/broken plate: '+clipMissing.missingRefs.join(', ')+' (no stand-in art)';
+      }
+      const missingBadge=(clipMissing.missingRefs&&clipMissing.missingRefs.length)?'<span class="clip-missing-badge" aria-label="Missing asset">Missing</span>':'';
+      b.innerHTML=`${ticks}${missingBadge}<img alt=""><span class="clip-label">${esc(String(i+1).padStart(2,'0')+' '+(a.label||a.id))}</span><span class="clip-duration">${a.duration_s.toFixed(2)}s</span>`;
       b.querySelector('img').src=thumbnail(a);
       b.onclick=e=>{if(e.shiftKey)selectRange(i);else select(i);};b.ondragstart=e=>{dragIndex=i;e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';};b.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';};
       b.ondrop=safe(e=>{e.preventDefault();if(dragIndex<0||dragIndex===i)return;edit(()=>{const [moved]=project.show.atoms.splice(dragIndex,1);project.show.atoms.splice(i,0,moved);selected=i;rangeAnchor=i;rangeEnd=i;time=startOf(i);HMComposeClient.reflowAllCamChains(project.show.atoms);});dragIndex=-1;});
@@ -1208,13 +1218,18 @@
   function syncStageMissingOverlay() {
     const box=$('stageMissingOverlay'),detail=$('stageMissingDetail');
     if(!box)return;
+    const failed=renderer&&Array.isArray(renderer.missingAssets)?renderer.missingAssets:[];
     const info=(project&&window.HMUxHelpers&&typeof HMUxHelpers.missingAssetsForActiveClip==='function')
-      ?HMUxHelpers.missingAssetsForActiveClip(project,time)
+      ?HMUxHelpers.missingAssetsForActiveClip(project,time,{failedAssets:failed})
       :{atomIndex:-1,clipLabel:'',missingRefs:[]};
-    if(!info.missingRefs.length){box.hidden=true;return;}
+    const runtimeGap=renderer&&renderer.lastMissingAsset&&renderer.lastMissingAsset.missing?renderer.lastMissingAsset:null;
+    const refs=info.missingRefs&&info.missingRefs.length?info.missingRefs:(runtimeGap&&Array.isArray(runtimeGap.refs)?runtimeGap.refs:[]);
+    if(!refs.length){box.hidden=true;delete box.dataset.missingState;return;}
     box.hidden=false;
-    if($('stageMissingTitle'))$('stageMissingTitle').textContent=`Missing image on ${info.clipLabel}`;
-    if(detail)detail.textContent=info.missingRefs.join(', ')+' — drop image file(s) here or click Relink.';
+    box.dataset.missingState='missing';
+    const clipLabel=info.clipLabel||atom()?.label||atom()?.id||'this clip';
+    if($('stageMissingTitle'))$('stageMissingTitle').textContent=`Missing or broken plate on ${clipLabel}`;
+    if(detail)detail.textContent=refs.join(', ')+' — no stand-in art generated. Drop image file(s) here or click Relink.';
   }
   function setTrackMute(track, muted) {
     if (track !== 'fg' && track !== 'bg') return;

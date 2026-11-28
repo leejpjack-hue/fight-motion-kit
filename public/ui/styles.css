@@ -745,3 +745,7 @@ button{font-size:var(--fs-sm);border-radius:var(--radius-md)}
 .export-receipt-honesty{margin:4px 0 0;color:var(--text)}
 .export-receipt-cmd{display:block;margin:6px 0;padding:6px 8px;border-radius:var(--radius-sm);background:var(--shell-bg);border:1px solid var(--border);font:11px/1.4 ui-monospace,SFMono-Regular,monospace;word-break:break-all;user-select:all}
 @media(max-width:600px){.empty-stage-actions{width:100%}.empty-stage-actions button{flex:1 1 160px;min-height:36px}}
+
+/* === #292: Missing/broken plate timeline badge (zero stand-in art) === */
+.timeline-clip[data-missing-asset="true"]{border-color:var(--warn);border-style:dashed}
+.clip-missing-badge{position:absolute;top:3px;right:3px;z-index:2;padding:1px 5px;border-radius:3px;background:#2f1c0fee;border:1px solid var(--warn);color:var(--warn-ink);font:700 8px/1.2 ui-monospace,SFMono-Regular,monospace;letter-spacing:.3px;pointer-events:none}

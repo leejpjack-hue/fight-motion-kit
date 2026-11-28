@@ -1325,8 +1325,8 @@ function backgroundLocationsBundle() {
 backgroundLocationsBundle();
 function createMotionRenderer(canvas, assets = {}) {
   const ctx = canvas.getContext('2d');
-  const images = new Map(), keyedImages = new Map();
-  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null, lastHitstop = null;
+  const images = new Map(), keyedImages = new Map(), failedAssets = new Map();
+  let timeline, layout, lastTime = 0, lastRenderViaSoT = false, lastRenderSource = '', onRenderHook = null, lastPixelfx = { drawn: [], missed: [] }, lastCut = null, lastLayerMatrix = null, lastStripSample = null, lastHitstop = null, lastMissingAsset = null;
   let activeMuteBg = false, activeMuteFg = false, lastBgScrollSpeed = 0;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   function url(path) {
@@ -1338,8 +1338,10 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     return '/' + String(path).replace(/^\.?\//, '');
   }
-  async function load(data) {
+  async function load(data, loadOpts = {}) {
     timeline = data.timeline; layout = data.layout;
+    failedAssets.clear();
+    const strictLoad = Boolean(loadOpts && loadOpts.strict === true);
     const paths = new Set();
     Object.values(layout).forEach(l => { if (l.full) paths.add(l.full); if(l.strip?.src)paths.add(l.strip.src); if(l.background?.src)paths.add(l.background.src); (l.parts || []).forEach(p => paths.add(p.src)); (l.micro_frames || []).forEach(mf => { if (mf && mf.src) paths.add(mf.src); }); });
     (timeline.atoms || []).forEach(a => (a.micro_frames || []).forEach(mf => { if (mf && mf.src) paths.add(mf.src); }));
@@ -1354,11 +1356,18 @@ function createMotionRenderer(canvas, assets = {}) {
       const cached = imgCache?.get(resolved);
       if (cached && cached.complete && cached.naturalWidth > 0) { images.set(path, cached); return; }
       const im = new Image(); im.src = resolved;
-      try { await im.decode(); } catch (_) { throw new Error('Image could not load: ' + path.slice(0, 120)); }
+      try {
+        await im.decode();
+      } catch (_) {
+        const msg = 'Image could not load: ' + String(path).slice(0, 120);
+        failedAssets.set(path, msg);
+        if (strictLoad) throw new Error(msg);
+        return;
+      }
       if (imgCache) { if (imgCache.size > 200) imgCache.clear(); imgCache.set(resolved, im); }
       images.set(path, im);
     }));
-    for(const l of Object.values(layout)){const b=backgroundAt(l,timeline.bg,l.t||0);const owns=!!(l.background&&Object.hasOwn(l.background,'src'));const anyLoc=!owns&&Array.isArray(timeline.bg?.locations)&&timeline.bg.locations.some(row=>row&&row.src);if((b.src||anyLoc)&&b.key_white&&l.full&&!keyedImages.has(l.full)){const im=images.get(l.full);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}if(b.key_white&&Array.isArray(l.micro_frames)){for(const mf of l.micro_frames){if(mf&&mf.src&&!keyedImages.has(mf.src)&&images.has(mf.src)){const im=images.get(mf.src);let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(mf.src,keyed);}}}}
+    for(const l of Object.values(layout)){const b=backgroundAt(l,timeline.bg,l.t||0);const owns=!!(l.background&&Object.hasOwn(l.background,'src'));const anyLoc=!owns&&Array.isArray(timeline.bg?.locations)&&timeline.bg.locations.some(row=>row&&row.src);if((b.src||anyLoc)&&b.key_white&&l.full&&!keyedImages.has(l.full)&&images.has(l.full)){const im=images.get(l.full);if(im){let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(l.full,keyed);}}if(b.key_white&&Array.isArray(l.micro_frames)){for(const mf of l.micro_frames){if(mf&&mf.src&&!keyedImages.has(mf.src)&&images.has(mf.src)){const im=images.get(mf.src);if(im){let keyed=keyCache?.get(im);if(!keyed){keyed=removeWhiteBackdrop(im);keyCache?.set(im,keyed);}keyedImages.set(mf.src,keyed);}}}}}
   }
   // Flood only edge-connected neutral whites, preserving enclosed white clothing/highlights.
   function removeWhiteBackdrop(im) {
@@ -1507,18 +1516,45 @@ function createMotionRenderer(canvas, assets = {}) {
     }
     ctx.restore();
   }
-  function drawScene(l, sampleT, microCtx) {
+  function plateMissingInfo(l) {
+    if (!l) return { missing: true, plateId: '', reason: 'empty-plate', refs: ['empty-plate'] };
+    if (l.strip && l.strip.src) {
+      if (!images.has(l.strip.src)) {
+        return { missing: true, plateId: l.source_plate || l.id || '', reason: failedAssets.has(l.strip.src) ? 'broken-image' : 'missing-image', refs: [l.strip.src] };
+      }
+      return null;
+    }
+    if (l.full) {
+      if (!images.has(l.full)) {
+        return { missing: true, plateId: l.source_plate || l.id || '', reason: failedAssets.has(l.full) ? 'broken-image' : 'missing-image', refs: [l.full] };
+      }
+      return null;
+    }
+    if (Array.isArray(l.parts) && l.parts.length) {
+      const missingParts = l.parts.filter(p => p && p.src && !images.has(p.src)).map(p => p.src);
+      if (missingParts.length) {
+        return { missing: true, plateId: l.source_plate || l.id || '', reason: missingParts.some(ref => failedAssets.has(ref)) ? 'broken-image' : 'missing-image', refs: missingParts };
+      }
+      return null;
+    }
+    if (!l.slate || /^(?:MISSING PLATE|HERO PENDING)\b/.test(String(l.slate))) {
+      return { missing: true, plateId: l.source_plate || l.id || '', reason: 'empty-plate', refs: [l.source_plate || l.id || 'empty-plate'] };
+    }
+    return null;
+  }
+  function drawScene(l, sampleT, microCtx, exportBake = false) {
     const b=backgroundAt(l,timeline.bg,sampleT);
     const paintPlate = swapSrc => {
       if (swapSrc && images.has(swapSrc)) {
         image(swapSrc, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
       } else if (l.strip && l.strip.src && typeof drawStripFrame === 'function') {
-        lastStripSample = drawStripFrame(ctx, images.get(l.strip.src), l.strip, sampleT, timeline?.floor_y);
+        const stripIm = images.get(l.strip.src);
+        if (stripIm) lastStripSample = drawStripFrame(ctx, stripIm, l.strip, sampleT, timeline?.floor_y);
       } else if (l.full) image(l.full, 0, 0, 1280, 720, true, false, !!b.src && b.key_white);
       else {
         (l.shadows || []).forEach(s => { ctx.fillStyle = '#0b181c22'; ctx.beginPath(); ctx.ellipse(s.cx,s.cy,s.rx,s.ry,0,0,Math.PI*2);ctx.fill(); });
         (l.parts || []).forEach(p => image(p.src, p.x, p.y, p.w, p.h, false, p.flip));
-        if (l.slate) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
+        if (l.slate && !(exportBake && /^(?:MISSING PLATE|HERO PENDING)\b/.test(String(l.slate)))) {ctx.fillStyle='#1c2b30';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#ccf17b';ctx.font='24px sans-serif';ctx.textAlign='center';ctx.fillText(l.slate,640,360,1100);}
       }
     };
     const list = (microCtx && Array.isArray(microCtx.micro_frames) && microCtx.micro_frames.length)
@@ -1655,6 +1691,8 @@ function createMotionRenderer(canvas, assets = {}) {
     activeMuteBg = !!opts.muteBg;
     activeMuteFg = !!opts.muteFg;
     lastBgScrollSpeed = 0;
+    lastMissingAsset = null;
+    const isExportBake = Boolean(opts.exportBake) || lastRenderSource.startsWith('bake-') || lastRenderSource === 'standalone-player';
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1280, 720);
     if (!timeline || !timeline.plates.length) { lastCut = null; lastStripSample = null; lastHitstop = null; ctx.restore(); return; }
     const clockT = clamp(time, 0, Math.max(0, timeline.duration_s - 1e-7));
@@ -1712,22 +1750,23 @@ function createMotionRenderer(canvas, assets = {}) {
     ctx.save(); ctx.translate(640 + camera.x + shake.dx, 360 + camera.y + shake.dy); ctx.rotate(totalRot * Math.PI / 180); ctx.scale(drawScale, drawScale); ctx.translate(-640, -360);
     if(!independent)drawBackground(l,t,camera);
     const microCtx = curAtom && Array.isArray(curAtom.micro_frames) && curAtom.micro_frames.length ? { t0: curAtom.t0, t1: curAtom.t1, micro_frames: curAtom.micro_frames } : null;
+    lastMissingAsset = plateMissingInfo(l);
     if (motionBlurOn && (Math.abs(camVel.vx) > 0.5 || Math.abs(camVel.vy) > 0.5)) {
       const blurWeight = Number(seg?.motion_blur) > 0 ? Math.min(2, +seg.motion_blur) : 1;
       for (const [step, ga] of [[1, 0.14], [2, 0.07]]) {
         ctx.save();
         ctx.globalAlpha = ga;
         ctx.translate(-camVel.vx * step * 0.45 * blurWeight, -camVel.vy * step * 0.45 * blurWeight);
-        drawScene(l, t, microCtx);
+        drawScene(l, t, microCtx, isExportBake);
         ctx.restore();
       }
     }
-    drawScene(l, t, microCtx);
+    drawScene(l, t, microCtx, isExportBake);
     if (opts.onion) {
       const prevPlate = timeline.plates[plateIndex - 1], nextPlate = timeline.plates[plateIndex + 1];
       ctx.save(); ctx.globalAlpha = 0.25;
-      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id], t);
-      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id], t);
+      if (prevPlate && layout[prevPlate.id]) drawScene(layout[prevPlate.id], t, null, isExportBake);
+      if (nextPlate && layout[nextPlate.id]) drawScene(layout[nextPlate.id], t, null, isExportBake);
       ctx.restore();
     }
     ctx.restore();
@@ -2109,6 +2148,8 @@ function createMotionRenderer(canvas, assets = {}) {
     get lastLayerMatrix() { return lastLayerMatrix; },
     get lastStripSample() { return lastStripSample; },
     get lastHitstop() { return lastHitstop; },
+    get missingAssets() { return [...failedAssets.keys()]; },
+    get lastMissingAsset() { return lastMissingAsset; },
     set onRenderHook(fn) { onRenderHook = typeof fn === 'function' ? fn : null; },
     get duration() { return timeline?.duration_s || 0; }
   };
